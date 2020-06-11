@@ -11,7 +11,7 @@ numpy = 1.18.1
 sklearn = 0.22.2
 
 
-Package data_prep contains:
+data_prep contains:
 - audio_extraction.py : code to extract necessary features from audio + corresponding transcriptions
 - data_prep.py : classes to prepare data for input into the models; mostly used for health outcomes data currently
 - meld_input_formatting.py : Formats MELD dataset for input into models
