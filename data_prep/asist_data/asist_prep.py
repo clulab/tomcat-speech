@@ -20,9 +20,11 @@ class JSONtoTSV:
         word_num = word number within the file
     NOTE: Transcripts currently have bad json format, so use AST to fix
     """
-    def __init__(self, path, jsonfile, use_txt=True):
+    def __init__(self, path, jsonfile, save_name, use_txt=True):
         self.path = path
         self.jname = jsonfile
+        self.save_name = save_name
+
         if use_txt:
             self.jfile = "{0}/{1}.txt".format(path, jsonfile)
         else:
@@ -64,9 +66,9 @@ class JSONtoTSV:
                 # update wd counter
                 wd_num += 1
 
-                jarray.append([speaker, timestart, timeend, word, utt_num, word_num])
+                jarray.append([str(speaker), timestart, timeend, word, str(utt_num), str(word_num)])
 
-        with open("{0}/{1}.tsv".format(savepath, self.jname), 'w') as tsvfile:
+        with open("{0}/{1}.tsv".format(savepath, self.save_name), 'w') as tsvfile:
             for item in jarray:
                 tsvfile.write("\t".join(item))
                 tsvfile.write("\n")
@@ -103,35 +105,41 @@ class ASISTInput:
                         # print(self.save_path)
                         participant_id = item
 
+                        # set the name for saving csvs
+                        acoustic_savename = "{0}_{1}".format(participant_id, mission)
+
+                        print("Extracting words from transcripts...")
+
                         # read transcript and extract words and times to a clean csv file
                         transcript_convert = JSONtoTSV(item_path, "{0}_transcript_full".format(mission),
-                                                       use_txt=True)
+                                                       save_name=acoustic_savename, use_txt=True)
                         transcript_convert.convert_json(self.save_path)
 
                         # open corresponding audio and send through extraction; return csv file
                         # ID audio file
                         audio_path = "{0}/{1}".format(item_path, mission)
 
-                        # set the name for saving csvs
-                        acoustic_savename = "{0}_{1}".format(participant_id, mission)
+                        print("Extracting openSMILE features...")
 
                         # extract audio features and save csv
                         audio_extract = audio_extraction.ExtractAudio(audio_path, "player_audio.wav", self.save_path,
                                                                       self.smilepath)
-                        audio_extract.save_acoustic_csv(self.acoustic_feature_set, "{0}.csv".format(acoustic_savename))
+                        audio_extract.save_acoustic_csv(self.acoustic_feature_set,
+                                                        "{0}_feats.csv".format(acoustic_savename))
 
                         # load csv of features + csv of transcription information
                         audio_df = audio_extraction.load_feature_csv(
-                            "{0}/{1}".format(self.save_path, "{0}.csv".format(acoustic_savename)))
+                            "{0}/{1}".format(self.save_path, "{0}_feats.csv".format(acoustic_savename)))
 
-                        # TODO: CAN ONLY COMPLETE THIS ONCE THE TEXT IS ALTERED
+                        print("Aligning audio and text data...")
+
                         audio_extraction.expand_words("{0}/{1}".format(self.save_path, "{0}.tsv".format(acoustic_savename)),
                                                       "{0}/{1}-expanded.csv".format(self.save_path,
                                                                                     acoustic_savename))
 
                         # read in the saved csv
                         expanded_wds_df = pd.read_csv("{0}/{1}-expanded.csv".format(self.save_path,
-                                                                                    acoustic_savename))
+                                                                                    acoustic_savename), sep="\t")
 
                         # combine the files
                         combined = pd.merge(audio_df, expanded_wds_df, on='frameTime')
@@ -139,9 +147,6 @@ class ASISTInput:
                         # average across words and save as new csv
                         wd_avgd = audio_extraction.avg_feats_across_words(combined)
                         wd_avgd.to_csv("{0}/{1}_avgd.csv".format(self.save_path, acoustic_savename))
-
-                        print("MADE IT THROUGH ONCE!")
-
 
 if __name__ == "__main__":
     # # define variables
