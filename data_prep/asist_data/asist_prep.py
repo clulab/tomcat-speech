@@ -7,6 +7,7 @@ import os
 import pandas as pd
 import pprint
 import ast
+import random
 
 
 class JSONtoTSV:
@@ -94,16 +95,25 @@ class ASISTInput:
         """
         get the audio data; feed it through processes in audio_extraction.py
         :param missions : a list of names of the mission(s) whose data is of interest
+        fixme: this will contain a gold-label creation mechanism; remove it once asist has real gold labels
         """
+        gold_labels = [["sid", "overall"]]
+
         for item in os.listdir(self.path):
             item_path = "{0}/{1}".format(self.path, item)
             if os.path.isdir(item_path):
                 print(item)
                 for mission in self.missions:
-                    if "{0}_transcript_full.txt".format(mission) in os.listdir(item_path):
+                    if "{0}_transcript_full.txt".format(mission) in os.listdir(item_path) and \
+                            check_transcript("{0}/{1}_transcript_full.txt".format(item_path, mission)):
                         print(mission)
                         # print(self.save_path)
                         participant_id = item
+
+                        # create gold label, participant id pair
+                        # todo: remove this once we have gold labels
+                        gold = random.randint(0, 1)
+                        gold_labels.append([item, str(gold)])
 
                         # set the name for saving csvs
                         acoustic_savename = "{0}_{1}".format(participant_id, mission)
@@ -149,6 +159,37 @@ class ASISTInput:
                         wd_avgd.to_csv("{0}/{1}_avgd.csv".format(self.save_path, acoustic_savename))
 
         print("Audio and text extracted and word-level alignment completed")
+        # todo: remove the following once we have gold labels
+        ys_path = "{0}/asist_ys".format(self.save_path)
+        os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(ys_path))
+        with open("{0}/all_ys.csv".format(ys_path), 'w') as goldfile:
+            for item in gold_labels:
+                goldfile.write(",".join(item))
+                goldfile.write("\n")
+
+
+def check_transcript(name_and_path):
+    """
+    Check a transcript to make sure it contains data
+    This is necessary since some files contain transcripts but no data
+    """
+    # read in the json
+    with open(name_and_path, 'r') as djfile:
+        jf = djfile.read()
+        fixed = ast.literal_eval(jf)
+
+    # get only the words
+    all_words = fixed['results']['items']
+    print(len(all_words))
+    if len(all_words) > 2:
+        contains_data = True
+    else:
+        contains_data = False
+    print(contains_data)
+    # sys.exit(1)
+
+    return contains_data
+
 
 if __name__ == "__main__":
     # # define variables

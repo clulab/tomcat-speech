@@ -101,7 +101,7 @@ class ExtractAudio:
             # fconf = "emobase.conf"
 
         # check to see if save path exists; if not, make it
-        os.system('if [ ! -d "{0}" ]; then mkdir {0}; fi'.format(self.savedir))
+        os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(self.savedir))
 
         # run openSMILE
         os.system("{0}/SMILExtract -C {0}/config/{1} -I {2} -lldcsvoutput {3}/{4}".format(self.smile, fconf, self.afile,
