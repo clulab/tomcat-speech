@@ -1,0 +1,11 @@
+# intellij
+.idea
+
+# python
+*.pyc
+*/__pycache__/
+
+# output directory
+output/
+
+.DS_Store

@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a64549a5-21ee-4da5-8889-7516c1174dc0" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/data_prep/asist_data/asist_prep.py" beforeDir="false" afterPath="$PROJECT_DIR$/data_prep/asist_data/asist_prep.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/smile.log" beforeDir="false" afterPath="$PROJECT_DIR$/smile.log" afterDir="false" />
     </list>
