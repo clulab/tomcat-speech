@@ -108,13 +108,6 @@ class ASISTInput:
                         # set the name for saving csvs
                         acoustic_savename = "{0}_{1}".format(participant_id, mission)
 
-                        print("Extracting words from transcripts...")
-
-                        # read transcript and extract words and times to a clean csv file
-                        transcript_convert = JSONtoTSV(item_path, "{0}_transcript_full".format(mission),
-                                                       save_name=acoustic_savename, use_txt=True)
-                        transcript_convert.convert_json(self.save_path)
-
                         # open corresponding audio and send through extraction; return csv file
                         # ID audio file
                         audio_path = "{0}/{1}".format(item_path, mission)
@@ -130,6 +123,13 @@ class ASISTInput:
                         # load csv of features + csv of transcription information
                         audio_df = audio_extraction.load_feature_csv(
                             "{0}/{1}".format(self.save_path, "{0}_feats.csv".format(acoustic_savename)))
+
+                        print("Extracting words from transcripts...")
+
+                        # read transcript and extract words and times to a clean csv file
+                        transcript_convert = JSONtoTSV(item_path, "{0}_transcript_full".format(mission),
+                                                       save_name=acoustic_savename, use_txt=True)
+                        transcript_convert.convert_json(self.save_path)
 
                         print("Aligning audio and text data...")
 
@@ -147,6 +147,8 @@ class ASISTInput:
                         # average across words and save as new csv
                         wd_avgd = audio_extraction.avg_feats_across_words(combined)
                         wd_avgd.to_csv("{0}/{1}_avgd.csv".format(self.save_path, acoustic_savename))
+
+        print("Audio and text extracted and word-level alignment completed")
 
 if __name__ == "__main__":
     # # define variables
