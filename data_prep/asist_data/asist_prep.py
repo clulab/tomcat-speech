@@ -98,6 +98,7 @@ class ASISTInput:
         fixme: this will contain a gold-label creation mechanism; remove it once asist has real gold labels
         """
         gold_labels = [["sid", "overall"]]
+        all_participants = []
 
         for item in os.listdir(self.path):
             item_path = "{0}/{1}".format(self.path, item)
@@ -113,7 +114,11 @@ class ASISTInput:
                         # create gold label, participant id pair
                         # todo: remove this once we have gold labels
                         gold = random.randint(0, 1)
-                        gold_labels.append([item, str(gold)])
+                        if participant_id not in all_participants:
+                            gold_labels.append([item, str(gold)])
+
+                        # add participant to list of participants so it doesn't get repeated
+                        all_participants.append(participant_id)
 
                         # set the name for saving csvs
                         acoustic_savename = "{0}_{1}".format(participant_id, mission)

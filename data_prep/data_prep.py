@@ -108,7 +108,7 @@ class Glove(object):
             self.idx2glove[self.max_idx] = vec
 
 
-def make_acoustic_dict(acoustic_path, f_end="_IS09_avgd.csv", use_cols=None):
+def make_acoustic_dict(acoustic_path, f_end="_IS09_avgd.csv", use_cols=None, data_type="clinical"):
     """
     makes a dict of (sid, call): data for use in ClinicalDataset objects
     f_end: end of acoustic file names
@@ -122,7 +122,10 @@ def make_acoustic_dict(acoustic_path, f_end="_IS09_avgd.csv", use_cols=None):
             else:
                 feats = pd.read_csv(acoustic_path + "/" + f)
             sid = f.split("_")[0]
-            callid = f.split("_")[1]
+            if data_type == "asist":
+                callid = f.split("_")[2]  # asist data has format sid_mission_num
+            else:
+                callid = f.split("_")[1]  # clinical data has format sid_callid
             acoustic_dict[(sid, callid)] = feats
     return acoustic_dict
 
@@ -525,6 +528,7 @@ class ClinicalDataset(Dataset):
         for tup in self.acoustic_dict.keys():
             # if the sid has gold data, add it
             if tup[0] in self.valid_files:
+                print(tup)
                 if tup not in self.skipped_files:
                     y = ys[ys.index == tup[0]].overall.item()
                     ordered_ys.append(y)

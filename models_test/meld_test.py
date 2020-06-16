@@ -18,11 +18,23 @@ import random
 import torch
 import sys
 
+
+# set device
+cuda = True
+
+# Check CUDA
+if not torch.cuda.is_available():
+    cuda = False
+
+device = torch.device("cuda" if cuda else "cpu")
+
 # set random seed
 seed = params.seed
 torch.manual_seed(seed)
 np.random.seed(seed)
 random.seed(seed)
+if cuda:
+    torch.cuda.manual_seed_all(seed)
 
 # set parameters for data prep
 glove_file = "../../glove.short.300d.txt"  # should be updated later to a glove subset appropriate for this task
@@ -89,6 +101,9 @@ if __name__ == "__main__":
     # mini search through different learning_rate values
     for lr in params.lrs:
 
+        # instantiate empty model holder
+        bimodal_predictor = None
+
         # this uses train-dev-test folds
         # create instance of model
         if params.model == "LRBaseline":
@@ -111,6 +126,11 @@ if __name__ == "__main__":
             # default to bimodal cnn
             bimodal_trial = BimodalCNN(params=params, num_embeddings=num_embeddings,
                                        pretrained_embeddings=pretrained_embeddings)
+
+        # set the classifier(s) to the right device
+        bimodal_trial = bimodal_trial.to(device)
+        if bimodal_predictor is not None:
+            bimodal_predictor.to(device)
 
         # set loss function, optimization, and scheduler, if using
         loss_func = nn.BCELoss()
@@ -158,11 +178,11 @@ if __name__ == "__main__":
         # train the model and evaluate on development set
         if params.model == "Multitask":
             train_and_predict(bimodal_trial, train_state, train_data, dev_data, params.batch_size,
-                              params.num_epochs, loss_func, optimizer, scheduler=None, model2=bimodal_predictor,
-                              train_state2=train_state_2)
+                              params.num_epochs, loss_func, optimizer, device, scheduler=None,
+                              model2=bimodal_predictor, train_state2=train_state_2)
         else:
             train_and_predict(bimodal_trial, train_state, train_data, dev_data, params.batch_size,
-                              params.num_epochs, loss_func, optimizer, scheduler=None)
+                              params.num_epochs, loss_func, optimizer, device, scheduler=None)
 
         # plot the loss and accuracy curves
         if get_plot:

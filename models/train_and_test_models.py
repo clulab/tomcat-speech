@@ -110,8 +110,31 @@ def generate_batches(xs, ys, batch_size):
     return np.asarray(x_batches), np.asarray(y_batches)
 
 
+def generate_batches(data, batch_size, shuffle=True, device="cpu"):
+    # feed data into dataloader for automatic batch splitting and shuffling
+    batched_split = DataLoader(data, batch_size=batch_size, shuffle=shuffle)
+
+    # holders for final data
+    acoustic = []
+    embedding = []
+    speaker = []
+    y = []
+
+    acoustic_batches = [item[0] for item in batched_split]
+    embedding_batches = [item[1] for item in batched_split]
+    speaker_batches = [item[2] for item in batched_split]
+    y_batches = [item[3] for item in batched_split]
+
+    [acoustic.append(item.to(device)) for item in acoustic_batches]
+    [embedding.append(item.to(device)) for item in embedding_batches]
+    [speaker.append(item.to(device)) for item in speaker_batches]
+    [y.append(item.to(device)) for item in y_batches]
+
+    return acoustic, embedding, speaker, y
+
+
 def train_and_predict(classifier, train_state, train_splits, val_data, batch_size, num_epochs, loss_func, optimizer,
-                      scheduler=None, model2=None, train_state2=None):
+                      device="cpu", scheduler=None, model2=None, train_state2=None):
 
     for epoch_index in range(num_epochs):
         print("Now starting epoch {0}".format(epoch_index))
@@ -130,20 +153,23 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             model2.train()
 
         # feed data into dataloader for automatic batch splitting and shuffling
-        batched_split = DataLoader(train_splits, batch_size=batch_size, shuffle=True)
+        # batched_split = DataLoader(train_splits, batch_size=batch_size, shuffle=True)
+        #
+        # # split into acoustic, text, speaker, and gold labels
+        # # because each input is saved as a tuple of these 4 components
+        # # print(batched_split)
+        # # sys.exit(1)
+        # # for item in batched_split:
+        # #     print(item)
+        # #     sys.exit(1)
+        #
+        # acoustic_batches = [item[0] for item in batched_split]
+        # embedding_batches = [item[1] for item in batched_split]
+        # speaker_batches = [item[2] for item in batched_split]
+        # y_batches = [item[3] for item in batched_split]
 
-        # split into acoustic, text, speaker, and gold labels
-        # because each input is saved as a tuple of these 4 components
-        # print(batched_split)
-        # sys.exit(1)
-        # for item in batched_split:
-        #     print(item)
-        #     sys.exit(1)
-
-        acoustic_batches = [item[0] for item in batched_split]
-        embedding_batches = [item[1] for item in batched_split]
-        speaker_batches = [item[2] for item in batched_split]
-        y_batches = [item[3] for item in batched_split]
+        acoustic_batches, embedding_batches, speaker_batches, y_batches = generate_batches(train_splits, batch_size,
+                                                                                           shuffle=True, device=device)
 
         # for each batch in the list of batches created by the dataloader
         for batch_index, batch_array in enumerate(acoustic_batches):
@@ -199,14 +225,16 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         # print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
 
         # Iterate over validation set--put it in a dataloader
-        val_split = DataLoader(val_data, batch_size=batch_size, shuffle=True)
+        # val_split = DataLoader(val_data, batch_size=batch_size, shuffle=True)
+        #
+        # # split the validation set into its components
+        # acoustic_batches = [item[0] for item in val_split]
+        # embedding_batches = [item[1] for item in val_split]
+        # speaker_batches = [item[2] for item in val_split]
+        # y_batches = [item[3] for item in val_split]
 
-        # split the validation set into its components
-        acoustic_batches = [item[0] for item in val_split]
-        embedding_batches = [item[1] for item in val_split]
-        speaker_batches = [item[2] for item in val_split]
-        y_batches = [item[3] for item in val_split]
-
+        acoustic_batches, embedding_batches, speaker_batches, y_batches = generate_batches(val_data, batch_size,
+                                                                                           shuffle=True, device=device)
         # reset loss and accuracy to zero
         running_loss = 0.
         running_acc = 0.

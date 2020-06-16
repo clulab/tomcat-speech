@@ -21,11 +21,22 @@ import random
 import torch
 import sys
 
+# set device
+cuda = True
+
+# Check CUDA
+if not torch.cuda.is_available():
+    cuda = False
+
+device = torch.device("cuda" if cuda else "cpu")
+
 # set random seed
 seed = params.seed
 torch.manual_seed(seed)
 np.random.seed(seed)
 random.seed(seed)
+if cuda:
+    torch.cuda.manual_seed_all(seed)
 
 # set parameters for data prep
 glove_file = "../../glove.short.300d.txt"  # todo: change this?
@@ -56,7 +67,7 @@ if __name__ == "__main__":
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
     # uncomment use_cols=... to use only specific columns from input data
-    acoustic_dict = make_acoustic_dict(input_dir, "_avgd.csv") #,
+    acoustic_dict = make_acoustic_dict(input_dir, "_avgd.csv", data_type="asist") #,
 
     print("Acoustic dict created")
 
@@ -95,6 +106,9 @@ if __name__ == "__main__":
         for split in range(data.splits):
             print("Now starting training/tuning with split {0} held out".format(split))
 
+            # instantiate empty model holder
+            bimodal_predictor = None
+
             # create instance of model
             if params.model == "LRBaseline":
                 # cleanup needed for baselines
@@ -116,6 +130,11 @@ if __name__ == "__main__":
                 # default to bimodal cnn
                 bimodal_trial = BimodalCNN(params=params, num_embeddings=num_embeddings,
                                            pretrained_embeddings=pretrained_embeddings)
+
+            # set the classifier(s) to the right device
+            bimodal_trial = bimodal_trial.to(device)
+            if bimodal_predictor is not None:
+                bimodal_predictor.to(device)
 
             # set loss function, optimization, and scheduler, if using
             loss_func = nn.BCELoss()
@@ -164,11 +183,11 @@ if __name__ == "__main__":
             # train the model and evaluate on development split
             if params.model == "Multitask":
                 train_and_predict(bimodal_trial, train_state, training_data, val_split, params.batch_size,
-                                  params.num_epochs, loss_func, optimizer, scheduler=None, model2=bimodal_predictor,
-                                  train_state2=train_state_2)
+                                  params.num_epochs, loss_func, optimizer, device, scheduler=None,
+                                  model2=bimodal_predictor, train_state2=train_state_2)
             else:
                 train_and_predict(bimodal_trial, train_state, training_data, val_split, params.batch_size,
-                                  params.num_epochs, loss_func, optimizer, scheduler=None)
+                                  params.num_epochs, loss_func, optimizer, device, scheduler=None)
 
             # plot the loss and accuracy curves
             if get_plot:
