@@ -38,13 +38,8 @@ if cuda:
 
 # set parameters for data prep
 glove_file = "../../glove.short.300d.txt"  # should be updated later to a glove subset appropriate for this task
-# input_dir = "/Volumes/LIvES/multimodal_data_updated/utts_corrected"
 
-meld_path = "../../pretraining_files"
-# to test outcomes at 6 months
-y_path = "/Volumes/LIvES/323_files/binary_scores_at_point_2.csv"
-# to test outcomes at 24 months
-# y_path = "/Volumes/LIvES/323_files/scores_at_point_4.csv"
+meld_path = "../../MELD_formatted"
 # set number of splits
 num_splits = params.num_splits
 # set model name and model type
@@ -122,6 +117,9 @@ if __name__ == "__main__":
             bimodal_predictor = EmotionToSuccessFFNN(params=params, num_utts=num_utts,
                                                      num_layers=2, hidden_dim=4,
                                                      output_dim=1)
+        elif params.model == "Multitask-meld":
+            bimodal_trial =  BasicEncoder(params=params, num_embeddings=num_embeddings,
+                                          pretrained_embeddings=pretrained_embeddings)
         else:
             # default to bimodal cnn
             bimodal_trial = BimodalCNN(params=params, num_embeddings=num_embeddings,

@@ -239,6 +239,9 @@ class BasicEncoder(nn.Module):
             # print("acoustic input size: ", acoustic_input.size())
             # print("utterance embeddings size: ", utt_embs.size())
             if self.num_embeddings is not None:
+                # print(acoustic_input.shape)
+                # print(utt_embs.shape)
+                # print(spk_embs.shape)
                 inputs = torch.cat((acoustic_input, utt_embs, spk_embs), 2)
             else:
                 inputs = torch.cat((acoustic_input, spk_embs), 2)
@@ -263,7 +266,7 @@ class BasicEncoder(nn.Module):
             # print("predictions computed")
         else:
             if self.softmax:
-                output = F.softmax(output)
+                output = F.softmax(output, dim=1)
 
         # return the output
         # squeeze to 1 dimension for binary categorization

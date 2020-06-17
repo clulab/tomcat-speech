@@ -138,8 +138,8 @@ class MELDData(Dataset):
         # dialogue-level holders
         utts = [[0] * self.longest_utt] * self.longest_dia
         spks = [0] * self.longest_dia
-        emos = [0] * self.longest_dia
-        sents = [0] * self.longest_dia
+        emos = [[0] * 7] * self.longest_dia
+        sents = [[0] * 3] * self.longest_dia
 
         for idx, row in all_utts_df.iterrows():
 
@@ -154,6 +154,7 @@ class MELDData(Dataset):
 
                 spk_id = row['Speaker']
                 emo = row['Emotion']
+                # print(emo)
                 sent = row['Sentiment']
 
                 # utterance-level holder
@@ -175,8 +176,8 @@ class MELDData(Dataset):
                     # print(len(utts), utt_id, utt)
                     utts[utt_id] = idxs
                     spks[utt_id] = spk_id
-                    emos[utt_id] = emo
-                    sents[utt_id] = sent
+                    emos[utt_id][emo] = 1 # assign 1 to the emotion tagged
+                    sents[utt_id][sent] = 1 # assign 1 to the sentiment tagged
                     # print("actually finished this")
                 else:
                     # all_utts.append(torch.tensor(utts))
@@ -193,8 +194,8 @@ class MELDData(Dataset):
                     # dialogue-level holders
                     utts = [[0] * self.longest_utt] * self.longest_dia
                     spks = [0] * self.longest_dia
-                    emos = [0] * self.longest_dia
-                    sents = [0] * self.longest_dia
+                    emos = [[0] * 7] * self.longest_dia
+                    sents = [[0] * 3] * self.longest_dia
 
                     # # re-zero utterance-level holder
                     # idxs = [0] * self.longest_utt
@@ -202,8 +203,8 @@ class MELDData(Dataset):
                     # utts.append(idxs)
                     utts[utt_id] = idxs
                     spks[utt_id] = spk_id
-                    emos[utt_id] = emo
-                    sents[utt_id] = sent
+                    emos[utt_id][emo] = 1 # assign 1 to the emotion tagged
+                    sents[utt_id][sent] = 1 # assign 1 to the sentiment tagged
 
         # print(len(all_utts))
         # print(len(all_utts[0]))
@@ -215,7 +216,11 @@ class MELDData(Dataset):
         # all_emotions = np.asarray(all_emotions)
         # all_sentiments = np.asarray(all_sentiments)
 
-        all_speakers = torch.tensor(all_speakers)
+        # print(all_emotions)
+        # print(len(all_emotions))
+        # print(len(all_emotions[0]))
+
+        all_speakers = torch.tensor(all_speakers)  # .unsqueeze(-1)
         all_emotions = torch.tensor(all_emotions)
         all_sentiments = torch.tensor(all_sentiments)
 
