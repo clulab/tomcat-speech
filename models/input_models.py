@@ -19,11 +19,12 @@ class BaseConvolution(nn.Module):
     """
     The basic convolutional model to be used inside of the encoder
     Abstracted out since it may be used TWICE within the encoder
-    (1x for text, 1x for all feats)
+    (1x for text, 1x for audio)
     """
     def __init__(self, input_dim, out_channels, output_dim, num_conv_layers, kernel_size, stride,
                  num_fc_layers, dropout, dialogue_aware):
         super(BaseConvolution, self).__init__()
+
         # input text
         self.input_dim = input_dim
         self.output_dim = output_dim
@@ -37,6 +38,7 @@ class BaseConvolution(nn.Module):
             self.conv1 = nn.Conv2d(input_dim, out_channels, kernel_size, stride, padding=1)
         else:
             self.conv1 = nn.Conv1d(input_dim, out_channels, kernel_size, stride, padding=1)
+
         # instantiate empty layers
         self.conv2 = None
         self.conv3 = None
@@ -68,7 +70,7 @@ class BaseConvolution(nn.Module):
             self.fc2 = None
 
     def forward(self, inputs):
-        # inputs = inputs.permute(2, 0, 1, 3)
+        # todo: try the below for packing padded sequences
         # inputs = nn.utils.rnn.pack_padded_sequence(inputs, enforce_sorted=False)
         # print("Input shape is: {}".format(inputs.shape))
 
@@ -87,19 +89,11 @@ class BaseConvolution(nn.Module):
         else:
             feats = F.leaky_relu(self.conv1(inputs))
 
-        # print("THE SIZE OF THE FEATURES OF INTEREST")
-        # print(feats.size())
-        # pool data and remove extra dimension as in book
-        # squeezed_size = feats.size(dim=3)
-        # feats = F.max_pool2d(feats, squeezed_size)  # .squeeze(dim=3)
         if self.dialogue_aware:
             feats = torch.max(feats, dim=3)[0]
-            # feats = feats.squeeze(dim=3)
             feats = feats.permute(0, 2, 1)
         else:
             feats = torch.max(feats, dim=2)[0]
-
-        # feats = feats.squeeze(dim=2)  # tried doing this directly and it said it couldn't be done
 
         # use pooled, squeezed feats as input into fc layers
         if self.fc2 is not None:
@@ -205,95 +199,61 @@ class BasicEncoder(nn.Module):
             self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
 
     def forward(self, acoustic_input, text_input, speaker_input=None):
-        # print("started forward pass")
-        # acoustic_input = acoustic_input.permute(0, 2, 1)
-        # print(acoustic_input.shape)
-        # print(text_input.shape)
-        # text_input = text_input.permute(0, 2, 1)
-        # print(text_input.shape)
-        # print(speaker_input.shape)
+        # set number to use in calculations
+        # using "dialogue aware" means every tensor will
+        # have an additional dimension
+        if self.dialogue_aware:
+            dialogue_dim = 1
+        else:
+            dialogue_dim = 0
+
+        # reshape speaker input if needed
         if self.dialogue_aware:
             speaker_input = speaker_input.unsqueeze(2)
             print(speaker_input.shape)
-        # sys.exit(1)
-        # speaker_input = speaker_input.permute(0, 2, 1)
+        # print("speaker input permuted")
 
-        # print("speaker and acoustic input permuted")
-
-        # print(speaker_input.shape)
-        # print(speaker_input)
-        # create word embeddings
         # if using pretrained, detach to not update weights
         if self.num_embeddings is not None:
             if self.pretrained_embeddings:
                 embs = self.embedding(text_input).detach()
             else:
                 embs = self.embedding(text_input)
-
-            # print(embs.shape)
             # print("text embeddings created")
 
-            # permute the embeddings for proper input
+            # permute the text embeddings and acoustic input
             if self.dialogue_aware:
                 embs = embs.permute(0, 3, 1, 2)
+                acoustic_input = acoustic_input.permute(0, 3, 1, 2)  # todo: untested
             else:
                 embs = embs.permute(0, 2, 1)
+                acoustic_input = acoustic_input.permute(0, 2, 1)
             # print("text embeddings permuted")
-            # print(embs.shape)
 
             # average embeddings OR feed through network
             if self.text_network:
                 utt_embs = self.text_conv(embs)
-                # utt_embs = utt_embs.permute(0, 2, 1)
-                # print("Utt embs shape is: ", utt_embs.shape)
             else:
-                # squeezed_size = embs.size(dim=3)
-                if self.dialogue_aware:
-                    utt_embs = torch.mean(embs, dim=3)
-                else:
-                    utt_embs = torch.mean(embs, dim=2)
-                # print("utterance embeddings calculated")
-                # utt_embs = F.avg_pool2d(embs, squeezed_size).squeeze(dim=3)
-                # utt_embs = utt_embs.squeeze(dim=2)
+                utt_embs = torch.mean(embs, dim=(2 + dialogue_dim))
 
         # if not using utt_avgd acoustic feats, feed acoustic through CNN
         if self.alignment is not "utt":
             acoustic_input = self.audio_conv(acoustic_input)
         elif not self.dialogue_aware:
-            acoustic_input = acoustic_input.permute(0, 2, 1)
             acoustic_input = torch.mean(acoustic_input, dim=2)
 
+        # combine modalities as required by architecture
         if speaker_input is not None:
-            # if present, create speaker embedding + add to
-            if self.dialogue_aware:
-                spk_embs = self.speaker_embeddings(speaker_input).squeeze(dim=3)
-            else:
-                spk_embs = self.speaker_embeddings(speaker_input).squeeze(dim=2)
-
-            # print("speaker embeddings size: ", spk_embs.size())
-            # print("acoustic input size: ", acoustic_input.size())
-            # print("utterance embeddings size: ", utt_embs.size())
+            spk_embs = self.speaker_embeddings(speaker_input).squeeze(dim=(2 + dialogue_dim))
 
             if self.num_embeddings is not None:
-                # print(acoustic_input.shape)
-                # print(utt_embs.shape)
-                # print(spk_embs.shape)
-                if self.dialogue_aware:
-                    inputs = torch.cat((acoustic_input, utt_embs, spk_embs), 2)
-                else:
-                    inputs = torch.cat((acoustic_input, utt_embs, spk_embs), 1)
+                inputs = torch.cat((acoustic_input, utt_embs, spk_embs), 1 + dialogue_dim)
             else:
-                if self.dialogue_aware:
-                    inputs = torch.cat((acoustic_input, spk_embs), 2)
-                else:
-                    inputs = torch.cat((acoustic_input, spk_embs), 1)
+                inputs = torch.cat((acoustic_input, spk_embs), 1 + dialogue_dim)
             # print("inputs concatenated")
         else:
             if self.num_embeddings is not None:
-                if self.dialogue_aware:
-                    inputs = torch.cat((acoustic_input, utt_embs), 2)
-                else:
-                    inputs = torch.cat((acoustic_input, utt_embs), 1)
+                inputs = torch.cat((acoustic_input, utt_embs), 1 + dialogue_dim)
             else:
                 inputs = acoustic_input
 

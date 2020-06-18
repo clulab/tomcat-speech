@@ -1,10 +1,8 @@
-# read meld into the system
-import os
-import pprint
-import sys
+# prepare MELD input for usage in networks
 
+import os
 import pandas as pd
-import numpy as np
+
 import torch
 from torch import nn
 from torch.utils.data import Dataset
@@ -14,9 +12,8 @@ from collections import OrderedDict
 
 
 class MELDData(Dataset):
-    # a dataset to hold the MELD data in before passing to NNs
+    # a dataset to manipulate the MELD data before passing to NNs
     def __init__(self, meld_path, glove, acoustic_length, f_end="_IS10.csv", use_cols=None):
-        # self.f_end = f_end
         self.train_path = meld_path + "/train"
         self.dev_path = meld_path + "/dev"
         self.test_path = meld_path + "/test"
@@ -33,9 +30,12 @@ class MELDData(Dataset):
         print("Collecting acoustic features")
 
         # ordered dicts of acoustic data
-        self.train_dict = OrderedDict(self.make_acoustic_dict_meld("{0}/audios".format(self.train_path), f_end, use_cols))
-        self.dev_dict = OrderedDict(self.make_acoustic_dict_meld("{0}/audios".format(self.dev_path), f_end, use_cols))
-        self.test_dict = OrderedDict(self.make_acoustic_dict_meld("{0}/audios".format(self.test_path), f_end, use_cols))
+        self.train_dict = OrderedDict(self.make_acoustic_dict_meld("{0}/audios".format(self.train_path),
+                                                                   f_end, use_cols))
+        self.dev_dict = OrderedDict(self.make_acoustic_dict_meld("{0}/audios".format(self.dev_path),
+                                                                 f_end, use_cols))
+        self.test_dict = OrderedDict(self.make_acoustic_dict_meld("{0}/audios".format(self.test_path),
+                                                                  f_end, use_cols))
 
         # utterance-level dict
         self.longest_utt, self.longest_dia = self.get_longest_utt_meld()
@@ -43,52 +43,44 @@ class MELDData(Dataset):
         print("Finalizing acoustic organization")
 
         self.train_acoustic, self.train_usable_utts = self.make_acoustic_set(self.meld_train, self.train_dict)
-        # print(type(self.train_acoustic))
-        # sys.exit(1)
         self.dev_acoustic, self.dev_usable_utts = self.make_acoustic_set(self.meld_dev, self.dev_dict)
         self.test_acoustic, self.test_usable_utts = self.make_acoustic_set(self.meld_test, self.test_dict)
 
         print("Getting text, speaker, and y features")
 
         # get utterance, speaker, y matrices for train, dev, and test sets
-        self.train_utts, self.train_spkrs, self.train_y_emo, self.train_y_sent = self.make_utt_dict_meld(self.meld_train,
-                                                                                                         self.train_usable_utts)
-        self.dev_utts, self.dev_spkrs, self.dev_y_emo, self.dev_y_sent = self.make_utt_dict_meld(self.meld_dev,
-                                                                                                 self.dev_usable_utts)
-        self.test_utts, self.test_spkrs, self.test_y_emo, self.test_y_sent = self.make_utt_dict_meld(self.meld_test,
-                                                                                                     self.test_usable_utts)
+        self.train_utts, self.train_spkrs, self.train_y_emo, self.train_y_sent = \
+            self.make_meld_data_tensors(self.meld_train, self.train_usable_utts)
+
+        self.dev_utts, self.dev_spkrs, self.dev_y_emo, self.dev_y_sent = \
+            self.make_meld_data_tensors(self.meld_dev, self.dev_usable_utts)
+
+        self.test_utts, self.test_spkrs, self.test_y_emo, self.test_y_sent = \
+            self.make_meld_data_tensors(self.meld_test, self.test_usable_utts)
 
         # get the data organized for input into the NNs
         self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
 
     def combine_xs_and_ys(self):
-        # combine all x and y data into list of tuples for easier access with DataLoader
+        """
+        Combine all x and y data into list of tuples for easier access with DataLoader
+        """
         train_data = []
         dev_data = []
         test_data = []
 
-        # print(len(self.train_acoustic))
-        # print(len(self.train_utts))
-        # print(len(self.train_spkrs))
-        # print(len(self.train_y_emo))
-        # print(len(self.train_y_sent))
-        # print(type(self.train_acoustic))
-
         for i, item in enumerate(self.train_acoustic):
-            # print(i)
-            # print(type(item))
-            # print(item)
-            # sys.exit(1)
-            train_data.append((item, self.train_utts[i], self.train_spkrs[i], self.train_y_emo[i], self.train_y_sent[i]))
+            train_data.append((item, self.train_utts[i], self.train_spkrs[i],
+                               self.train_y_emo[i], self.train_y_sent[i]))
 
         for i, item in enumerate(self.dev_acoustic):
-            dev_data.append((item, self.dev_utts[i], self.dev_spkrs[i], self.dev_y_emo[i], self.dev_y_sent[i]))
+            dev_data.append((item, self.dev_utts[i], self.dev_spkrs[i],
+                             self.dev_y_emo[i], self.dev_y_sent[i]))
 
         for i, item in enumerate(self.test_acoustic):
-            test_data.append((item, self.test_utts[i], self.test_spkrs[i], self.test_y_emo[i], self.test_y_sent[i]))
+            test_data.append((item, self.test_utts[i], self.test_spkrs[i],
+                              self.test_y_emo[i], self.test_y_sent[i]))
 
-        # print(type(train_data))
-        # sys.exit(1)
         return train_data, dev_data, test_data
 
     def get_longest_utt_meld(self):
@@ -119,20 +111,20 @@ class MELDData(Dataset):
 
         return longest, longest_dia
 
-    def make_utt_dict_meld(self, text_path, all_utts_list):
+    def make_meld_data_tensors(self, text_path, all_utts_list):
         """
+        Prepare the tensors of utterances + speakers, emotion and sentiment scores
         :param text_path: the FULL path to a csv containing the text (in column 0)
         :param all_utts_list: a list of all usable utterances
         :return:
         """
-        # holders for the data
+        # create holders for the data
         all_utts = []
         all_speakers = []
         all_emotions = []
         all_sentiments = []
 
         all_utts_df = pd.read_csv(text_path)
-        dialogue = 0
 
         for idx, row in all_utts_df.iterrows():
 
@@ -140,31 +132,24 @@ class MELDData(Dataset):
             dia_num, utt_num = row['DiaID_UttID'].split("_")[:2]
             if (dia_num, utt_num) in all_utts_list:
 
-                # utterance-level holders
-                spks = []
+                # create utterance-level holders
                 emos = [0] * 7
                 sents = [0] * 3
                 utts = [0] * self.longest_utt
 
-                dia_id = row['Dialogue_ID']
-                utt_id = row['Utterance_ID']
+                # get values from row
                 utt = row["Utterance"]
                 utt = [clean_up_word(wd) for wd in utt.strip().split(" ")]
 
                 spk_id = row['Speaker']
                 emo = row['Emotion']
-                # print(emo)
                 sent = row['Sentiment']
 
                 # convert words to indices for glove
                 for ix, wd in enumerate(utt):
-                    # print(ix, wd)
                     if wd in self.glove.wd2idx.keys():
-                        # print(glove.wd2idx[wd])
-                        # idxs.append(glove.wd2idx[wd])
                         utts[ix] = self.glove.wd2idx[wd]
                     else:
-                        # idxs.append(glove.wd2idx['<UNK>'])
                         utts[ix] = self.glove.wd2idx['<UNK>']
 
                 all_utts.append(torch.tensor(utts))
@@ -175,80 +160,24 @@ class MELDData(Dataset):
                 all_emotions.append(emos)
                 all_sentiments.append(sents)
 
-                # if dialogue == dia_id:
-                #     # utts.append(idxs)
-                #     # print(len(utts), utt_id, utt)
-                #     utts[utt_id] = utts
-                #     spks[utt_id] = spk_id
-                #
-                #     # print("actually finished this")
-                # else:
-                #     # all_utts.append(torch.tensor(utts))
-                #     # print(utts)
-                #     # sys.exit(1)
-                #     all_utts.append(torch.tensor(utts))
-                #     all_speakers.append(spks)
-                #     all_emotions.append(emos)
-                #     all_sentiments.append(sents)
-                #
-                #     # utt_dict[dia_id] = utts
-                #     dialogue = dia_id
-                #
-                #     # dialogue-level holders
-                #     utts = [[0] * self.longest_utt] * self.longest_dia
-                #     spks = [0] * self.longest_dia
-                #     emos = [[0] * 7] * self.longest_dia
-                #     sents = [[0] * 3] * self.longest_dia
-                #
-                #     # # re-zero utterance-level holder
-                #     # idxs = [0] * self.longest_utt
-                #
-                #     # utts.append(idxs)
-                #     utts[utt_id] = idxs
-                #     spks[utt_id] = spk_id
-                #     emos[utt_id][emo] = 1  # assign 1 to the emotion tagged
-                #     sents[utt_id][sent] = 1  # assign 1 to the sentiment tagged
-
-        # print(len(all_utts))
-        # print(len(all_utts[0]))
-        # print(len(all_utts[-1][0]))
-        # utt_dict = torch.tensor(utt_dict)
-        # utt_dict = nn.utils.rnn.pad_sequence(utt_dict)
-        # all_utts = np.asarray(all_utts)
-        # all_speakers = np.asarray(all_speakers)
-        # all_emotions = np.asarray(all_emotions)
-        # all_sentiments = np.asarray(all_sentiments)
-
-        # print(all_emotions)
-        # print(len(all_emotions))
-        # print(len(all_emotions[0]))
-
-        all_speakers = torch.tensor(all_speakers)  # .unsqueeze(-1)
+        # create pytorch tensors for each
+        all_speakers = torch.tensor(all_speakers)
         all_emotions = torch.tensor(all_emotions)
         all_sentiments = torch.tensor(all_sentiments)
 
+        # padd and transpose utterance sequences
         all_utts = nn.utils.rnn.pad_sequence(all_utts)
-        # all_speakers = nn.utils.rnn.pad_sequence(all_speakers)
-        # all_emotions = nn.utils.rnn.pad_sequence(all_emotions)
-        # all_sentiments = nn.utils.rnn.pad_sequence(all_sentiments)
-
         all_utts = all_utts.transpose(0, 1)
-        # all_speakers = all_speakers.transpose(0, 1)
-        # all_emotions = all_emotions.transpose(0, 1)
-        # all_sentiments = all_sentiments.transpose(0, 1)
-
-        print(all_speakers.shape)
-        print(all_emotions.shape)
-        print(all_sentiments.shape)
-        print(all_utts.shape)
-        # sys.exit(1)
 
         # return data
         return all_utts, all_speakers, all_emotions, all_sentiments
 
-    def make_dialogue_aware_utt_dict_meld(self, text_path, all_utts_list):
+    def make_dialogue_aware_meld_data_tensors(self, text_path, all_utts_list):
         """
-        Make a dict of (dia, utt): [words]
+        Prepare the tensors of utterances + speakers, emotion and sentiment scores
+        This preserves dialogue structure for use within networks
+        todo: add usage of this back into the class as needed
+            or (better) combine with make_meld_data_tensors
         :param text_path: the FULL path to a csv containing the text (in column 0)
         :param all_utts_list: a list of all usable utterances
         :return:
@@ -281,7 +210,6 @@ class MELDData(Dataset):
 
                 spk_id = row['Speaker']
                 emo = row['Emotion']
-                # print(emo)
                 sent = row['Sentiment']
 
                 # utterance-level holder
@@ -289,27 +217,17 @@ class MELDData(Dataset):
 
                 # convert words to indices for glove
                 for ix, wd in enumerate(utt):
-                    # print(ix, wd)
                     if wd in self.glove.wd2idx.keys():
-                        # print(glove.wd2idx[wd])
-                        # idxs.append(glove.wd2idx[wd])
                         idxs[ix] = self.glove.wd2idx[wd]
                     else:
-                        # idxs.append(glove.wd2idx['<UNK>'])
                         idxs[ix] = self.glove.wd2idx['<UNK>']
 
                 if dialogue == dia_id:
-                    # utts.append(idxs)
-                    # print(len(utts), utt_id, utt)
                     utts[utt_id] = idxs
                     spks[utt_id] = spk_id
                     emos[utt_id][emo] = 1 # assign 1 to the emotion tagged
                     sents[utt_id][sent] = 1 # assign 1 to the sentiment tagged
-                    # print("actually finished this")
                 else:
-                    # all_utts.append(torch.tensor(utts))
-                    # print(utts)
-                    # sys.exit(1)
                     all_utts.append(torch.tensor(utts))
                     all_speakers.append(spks)
                     all_emotions.append(emos)
@@ -324,48 +242,18 @@ class MELDData(Dataset):
                     emos = [[0] * 7] * self.longest_dia
                     sents = [[0] * 3] * self.longest_dia
 
-                    # # re-zero utterance-level holder
-                    # idxs = [0] * self.longest_utt
-
                     # utts.append(idxs)
                     utts[utt_id] = idxs
                     spks[utt_id] = spk_id
                     emos[utt_id][emo] = 1 # assign 1 to the emotion tagged
                     sents[utt_id][sent] = 1 # assign 1 to the sentiment tagged
 
-        # print(len(all_utts))
-        # print(len(all_utts[0]))
-        # print(len(all_utts[-1][0]))
-        # utt_dict = torch.tensor(utt_dict)
-        # utt_dict = nn.utils.rnn.pad_sequence(utt_dict)
-        # all_utts = np.asarray(all_utts)
-        # all_speakers = np.asarray(all_speakers)
-        # all_emotions = np.asarray(all_emotions)
-        # all_sentiments = np.asarray(all_sentiments)
-
-        # print(all_emotions)
-        # print(len(all_emotions))
-        # print(len(all_emotions[0]))
-
-        all_speakers = torch.tensor(all_speakers)  # .unsqueeze(-1)
+        all_speakers = torch.tensor(all_speakers)
         all_emotions = torch.tensor(all_emotions)
         all_sentiments = torch.tensor(all_sentiments)
 
         all_utts = nn.utils.rnn.pad_sequence(all_utts)
-        # all_speakers = nn.utils.rnn.pad_sequence(all_speakers)
-        # all_emotions = nn.utils.rnn.pad_sequence(all_emotions)
-        # all_sentiments = nn.utils.rnn.pad_sequence(all_sentiments)
-
         all_utts = all_utts.transpose(0, 1)
-        # all_speakers = all_speakers.transpose(0, 1)
-        # all_emotions = all_emotions.transpose(0, 1)
-        # all_sentiments = all_sentiments.transpose(0, 1)
-
-        print(all_speakers.shape)
-        print(all_emotions.shape)
-        print(all_sentiments.shape)
-        print(all_utts.shape)
-        # sys.exit(1)
 
         # return data
         return all_utts, all_speakers, all_emotions, all_sentiments

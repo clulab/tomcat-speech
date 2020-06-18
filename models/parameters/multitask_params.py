@@ -9,10 +9,10 @@ params = Namespace(
             model="Multitask-meld",
             num_splits=4,  # 5  #splits for CV
             num_epochs=100,
-            batch_size=10,
-            early_stopping_criteria=50,
+            batch_size=10, # 32
+            early_stopping_criteria=10,  # 50,
             text_network=True,
-            alignment="utt",
+            alignment=None,     # "utt",
             dialogue_aware=False,
 
             # input dimension parameters
@@ -25,10 +25,10 @@ params = Namespace(
             use_speaker=True,
 
             # text CNN
-            num_text_conv_layers=1,
+            num_text_conv_layers=1,  # 2
             num_text_fc_layers=1,
-            text_out_channels=100,
-            text_output_dim=300,
+            text_out_channels=100, # 100
+            text_output_dim=50,   # 300,
 
             # audio CNN
             num_audio_conv_layers=1,
@@ -41,7 +41,7 @@ params = Namespace(
             softmax=True,
 
             # CNN-specific parameters
-            num_layers=3,  # 3  # number of lstm/cnn layers
+            num_layers=2,   # 1,  # 3  # number of lstm/cnn layers
             out_channels=20,
             kernel_size=3,
             stride=1,
@@ -53,8 +53,8 @@ params = Namespace(
             dropout=0.0,  # 0.2
 
             # optimizer parameters
-            # learning_rate=1e-06,  # 1e-06 0.00001  # 0.0001 0.001 tried
-            lrs=[1e-05],  # if using multiple learning rates to test
+            # 1e-4 best for meld
+            lrs=[1e-4],  #1e-05 if using multiple learning rates to test
             beta_1=0.9,
             beta_2=0.999,  # beta params for Adam--defaults 0.9 and 0.999
             weight_decay=0.01,
