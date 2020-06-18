@@ -1,5 +1,7 @@
 # test the models created in py_code directory with ASIST dataset
 # currently the main entry point into the system
+# add "prep_data" as an argument when running this from command line
+#       if your acoustic features have not been extracted from audio
 
 from models.bimodal_models import BimodalCNN, MultichannelCNN
 from models.baselines import LRBaseline, EmbeddingsOnly
@@ -62,7 +64,8 @@ os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path))
 
 if __name__ == "__main__":
     # 0. RUN ASIST DATA PREP AND REORGANIZATION FOR INPUT INTO THE MODEL
-    os.system("time python data_prep/asist_data/asist_prep.py")
+    if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
+        os.system("time python data_prep/asist_data/asist_prep.py")
 
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict

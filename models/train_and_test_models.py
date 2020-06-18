@@ -209,9 +209,11 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             optimizer.step()
 
             # compute the accuracy
-            y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
-            y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
-            # y_pred = torch.round(y_pred)  # old version -- only useful for binary classification?
+            if len(list(y_pred.size())) > 1:
+                y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
+                y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
+            else:
+                y_pred = torch.round(y_pred)
 
             acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
 
@@ -273,9 +275,11 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             running_loss += (loss.item() - running_loss) / (batch_index + 1)
 
             # compute the accuracy
-            y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
-            y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
-            # y_pred = torch.round(y_pred)  # old version -- only useful for binary classification?
+            if len(list(y_pred.size())) > 1:
+                y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
+                y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
+            else:
+                y_pred = torch.round(y_pred)  # old version -- only useful for binary classification?
 
             acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
             running_acc += (acc_t - running_acc) / (batch_index + 1)
