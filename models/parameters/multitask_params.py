@@ -13,6 +13,7 @@ params = Namespace(
             early_stopping_criteria=50,
             text_network=True,
             alignment="utt",
+            dialogue_aware=False,
 
             # input dimension parameters
             text_dim=300,  # text vector length

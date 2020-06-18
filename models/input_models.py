@@ -22,7 +22,7 @@ class BaseConvolution(nn.Module):
     (1x for text, 1x for all feats)
     """
     def __init__(self, input_dim, out_channels, output_dim, num_conv_layers, kernel_size, stride,
-                 num_fc_layers, dropout):
+                 num_fc_layers, dropout, dialogue_aware):
         super(BaseConvolution, self).__init__()
         # input text
         self.input_dim = input_dim
@@ -31,8 +31,12 @@ class BaseConvolution(nn.Module):
         self.kernel_size = kernel_size
         self.stride = stride
         self.dropout = dropout
+        self.dialogue_aware = dialogue_aware
 
-        self.conv1 = nn.Conv2d(input_dim, out_channels, kernel_size, stride, padding=1)
+        if dialogue_aware:
+            self.conv1 = nn.Conv2d(input_dim, out_channels, kernel_size, stride, padding=1)
+        else:
+            self.conv1 = nn.Conv1d(input_dim, out_channels, kernel_size, stride, padding=1)
         # instantiate empty layers
         self.conv2 = None
         self.conv3 = None
@@ -40,11 +44,20 @@ class BaseConvolution(nn.Module):
 
         # add optional layers as required
         if num_conv_layers > 1:
-            self.conv2 = nn.Conv2d(out_channels, out_channels, self.kernel_size, stride)
+            if dialogue_aware:
+                self.conv2 = nn.Conv2d(out_channels, out_channels, self.kernel_size, stride)
+            else:
+                self.conv2 = nn.Conv1d(out_channels, out_channels, self.kernel_size, stride)
             if num_conv_layers > 2:
-                self.conv3 = nn.Conv2d(out_channels, out_channels, self.kernel_size, stride)
+                if dialogue_aware:
+                    self.conv3 = nn.Conv2d(out_channels, out_channels, self.kernel_size, stride)
+                else:
+                    self.conv3 = nn.Conv1d(out_channels, out_channels, self.kernel_size, stride)
                 if num_conv_layers == 4:
-                    self.conv4 = nn.Conv2d(out_channels, out_channels, self.kernel_size)
+                    if dialogue_aware:
+                        self.conv4 = nn.Conv2d(out_channels, out_channels, self.kernel_size)
+                    else:
+                        self.conv4 = nn.Conv1d(out_channels, out_channels, self.kernel_size)
 
         # fc layers
         if num_fc_layers > 1:
@@ -56,6 +69,8 @@ class BaseConvolution(nn.Module):
 
     def forward(self, inputs):
         # inputs = inputs.permute(2, 0, 1, 3)
+        # inputs = nn.utils.rnn.pack_padded_sequence(inputs, enforce_sorted=False)
+        # print("Input shape is: {}".format(inputs.shape))
 
         if self.conv4 is not None:
             intermediate_1 = torch.relu(self.conv1(inputs))
@@ -77,9 +92,12 @@ class BaseConvolution(nn.Module):
         # pool data and remove extra dimension as in book
         # squeezed_size = feats.size(dim=3)
         # feats = F.max_pool2d(feats, squeezed_size)  # .squeeze(dim=3)
-        feats = torch.max(feats, dim=3)[0]
-        # feats = feats.squeeze(dim=3)
-        feats = feats.permute(0, 2, 1)
+        if self.dialogue_aware:
+            feats = torch.max(feats, dim=3)[0]
+            # feats = feats.squeeze(dim=3)
+            feats = feats.permute(0, 2, 1)
+        else:
+            feats = torch.max(feats, dim=2)[0]
 
         # feats = feats.squeeze(dim=2)  # tried doing this directly and it said it couldn't be done
 
@@ -121,18 +139,21 @@ class BasicEncoder(nn.Module):
         self.text_network = params.text_network
         self.alignment = params.alignment
 
+        # to determine if utterances are organized into dialogues
+        self.dialogue_aware = params.dialogue_aware
+
         # if we feed text through additional layer(s)
         self.text_output_dim = params.text_output_dim
         if params.text_network:
             self.text_conv = BaseConvolution(params.text_dim, params.text_out_channels, params.text_output_dim,
                                              params.num_text_conv_layers, params.kernel_size, params.stride,
-                                             params.num_text_fc_layers, params.dropout)
+                                             params.num_text_fc_layers, params.dropout, params.dialogue_aware)
 
         # fixme: not yet fully implemented/tested
         if params.alignment is not "utt":
             self.audio_conv = BaseConvolution(params.audio_dim, params.audio_out_channels, params.audio_output_dim,
                                               params.num_audio_conv_layers, params.kernel_size, params.stride,
-                                              params.num_audio_fc_layers, params.dropout)
+                                              params.num_audio_fc_layers, params.dropout, params.dialogue_aware)
 
         # set the size of the input into the fc layers
         if params.alignment is not "utt":
@@ -191,8 +212,9 @@ class BasicEncoder(nn.Module):
         # text_input = text_input.permute(0, 2, 1)
         # print(text_input.shape)
         # print(speaker_input.shape)
-        speaker_input = speaker_input.unsqueeze(2)
-        # print(speaker_input.shape)
+        if self.dialogue_aware:
+            speaker_input = speaker_input.unsqueeze(2)
+            print(speaker_input.shape)
         # sys.exit(1)
         # speaker_input = speaker_input.permute(0, 2, 1)
 
@@ -208,10 +230,14 @@ class BasicEncoder(nn.Module):
             else:
                 embs = self.embedding(text_input)
 
+            # print(embs.shape)
             # print("text embeddings created")
 
             # permute the embeddings for proper input
-            embs = embs.permute(0, 3, 1, 2)
+            if self.dialogue_aware:
+                embs = embs.permute(0, 3, 1, 2)
+            else:
+                embs = embs.permute(0, 2, 1)
             # print("text embeddings permuted")
             # print(embs.shape)
 
@@ -222,7 +248,10 @@ class BasicEncoder(nn.Module):
                 # print("Utt embs shape is: ", utt_embs.shape)
             else:
                 # squeezed_size = embs.size(dim=3)
-                utt_embs = torch.mean(embs, dim=3)
+                if self.dialogue_aware:
+                    utt_embs = torch.mean(embs, dim=3)
+                else:
+                    utt_embs = torch.mean(embs, dim=2)
                 # print("utterance embeddings calculated")
                 # utt_embs = F.avg_pool2d(embs, squeezed_size).squeeze(dim=3)
                 # utt_embs = utt_embs.squeeze(dim=2)
@@ -230,25 +259,41 @@ class BasicEncoder(nn.Module):
         # if not using utt_avgd acoustic feats, feed acoustic through CNN
         if self.alignment is not "utt":
             acoustic_input = self.audio_conv(acoustic_input)
+        elif not self.dialogue_aware:
+            acoustic_input = acoustic_input.permute(0, 2, 1)
+            acoustic_input = torch.mean(acoustic_input, dim=2)
 
         if speaker_input is not None:
             # if present, create speaker embedding + add to
-            # speaker_input =
-            spk_embs = self.speaker_embeddings(speaker_input).squeeze(dim=3)
+            if self.dialogue_aware:
+                spk_embs = self.speaker_embeddings(speaker_input).squeeze(dim=3)
+            else:
+                spk_embs = self.speaker_embeddings(speaker_input).squeeze(dim=2)
+
             # print("speaker embeddings size: ", spk_embs.size())
             # print("acoustic input size: ", acoustic_input.size())
             # print("utterance embeddings size: ", utt_embs.size())
+
             if self.num_embeddings is not None:
                 # print(acoustic_input.shape)
                 # print(utt_embs.shape)
                 # print(spk_embs.shape)
-                inputs = torch.cat((acoustic_input, utt_embs, spk_embs), 2)
+                if self.dialogue_aware:
+                    inputs = torch.cat((acoustic_input, utt_embs, spk_embs), 2)
+                else:
+                    inputs = torch.cat((acoustic_input, utt_embs, spk_embs), 1)
             else:
-                inputs = torch.cat((acoustic_input, spk_embs), 2)
+                if self.dialogue_aware:
+                    inputs = torch.cat((acoustic_input, spk_embs), 2)
+                else:
+                    inputs = torch.cat((acoustic_input, spk_embs), 1)
             # print("inputs concatenated")
         else:
             if self.num_embeddings is not None:
-                inputs = torch.cat((acoustic_input, utt_embs), 2)
+                if self.dialogue_aware:
+                    inputs = torch.cat((acoustic_input, utt_embs), 2)
+                else:
+                    inputs = torch.cat((acoustic_input, utt_embs), 1)
             else:
                 inputs = acoustic_input
 
