@@ -94,18 +94,21 @@ def generate_batches(data, batch_size, shuffle=True, device="cpu"):
     embedding = []
     speaker = []
     y = []
+    lengths = []
 
     acoustic_batches = [item[0] for item in batched_split]
     embedding_batches = [item[1] for item in batched_split]
     speaker_batches = [item[2] for item in batched_split]
     y_batches = [item[3] for item in batched_split]
+    length_batches = [item[5] for item in batched_split]
 
     [acoustic.append(item.to(device)) for item in acoustic_batches]
     [embedding.append(item.to(device)) for item in embedding_batches]
     [speaker.append(item.to(device)) for item in speaker_batches]
     [y.append(item.to(device)) for item in y_batches]
+    [lengths.append(item.to(device)) for item in length_batches]
 
-    return acoustic, embedding, speaker, y
+    return acoustic, embedding, speaker, y, lengths
 
 
 def train_and_predict(classifier, train_state, train_splits, val_data, batch_size, num_epochs,
@@ -128,7 +131,7 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             train_state2['epoch_index'] = epoch_index
             model2.train()
 
-        acoustic_batches, embedding_batches, speaker_batches, y_batches = \
+        acoustic_batches, embedding_batches, speaker_batches, y_batches, length_batches = \
             generate_batches(train_splits, batch_size, shuffle=True, device=device)
 
         # for each batch in the list of batches created by the dataloader
@@ -141,7 +144,8 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
 
             # step 2. compute the output
             class_pred = classifier(acoustic_input=batch_array, text_input=embedding_batches[batch_index],
-                                    speaker_input=speaker_batches[batch_index])
+                                    speaker_input=speaker_batches[batch_index],
+                                    length_input=length_batches[batch_index])
 
             # if we're using multitask, include the decoder
             if model2 is not None:
@@ -157,6 +161,8 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
 
             # step 3. compute the loss
             y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
+
+            # print(y_pred)
 
             loss = loss_func(y_pred, y_gold)
             loss_t = loss.item()  # loss for the item
@@ -191,7 +197,7 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         # print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
 
         # Iterate over validation set--put it in a dataloader
-        acoustic_batches, embedding_batches, speaker_batches, y_batches = \
+        acoustic_batches, embedding_batches, speaker_batches, y_batches, length_batches = \
             generate_batches(val_data, batch_size, shuffle=True, device=device)
 
         # reset loss and accuracy to zero
@@ -209,7 +215,8 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         for batch_index, batch_array in enumerate(acoustic_batches):
             # compute the output
             class_pred = classifier(acoustic_input=batch_array, text_input=embedding_batches[batch_index],
-                                    speaker_input=speaker_batches[batch_index])
+                                    speaker_input=speaker_batches[batch_index],
+                                    length_input=length_batches[batch_index])
 
             # if we're using multitask, include the decoder
             if model2 is not None:

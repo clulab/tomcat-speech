@@ -49,13 +49,13 @@ class MELDData(Dataset):
         print("Getting text, speaker, and y features")
 
         # get utterance, speaker, y matrices for train, dev, and test sets
-        self.train_utts, self.train_spkrs, self.train_y_emo, self.train_y_sent = \
+        self.train_utts, self.train_spkrs, self.train_y_emo, self.train_y_sent, self.train_utt_lengths = \
             self.make_meld_data_tensors(self.meld_train, self.train_usable_utts)
 
-        self.dev_utts, self.dev_spkrs, self.dev_y_emo, self.dev_y_sent = \
+        self.dev_utts, self.dev_spkrs, self.dev_y_emo, self.dev_y_sent, self.dev_utt_lengths = \
             self.make_meld_data_tensors(self.meld_dev, self.dev_usable_utts)
 
-        self.test_utts, self.test_spkrs, self.test_y_emo, self.test_y_sent = \
+        self.test_utts, self.test_spkrs, self.test_y_emo, self.test_y_sent, self.test_utt_lengths = \
             self.make_meld_data_tensors(self.meld_test, self.test_usable_utts)
 
         # get the data organized for input into the NNs
@@ -88,15 +88,17 @@ class MELDData(Dataset):
 
         for i, item in enumerate(self.train_acoustic):
             train_data.append((item, self.train_utts[i], self.train_spkrs[i],
-                               self.train_y_emo[i], self.train_y_sent[i]))
+                               self.train_y_emo[i], self.train_y_sent[i], self.train_utt_lengths[i]))
 
         for i, item in enumerate(self.dev_acoustic):
+            # print(i)
+            # print(self.dev_utt_lengths[i])
             dev_data.append((item, self.dev_utts[i], self.dev_spkrs[i],
-                             self.dev_y_emo[i], self.dev_y_sent[i]))
+                             self.dev_y_emo[i], self.dev_y_sent[i], self.dev_utt_lengths[i]))
 
         for i, item in enumerate(self.test_acoustic):
             test_data.append((item, self.test_utts[i], self.test_spkrs[i],
-                              self.test_y_emo[i], self.test_y_sent[i]))
+                              self.test_y_emo[i], self.test_y_sent[i], self.test_utt_lengths[i]))
 
         return train_data, dev_data, test_data
 
@@ -141,6 +143,9 @@ class MELDData(Dataset):
         all_emotions = []
         all_sentiments = []
 
+        # create holder for sequence lengths information
+        utt_lengths = []
+
         all_utts_df = pd.read_csv(text_path)
 
         for idx, row in all_utts_df.iterrows():
@@ -157,6 +162,7 @@ class MELDData(Dataset):
                 # get values from row
                 utt = row["Utterance"]
                 utt = [clean_up_word(wd) for wd in utt.strip().split(" ")]
+                utt_lengths.append(len(utt))
 
                 spk_id = row['Speaker']
                 emo = row['Emotion']
@@ -187,7 +193,7 @@ class MELDData(Dataset):
         all_utts = all_utts.transpose(0, 1)
 
         # return data
-        return all_utts, all_speakers, all_emotions, all_sentiments
+        return all_utts, all_speakers, all_emotions, all_sentiments, utt_lengths
 
     def make_dialogue_aware_meld_data_tensors(self, text_path, all_utts_list):
         """

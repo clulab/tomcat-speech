@@ -44,7 +44,7 @@ meld_path = "../../MELD_formatted"
 num_splits = params.num_splits
 # set model name and model type
 model = params.model
-model_type = "Multitask_textOnly"
+model_type = "Multitask_4lyrGRU"
 # set number of columns to skip in data input files
 cols_to_skip = params.cols_to_skip
 # path to directory where best models are saved
