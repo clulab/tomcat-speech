@@ -1,0 +1,14 @@
+# intellij
+.idea
+
+# python
+*.pyc
+*/__pycache__/
+
+# output directory
+output/
+
+#opensmile
+smile.log
+
+.DS_Store

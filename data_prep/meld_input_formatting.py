@@ -121,6 +121,133 @@ class MELDData(Dataset):
 
     def make_utt_dict_meld(self, text_path, all_utts_list):
         """
+        :param text_path: the FULL path to a csv containing the text (in column 0)
+        :param all_utts_list: a list of all usable utterances
+        :return:
+        """
+        # holders for the data
+        all_utts = []
+        all_speakers = []
+        all_emotions = []
+        all_sentiments = []
+
+        all_utts_df = pd.read_csv(text_path)
+        dialogue = 0
+
+        for idx, row in all_utts_df.iterrows():
+
+            # check to make sure this utterance is used
+            dia_num, utt_num = row['DiaID_UttID'].split("_")[:2]
+            if (dia_num, utt_num) in all_utts_list:
+
+                # utterance-level holders
+                spks = []
+                emos = [0] * 7
+                sents = [0] * 3
+                utts = [0] * self.longest_utt
+
+                dia_id = row['Dialogue_ID']
+                utt_id = row['Utterance_ID']
+                utt = row["Utterance"]
+                utt = [clean_up_word(wd) for wd in utt.strip().split(" ")]
+
+                spk_id = row['Speaker']
+                emo = row['Emotion']
+                # print(emo)
+                sent = row['Sentiment']
+
+                # convert words to indices for glove
+                for ix, wd in enumerate(utt):
+                    # print(ix, wd)
+                    if wd in self.glove.wd2idx.keys():
+                        # print(glove.wd2idx[wd])
+                        # idxs.append(glove.wd2idx[wd])
+                        utts[ix] = self.glove.wd2idx[wd]
+                    else:
+                        # idxs.append(glove.wd2idx['<UNK>'])
+                        utts[ix] = self.glove.wd2idx['<UNK>']
+
+                all_utts.append(torch.tensor(utts))
+                all_speakers.append([spk_id])
+
+                emos[emo] = 1  # assign 1 to the emotion tagged
+                sents[sent] = 1  # assign 1 to the sentiment tagged
+                all_emotions.append(emos)
+                all_sentiments.append(sents)
+
+                # if dialogue == dia_id:
+                #     # utts.append(idxs)
+                #     # print(len(utts), utt_id, utt)
+                #     utts[utt_id] = utts
+                #     spks[utt_id] = spk_id
+                #
+                #     # print("actually finished this")
+                # else:
+                #     # all_utts.append(torch.tensor(utts))
+                #     # print(utts)
+                #     # sys.exit(1)
+                #     all_utts.append(torch.tensor(utts))
+                #     all_speakers.append(spks)
+                #     all_emotions.append(emos)
+                #     all_sentiments.append(sents)
+                #
+                #     # utt_dict[dia_id] = utts
+                #     dialogue = dia_id
+                #
+                #     # dialogue-level holders
+                #     utts = [[0] * self.longest_utt] * self.longest_dia
+                #     spks = [0] * self.longest_dia
+                #     emos = [[0] * 7] * self.longest_dia
+                #     sents = [[0] * 3] * self.longest_dia
+                #
+                #     # # re-zero utterance-level holder
+                #     # idxs = [0] * self.longest_utt
+                #
+                #     # utts.append(idxs)
+                #     utts[utt_id] = idxs
+                #     spks[utt_id] = spk_id
+                #     emos[utt_id][emo] = 1  # assign 1 to the emotion tagged
+                #     sents[utt_id][sent] = 1  # assign 1 to the sentiment tagged
+
+        # print(len(all_utts))
+        # print(len(all_utts[0]))
+        # print(len(all_utts[-1][0]))
+        # utt_dict = torch.tensor(utt_dict)
+        # utt_dict = nn.utils.rnn.pad_sequence(utt_dict)
+        # all_utts = np.asarray(all_utts)
+        # all_speakers = np.asarray(all_speakers)
+        # all_emotions = np.asarray(all_emotions)
+        # all_sentiments = np.asarray(all_sentiments)
+
+        # print(all_emotions)
+        # print(len(all_emotions))
+        # print(len(all_emotions[0]))
+
+        all_speakers = torch.tensor(all_speakers)  # .unsqueeze(-1)
+        all_emotions = torch.tensor(all_emotions)
+        all_sentiments = torch.tensor(all_sentiments)
+
+        all_utts = nn.utils.rnn.pad_sequence(all_utts)
+        # all_speakers = nn.utils.rnn.pad_sequence(all_speakers)
+        # all_emotions = nn.utils.rnn.pad_sequence(all_emotions)
+        # all_sentiments = nn.utils.rnn.pad_sequence(all_sentiments)
+
+        all_utts = all_utts.transpose(0, 1)
+        # all_speakers = all_speakers.transpose(0, 1)
+        # all_emotions = all_emotions.transpose(0, 1)
+        # all_sentiments = all_sentiments.transpose(0, 1)
+
+        print(all_speakers.shape)
+        print(all_emotions.shape)
+        print(all_sentiments.shape)
+        print(all_utts.shape)
+        # sys.exit(1)
+
+        # return data
+        return all_utts, all_speakers, all_emotions, all_sentiments
+
+    def make_dialogue_aware_utt_dict_meld(self, text_path, all_utts_list):
+        """
         Make a dict of (dia, utt): [words]
         :param text_path: the FULL path to a csv containing the text (in column 0)
         :param all_utts_list: a list of all usable utterances
@@ -138,8 +265,8 @@ class MELDData(Dataset):
         # dialogue-level holders
         utts = [[0] * self.longest_utt] * self.longest_dia
         spks = [0] * self.longest_dia
-        emos = [0] * self.longest_dia
-        sents = [0] * self.longest_dia
+        emos = [[0] * 7] * self.longest_dia
+        sents = [[0] * 3] * self.longest_dia
 
         for idx, row in all_utts_df.iterrows():
 
@@ -154,6 +281,7 @@ class MELDData(Dataset):
 
                 spk_id = row['Speaker']
                 emo = row['Emotion']
+                # print(emo)
                 sent = row['Sentiment']
 
                 # utterance-level holder
@@ -175,8 +303,8 @@ class MELDData(Dataset):
                     # print(len(utts), utt_id, utt)
                     utts[utt_id] = idxs
                     spks[utt_id] = spk_id
-                    emos[utt_id] = emo
-                    sents[utt_id] = sent
+                    emos[utt_id][emo] = 1 # assign 1 to the emotion tagged
+                    sents[utt_id][sent] = 1 # assign 1 to the sentiment tagged
                     # print("actually finished this")
                 else:
                     # all_utts.append(torch.tensor(utts))
@@ -193,8 +321,8 @@ class MELDData(Dataset):
                     # dialogue-level holders
                     utts = [[0] * self.longest_utt] * self.longest_dia
                     spks = [0] * self.longest_dia
-                    emos = [0] * self.longest_dia
-                    sents = [0] * self.longest_dia
+                    emos = [[0] * 7] * self.longest_dia
+                    sents = [[0] * 3] * self.longest_dia
 
                     # # re-zero utterance-level holder
                     # idxs = [0] * self.longest_utt
@@ -202,8 +330,8 @@ class MELDData(Dataset):
                     # utts.append(idxs)
                     utts[utt_id] = idxs
                     spks[utt_id] = spk_id
-                    emos[utt_id] = emo
-                    sents[utt_id] = sent
+                    emos[utt_id][emo] = 1 # assign 1 to the emotion tagged
+                    sents[utt_id][sent] = 1 # assign 1 to the sentiment tagged
 
         # print(len(all_utts))
         # print(len(all_utts[0]))
@@ -215,7 +343,11 @@ class MELDData(Dataset):
         # all_emotions = np.asarray(all_emotions)
         # all_sentiments = np.asarray(all_sentiments)
 
-        all_speakers = torch.tensor(all_speakers)
+        # print(all_emotions)
+        # print(len(all_emotions))
+        # print(len(all_emotions[0]))
+
+        all_speakers = torch.tensor(all_speakers)  # .unsqueeze(-1)
         all_emotions = torch.tensor(all_emotions)
         all_sentiments = torch.tensor(all_sentiments)
 

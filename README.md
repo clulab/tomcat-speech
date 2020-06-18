@@ -10,15 +10,21 @@ pandas = 1.0.1
 numpy = 1.18.1
 sklearn = 0.22.2
 
+### Other requirements:
 
-data_prep contains:
+Users of this repository should have access to
+1. OpenSMILE: https://www.audeering.com/opensmile/ (the code is created with OpenSMILE v2.3.0)
+2. GloVE: https://nlp.stanford.edu/projects/glove/
+
+
+## data_prep contains:
 - audio_extraction.py : code to extract necessary features from audio + corresponding transcriptions
 - data_prep.py : classes to prepare data for input into the models; mostly used for health outcomes data currently
 - meld_input_formatting.py : Formats MELD dataset for input into models
 - subset_glove.py : code to create a subset of GloVe for faster loading at test time
 
 
-models contains:
+## models contains:
 - parameters/ : directory of parameters files used by the models
 - baselines.py : model classes to be used for baselines
 - bimodal_models.py : model classes to be used with bimodal data
@@ -27,7 +33,7 @@ models contains:
 - train_and_test_models.py : code for training + evaluation of models
 
 
-models_test contains:
+## models_test contains:
 - glove_test.py : test usage of subset_glove.py
 - input_manipulation_test.py : test usage of audio_extraction.py
 - meld_test.py : test usage of running a model with MELD

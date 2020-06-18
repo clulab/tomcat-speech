@@ -6,13 +6,14 @@ params = Namespace(
             cols_to_skip=3,
 
             # overall model parameters
-            model="Multitask",
+            model="Multitask-meld",
             num_splits=4,  # 5  #splits for CV
             num_epochs=100,
             batch_size=10,
             early_stopping_criteria=50,
             text_network=True,
             alignment="utt",
+            dialogue_aware=False,
 
             # input dimension parameters
             text_dim=300,  # text vector length
@@ -20,7 +21,7 @@ params = Namespace(
 
             # speaker parameters
             spkr_emb_dim=1,
-            num_speakers=260,  # num speakers per split specified in meld readme, but not overall num
+            num_speakers=500,  # num speakers per split specified in meld readme, but not overall num
             use_speaker=True,
 
             # text CNN

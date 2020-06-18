@@ -12,12 +12,11 @@ import pandas as pd
 
 class TRSToCSV:
     """
-    Takes a trs file and converts it to a csv, which is used as
-    input to an ExtractAudio object
+    Takes a trs file and converts it to a csv
     lines of csvfile are speaker,timestart,timeend, word, utt_num where:
         speaker   = caller or patient
-        timestart = time of start of turn
-        timeend   = time of end of turn
+        timestart = time of start of word
+        timeend   = time of end of word
         word      = the word predicted
         utt_num   = the utterance number within the conversation
         word_num  = the word number (useful for averaging over words)
@@ -100,6 +99,9 @@ class ExtractAudio:
         else:
             fconf = "IS09_emotion.conf"
             # fconf = "emobase.conf"
+
+        # check to see if save path exists; if not, make it
+        os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(self.savedir))
 
         # run openSMILE
         os.system("{0}/SMILExtract -C {0}/config/{1} -I {2} -lldcsvoutput {3}/{4}".format(self.smile, fconf, self.afile,

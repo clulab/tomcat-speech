@@ -18,21 +18,28 @@ import random
 import torch
 import sys
 
+
+# set device
+cuda = True
+
+# Check CUDA
+if not torch.cuda.is_available():
+    cuda = False
+
+device = torch.device("cuda" if cuda else "cpu")
+
 # set random seed
 seed = params.seed
 torch.manual_seed(seed)
 np.random.seed(seed)
 random.seed(seed)
+if cuda:
+    torch.cuda.manual_seed_all(seed)
 
 # set parameters for data prep
 glove_file = "../../glove.short.300d.txt"  # should be updated later to a glove subset appropriate for this task
-# input_dir = "/Volumes/LIvES/multimodal_data_updated/utts_corrected"
 
-meld_path = "../../pretraining_files"
-# to test outcomes at 6 months
-y_path = "/Volumes/LIvES/323_files/binary_scores_at_point_2.csv"
-# to test outcomes at 24 months
-# y_path = "/Volumes/LIvES/323_files/scores_at_point_4.csv"
+meld_path = "../../MELD_formatted"
 # set number of splits
 num_splits = params.num_splits
 # set model name and model type
@@ -89,6 +96,9 @@ if __name__ == "__main__":
     # mini search through different learning_rate values
     for lr in params.lrs:
 
+        # instantiate empty model holder
+        bimodal_predictor = None
+
         # this uses train-dev-test folds
         # create instance of model
         if params.model == "LRBaseline":
@@ -107,10 +117,18 @@ if __name__ == "__main__":
             bimodal_predictor = EmotionToSuccessFFNN(params=params, num_utts=num_utts,
                                                      num_layers=2, hidden_dim=4,
                                                      output_dim=1)
+        elif params.model == "Multitask-meld":
+            bimodal_trial =  BasicEncoder(params=params, num_embeddings=num_embeddings,
+                                          pretrained_embeddings=pretrained_embeddings)
         else:
             # default to bimodal cnn
             bimodal_trial = BimodalCNN(params=params, num_embeddings=num_embeddings,
                                        pretrained_embeddings=pretrained_embeddings)
+
+        # set the classifier(s) to the right device
+        bimodal_trial = bimodal_trial.to(device)
+        if bimodal_predictor is not None:
+            bimodal_predictor.to(device)
 
         # set loss function, optimization, and scheduler, if using
         loss_func = nn.BCELoss()
@@ -158,11 +176,11 @@ if __name__ == "__main__":
         # train the model and evaluate on development set
         if params.model == "Multitask":
             train_and_predict(bimodal_trial, train_state, train_data, dev_data, params.batch_size,
-                              params.num_epochs, loss_func, optimizer, scheduler=None, model2=bimodal_predictor,
-                              train_state2=train_state_2)
+                              params.num_epochs, loss_func, optimizer, device, scheduler=None,
+                              model2=bimodal_predictor, train_state2=train_state_2)
         else:
             train_and_predict(bimodal_trial, train_state, train_data, dev_data, params.batch_size,
-                              params.num_epochs, loss_func, optimizer, scheduler=None)
+                              params.num_epochs, loss_func, optimizer, device, scheduler=None)
 
         # plot the loss and accuracy curves
         if get_plot:
@@ -171,26 +189,30 @@ if __name__ == "__main__":
                                      y_label="Loss",
                                      title="Training and Dev loss for normed model {0} with lr {1}".format(
                                          model_type, lr),
-                                     save_name="output/plots/{0}_lr{1}_loss.png".format(model_type, lr))
+                                     save_name="output/plots/{0}_lr{1}_loss.png".format(model_type, lr),
+                                     set_axis_boundaries=False)
                 # plot the accuracy
                 plot_train_dev_curve(train_state_2['train_acc'], train_state_2['val_acc'], x_label="Epoch",
                                      y_label="Accuracy",
                                      title="Training and Dev accuracy for normed model {0} with lr {1}".format(
                                          model_type, lr),
-                                     save_name="output/plots/{0}_lr{1}_acc.png".format(model_type, lr), losses=False)
+                                     save_name="output/plots/{0}_lr{1}_acc.png".format(model_type, lr), losses=False,
+                                     set_axis_boundaries=False)
             else:
             # loss curve
                 plot_train_dev_curve(train_state['train_loss'], train_state['val_loss'], x_label="Epoch",
                                      y_label="Loss",
                                      title="Training and Dev loss for normed model {0} with lr {1}".format(
                                          model_type, lr),
-                                     save_name="output/plots/{0}_lr{1}_loss.png".format(model_type, lr))
+                                     save_name="output/plots/{0}_lr{1}_loss.png".format(model_type, lr),
+                                     set_axis_boundaries=False)
                 # plot the accuracy
                 plot_train_dev_curve(train_state['train_acc'], train_state['val_acc'], x_label="Epoch",
                                      y_label="Accuracy",
                                      title="Training and Dev accuracy for normed model {0} with lr {1}".format(
                                          model_type, lr),
-                                     save_name="output/plots/{0}_lr{1}_acc.png".format(model_type, lr), losses=False)
+                                     save_name="output/plots/{0}_lr{1}_acc.png".format(model_type, lr), losses=False,
+                                     set_axis_boundaries=False)
 
         # add best evaluation losses and accuracy from training to set
         all_test_losses.append(train_state['early_stopping_best_val'])

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 
 def plot_train_dev_curve(train_losses, dev_losses, x_label="", y_label="", title="",
-                         save_name=None, show=False, losses=True):
+                         save_name=None, show=False, losses=True, set_axis_boundaries=True):
     """
     plot the loss or accuracy curves over time for training and dev set
     """
@@ -24,10 +24,11 @@ def plot_train_dev_curve(train_losses, dev_losses, x_label="", y_label="", title
     ax.set_ylabel(y_label)
 
     # depending on type of input, set the y axis boundaries
-    if losses:
-        ax.set_ylim([0.66, 0.72])
-    else:
-        ax.set_ylim([0.3, 1.0])
+    if set_axis_boundaries:
+        if losses:
+            ax.set_ylim([0.66, 0.72])
+        else:
+            ax.set_ylim([0.3, 1.0])
 
     # create title and legend
     ax.set_title(title, loc='center', wrap=True)

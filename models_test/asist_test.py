@@ -1,17 +1,20 @@
-# test the models created in py_code directory
+# test the models created in py_code directory with ASIST dataset
 # currently the main entry point into the system
+# add "prep_data" as an argument when running this from command line
+#       if your acoustic features have not been extracted from audio
 
 from models.bimodal_models import BimodalCNN, MultichannelCNN
 from models.baselines import LRBaseline, EmbeddingsOnly
 from models.train_and_test_models import *
-
 from models.input_models import *
+
 from data_prep.data_prep import *
+import data_prep.asist_data.asist_prep as asist_prep
 
 # import parameters for model
 # comment or uncomment as needed
-# from models.parameters.bimodal_params import params
-from models.parameters.multitask_params import params
+from models.parameters.bimodal_params import params
+# from models.parameters.multitask_params import params
 # from models.parameters.lr_baseline_1_params import params
 # from models.parameters.multichannel_cnn_params import params
 
@@ -19,7 +22,6 @@ import numpy as np
 import random
 import torch
 import sys
-
 
 # set device
 cuda = True
@@ -39,36 +41,37 @@ if cuda:
     torch.cuda.manual_seed_all(seed)
 
 # set parameters for data prep
-glove_file = "../../glove.short.300d.txt"
-# input_dir = "/Volumes/LIvES/multimodal_data_updated/utts_corrected/small_set_for_framework_testing"
-input_dir = "/Volumes/LIvES/multimodal_data_updated/utts_corrected"
-# to test outcomes at 6 months
-y_path = "/Volumes/LIvES/323_files/binary_scores_at_point_2.csv"
-# to test outcomes at 24 months
-# y_path = "/Volumes/LIvES/323_files/scores_at_point_4.csv"
+glove_file = "../../glove.short.300d.txt"  # todo: change this?
+input_dir = "output/asist_audio"
+# to test the data--this doesn't contain real outcomes
+y_path = "output/asist_audio/asist_ys/all_ys.csv"
 # set number of splits
 num_splits = params.num_splits
 # set model name and model type
 model = params.model
-model_type = "Multitask_k=4"
+model_type = "BimodalCNN_k=4"
 # set number of columns to skip in data input files
 cols_to_skip = params.cols_to_skip
 # path to directory where best models are saved
 model_save_path = "output/models/"
+# make sure the full save path exists; if not, create it
+os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_save_path))
 # decide if you want to plot the loss/accuracy curves for training
 get_plot = True
+model_plot_path = "output/plots/"
+os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path))
 
 
 if __name__ == "__main__":
+    # 0. RUN ASIST DATA PREP AND REORGANIZATION FOR INPUT INTO THE MODEL
+    if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
+        os.system("time python data_prep/asist_data/asist_prep.py")
+
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
     # uncomment use_cols=... to use only specific columns from input data
-    acoustic_dict = make_acoustic_dict(input_dir, "_IS10_avgd.csv") #,
-                                       # use_cols=['word', 'speaker', 'utt_num', 'word_num',
-                                       #           'pcm_loudness_sma', 'F0final_sma', 'jitterLocal_sma',
-                                       #           'shimmerLocal_sma', 'pcm_loudness_sma_de',
-                                       #           'F0final_sma_de', 'jitterLocal_sma_de',
-                                       #           'shimmerLocal_sma_de'])
+    acoustic_dict = make_acoustic_dict(input_dir, "_avgd.csv", data_type="asist") #,
+
     print("Acoustic dict created")
 
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
@@ -86,8 +89,6 @@ if __name__ == "__main__":
     pretrained_embeddings = data.glove.data
     num_embeddings = pretrained_embeddings.size()[0]
     print("shape of pretrained embeddings is: {0}".format(data.glove.data.size()))
-    # num_embeddings = None
-    # pretrained_embeddings = None
 
     # get the number of utterances per data point
     num_utts = data.x_acoustic.shape[1]
@@ -210,7 +211,7 @@ if __name__ == "__main__":
                                          save_name="output/plots/{0}_{1}_lr{2}_acc.png".format(model_type, split, lr),
                                          losses=False)
                 else:
-                # loss curve
+                    # loss curve
                     plot_train_dev_curve(train_state['train_loss'], train_state['val_loss'], x_label="Epoch",
                                          y_label="Loss",
                                          title="Training and Dev loss for normed model {0} split {1} with lr {2}".format(
