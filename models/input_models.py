@@ -136,6 +136,12 @@ class BasicEncoder(nn.Module):
         # to determine if utterances are organized into dialogues
         self.dialogue_aware = params.dialogue_aware
 
+        # if we need to use different modalities
+        self.use_speaker = params.use_speaker
+        # todo: implement these
+        self.use_acoustic = params.use_acoustic
+        self.use_text = params.use_text
+
         # if we feed text through additional layer(s)
         self.text_output_dim = params.text_output_dim
         if params.text_network:
@@ -163,11 +169,34 @@ class BasicEncoder(nn.Module):
         # initialize speaker embeddings
         if params.use_speaker:
             self.speaker_embeddings = nn.Embedding(params.num_speakers, params.spkr_emb_dim, max_norm=1.0)
-            # set input dimensions for fc layer(s)
-            self.fc_input_dim = self.audio_fc_input_dim + self.text_fc_input_dim + params.spkr_emb_dim
-        else:
-            # set input dimensions for fc layer(s)
-            self.fc_input_dim = self.audio_fc_input_dim + self.text_fc_input_dim
+
+        # set input dimensions for fc layers
+        self.acoustic_fc = 0
+        self.spkr_fc = 0
+        self.text_fc = 0
+
+        if params.use_speaker:
+            self.spkr_fc = params.spkr_emb_dim
+        if params.use_acoustic:
+            self.acoustic_fc = self.audio_fc_input_dim
+        if params.use_text:
+            self.text_fc = self.text_fc_input_dim
+
+        self.fc_input_dim = self.acoustic_fc + self.spkr_fc + self.text_fc
+
+        # # set input dimensions for fc layer(s)
+        # if params.use_speaker and params.use_acoustic and params.use_text:
+        #     self.fc_input_dim = self.audio_fc_input_dim + self.text_fc_input_dim + params.spkr_emb_dim
+        # elif params.use_acoustic and params.use_text:
+        #     self.fc_input_dim = self.audio_fc_input_dim + self.text_fc_input_dim
+        # elif params.use_acoustic and params.use_speaker:
+        #     self.fc_input_dim = self.audio_fc_input_dim + params.spkr_emb_dim
+        # elif params.use_text and params.use_speaker:
+        #     self.fc_input_dim = self.text_fc_input_dim + params.spkr_emb_dim
+        # elif params.use_text:
+        #     self.fc_input_dim = self.text_fc_input_dim
+        # elif params.use_acoustic:
+        #     self.fc_input_dim = self.
 
         # set number of classes
         self.output_dim = params.output_dim
@@ -208,27 +237,31 @@ class BasicEncoder(nn.Module):
             dialogue_dim = 0
 
         # reshape speaker input if needed
-        if self.dialogue_aware:
-            speaker_input = speaker_input.unsqueeze(2)
-            print(speaker_input.shape)
-        # print("speaker input permuted")
+        if self.use_speaker:
+            if self.dialogue_aware:
+                speaker_input = speaker_input.unsqueeze(2)
+                acoustic_input = acoustic_input.permute(0, 3, 1, 2)  # todo: untested
+            else:
+                acoustic_input = acoustic_input.permute(0, 2, 1)
+
+            # if not using utt_avgd acoustic feats, feed acoustic through CNN
+            if self.alignment is not "utt":
+                acoustic_input = self.audio_conv(acoustic_input)
+            elif not self.dialogue_aware:
+                acoustic_input = torch.mean(acoustic_input, dim=2)
 
         # if using pretrained, detach to not update weights
-        if self.num_embeddings is not None:
+        if self.num_embeddings is not None and self.use_text:
             if self.pretrained_embeddings:
                 embs = self.embedding(text_input).detach()
             else:
                 embs = self.embedding(text_input)
-            # print("text embeddings created")
 
             # permute the text embeddings and acoustic input
             if self.dialogue_aware:
                 embs = embs.permute(0, 3, 1, 2)
-                acoustic_input = acoustic_input.permute(0, 3, 1, 2)  # todo: untested
             else:
                 embs = embs.permute(0, 2, 1)
-                acoustic_input = acoustic_input.permute(0, 2, 1)
-            # print("text embeddings permuted")
 
             # average embeddings OR feed through network
             if self.text_network:
@@ -236,26 +269,24 @@ class BasicEncoder(nn.Module):
             else:
                 utt_embs = torch.mean(embs, dim=(2 + dialogue_dim))
 
-        # if not using utt_avgd acoustic feats, feed acoustic through CNN
-        if self.alignment is not "utt":
-            acoustic_input = self.audio_conv(acoustic_input)
-        elif not self.dialogue_aware:
-            acoustic_input = torch.mean(acoustic_input, dim=2)
-
         # combine modalities as required by architecture
-        if speaker_input is not None:
+        if self.use_speaker:
             spk_embs = self.speaker_embeddings(speaker_input).squeeze(dim=(2 + dialogue_dim))
 
-            if self.num_embeddings is not None:
+            if self.num_embeddings is not None and self.use_text and self.use_acoustic:
                 inputs = torch.cat((acoustic_input, utt_embs, spk_embs), 1 + dialogue_dim)
-            else:
+            elif self.use_acoustic:
                 inputs = torch.cat((acoustic_input, spk_embs), 1 + dialogue_dim)
+            else:
+                inputs = spk_embs
             # print("inputs concatenated")
-        else:
+        elif self.use_acoustic:
             if self.num_embeddings is not None:
                 inputs = torch.cat((acoustic_input, utt_embs), 1 + dialogue_dim)
             else:
                 inputs = acoustic_input
+        elif self.use_text and self.num_embeddings is not None:
+            inputs = utt_embs
 
         # use pooled, squeezed feats as input into fc layers
         if self.fc2 is not None:

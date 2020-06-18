@@ -156,8 +156,15 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             # sys.exit(1)
 
             # step 3. compute the loss
+            y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
+
             loss = loss_func(y_pred, y_gold)
             loss_t = loss.item()  # loss for the item
+
+            if len(list(y_pred.size())) > 1:
+                y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
+            else:
+                y_pred = torch.round(y_pred)
 
             # calculate running loss
             running_loss += (loss_t - running_loss) / (batch_index + 1)
@@ -169,12 +176,6 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             optimizer.step()
 
             # compute the accuracy
-            if len(list(y_pred.size())) > 1:
-                y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
-                y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
-            else:
-                y_pred = torch.round(y_pred)
-
             acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
 
             running_acc += (acc_t - running_acc) / (batch_index + 1)
@@ -224,17 +225,18 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             # preds_holder.extend(y_pred)
             # ys_holder.extend(y_gold)
 
-            # compute the loss
+            y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
+
             loss = loss_func(y_pred, y_gold)
             running_loss += (loss.item() - running_loss) / (batch_index + 1)
 
-            # compute the accuracy
+            # compute the loss
             if len(list(y_pred.size())) > 1:
                 y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
-                y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
             else:
                 y_pred = torch.round(y_pred)
 
+            # compute the accuracy
             acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
             running_acc += (acc_t - running_acc) / (batch_index + 1)
 

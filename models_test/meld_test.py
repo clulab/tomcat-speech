@@ -44,7 +44,7 @@ meld_path = "../../MELD_formatted"
 num_splits = params.num_splits
 # set model name and model type
 model = params.model
-model_type = "Multitask_textCNN_50outputDim"
+model_type = "Multitask_textOnly"
 # set number of columns to skip in data input files
 cols_to_skip = params.cols_to_skip
 # path to directory where best models are saved
@@ -62,6 +62,7 @@ if __name__ == "__main__":
 
     # 2. MAKE DATASET
     data = MELDData(meld_path=meld_path, glove=glove, acoustic_length=params.audio_dim)
+    data.emotion_weights = data.emotion_weights.to(device)  # add class weights to device
     print("Dataset created")
 
     # 3. CREATE NN
@@ -120,7 +121,9 @@ if __name__ == "__main__":
             bimodal_predictor.to(device)
 
         # set loss function, optimization, and scheduler, if using
-        loss_func = nn.BCELoss()
+        # todo: do we want to include the class weights in the loss function?
+        #   here we know it, but we won't with new tasks/classes
+        loss_func = nn.CrossEntropyLoss(data.emotion_weights)
         # loss_func = nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
                                      weight_decay=params.weight_decay)
@@ -138,12 +141,12 @@ if __name__ == "__main__":
 
         # create a a save path and file for the model
         model_save_file = "{0}_batch{1}_{2}hidden_{3}lyrs_lr{4}.pth".format(
-            model_type, params.batch_size, params.hidden_dim, params.num_layers, lr)
+            model_type, params.batch_size, params.fc_hidden_dim, params.num_layers, lr)
 
         # create 2 save paths for models if using both encoder + decoder
         if params.model == "Multitask":
             model2_save_file = "{0}__batch{1}_{2}hidden_{3}lyrs_lr{4}_decoder.pth".format(
-                model_type, params.batch_size, params.hidden_dim, params.num_layers, lr)
+                model_type, params.batch_size, params.fc_hidden_dim, params.num_layers, lr)
 
             train_state_2 = make_train_state(lr, model_save_path, model2_save_file)
             load_path2 = model_save_path + model2_save_file

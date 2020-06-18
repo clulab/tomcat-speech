@@ -61,6 +61,23 @@ class MELDData(Dataset):
         # get the data organized for input into the NNs
         self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
 
+        self.emotion_weights = self.get_class_weights(self.train_y_emo)
+
+    def get_class_weights(self, y_set):
+        class_counts = {}
+        y_values = [item.index(max(item)) for item in y_set.tolist()]
+        for item in y_values:
+            if item not in class_counts:
+                class_counts[item] = 1
+            else:
+                class_counts[item] += 1
+        class_weights = []
+        for k,v in sorted(class_counts.items()):
+            class_weights.append(float(v))
+        class_weights = torch.tensor(class_weights)
+        return 1.0 / class_weights
+
+
     def combine_xs_and_ys(self):
         """
         Combine all x and y data into list of tuples for easier access with DataLoader
