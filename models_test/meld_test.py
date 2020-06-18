@@ -189,26 +189,30 @@ if __name__ == "__main__":
                                      y_label="Loss",
                                      title="Training and Dev loss for normed model {0} with lr {1}".format(
                                          model_type, lr),
-                                     save_name="output/plots/{0}_lr{1}_loss.png".format(model_type, lr))
+                                     save_name="output/plots/{0}_lr{1}_loss.png".format(model_type, lr),
+                                     set_axis_boundaries=False)
                 # plot the accuracy
                 plot_train_dev_curve(train_state_2['train_acc'], train_state_2['val_acc'], x_label="Epoch",
                                      y_label="Accuracy",
                                      title="Training and Dev accuracy for normed model {0} with lr {1}".format(
                                          model_type, lr),
-                                     save_name="output/plots/{0}_lr{1}_acc.png".format(model_type, lr), losses=False)
+                                     save_name="output/plots/{0}_lr{1}_acc.png".format(model_type, lr), losses=False,
+                                     set_axis_boundaries=False)
             else:
             # loss curve
                 plot_train_dev_curve(train_state['train_loss'], train_state['val_loss'], x_label="Epoch",
                                      y_label="Loss",
                                      title="Training and Dev loss for normed model {0} with lr {1}".format(
                                          model_type, lr),
-                                     save_name="output/plots/{0}_lr{1}_loss.png".format(model_type, lr))
+                                     save_name="output/plots/{0}_lr{1}_loss.png".format(model_type, lr),
+                                     set_axis_boundaries=False)
                 # plot the accuracy
                 plot_train_dev_curve(train_state['train_acc'], train_state['val_acc'], x_label="Epoch",
                                      y_label="Accuracy",
                                      title="Training and Dev accuracy for normed model {0} with lr {1}".format(
                                          model_type, lr),
-                                     save_name="output/plots/{0}_lr{1}_acc.png".format(model_type, lr), losses=False)
+                                     save_name="output/plots/{0}_lr{1}_acc.png".format(model_type, lr), losses=False,
+                                     set_axis_boundaries=False)
 
         # add best evaluation losses and accuracy from training to set
         all_test_losses.append(train_state['early_stopping_best_val'])

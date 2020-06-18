@@ -193,6 +193,7 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             # uncomment for prediction spot-checking during training
             # print(y_pred)
             # print(y_gold)
+            # sys.exit(1)
 
             # step 3. compute the loss
             loss = loss_func(y_pred, y_gold)
@@ -208,7 +209,9 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             optimizer.step()
 
             # compute the accuracy
-            y_pred = torch.round(y_pred)
+            y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
+            y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
+            # y_pred = torch.round(y_pred)  # old version -- only useful for binary classification?
 
             acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
 
@@ -270,7 +273,9 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             running_loss += (loss.item() - running_loss) / (batch_index + 1)
 
             # compute the accuracy
-            y_pred = torch.round(y_pred)
+            y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
+            y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
+            # y_pred = torch.round(y_pred)  # old version -- only useful for binary classification?
 
             acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
             running_acc += (acc_t - running_acc) / (batch_index + 1)
