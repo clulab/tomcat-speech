@@ -8,6 +8,7 @@ import pandas as pd
 import pprint
 import ast
 import random
+import re
 
 
 class JSONtoTSV:
@@ -75,6 +76,78 @@ class JSONtoTSV:
                 tsvfile.write("\n")
 
 
+class ZoomTranscriptToTSV:
+    """
+    Takes a zoom-generated transcript and gets words, speakers, and timestamps
+    lines of tsv are speaker, utt_timestart, utt_timeend, utt, utt_num, where:
+        speaker = name of speaker
+        utt_timestart = time of utterance start
+        utt_timeend = time of utterance end
+        utt = words in the utterance
+        utt_num = utterance number within the conversation
+    """
+    def __init__(self, path, txtfile, save_name):
+        self.path = path
+        self.text_file = path + "/" + txtfile
+        self.save_name = save_name
+
+    def convert_transcript(self, savepath):
+        # convert the transcript to a tsv
+        # savepath should be the full path to saving, including the file name and ext
+
+        # set holders for turn number, times, speaker, and utterances
+        speakers = ["speaker"]
+        utt_timestarts = ["timestart"]
+        utt_timeends = ["timeend"]
+        utts = ["utt"]
+        utt_nums = ["utt_num"]
+
+        with open(self.text_file, 'r') as zoomfile:
+            # skip the first line
+            zoomfile.readline()
+            # set a count to loop through file
+            c = 0
+            for line in zoomfile:
+                line = line.strip()
+                # increment the count
+                c += 1
+                # if it is a blank line
+                if c % 4 == 1:
+                    continue
+                # if the line contains the line number
+                elif c % 4 == 2:
+                    utt_nums.append(line)
+                # if the line contains start and end times
+                elif c % 4 == 3:
+                    # find the timestamps
+                    utt_timestart = re.search(r'(\d\d:\d\d:\d\d\.\d\d\d) -->', line).group(1)
+                    utt_timeend = re.search(r'--> (\d\d:\d\d:\d\d\.\d\d\d)', line).group(1)
+
+                    utt_timestarts.append(utt_timestart)
+                    utt_timeends.append(utt_timeend)
+                # if the line contains the speaker and utterances
+                else:
+                    # find the speaker
+                    split_line = line.split(":")
+                    if len(split_line) > 1:
+                        speaker = split_line[0]
+                        # find the utterances, and be careful
+                        # in case there are colons in transcription
+                        utt = ":".join(split_line[1:])
+                    else:
+                        speaker = ""  # first line of one file has an utt but no speaker
+                        utt = split_line[0]
+
+                    speakers.append(speaker)
+                    utts.append(utt)
+
+        # create a tsvfile from the data
+        with open(savepath + "/" + self.save_name + ".tsv", 'w') as savefile:
+            for i in range(len(utt_nums)):
+                savefile.write(speakers[i] + "\t" + utt_timestarts[i] + "\t" + utt_timeends[i] + "\t" +
+                               utts[i] + "\t" + utt_nums[i] + "\n")
+
+
 class ASISTInput:
     def __init__(self, asist_path, save_path, smilepath="~/opensmile-2.3.0",
                  acoustic_feature_set="IS10", missions=None):
@@ -100,16 +173,18 @@ class ASISTInput:
         if create_gold_labels:
             gold_labels = [["sid", "overall"]]
             all_participants = []
+
+        # if we are using the flat structure
         if not nested:
+            # iterate through items in the dir, look for the videos
             for item in os.listdir(self.path):
                 if item.endswith("_video.mp4"):
-                    # get the participant number
+                    # get the participant and experiment ids
                     experiment_id = item.split("_")[4]
                     participant_id = item.split("_")[7]
+
+                    # set the path to the file
                     itempath = self.path + "/" + item
-                    print(self.path)
-                    print(item)
-                    print(itempath)
 
                     # create gold label, participant id pair
                     # todo: remove this once we have gold labels
@@ -123,9 +198,7 @@ class ASISTInput:
 
                     # convert mp4 files to wav
                     audio_path = convert_mp4_to_wav(itempath)
-                    print(audio_path)
                     audio_name = audio_path.split("/")[-1] # because we don't want the full path
-                    print(audio_name)
 
                     # set the name for saving csvs
                     acoustic_savename = "{0}_{1}".format(experiment_id, participant_id)
@@ -137,7 +210,7 @@ class ASISTInput:
                                                                   self.smilepath)
                     audio_extract.save_acoustic_csv(self.acoustic_feature_set,
                                                     "{0}_feats.csv".format(acoustic_savename))
-
+        # add the gold labels to a file for later use
         if create_gold_labels:
             ys_path = "{0}/asist_ys".format(self.save_path)
             os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(ys_path))
@@ -150,7 +223,24 @@ class ASISTInput:
         """
         Convert Zoom transcriptions into usable csv transcription files
         """
+        # if using the flat directory structure
+        if not nested:
+            # look for transcript items
+            for item in os.listdir(self.path):
+                if item.endswith("_transcript.txt"):
+                    # get participant and experiment ids
+                    experiment_id = item.split("_")[4]
+                    participant_id = item.split("_")[7]
 
+                    # set the path to the item
+                    text_path = self.path + "/" + item
+
+                    # set the name for saving csvs
+                    text_savename = "{0}_{1}".format(experiment_id, participant_id)
+
+                    # reorganize the transcription into a csv
+                    transcript_convert = ZoomTranscriptToTSV(self.path, item, text_savename)
+                    transcript_convert.convert_transcript(self.save_path)
 
     def extract_tomcat_audio_and_text_data(self):
         """
@@ -289,7 +379,10 @@ if __name__ == "__main__":
             asist.extract_tomcat_audio_and_text_data()
         elif len(sys.argv) == 2 and sys.argv[1] == "mp4_data":
             print("Going to extract asist audio data from mp4 files")
+            # extract audio from mp4 files
             asist.extract_asist_audio_data()
+            # extract text from zoom transcripts
+            asist.extract_asist_text_data()
 
     elif len(sys.argv) == 6:
         # variables may be entered manually
