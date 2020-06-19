@@ -66,6 +66,8 @@ if __name__ == "__main__":
     # 0. RUN ASIST DATA PREP AND REORGANIZATION FOR INPUT INTO THE MODEL
     if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
         os.system("time python data_prep/asist_data/asist_prep.py")
+    elif len(sys.argv) > 1 and sys.argv[1] == "mp4_data":
+        os.system("time python data_prep/asist_data/asist_prep.py mp4_data") #fixme
 
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
