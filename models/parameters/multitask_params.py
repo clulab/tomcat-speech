@@ -12,10 +12,10 @@ params = Namespace(
             batch_size=10, # 32
             early_stopping_criteria=10,  # 50,
             text_network=True,  # where to use sub-networks
-            alignment=None,  # "utt",
+            alignment=None, #"utt",  # None,
 
             use_GRU=True,  # whether sub-networks use cnn or gru
-            num_gru_layers=4,
+            num_gru_layers=2,  # 4,
             bidirectional=False,
 
             dialogue_aware=False,
@@ -38,7 +38,7 @@ params = Namespace(
             text_gru_hidden_dim=20,
 
             # audio NN
-            use_acoustic=False,
+            use_acoustic=True,      # True,
             num_audio_conv_layers=2,  # 1,
             num_audio_fc_layers=1,
             audio_out_channels=20,

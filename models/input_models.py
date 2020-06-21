@@ -227,7 +227,7 @@ class BasicEncoder(nn.Module):
                                                   params.num_audio_fc_layers, params.dropout, params.dialogue_aware)
 
         # set the size of the input into the fc layers
-        if params.alignment is not "utt":
+        if params.use_acoustic or params.alignment is not "utt":
             self.audio_fc_input_dim = params.audio_output_dim
         else:
             self.audio_fc_input_dim = params.audio_dim
@@ -297,14 +297,20 @@ class BasicEncoder(nn.Module):
         if self.use_speaker:
             if self.dialogue_aware:
                 speaker_input = speaker_input.unsqueeze(2)
+
+        if self.use_acoustic:
+            if self.dialogue_aware:
                 acoustic_input = acoustic_input.permute(0, 3, 1, 2)  # todo: untested
-            else:
+            elif not self.use_GRU:
                 acoustic_input = acoustic_input.permute(0, 2, 1)
 
             # if not using utt_avgd acoustic feats, feed acoustic through CNN
             if self.alignment is not "utt":
                 if self.use_GRU:
                     acoustic_input = self.audio_gru(acoustic_input, length_input)
+                    acoustic_input = acoustic_input.permute(0, 2, 1)
+                    # print(acoustic_input.shape)
+                    acoustic_input = torch.max(acoustic_input, dim=2)[0]
                 else:
                     acoustic_input = self.audio_conv(acoustic_input)
             elif not self.dialogue_aware:
