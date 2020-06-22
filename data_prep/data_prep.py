@@ -63,7 +63,7 @@ def make_glove_dict(glove_path):
 class Glove(object):
     def __init__(self, glove_dict):
         """
-        Use a dict of format {word: vec} to get nn.Embedding
+        Use a dict of format {word: vec} to get torch.tensor of vecs
         :param glove_dict: a dict created with make_glove_dict
         """
         self.glove_dict = OrderedDict(glove_dict)
@@ -72,6 +72,11 @@ class Glove(object):
         self.wd2idx = self.get_index_dict()
         self.idx2glove = self.get_index2glove_dict()  # todo: get rid of me
         self.max_idx = -1
+
+        # add an average <UNK> if not in glove dict
+        if "<UNK>" not in self.glove_dict.keys():
+            mean_vec = self.get_avg_embedding()
+            self.add_vector("<UNK>", mean_vec)
 
     def create_embedding(self):
         emb = []
@@ -104,8 +109,15 @@ class Glove(object):
         # adds a new word vector to the dictionaries
         self.max_idx += 1
         if self.max_idx not in self.wd2idx.keys():
-            self.wd2idx[self.max_idx] = word
-            self.idx2glove[self.max_idx] = vec
+            self.glove_dict[word] = vec  # add to the glove dict
+            self.wd2idx[word] = self.max_idx  # add to the wd2idx dict
+            self.idx2glove[self.max_idx] = vec  # add to the idx2 glove dict
+            torch.cat((self.data, vec.unsqueeze(dim=0)), dim=0)  # add to the data tensor
+
+    def get_avg_embedding(self):
+        # get an average of all embeddings in dataset
+        # can be used for "<UNK>" if it doesn't exist
+        return torch.mean(self.data, dim=0)
 
 
 def make_acoustic_dict(acoustic_path, f_end="_IS09_avgd.csv", use_cols=None, data_type="clinical"):
