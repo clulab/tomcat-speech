@@ -85,31 +85,6 @@ def update_train_state(model, train_state):
     return train_state
 
 
-# currently not used
-def generate_batches(xs, ys, batch_size):
-    """
-    Takes input xs and ys and returns minibatches of xs and ys
-    :param xs: all training xs
-    :param ys: all training ys
-    :param batch_size: minibatch size
-    :return: batched xs, batched ys
-    """
-    x_batches = []
-    y_batches = []
-    data = list(zip(xs, ys))
-    np.random.shuffle(data)
-    new_xs, new_ys = zip(*data)
-    dlen = len(new_xs)
-    i = 0
-    while dlen > 0:
-        x_batches.append(new_xs[i:i*batch_size+1])
-        y_batches.append(new_ys[i:i*batch_size+1])
-        i += 1
-        dlen -= batch_size
-
-    return np.asarray(x_batches), np.asarray(y_batches)
-
-
 def generate_batches(data, batch_size, shuffle=True, device="cpu"):
     # feed data into dataloader for automatic batch splitting and shuffling
     batched_split = DataLoader(data, batch_size=batch_size, shuffle=shuffle)
@@ -119,22 +94,26 @@ def generate_batches(data, batch_size, shuffle=True, device="cpu"):
     embedding = []
     speaker = []
     y = []
+    lengths = []
 
     acoustic_batches = [item[0] for item in batched_split]
     embedding_batches = [item[1] for item in batched_split]
     speaker_batches = [item[2] for item in batched_split]
     y_batches = [item[3] for item in batched_split]
+    length_batches = [item[5] for item in batched_split]
 
     [acoustic.append(item.to(device)) for item in acoustic_batches]
     [embedding.append(item.to(device)) for item in embedding_batches]
     [speaker.append(item.to(device)) for item in speaker_batches]
     [y.append(item.to(device)) for item in y_batches]
+    [lengths.append(item.to(device)) for item in length_batches]
 
-    return acoustic, embedding, speaker, y
+    return acoustic, embedding, speaker, y, lengths
 
 
-def train_and_predict(classifier, train_state, train_splits, val_data, batch_size, num_epochs, loss_func, optimizer,
-                      device="cpu", scheduler=None, model2=None, train_state2=None):
+def train_and_predict(classifier, train_state, train_splits, val_data, batch_size, num_epochs,
+                      loss_func, optimizer, device="cpu", scheduler=None, model2=None,
+                      train_state2=None):
 
     for epoch_index in range(num_epochs):
         print("Now starting epoch {0}".format(epoch_index))
@@ -152,24 +131,8 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             train_state2['epoch_index'] = epoch_index
             model2.train()
 
-        # feed data into dataloader for automatic batch splitting and shuffling
-        # batched_split = DataLoader(train_splits, batch_size=batch_size, shuffle=True)
-        #
-        # # split into acoustic, text, speaker, and gold labels
-        # # because each input is saved as a tuple of these 4 components
-        # # print(batched_split)
-        # # sys.exit(1)
-        # # for item in batched_split:
-        # #     print(item)
-        # #     sys.exit(1)
-        #
-        # acoustic_batches = [item[0] for item in batched_split]
-        # embedding_batches = [item[1] for item in batched_split]
-        # speaker_batches = [item[2] for item in batched_split]
-        # y_batches = [item[3] for item in batched_split]
-
-        acoustic_batches, embedding_batches, speaker_batches, y_batches = generate_batches(train_splits, batch_size,
-                                                                                           shuffle=True, device=device)
+        acoustic_batches, embedding_batches, speaker_batches, y_batches, length_batches = \
+            generate_batches(train_splits, batch_size, shuffle=True, device=device)
 
         # for each batch in the list of batches created by the dataloader
         for batch_index, batch_array in enumerate(acoustic_batches):
@@ -181,7 +144,8 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
 
             # step 2. compute the output
             class_pred = classifier(acoustic_input=batch_array, text_input=embedding_batches[batch_index],
-                                    speaker_input=speaker_batches[batch_index])
+                                    speaker_input=speaker_batches[batch_index],
+                                    length_input=length_batches[batch_index])
 
             # if we're using multitask, include the decoder
             if model2 is not None:
@@ -196,8 +160,17 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             # sys.exit(1)
 
             # step 3. compute the loss
+            y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
+
+            # print(y_pred)
+
             loss = loss_func(y_pred, y_gold)
             loss_t = loss.item()  # loss for the item
+
+            if len(list(y_pred.size())) > 1:
+                y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
+            else:
+                y_pred = torch.round(y_pred)
 
             # calculate running loss
             running_loss += (loss_t - running_loss) / (batch_index + 1)
@@ -209,12 +182,6 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             optimizer.step()
 
             # compute the accuracy
-            if len(list(y_pred.size())) > 1:
-                y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
-                y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
-            else:
-                y_pred = torch.round(y_pred)
-
             acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
 
             running_acc += (acc_t - running_acc) / (batch_index + 1)
@@ -230,16 +197,9 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         # print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
 
         # Iterate over validation set--put it in a dataloader
-        # val_split = DataLoader(val_data, batch_size=batch_size, shuffle=True)
-        #
-        # # split the validation set into its components
-        # acoustic_batches = [item[0] for item in val_split]
-        # embedding_batches = [item[1] for item in val_split]
-        # speaker_batches = [item[2] for item in val_split]
-        # y_batches = [item[3] for item in val_split]
+        acoustic_batches, embedding_batches, speaker_batches, y_batches, length_batches = \
+            generate_batches(val_data, batch_size, shuffle=True, device=device)
 
-        acoustic_batches, embedding_batches, speaker_batches, y_batches = generate_batches(val_data, batch_size,
-                                                                                           shuffle=True, device=device)
         # reset loss and accuracy to zero
         running_loss = 0.
         running_acc = 0.
@@ -247,15 +207,16 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         # set classifier to evaluation mode
         classifier.eval()
 
-        # set holder to return all ys and predictions for calculation
-        ys_holder = []
-        preds_holder = []
+        # set holders to use for error analysis
+        # ys_holder = []
+        # preds_holder = []
 
         # for each batch in the dataloader
         for batch_index, batch_array in enumerate(acoustic_batches):
             # compute the output
             class_pred = classifier(acoustic_input=batch_array, text_input=embedding_batches[batch_index],
-                                    speaker_input=speaker_batches[batch_index])
+                                    speaker_input=speaker_batches[batch_index],
+                                    length_input=length_batches[batch_index])
 
             # if we're using multitask, include the decoder
             if model2 is not None:
@@ -264,23 +225,25 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             else:
                 y_pred = class_pred
 
-            preds_holder.extend(y_pred)
-
             # get the gold labels
             y_gold = y_batches[batch_index].float()
-            ys_holder.extend(y_gold)
 
-            # compute the loss
+            # add ys to holder for error analysis
+            # preds_holder.extend(y_pred)
+            # ys_holder.extend(y_gold)
+
+            y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
+
             loss = loss_func(y_pred, y_gold)
             running_loss += (loss.item() - running_loss) / (batch_index + 1)
 
-            # compute the accuracy
+            # compute the loss
             if len(list(y_pred.size())) > 1:
                 y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
-                y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
             else:
-                y_pred = torch.round(y_pred)  # old version -- only useful for binary classification?
+                y_pred = torch.round(y_pred)
 
+            # compute the accuracy
             acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
             running_acc += (acc_t - running_acc) / (batch_index + 1)
 
@@ -344,82 +307,3 @@ def test(model, state_loadpath, test_data, loss_func):
         running_acc += (acc_t - running_acc) / (index + 1)
 
     return running_loss, running_acc
-
-
-# not currently using -- added this information to model_test.py, instead
-# def cv_train_wrapper(model, dataset, batch, num_epochs, loss_f, optimizer, scheduler=None, model_type="LRbaseline",
-#                      test_model=False, get_plot=True, lr=0.0, num_embeddings=6239, pretrained_embeddings=True):
-#     # , savefile="phonological_cv_log.csv"):
-#     """
-#     Wrapper for training with k-fold CV
-#     returns all the predictions for y along with all gold y values
-#     """
-#     all_y_acc = []
-#     all_y_loss = []
-#
-#     for split in range(dataset.splits):
-#         print("Now starting training/tuning with split {0} held out".format(split))
-#
-#         model = BimodalCNN(text_dim=text_dim, audio_dim=audio_dim, hidden_dim=hidden_dim, output_dim=output_dim,
-#                                    num_embeddings=num_embeddings, num_layers=num_layers, dropout=dropout, kernel_size=3,
-#                                    out_channels=20, pretrained_embeddings=pretrained_embeddings,
-#                                    num_speakers=2, spkr_embedding_size=3, use_speaker=True)
-#         # print(split)
-#         # print(dataset.data_for_model_input.keys())
-#         dataset.set_split(split)
-#         holdout = dataset.current_split
-#         val_split = dataset.val_split
-#         training_data = dataset.remaining_splits
-#         # print(training_data.keys())
-#         # print(type(holdout))
-#         # holdout = dataset.data_for_model_input[split]
-#
-#         # make the train state
-#         model_save_path = "models/"
-#         model_save_file = "{0}_{1}_batch{2}_{3}hidden_{4}lyrs_lr{5}_{6}batch.pth".format(
-#             model_type, split, batch_size, hidden_dim, num_layers, lr,
-#             batch_size
-#         )
-#
-#         train_state = make_train_state(lr, model_save_path, model_save_file)
-#
-#         load_path = model_save_path + model_save_file
-#         train_and_predict(model, train_state, training_data, val_split, batch, num_epochs, loss_f, optimizer, scheduler)
-#
-#         # plot this
-#         # plot the loss
-#         if get_plot is True:
-#             plot_train_dev_curve(train_state['train_loss'], train_state['val_loss'], x_label="Epoch", y_label="Loss",
-#                                  title="Training and Dev loss for normed model {0} split {1} with lr {2}".format(model_type, split,
-#                                                                                                           lr),
-#                                  save_name="plots/{0}_{1}_lr{2}_loss.png".format(model_type, split, lr))
-#             # plot the accuracy
-#             plot_train_dev_curve(train_state['train_acc'], train_state['val_acc'], x_label="Epoch", y_label="Accuracy",
-#                                  title="Training and Dev accuracy for normed model {0} split {1} with lr {2}".format(model_type,
-#                                                                                                               split,
-#                                                                                                               lr),
-#                                  save_name="plots/{0}_{1}_lr{2}_acc.png".format(model_type, split, lr))
-#
-#         if test_model is True:
-#             print("Now starting testing on split {0}".format(split))
-#             test_loss, test_acc = test(model, load_path, holdout, loss_f)
-#             # add TEST here + select one fold for testing
-#
-#             all_y_loss.append(test_loss)
-#             all_y_acc.append(test_acc)
-#             print("Test loss for split {0}: {1}".format(split, test_loss))
-#             print("Test accuracy for split {0}: {1}".format(split, test_acc))
-#         else:
-#             all_y_loss.append(train_state['early_stopping_best_val'])
-#             all_y_acc.append(train_state['best_val_acc'])
-#             # all_y_loss.extend(train_state['val_loss'])
-#             # all_y_acc.extend(train_state['val_acc'])
-#
-#     # print(all_y_loss)
-#     # print(type(all_y_loss))
-#     if test_model is True:
-#         test_y_loss = sum(all_y_loss) / len(all_y_loss)
-#         test_y_acc = sum(all_y_acc) / len(all_y_acc)
-#         return test_y_loss, test_y_acc
-#     else:
-#         return all_y_loss, all_y_acc

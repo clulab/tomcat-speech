@@ -1,4 +1,4 @@
-# test the models created in py_code directory
+# test the models created in models directory with MELD data
 # currently the main entry point into the system
 
 from models.bimodal_models import BimodalCNN, MultichannelCNN
@@ -10,7 +10,6 @@ from data_prep.data_prep import *
 from data_prep.meld_input_formatting import *
 
 # import parameters for model
-# comment or uncomment as needed
 from models.parameters.multitask_params import params
 
 import numpy as np
@@ -37,14 +36,15 @@ if cuda:
     torch.cuda.manual_seed_all(seed)
 
 # set parameters for data prep
-glove_file = "../../glove.short.300d.txt"  # should be updated later to a glove subset appropriate for this task
+# todo: should be updated later to a glove subset appropriate for this task
+glove_file = "../../glove.short.300d.txt"
 
 meld_path = "../../MELD_formatted"
 # set number of splits
 num_splits = params.num_splits
 # set model name and model type
 model = params.model
-model_type = "Multitask_k=4"
+model_type = "Multitask_4lyrGRU"
 # set number of columns to skip in data input files
 cols_to_skip = params.cols_to_skip
 # path to directory where best models are saved
@@ -54,40 +54,30 @@ get_plot = True
 
 
 if __name__ == "__main__":
-    # 1. IMPORT AUDIO AND TEXT
-    #
-    # # make acoustic dict
-    # # uncomment use_cols=... to use only specific columns from input data
-    # acoustic_dict = make_acoustic_dict(input_dir, "_IS10_avgd.csv") #,
-    #                                    # use_cols=['word', 'speaker', 'utt_num', 'word_num',
-    #                                    #           'pcm_loudness_sma', 'F0final_sma', 'jitterLocal_sma',
-    #                                    #           'shimmerLocal_sma', 'pcm_loudness_sma_de',
-    #                                    #           'F0final_sma_de', 'jitterLocal_sma_de',
-    #                                    #           'shimmerLocal_sma_de'])
-    # print("Acoustic dict created")
 
-    # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
+    # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
     glove_dict = make_glove_dict(glove_file)
     glove = Glove(glove_dict)
     print("Glove object created")
 
-    # 3. MAKE DATASET
+    # 2. MAKE DATASET
     data = MELDData(meld_path=meld_path, glove=glove, acoustic_length=params.audio_dim)
+    data.emotion_weights = data.emotion_weights.to(device)  # add class weights to device
     print("Dataset created")
 
-    # 6. CREATE NN
+    # 3. CREATE NN
     # get set of pretrained embeddings and their shape
     pretrained_embeddings = data.glove.data
     num_embeddings = pretrained_embeddings.size()[0]
     print("shape of pretrained embeddings is: {0}".format(data.glove.data.size()))
-    # num_embeddings = None
-    # pretrained_embeddings = None
 
     # get the number of utterances per data point
     # todo: will need to change to variable number of utts per point
-    num_utts = len(data.test_utts[0])  # data format should be [DIALOGUES][UTTS][WDS]
-    # num_utts = data.x_acoustic.shape[1]
-    # print(num_utts)
+    # fixme: this is only correct with params.
+    if params.dialogue_aware:
+        num_utts = len(data.test_utts[0])  # data format should be [DIALOGUES][UTTS][WDS]
+    else:
+        num_utts = len(data.test_utts)
 
     # prepare holders for loss and accuracy of best model versions
     all_test_losses = []
@@ -118,8 +108,8 @@ if __name__ == "__main__":
                                                      num_layers=2, hidden_dim=4,
                                                      output_dim=1)
         elif params.model == "Multitask-meld":
-            bimodal_trial =  BasicEncoder(params=params, num_embeddings=num_embeddings,
-                                          pretrained_embeddings=pretrained_embeddings)
+            bimodal_trial = BasicEncoder(params=params, num_embeddings=num_embeddings,
+                                         pretrained_embeddings=pretrained_embeddings)
         else:
             # default to bimodal cnn
             bimodal_trial = BimodalCNN(params=params, num_embeddings=num_embeddings,
@@ -131,7 +121,9 @@ if __name__ == "__main__":
             bimodal_predictor.to(device)
 
         # set loss function, optimization, and scheduler, if using
-        loss_func = nn.BCELoss()
+        # todo: do we want to include the class weights in the loss function?
+        #   here we know it, but we won't with new tasks/classes
+        loss_func = nn.CrossEntropyLoss(data.emotion_weights)
         # loss_func = nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
                                      weight_decay=params.weight_decay)
@@ -142,28 +134,19 @@ if __name__ == "__main__":
 
         print("Model, loss function, and optimization created")
 
+        # set the train, dev, and set data
         train_data = data.train_data
-        print(type(train_data))
-        # sys.exit(1)
         dev_data = data.dev_data
         test_data = data.test_data
 
         # create a a save path and file for the model
-        model_save_file = "{0}_batch{1}_{2}hidden_{3}lyrs_lr{4}_{5}batch.pth".format(
-            model_type, params.batch_size, params.hidden_dim, params.num_layers, lr,
-            params.batch_size
-        )
+        model_save_file = "{0}_batch{1}_{2}hidden_{3}lyrs_lr{4}.pth".format(
+            model_type, params.batch_size, params.fc_hidden_dim, params.num_layers, lr)
 
         # create 2 save paths for models if using both encoder + decoder
         if params.model == "Multitask":
-            # model_save_file = "{0}_batch{1}_{2}hidden_{3}lyrs_lr{4}_{5}batch_encoder.pth".format(
-            #     model_type, params.batch_size, params.hidden_dim, params.num_layers, lr,
-            #     params.batch_size
-            # )
-            model2_save_file = "{0}__batch{1}_{2}hidden_{3}lyrs_lr{4}_{5}batch_decoder.pth".format(
-                model_type, params.batch_size, params.hidden_dim, params.num_layers, lr,
-                params.batch_size
-            )
+            model2_save_file = "{0}__batch{1}_{2}hidden_{3}lyrs_lr{4}_decoder.pth".format(
+                model_type, params.batch_size, params.fc_hidden_dim, params.num_layers, lr)
 
             train_state_2 = make_train_state(lr, model_save_path, model2_save_file)
             load_path2 = model_save_path + model2_save_file
@@ -171,6 +154,7 @@ if __name__ == "__main__":
         # make the train state to keep track of model training/development
         train_state = make_train_state(lr, model_save_path, model_save_file)
 
+        # set the load path for testing
         load_path = model_save_path + model_save_file
 
         # train the model and evaluate on development set
@@ -184,34 +168,31 @@ if __name__ == "__main__":
 
         # plot the loss and accuracy curves
         if get_plot:
+            # set plot titles
+            loss_title = "Training and Dev loss for model {0} with lr {1}".format(model_type, lr)
+            acc_title = "Training and Dev accuracy for model {0} with lr {1}".format(model_type, lr)
+
+            # set save names
+            loss_save = "output/plots/{0}_lr{1}_loss.png".format(model_type, lr)
+            acc_save = "output/plots/{0}_lr{1}_acc.png".format(model_type, lr)
+
             if params.model == "Multitask":
+                # plot the loss from output layer
                 plot_train_dev_curve(train_state_2['train_loss'], train_state_2['val_loss'], x_label="Epoch",
-                                     y_label="Loss",
-                                     title="Training and Dev loss for normed model {0} with lr {1}".format(
-                                         model_type, lr),
-                                     save_name="output/plots/{0}_lr{1}_loss.png".format(model_type, lr),
+                                     y_label="Loss", title=loss_title, save_name=loss_save,
                                      set_axis_boundaries=False)
-                # plot the accuracy
+                # plot the accuracy from output layer
                 plot_train_dev_curve(train_state_2['train_acc'], train_state_2['val_acc'], x_label="Epoch",
-                                     y_label="Accuracy",
-                                     title="Training and Dev accuracy for normed model {0} with lr {1}".format(
-                                         model_type, lr),
-                                     save_name="output/plots/{0}_lr{1}_acc.png".format(model_type, lr), losses=False,
+                                     y_label="Accuracy", title=acc_title, save_name=acc_save, losses=False,
                                      set_axis_boundaries=False)
             else:
-            # loss curve
+                # plot the loss from model
                 plot_train_dev_curve(train_state['train_loss'], train_state['val_loss'], x_label="Epoch",
-                                     y_label="Loss",
-                                     title="Training and Dev loss for normed model {0} with lr {1}".format(
-                                         model_type, lr),
-                                     save_name="output/plots/{0}_lr{1}_loss.png".format(model_type, lr),
+                                     y_label="Loss", title=loss_title, save_name=loss_save,
                                      set_axis_boundaries=False)
-                # plot the accuracy
+                # plot the accuracy from model
                 plot_train_dev_curve(train_state['train_acc'], train_state['val_acc'], x_label="Epoch",
-                                     y_label="Accuracy",
-                                     title="Training and Dev accuracy for normed model {0} with lr {1}".format(
-                                         model_type, lr),
-                                     save_name="output/plots/{0}_lr{1}_acc.png".format(model_type, lr), losses=False,
+                                     y_label="Accuracy", title=acc_title, save_name=acc_save, losses=False,
                                      set_axis_boundaries=False)
 
         # add best evaluation losses and accuracy from training to set
