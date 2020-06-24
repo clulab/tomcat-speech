@@ -2,8 +2,8 @@
 # currently the main entry point into the system
 # add "prep_data" as an argument when running this from command line
 #       if your acoustic features have not been extracted from audio
-import sys
-sys.path.append("/Users/meghavarshinikrishnaswami/github/asist-speech")
+
+
 from models.bimodal_models import BimodalCNN, MultichannelCNN
 from models.baselines import LRBaseline, EmbeddingsOnly
 from models.train_and_test_models import *
@@ -22,6 +22,7 @@ from models.parameters.bimodal_params import params
 import numpy as np
 import random
 import torch
+import sys
 
 
 # set device
@@ -42,7 +43,7 @@ if cuda:
     torch.cuda.manual_seed_all(seed)
 
 # set parameters for data prep
-glove_file = "./glove.short.300d.txt"  # todo: change this?
+glove_file = "../../glove.short.300d.txt"  # todo: change this?
 input_dir = "output/asist_audio"
 # to test the data--this doesn't contain real outcomes
 y_path = "output/asist_audio/asist_ys/all_ys.csv"
