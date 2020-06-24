@@ -4,6 +4,9 @@ params = Namespace(
             # consistency parameters
             seed=888,  # 1007
             cols_to_skip=3,
+
+            # alignment None with internal data
+            #   and "utt" with external asist data
             alignment=None,
 
             # overall model parameters
