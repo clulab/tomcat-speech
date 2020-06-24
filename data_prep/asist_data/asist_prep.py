@@ -1,9 +1,9 @@
 # prepare the asist-produced audio and transcription data for neural classifiers
-
+import sys
+sys.path.append("/Users/meghavarshinikrishnaswami/github/asist-speech")
 import data_prep.audio_extraction as audio_extraction
 
 import os
-import sys
 import pandas as pd
 import pprint
 import ast
@@ -534,7 +534,7 @@ if __name__ == "__main__":
     if len(sys.argv) <= 2:
         # # define variables
         # data_path = "../../Downloads/real_search_data"
-        data_path = "../../Downloads/data_flatstructure"
+        data_path = "output/asist_audio/input"
         save_path = "output/asist_audio"
         sentiment_text_path = "output/"
         missions = ['mission_1', 'mission_2', 'mission_0']
