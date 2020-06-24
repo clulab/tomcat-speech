@@ -71,8 +71,7 @@ if __name__ == "__main__":
 
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
-    # uncomment use_cols=... to use only specific columns from input data
-    acoustic_dict = make_acoustic_dict(input_dir, "_avgd.csv", data_type="asist") #,
+    acoustic_dict = make_acoustic_dict(input_dir, "_avgd.csv", data_type="asist")
 
     print("Acoustic dict created")
 

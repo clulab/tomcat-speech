@@ -9,6 +9,7 @@ import pprint
 import ast
 import random
 import re
+import time
 
 
 class JSONtoTSV:
@@ -246,7 +247,7 @@ class ASISTInput:
         """
         get the audio data; feed it through processes in audio_extraction.py
         :param missions : a list of names of the mission(s) whose data is of interest
-        fixme: this will contain a gold-label creation mechanism; remove it once asist has real gold labels
+        fixme: this contains a gold-label creation mechanism; remove it once asist has real gold labels
         """
         gold_labels = [["sid", "overall"]]
         all_participants = []
@@ -323,6 +324,78 @@ class ASISTInput:
                 goldfile.write(",".join(item))
                 goldfile.write("\n")
 
+    def align_tomcat_text_and_acoustic_data(self):
+        """
+        To average acoustic features at the utterance level
+        So hackathon data is formatted to fit in basic CNN
+        """
+        print("Alignment has begun")
+
+        for item in os.listdir(self.save_path):
+            # check to make sure it's a file of acoustic features
+            if item.endswith("_feats.csv"):
+
+                print(item + " found")
+                # get holder for averaged acoustic items
+                all_acoustic_items = []
+
+                # add the feature file to a dataframe
+                acoustic_df = pd.read_csv("{0}/{1}".format(self.save_path, item), sep=";")
+                acoustic_df = acoustic_df.drop(columns=['name'])
+
+                # add column names to holder
+                col_names = acoustic_df.columns.tolist()
+                col_names.append('timestart')  # so that we can join dataframes later
+
+                # get experiment and participant IDs
+                experiment_id = item.split("_")[0]
+                participant_id = item.split("_")[1]
+
+                # add the corresponding dataframe of utterance info
+                utt_df = pd.read_csv("{0}/{1}_{2}.tsv".format(self.save_path, experiment_id,
+                                                              participant_id), sep="\t")
+
+                # ID all rows id df between start and end of an utterace
+                for row in utt_df.itertuples():
+
+                    # print(row)
+                    # get the goal start and end time
+                    start_str = row.timestart
+                    end_str = row.timeend
+
+                    start_time = split_zoom_time(start_str)
+                    end_time = split_zoom_time(end_str)
+
+
+
+                    # get the portion of the dataframe that is between the start and end times
+                    this_utterance = acoustic_df[acoustic_df['frameTime'].between(start_time, end_time)]
+
+                    # get the mean values of all columns
+                    this_utt_avgd = this_utterance.mean().tolist()
+                    this_utt_avgd.append(start_str)  # add timestart so dataframes can be joined
+
+                    # add means to list
+                    all_acoustic_items.append(this_utt_avgd)
+
+                # convert all_acoustic_items to pd dataframe
+                acoustic = pd.DataFrame(all_acoustic_items, columns=col_names)
+
+                # join the dataframes
+                df = pd.merge(utt_df, acoustic, on="timestart")
+
+                # save the joined df as a new csv
+                df.to_csv("{0}/{1}_{2}_avgd.csv".format(self.save_path, experiment_id, participant_id))
+
+
+def split_zoom_time(timestamp):
+    """
+    split the hh:mm:ss.sss zoom timestamps to seconds + ms
+    used to calculate start and end of acoustic features
+    """
+    h, m, s = timestamp.split(":")
+    return (float(h) * 60 + float(m)) * 60 + float(s)
+
 
 def check_transcript(name_and_path):
     """
@@ -336,13 +409,12 @@ def check_transcript(name_and_path):
 
     # get only the words
     all_words = fixed['results']['items']
-    print(len(all_words))
+
+    # only say it contains data if it contains more than 2 words
     if len(all_words) > 2:
         contains_data = True
     else:
         contains_data = False
-    print(contains_data)
-    # sys.exit(1)
 
     return contains_data
 
@@ -351,12 +423,8 @@ def convert_mp4_to_wav(mp4_file):
     # if the audio is in an mp4 file, convert to wav
     # file is saved to the location where the mp4 was found
     # returns the name of the file and its path
-    # print(mp4_file)
     file_name = mp4_file.split(".mp4")[0]
-    # print(file_name)
     wav_name = "{}.wav".format(file_name)
-    # print(wav_name)
-    # sys.exit(1)
     os.system("ffmpeg -i {0} {1}".format(mp4_file, wav_name))
     return wav_name
 
@@ -380,15 +448,17 @@ if __name__ == "__main__":
         elif len(sys.argv) == 2 and sys.argv[1] == "mp4_data":
             print("Going to extract asist audio data from mp4 files")
             # extract audio from mp4 files
-            asist.extract_asist_audio_data()
+            # asist.extract_asist_audio_data()
             # extract text from zoom transcripts
-            asist.extract_asist_text_data()
+            # asist.extract_asist_text_data()
+            # combine the audio and text files
+            asist.align_tomcat_text_and_acoustic_data()
 
-    elif len(sys.argv) == 6:
-        # variables may be entered manually
-        data_path = sys.argv[1]
-        save_path = sys.argv[2]
-        missions = [sys.argv[3]]
-        acoustic_feature_set = sys.argv[4]
-        smile_path = sys.argv[5]
+    # elif len(sys.argv) == 6:
+    #     # variables may be entered manually
+    #     data_path = sys.argv[1]
+    #     save_path = sys.argv[2]
+    #     missions = [sys.argv[3]]
+    #     acoustic_feature_set = sys.argv[4]
+    #     smile_path = sys.argv[5]
 
