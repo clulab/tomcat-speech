@@ -47,10 +47,11 @@ class JSONtoTSV:
         # set utterance and word counters
         utt = 0
         wd_num = 0
+        utt_enders = ['.', '?', '!']
 
         for item in all_words:
 
-            if item['type'] == "punctuation":
+            if item['type'] == "punctuation" and item['alternatives'][0]['content'] in utt_enders:
                 utt += 1
 
             elif item['type'] == "pronunciation":
@@ -220,9 +221,43 @@ class ASISTInput:
                     goldfile.write(",".join(item))
                     goldfile.write("\n")
 
-    def extract_asist_text_data(self, nested=False):
+    def extract_audio_data(self, audio_path, audio_file, mp4=True):
+        """
+        Extract acoustic features from a given file
+        """
+        # get participant and experiment ids
+        experiment_id = audio_file.split("_")[4]
+        participant_id = audio_file.split("_")[7]
+
+        audio_path_and_file = audio_path + "/" + audio_file
+
+        # convert mp4 files to wav
+        if mp4:
+            audio_path = convert_mp4_to_wav(audio_path_and_file + ".mp4")
+            audio_name = audio_path.split("/")[-1]  # because we don't want the full path
+            audio_path = "/".join(audio_path.split("/")[:-1])
+        else:
+            audio_name = "player_audio.wav"
+
+        # set the name for saving csvs
+        acoustic_savename = "{0}_{1}".format(experiment_id, participant_id)
+
+        # open corresponding audio and send through extraction; return csv file
+        print("Extracting openSMILE features...")
+
+        # extract audio features and save csv
+        audio_extract = audio_extraction.ExtractAudio(audio_path, audio_name, self.save_path,
+                                                      self.smilepath)
+        audio_extract.save_acoustic_csv(self.acoustic_feature_set,
+                                        "{0}_feats.csv".format(acoustic_savename))
+
+        # return name of output file
+        return "{0}_feats.csv".format(acoustic_savename)
+
+    def extract_zoom_text_data(self, nested=False):
         """
         Convert Zoom transcriptions into usable csv transcription files
+        todo: reorganize this
         """
         # if using the flat directory structure
         if not nested:
@@ -242,6 +277,72 @@ class ASISTInput:
                     # reorganize the transcription into a csv
                     transcript_convert = ZoomTranscriptToTSV(self.path, item, text_savename)
                     transcript_convert.convert_transcript(self.save_path)
+
+    def align_text_and_audio_word_level(self, path_to_files, expanded_wds_file, audio_feats_file):
+        """
+        Align and combine text and audio data at the word level
+        Expanded_wds_file : the name of the file containing words and timestamps
+        audio_feats_file : the name of the file containing extracted acoustic features
+        """
+        # read in the saved acoustic features file
+        audio_df = audio_extraction.load_feature_csv(
+            "{0}/{1}".format(path_to_files, audio_feats_file))
+
+        # read in the saved csv
+        expanded_wds_df = pd.read_csv("{0}/{1}".format(path_to_files, expanded_wds_file), sep="\t")
+
+        # combine the files
+        combined = pd.merge(audio_df, expanded_wds_df, on='frameTime')
+
+        # average across words and save as new csv
+        save_name = "_".join(audio_feats_file.split("_")[:2])
+        wd_avgd = audio_extraction.avg_feats_across_words(combined)
+        wd_avgd.to_csv("{0}/{1}_avgd.csv".format(self.save_path, save_name), index=False)
+
+    def extract_aws_text_data(self, aws_transcription_file, expand_data=False):
+        """
+        Convert AWS transcriptions into usable csv transcription files
+        """
+        # get participant and experiment ids
+        experiment_id = aws_transcription_file.split("_")[4]
+        participant_id = aws_transcription_file.split("_")[7]
+
+        # set the name for saving csvs
+        text_savename = "{0}_{1}".format(experiment_id, participant_id)
+
+        # reorganize the transcription into a csv
+        transcript_convert = JSONtoTSV(self.path, aws_transcription_file.split(".")[0],
+                                       save_name=text_savename, use_txt=True)
+
+        transcript_convert.convert_json(self.save_path)
+        transcript_save_name = text_savename
+
+        if expand_data:
+            audio_extraction.expand_words("{0}/{1}".format(self.save_path, "{0}.tsv".format(text_savename)),
+                                          "{0}/{1}-expanded.tsv".format(self.save_path, text_savename))
+            transcript_save_name = "{}-expanded.tsv".format(text_savename)
+
+        # return name of saved transcript file
+        return transcript_save_name
+
+    def extract_audio_and_aws_text(self, file_path, mp4=True):
+        """
+        A basic method to extract audio and text data
+        Assumes that audio and transcriptions are in the same path
+        """
+        for item in os.listdir(file_path):
+            if item.endswith("_transcript_full.txt"):
+                # get the name of the file without _transcript_full.txt
+                audio_name = "_".join(item.split("_")[:9])
+
+                # create acoustic features for this file
+                acoustic_feats_name = self.extract_audio_data(file_path, audio_name, mp4)
+
+                # create preprocessed transcript of this file
+                transcript_save_name = self.extract_aws_text_data(item, expand_data=True)
+
+                # combine and word-align acoustic and text
+                self.align_text_and_audio_word_level(self.save_path, transcript_save_name, acoustic_feats_name)
 
     def extract_tomcat_audio_and_text_data(self):
         """
@@ -448,17 +549,11 @@ if __name__ == "__main__":
         elif len(sys.argv) == 2 and sys.argv[1] == "mp4_data":
             print("Going to extract asist audio data from mp4 files")
             # extract audio from mp4 files
-            # asist.extract_asist_audio_data()
+            asist.extract_asist_audio_data()
             # extract text from zoom transcripts
-            # asist.extract_asist_text_data()
+            asist.extract_asist_text_data()
             # combine the audio and text files
             asist.align_tomcat_text_and_acoustic_data()
-
-    # elif len(sys.argv) == 6:
-    #     # variables may be entered manually
-    #     data_path = sys.argv[1]
-    #     save_path = sys.argv[2]
-    #     missions = [sys.argv[3]]
-    #     acoustic_feature_set = sys.argv[4]
-    #     smile_path = sys.argv[5]
+        elif len(sys.argv) == 2 and sys.argv[1] == "prep_for_sentiment_analyzer":
+            asist.extract_audio_and_aws_text(asist.path)
 
