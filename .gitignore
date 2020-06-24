@@ -12,3 +12,14 @@ output/
 smile.log
 
 .DS_Store
+
+# extra files
+*.csv
+*.tsv
+*.wav
+*.mp3
+*.mp4
+./output
+glove.short.300d.txt
+python_readme.md
+
