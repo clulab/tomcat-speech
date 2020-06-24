@@ -21,3 +21,5 @@ smile.log
 *.mp4
 ./output
 glove.short.300d.txt
+python_readme.md
+
