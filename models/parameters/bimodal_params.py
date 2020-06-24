@@ -7,7 +7,7 @@ params = Namespace(
 
             # alignment None with internal data
             #   and "utt" with external asist data
-            alignment="utt",
+            alignment=None,
 
             # overall model parameters
             model="BimodalCNN",

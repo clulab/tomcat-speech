@@ -536,6 +536,7 @@ if __name__ == "__main__":
         # data_path = "../../Downloads/real_search_data"
         data_path = "../../Downloads/data_flatstructure"
         save_path = "output/asist_audio"
+        sentiment_text_path = "output/"
         missions = ['mission_1', 'mission_2', 'mission_0']
         acoustic_feature_set = "IS10"
         smile_path = "~/opensmile-2.3.0"
@@ -555,5 +556,18 @@ if __name__ == "__main__":
             # combine the audio and text files
             asist.align_tomcat_text_and_acoustic_data()
         elif len(sys.argv) == 2 and sys.argv[1] == "prep_for_sentiment_analyzer":
-            asist.extract_audio_and_aws_text(asist.path)
+            # prepare audio and text data
+            # asist.extract_audio_and_aws_text(asist.path)
+
+            # todo: megh function, prepare utterances for input into analyzer
+
+            # put utterances through analyzer
+            for f in os.listdir(sentiment_text_path):
+                # find files produced by megh function
+                if f.endswith("_transcript_split.txt"):
+                    # prepare name for output files
+                    out_name = "_".join(f.split("_")[:-3]) + "sentiment_out.txt"
+                    # run shell script
+                    os.system("./get_asist_sentiment_analysis.sh {0}/{1} {0}/{2}".format(sentiment_text_path,
+                                                                                         f, out_name))
 

@@ -67,7 +67,9 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
         os.system("time python data_prep/asist_data/asist_prep.py")
     elif len(sys.argv) > 1 and sys.argv[1] == "mp4_data":
-        os.system("time python data_prep/asist_data/asist_prep.py mp4_data") #fixme
+        os.system("time python data_prep/asist_data/asist_prep.py mp4_data")  # fixme
+    elif len(sys.argv) > 1 and sys.argv[1] == "use_sentiment_analyzer":
+        os.system("time python data_prep/asist_data/asist_prep.py prep_for_sentiment_analyzer")
 
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
