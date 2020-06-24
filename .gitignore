@@ -20,3 +20,4 @@ smile.log
 *.mp3
 *.mp4
 ./output
+glove.short.300d.txt
