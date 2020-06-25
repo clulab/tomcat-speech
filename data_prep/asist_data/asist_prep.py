@@ -1,6 +1,7 @@
 # prepare the asist-produced audio and transcription data for neural classifiers
 
 import data_prep.audio_extraction as audio_extraction
+import data_prep.sentiment_score_prep as sent_prep
 
 import os
 import sys
@@ -10,6 +11,10 @@ import ast
 import random
 import re
 import time
+
+################################################################################
+############               TRANSCRIPT-ALTERING CLASS                ############
+################################################################################
 
 
 class JSONtoTSV:
@@ -150,6 +155,11 @@ class ZoomTranscriptToTSV:
                                utts[i] + "\t" + utt_nums[i] + "\n")
 
 
+################################################################################
+############                 ASIST DATA INPUT CLASS                 ############
+################################################################################
+
+
 class ASISTInput:
     def __init__(self, asist_path, save_path, smilepath="~/opensmile-2.3.0",
                  acoustic_feature_set="IS10", missions=None):
@@ -166,117 +176,67 @@ class ASISTInput:
         else:
             self.missions = (['mission_2'])
 
-    def extract_asist_audio_data(self, create_gold_labels=True, nested=False):
-        """
-        Get the audio data; convert it to .wav and feed it through the processes in audio_extraction.py
-        todo: currently only deals with flat structure
-        """
-        # create fake gold labels to see how this works in the system
-        if create_gold_labels:
-            gold_labels = [["sid", "overall"]]
-            all_participants = []
-
-        # if we are using the flat structure
-        if not nested:
-            # iterate through items in the dir, look for the videos
-            for item in os.listdir(self.path):
-                if item.endswith("_video.mp4"):
-                    # get the participant and experiment ids
-                    experiment_id = item.split("_")[4]
-                    participant_id = item.split("_")[7]
-
-                    # set the path to the file
-                    itempath = self.path + "/" + item
-
-                    # create gold label, participant id pair
-                    # todo: remove this once we have gold labels
-                    if create_gold_labels:
-                        gold = random.randint(0, 1)
-                        if participant_id not in all_participants:
-                            gold_labels.append([item, str(gold)])
-
-                        # add participant to list of participants so it doesn't get repeated
-                        all_participants.append(participant_id)
-
-                    # convert mp4 files to wav
-                    audio_path = convert_mp4_to_wav(itempath)
-                    audio_name = audio_path.split("/")[-1] # because we don't want the full path
-
-                    # set the name for saving csvs
-                    acoustic_savename = "{0}_{1}".format(experiment_id, participant_id)
-
-                    print("Extracting openSMILE features...")
-
-                    # extract audio features and save csv
-                    audio_extract = audio_extraction.ExtractAudio(self.path, audio_name, self.save_path,
-                                                                  self.smilepath)
-                    audio_extract.save_acoustic_csv(self.acoustic_feature_set,
-                                                    "{0}_feats.csv".format(acoustic_savename))
-        # add the gold labels to a file for later use
-        if create_gold_labels:
-            ys_path = "{0}/asist_ys".format(self.save_path)
-            os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(ys_path))
-            with open("{0}/all_ys.csv".format(ys_path), 'w') as goldfile:
-                for item in gold_labels:
-                    goldfile.write(",".join(item))
-                    goldfile.write("\n")
-
-    def extract_audio_data(self, audio_path, audio_file, mp4=True):
+    def extract_audio_data(self, audio_path, audio_file, mp4=True, use_missions=False):
         """
         Extract acoustic features from a given file
         """
-        # get participant and experiment ids
-        experiment_id = audio_file.split("_")[4]
-        participant_id = audio_file.split("_")[7]
+        # internal files with missions had a different naming convention
+        if not use_missions:
+            # get participant and experiment ids
+            experiment_id = audio_file.split("_")[4]
+            participant_id = audio_file.split("_")[7]
+            # set the name for saving csvs
+            acoustic_savename = "{0}_{1}".format(experiment_id, participant_id)
+        else:
+            participant_id = audio_file.split("_")[0]
+            mission = audio_file.split("_")[-1]
+            acoustic_savename = "{0}_mission_{1}".format(participant_id, mission)
+            print(acoustic_savename)
 
-        audio_path_and_file = audio_path + "/" + audio_file
-
-        # convert mp4 files to wav
+        # convert mp4 files to wav if needed
         if mp4:
-            audio_path = convert_mp4_to_wav(audio_path_and_file + ".mp4")
+            audio_path_and_file = audio_path + "/" + audio_file
+            audio_path = audio_extraction.convert_mp4_to_wav(audio_path_and_file + ".mp4")
             audio_name = audio_path.split("/")[-1]  # because we don't want the full path
             audio_path = "/".join(audio_path.split("/")[:-1])
         else:
             audio_name = "player_audio.wav"
 
-        # set the name for saving csvs
-        acoustic_savename = "{0}_{1}".format(experiment_id, participant_id)
-
         # open corresponding audio and send through extraction; return csv file
         print("Extracting openSMILE features...")
 
-        # extract audio features and save csv
-        audio_extract = audio_extraction.ExtractAudio(audio_path, audio_name, self.save_path,
-                                                      self.smilepath)
-        audio_extract.save_acoustic_csv(self.acoustic_feature_set,
-                                        "{0}_feats.csv".format(acoustic_savename))
+        # extract audio features and save csv if not already extracted
+        if os.path.exists(self.save_path + "/" + acoustic_savename + "_feats.csv"):
+            print("Acoustic features already extracted for file {}".format(acoustic_savename))
+        else:
+            audio_extract = audio_extraction.ExtractAudio(audio_path, audio_name, self.save_path,
+                                                          self.smilepath)
+            audio_extract.save_acoustic_csv(self.acoustic_feature_set,
+                                            "{0}_feats.csv".format(acoustic_savename))
 
         # return name of output file
         return "{0}_feats.csv".format(acoustic_savename)
 
-    def extract_zoom_text_data(self, nested=False):
+    def extract_zoom_text_data(self):
         """
         Convert Zoom transcriptions into usable csv transcription files
-        todo: reorganize this
         """
-        # if using the flat directory structure
-        if not nested:
-            # look for transcript items
-            for item in os.listdir(self.path):
-                if item.endswith("_transcript.txt"):
-                    # get participant and experiment ids
-                    experiment_id = item.split("_")[4]
-                    participant_id = item.split("_")[7]
+        # look for transcript items
+        for item in os.listdir(self.path):
+            if item.endswith("_transcript.txt"):
+                # get participant and experiment ids
+                experiment_id = item.split("_")[4]
+                participant_id = item.split("_")[7]
 
-                    # set the path to the item
-                    text_path = self.path + "/" + item
+                # set the path to the item
+                text_path = self.path + "/" + item
 
-                    # set the name for saving csvs
-                    text_savename = "{0}_{1}".format(experiment_id, participant_id)
+                # set the name for saving csv files
+                text_savename = "{0}_{1}".format(experiment_id, participant_id)
 
-                    # reorganize the transcription into a csv
-                    transcript_convert = ZoomTranscriptToTSV(self.path, item, text_savename)
-                    transcript_convert.convert_transcript(self.save_path)
+                # reorganize the transcription into a csv
+                transcript_convert = ZoomTranscriptToTSV(self.path, item, text_savename)
+                transcript_convert.convert_transcript(self.save_path)
 
     def align_text_and_audio_word_level(self, path_to_files, expanded_wds_file, audio_feats_file):
         """
@@ -299,21 +259,31 @@ class ASISTInput:
         wd_avgd = audio_extraction.avg_feats_across_words(combined)
         wd_avgd.to_csv("{0}/{1}_avgd.csv".format(self.save_path, save_name), index=False)
 
-    def extract_aws_text_data(self, aws_transcription_file, expand_data=False):
+    def extract_aws_text_data(self, aws_transcription_file, expand_data=False, use_missions=False):
         """
         Convert AWS transcriptions into usable csv transcription files
         """
-        # get participant and experiment ids
-        experiment_id = aws_transcription_file.split("_")[4]
-        participant_id = aws_transcription_file.split("_")[7]
-
-        # set the name for saving csvs
-        text_savename = "{0}_{1}".format(experiment_id, participant_id)
+        if not use_missions:
+            # get participant and experiment ids
+            experiment_id = aws_transcription_file.split("_")[4]
+            participant_id = aws_transcription_file.split("_")[7]
+            # set the name for saving csv files
+            text_savename = "{0}_{1}".format(experiment_id, participant_id)
+            # create instance of JSON to TSV class
+            transcript_convert = JSONtoTSV(self.path, aws_transcription_file.split(".")[0],
+                                           save_name=text_savename, use_txt=True)
+        else:
+            # set the name for saving csv files
+            text_savename = aws_transcription_file
+            # set the path to the item--participant_id is the directory name
+            item_path = self.path + "/" + text_savename.split("_")[0]
+            # set the name of the mission--transcript names contain the mission
+            mission = "mission_" + text_savename.split("_")[-1]
+            # create instance of JSON to TSV class
+            transcript_convert = JSONtoTSV(item_path, "{0}_transcript_full".format(mission),
+                                           save_name=text_savename, use_txt=True)
 
         # reorganize the transcription into a csv
-        transcript_convert = JSONtoTSV(self.path, aws_transcription_file.split(".")[0],
-                                       save_name=text_savename, use_txt=True)
-
         transcript_convert.convert_json(self.save_path)
         transcript_save_name = text_savename
 
@@ -325,6 +295,7 @@ class ASISTInput:
         # return name of saved transcript file
         return transcript_save_name
 
+    # use the previously-defined functions to extract audio and text for different conditions
     def extract_audio_and_aws_text(self, file_path, mp4=True):
         """
         A basic method to extract audio and text data
@@ -344,91 +315,62 @@ class ASISTInput:
                 # combine and word-align acoustic and text
                 self.align_text_and_audio_word_level(self.save_path, transcript_save_name, acoustic_feats_name)
 
-    def extract_tomcat_audio_and_text_data(self):
+    def extract_audio_and_aws_text_with_missions(self, mp4=False):
         """
-        get the audio data; feed it through processes in audio_extraction.py
-        :param missions : a list of names of the mission(s) whose data is of interest
-        fixme: this contains a gold-label creation mechanism; remove it once asist has real gold labels
+        Extract audio and aws transcripts from internal data
+        Assumes multiple possible missions to distinguish between
         """
-        gold_labels = [["sid", "overall"]]
-        all_participants = []
-
         for item in os.listdir(self.path):
             item_path = "{0}/{1}".format(self.path, item)
             if os.path.isdir(item_path):
-                print(item)
                 for mission in self.missions:
                     if "{0}_transcript_full.txt".format(mission) in os.listdir(item_path) and \
                             check_transcript("{0}/{1}_transcript_full.txt".format(item_path, mission)):
-                        print(mission)
-                        # print(self.save_path)
                         participant_id = item
-
-                        # create gold label, participant id pair
-                        # todo: remove this once we have gold labels
-                        gold = random.randint(0, 1)
-                        if participant_id not in all_participants:
-                            gold_labels.append([item, str(gold)])
-
-                        # add participant to list of participants so it doesn't get repeated
-                        all_participants.append(participant_id)
+                        name_and_mission = participant_id + "_" + mission
 
                         # set the name for saving csvs
                         acoustic_savename = "{0}_{1}".format(participant_id, mission)
 
                         # open corresponding audio and send through extraction; return csv file
-                        # ID audio file
                         audio_path = "{0}/{1}".format(item_path, mission)
 
-                        print("Extracting openSMILE features...")
+                        # create acoustic features for this file
+                        acoustic_feats_name = self.extract_audio_data(audio_path, acoustic_savename,
+                                                                      mp4, use_missions=True)
 
-                        # extract audio features and save csv
-                        audio_extract = audio_extraction.ExtractAudio(audio_path, "player_audio.wav", self.save_path,
-                                                                      self.smilepath)
-                        audio_extract.save_acoustic_csv(self.acoustic_feature_set,
-                                                        "{0}_feats.csv".format(acoustic_savename))
+                        # create preprocessed transcript of this file
+                        transcript_save_name = self.extract_aws_text_data(name_and_mission, expand_data=True,
+                                                                          use_missions=True)
 
-                        # load csv of features + csv of transcription information
-                        audio_df = audio_extraction.load_feature_csv(
-                            "{0}/{1}".format(self.save_path, "{0}_feats.csv".format(acoustic_savename)))
+                        # align features and transcripts
+                        self.align_text_and_audio_word_level(self.save_path, transcript_save_name,
+                                                             acoustic_feats_name)
 
-                        print("Extracting words from transcripts...")
+    def extract_audio_and_zoom_text(self, file_path, mp4=True):
+        """
+        Extract the audio and zoom-generated transcripts; keep them separate
+        """
+        # extract audio
+        for item in os.listdir(file_path):
+            if item.endswith("_video.mp4"):
+                # get the name of the audio file without .mp4
+                audio_name = item.split(".mp4")[0]
 
-                        # read transcript and extract words and times to a clean csv file
-                        transcript_convert = JSONtoTSV(item_path, "{0}_transcript_full".format(mission),
-                                                       save_name=acoustic_savename, use_txt=True)
-                        transcript_convert.convert_json(self.save_path)
+                # create acoustic features for this file
+                _ = self.extract_audio_data(file_path, audio_name, mp4)
 
-                        print("Aligning audio and text data...")
+        # extract transcripts
+        self.extract_zoom_text_data()
 
-                        audio_extraction.expand_words("{0}/{1}".format(self.save_path, "{0}.tsv".format(acoustic_savename)),
-                                                      "{0}/{1}-expanded.csv".format(self.save_path,
-                                                                                    acoustic_savename))
-
-                        # read in the saved csv
-                        expanded_wds_df = pd.read_csv("{0}/{1}-expanded.csv".format(self.save_path,
-                                                                                    acoustic_savename), sep="\t")
-
-                        # combine the files
-                        combined = pd.merge(audio_df, expanded_wds_df, on='frameTime')
-
-                        # average across words and save as new csv
-                        wd_avgd = audio_extraction.avg_feats_across_words(combined)
-                        wd_avgd.to_csv("{0}/{1}_avgd.csv".format(self.save_path, acoustic_savename))
-
-        print("Audio and text extracted and word-level alignment completed")
-        # todo: remove the following once we have gold labels
-        ys_path = "{0}/asist_ys".format(self.save_path)
-        os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(ys_path))
-        with open("{0}/all_ys.csv".format(ys_path), 'w') as goldfile:
-            for item in gold_labels:
-                goldfile.write(",".join(item))
-                goldfile.write("\n")
+        # align at utterance level
+        self.align_tomcat_text_and_acoustic_data()
 
     def align_tomcat_text_and_acoustic_data(self):
         """
         To average acoustic features at the utterance level
         So hackathon data is formatted to fit in basic CNN
+        Assumes that the files to be manipulated are all found in the save_path
         """
         print("Alignment has begun")
 
@@ -459,15 +401,12 @@ class ASISTInput:
                 # ID all rows id df between start and end of an utterace
                 for row in utt_df.itertuples():
 
-                    # print(row)
                     # get the goal start and end time
                     start_str = row.timestart
                     end_str = row.timeend
 
                     start_time = split_zoom_time(start_str)
                     end_time = split_zoom_time(end_str)
-
-
 
                     # get the portion of the dataframe that is between the start and end times
                     this_utterance = acoustic_df[acoustic_df['frameTime'].between(start_time, end_time)]
@@ -487,6 +426,11 @@ class ASISTInput:
 
                 # save the joined df as a new csv
                 df.to_csv("{0}/{1}_{2}_avgd.csv".format(self.save_path, experiment_id, participant_id))
+
+
+################################################################################
+############              ASIST PREP HELPER FUNCTIONS               ############
+################################################################################
 
 
 def split_zoom_time(timestamp):
@@ -520,19 +464,74 @@ def check_transcript(name_and_path):
     return contains_data
 
 
-def convert_mp4_to_wav(mp4_file):
-    # if the audio is in an mp4 file, convert to wav
-    # file is saved to the location where the mp4 was found
-    # returns the name of the file and its path
-    file_name = mp4_file.split(".mp4")[0]
-    wav_name = "{}.wav".format(file_name)
-    os.system("ffmpeg -i {0} {1}".format(mp4_file, wav_name))
-    return wav_name
+def create_random_gold_labels(data_path):
+    """
+    Create gold labels before real ones have been made
+    """
+    # create holder for gold labels
+    gold_labels = [["sid", "overall"]]
+    # create set for participants
+    all_participants = set()
 
+    # add all participants
+    [all_participants.add(item.split("_")[1]) for item in os.listdir(data_path)
+     if item.endswith("_avgd.csv")]
+
+    # add participant_ids and gold labels to holder
+    [gold_labels.append((participant, str(random.randint(0, 1)))) for participant in all_participants]
+
+    # save holder to file
+    ys_path = "{0}/asist_ys".format(data_path)
+    os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(ys_path))
+    with open("{0}/all_ys.csv".format(ys_path), 'w') as goldfile:
+        for item in gold_labels:
+            goldfile.write(",".join(item))
+            goldfile.write("\n")
+
+
+def run_sentiment_analysis_pipeline(asist, sentiment_text_path):
+    """
+    Run the full text-based sentiment analysis portion of the pipeline
+    asist : an ASISTInput object
+
+    """
+    # prepare audio and text data
+    asist.extract_audio_and_aws_text(asist.path)
+
+    # prepare utterances for input into analyzer
+    transcription_path = asist.path
+
+    # get instance of TranscriptPrepper class
+    transcript_prepper = sent_prep.TranscriptPrepper(transcription_path, sentiment_text_path)
+
+    # prepare transcripts
+    transcript_prepper.split_transcripts_by_utterance()
+
+    # holder for all output file names
+    out_names = []
+
+    # put utterances through analyzer
+    for f in os.listdir(sentiment_text_path):
+        # find files produced by megh function
+        if f.endswith("_transcript_split.txt"):
+            # prepare name for output files
+            out_name = "_".join(f.split("_")[:-3]) + "_sentiment_out.txt"
+            out_names.append(out_name)
+            # run shell script
+            os.system("./get_asist_sentiment_analysis.sh {0}/{1} {0}/{2}".format(sentiment_text_path,
+                                                                                 f, out_name))
+
+    # return the names of all score files created
+    return out_names
+
+
+################################################################################
+############                         USAGE                          ############
+################################################################################
 
 if __name__ == "__main__":
     if len(sys.argv) <= 2:
-        # # define variables
+        # define variables
         # data_path = "../../Downloads/real_search_data"
         data_path = "../../Downloads/data_flatstructure"
         save_path = "output/asist_audio"
@@ -541,33 +540,27 @@ if __name__ == "__main__":
         acoustic_feature_set = "IS10"
         smile_path = "~/opensmile-2.3.0"
 
-        # try out the audio
-        # print(missions)
+        # create instance of input class
         asist = ASISTInput(data_path, save_path, smile_path, missions=missions,
                            acoustic_feature_set=acoustic_feature_set)
         if len(sys.argv) == 1:
-            asist.extract_tomcat_audio_and_text_data()
+            # asist.extract_tomcat_audio_and_text_data()
+            asist.extract_audio_and_aws_text_with_missions()
         elif len(sys.argv) == 2 and sys.argv[1] == "mp4_data":
-            print("Going to extract asist audio data from mp4 files")
-            # extract audio from mp4 files
-            asist.extract_asist_audio_data()
-            # extract text from zoom transcripts
-            asist.extract_asist_text_data()
-            # combine the audio and text files
-            asist.align_tomcat_text_and_acoustic_data()
+            # extract audio + zoom text, use utterance averaging of features for alignment
+            asist.extract_audio_and_zoom_text(asist.path)
         elif len(sys.argv) == 2 and sys.argv[1] == "prep_for_sentiment_analyzer":
-            # prepare audio and text data
-            # asist.extract_audio_and_aws_text(asist.path)
+            run_sentiment_analysis_pipeline(asist, sentiment_text_path)
+    elif len(sys.argv) == 8:
+        data_path = sys.argv[1]
+        save_path = sys.argv[2]
+        sentiment_text_path = sys.argv[3]
+        missions = sys.argv[4]
+        acoustic_feature_set = sys.argv[5]
+        smile_path = sys.argv[6]
+        analysis_type = sys.argv[7]
 
-            # todo: megh function, prepare utterances for input into analyzer
-
-            # put utterances through analyzer
-            for f in os.listdir(sentiment_text_path):
-                # find files produced by megh function
-                if f.endswith("_transcript_split.txt"):
-                    # prepare name for output files
-                    out_name = "_".join(f.split("_")[:-3]) + "sentiment_out.txt"
-                    # run shell script
-                    os.system("./get_asist_sentiment_analysis.sh {0}/{1} {0}/{2}".format(sentiment_text_path,
-                                                                                         f, out_name))
+        # create instance of input class
+        asist = ASISTInput(data_path, save_path, smile_path, missions=missions,
+                           acoustic_feature_set=acoustic_feature_set)
 

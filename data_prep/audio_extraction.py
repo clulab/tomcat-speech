@@ -302,3 +302,51 @@ class GetFeatures:
                 feature_set[csv_name] = csv_data
 
         return feature_set
+
+
+def convert_mp4_to_wav(mp4_file):
+    # if the audio is in an mp4 file, convert to wav
+    # file is saved to the location where the mp4 was found
+    # returns the name of the file and its path
+    file_name = mp4_file.split(".mp4")[0]
+    wav_name = "{}.wav".format(file_name)
+    # check if the file already exists
+    if not os.path.exists(mp4_file):
+        os.system("ffmpeg -i {0} {1}".format(mp4_file, wav_name))
+    # otherwise, print that it exists
+    else:
+        print("{} already exists".format(wav_name))
+
+    return wav_name
+
+
+def extract_portions_of_mp4_or_wav(path_to_sound_file, sound_file, start_time,
+                                   end_time, save_path=None, short_file_name=None):
+    """
+    Extracts only necessary portions of a sound file
+    sound_file : the name of the full file to be adjusted
+    start_time : the time at which the extracted segment should start
+    end_time : the time at which the extracted segment should end
+    short_file_name : the name of the saved short sound file
+    """
+    # set full path to file
+    full_sound_path = os.path.join(path_to_sound_file, sound_file)
+
+    # check sound file extension
+    if sound_file.endswith(".mp4"):
+        # convert to wav first
+        full_sound_path = convert_mp4_to_wav(full_sound_path)
+
+    if not short_file_name:
+        print("short file name not found")
+        short_file_name = "{0}_{1}_{2}.wav".format(sound_file.split(".")[0],
+                                                   start_time, end_time)
+
+    if save_path is not None:
+        save_name = save_path + "/" + short_file_name
+    else:
+        save_name = path_to_sound_file + "/" + short_file_name
+
+    # get shortened version of file
+    os.system("ffmpeg -i {0} -ss {1} -to {2} {3}".format(full_sound_path, start_time,
+                                                         end_time, save_name))
