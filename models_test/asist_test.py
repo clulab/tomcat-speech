@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
         print("Sentiment scores and their corresponding utterances loaded")
 
-        sys.exit(1)
+        # sys.exit(1)
 
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
     glove_dict = make_glove_dict(glove_file)

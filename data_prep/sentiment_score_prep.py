@@ -118,6 +118,9 @@ class SentimentScores:
 
         # for each item in the output list
         for input_name in utterance_input_names:
+            # ensure the input name does not contain the full path
+            input_name = input_name.split("/")[-1]
+
             # get the study and subject IDs
             study_id = input_name.split("_")[4]
             participant_id = input_name.split("_")[7]

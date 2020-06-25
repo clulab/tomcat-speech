@@ -4,7 +4,6 @@ import data_prep.audio_extraction as audio_extraction
 import data_prep.sentiment_score_prep as sent_prep
 
 import os
-import subprocess
 import sys
 import pandas as pd
 import pprint
