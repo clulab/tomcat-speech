@@ -536,7 +536,7 @@ if __name__ == "__main__":
                 # find files produced by megh function
                 if f.endswith("_transcript_split.txt"):
                     # prepare name for output files
-                    out_name = "_".join(f.split("_")[:-3]) + "sentiment_out.txt"
+                    out_name = "_".join(f.split("_")[:-3]) + "_sentiment_out.txt"
                     # run shell script
                     os.system("./get_asist_sentiment_analysis.sh {0}/{1} {0}/{2}".format(sentiment_text_path,
                                                                                          f, out_name))
