@@ -194,7 +194,7 @@ class ASISTInput:
         # convert mp4 files to wav if needed
         if mp4:
             audio_path_and_file = audio_path + "/" + audio_file
-            audio_path = convert_mp4_to_wav(audio_path_and_file + ".mp4")
+            audio_path = audio_extraction.convert_mp4_to_wav(audio_path_and_file + ".mp4")
             audio_name = audio_path.split("/")[-1]  # because we don't want the full path
             audio_path = "/".join(audio_path.split("/")[:-1])
         else:
@@ -459,23 +459,6 @@ def check_transcript(name_and_path):
         contains_data = False
 
     return contains_data
-
-
-def convert_mp4_to_wav(mp4_file):
-    # if the audio is in an mp4 file, convert to wav
-    # file is saved to the location where the mp4 was found
-    # returns the name of the file and its path
-    file_name = mp4_file.split(".mp4")[0]
-    wav_name = "{}.wav".format(file_name)
-    # check if the file already exists
-    if not os.path.exists(mp4_file):
-        os.system("ffmpeg -i {0} {1}".format(mp4_file, wav_name))
-    # otherwise, print that it exists
-    else:
-        print("{} already exists".format(wav_name))
-
-    return wav_name
-
 
 def create_random_gold_labels(data_path):
     """
