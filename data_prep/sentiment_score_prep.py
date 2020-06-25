@@ -2,11 +2,63 @@
 # organize them for input into a neural network classifier
 #   or for use with a hybrid sentiment analyzer
 
+import glob
 import os
+import re
 import sys
 
 import pandas as pd
 import warnings
+
+
+class TranscriptPrepper:
+    """
+    Prepares transcripts to be entered into the sentiment analyzer
+    Identifies transcripts and splits them at utterance boundary
+    """
+    def __init__(self, path_to_transcripts, save_path):
+        self.transcript_path = path_to_transcripts
+        self.save_path = save_path
+        os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(save_path))
+
+        # get a list of transcript files
+        self.transcript_files = self.get_list_of_transcripts()
+
+    def get_list_of_transcripts(self):
+        """
+        find all transcript files in a given directory
+        location : the path to directory containing transcripts
+        """
+        fold = self.transcript_path + '/*video_transcript.txt'
+        files = glob.glob(fold)
+
+        if len(files) == 0:
+            sys.exit("No relevant transcript files")
+
+        return files
+
+    def split_transcripts_by_utterance(self):
+        """
+        uses [., ?, !] to split transcripts at sentence boundaries
+        saves the split transcripts into files
+        used as input to text-based sentiment analysis
+        """
+        for item in self.transcript_files:
+            # get just the file name
+            item_name = item.split("/")[-1].split(".txt")[0]
+
+            # create name for the output file
+            output_name = self.save_path + "/" + item_name + "_split.txt"
+
+            # find utterances
+            with open(item) as f:
+                my_list = list(f)
+                split_utts = re.split('\.\s|\?\s|\!\s', my_list[0])
+
+            # save the split transcript to a file
+            with open(output_name, 'w') as file_handler:
+                for utt in split_utts:
+                    file_handler.write("%s\n" % utt)
 
 
 class SentimentScores:
@@ -121,23 +173,3 @@ def set_cols_and_colnames(counts=True, probabilities=True, include_utts=True):
 
     return cols, colnames
 
-
-
-
-
-
-
-
-# test this code
-scores = SentimentScores("output", ["ASIST_data_study_id_000001_subject_id_000011_sentiment_out.txt",
-                                    "ASIST_data_study_id_000001_subject_id_000012_sentiment_out.txt"])
-
-all_scores = scores.prepare_scores(counts=True, probabilities=True)
-print(all_scores.keys())
-print(all_scores["ASIST_data_study_id_000001_subject_id_000011_sentiment_out.txt"])
-
-scores_and_utts = scores.join_words_with_predictions("output",
-                                                     ["ASIST_data_study_id_000001_subject_id_000011_video_transcript_split.txt",
-                                                      "ASIST_data_study_id_000001_subject_id_000012_video_transcript_split.txt"])
-print(scores_and_utts.keys())
-print(scores_and_utts["000001_000011"])

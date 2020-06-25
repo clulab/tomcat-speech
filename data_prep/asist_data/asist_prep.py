@@ -1,6 +1,7 @@
 # prepare the asist-produced audio and transcription data for neural classifiers
 
 import data_prep.audio_extraction as audio_extraction
+import data_prep.sentiment_score_prep as sent_prep
 
 import os
 import sys
@@ -508,8 +509,8 @@ def create_random_gold_labels(data_path):
 if __name__ == "__main__":
     if len(sys.argv) <= 2:
         # define variables
-        data_path = "../../Downloads/real_search_data"
-        # data_path = "../../Downloads/data_flatstructure"
+        # data_path = "../../Downloads/real_search_data"
+        data_path = "../../Downloads/data_flatstructure"
         save_path = "output/asist_audio"
         sentiment_text_path = "output/"
         missions = ['mission_1', 'mission_2', 'mission_0']
@@ -529,7 +530,14 @@ if __name__ == "__main__":
             # prepare audio and text data
             asist.extract_audio_and_aws_text(asist.path)
 
-            # todo: megh function, prepare utterances for input into analyzer
+            # prepare utterances for input into analyzer
+            transcription_path = asist.path
+
+            # get instance of TranscriptPrepper class
+            transcript_prepper = sent_prep.TranscriptPrepper(transcription_path, sentiment_text_path)
+
+            # prepare transcripts
+            transcript_prepper.split_transcripts_by_utterance()
 
             # put utterances through analyzer
             for f in os.listdir(sentiment_text_path):
