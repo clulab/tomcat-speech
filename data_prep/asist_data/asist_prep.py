@@ -4,6 +4,7 @@ import data_prep.audio_extraction as audio_extraction
 import data_prep.sentiment_score_prep as sent_prep
 
 import os
+import subprocess
 import sys
 import pandas as pd
 import pprint
@@ -15,6 +16,7 @@ import time
 ################################################################################
 ############               TRANSCRIPT-ALTERING CLASS                ############
 ################################################################################
+
 
 class JSONtoTSV:
     """
@@ -157,6 +159,7 @@ class ZoomTranscriptToTSV:
 ################################################################################
 ############                 ASIST DATA INPUT CLASS                 ############
 ################################################################################
+
 
 class ASISTInput:
     def __init__(self, asist_path, save_path, smilepath="~/opensmile-2.3.0",
@@ -430,6 +433,7 @@ class ASISTInput:
 ############              ASIST PREP HELPER FUNCTIONS               ############
 ################################################################################
 
+
 def split_zoom_time(timestamp):
     """
     split the hh:mm:ss.sss zoom timestamps to seconds + ms
@@ -460,6 +464,7 @@ def check_transcript(name_and_path):
 
     return contains_data
 
+
 def create_random_gold_labels(data_path):
     """
     Create gold labels before real ones have been made
@@ -483,6 +488,42 @@ def create_random_gold_labels(data_path):
         for item in gold_labels:
             goldfile.write(",".join(item))
             goldfile.write("\n")
+
+
+def run_sentiment_analysis_pipeline(asist, sentiment_text_path):
+    """
+    Run the full text-based sentiment analysis portion of the pipeline
+    asist : an ASISTInput object
+
+    """
+    # prepare audio and text data
+    asist.extract_audio_and_aws_text(asist.path)
+
+    # prepare utterances for input into analyzer
+    transcription_path = asist.path
+
+    # get instance of TranscriptPrepper class
+    transcript_prepper = sent_prep.TranscriptPrepper(transcription_path, sentiment_text_path)
+
+    # prepare transcripts
+    transcript_prepper.split_transcripts_by_utterance()
+
+    # holder for all output file names
+    out_names = []
+
+    # put utterances through analyzer
+    for f in os.listdir(sentiment_text_path):
+        # find files produced by megh function
+        if f.endswith("_transcript_split.txt"):
+            # prepare name for output files
+            out_name = "_".join(f.split("_")[:-3]) + "_sentiment_out.txt"
+            out_names.append(out_name)
+            # run shell script
+            os.system("./get_asist_sentiment_analysis.sh {0}/{1} {0}/{2}".format(sentiment_text_path,
+                                                                                 f, out_name))
+
+    # return the names of all score files created
+    return out_names
 
 
 ################################################################################
@@ -510,25 +551,17 @@ if __name__ == "__main__":
             # extract audio + zoom text, use utterance averaging of features for alignment
             asist.extract_audio_and_zoom_text(asist.path)
         elif len(sys.argv) == 2 and sys.argv[1] == "prep_for_sentiment_analyzer":
-            # prepare audio and text data
-            asist.extract_audio_and_aws_text(asist.path)
+            run_sentiment_analysis_pipeline(asist, sentiment_text_path)
+    elif len(sys.argv) == 8:
+        data_path = sys.argv[1]
+        save_path = sys.argv[2]
+        sentiment_text_path = sys.argv[3]
+        missions = sys.argv[4]
+        acoustic_feature_set = sys.argv[5]
+        smile_path = sys.argv[6]
+        analysis_type = sys.argv[7]
 
-            # prepare utterances for input into analyzer
-            transcription_path = asist.path
-
-            # get instance of TranscriptPrepper class
-            transcript_prepper = sent_prep.TranscriptPrepper(transcription_path, sentiment_text_path)
-
-            # prepare transcripts
-            transcript_prepper.split_transcripts_by_utterance()
-
-            # put utterances through analyzer
-            for f in os.listdir(sentiment_text_path):
-                # find files produced by megh function
-                if f.endswith("_transcript_split.txt"):
-                    # prepare name for output files
-                    out_name = "_".join(f.split("_")[:-3]) + "_sentiment_out.txt"
-                    # run shell script
-                    os.system("./get_asist_sentiment_analysis.sh {0}/{1} {0}/{2}".format(sentiment_text_path,
-                                                                                         f, out_name))
+        # create instance of input class
+        asist = ASISTInput(data_path, save_path, smile_path, missions=missions,
+                           acoustic_feature_set=acoustic_feature_set)
 

@@ -2,7 +2,7 @@
 # currently the main entry point into the system
 # add "prep_data" as an argument when running this from command line
 #       if your acoustic features have not been extracted from audio
-
+import glob
 
 from models.bimodal_models import BimodalCNN, MultichannelCNN
 from models.baselines import LRBaseline, EmbeddingsOnly
@@ -10,6 +10,7 @@ from models.train_and_test_models import *
 from models.input_models import *
 
 from data_prep.data_prep import *
+import data_prep.sentiment_score_prep as score_prep
 import data_prep.asist_data.asist_prep as asist_prep
 
 # import parameters for model
@@ -63,6 +64,15 @@ get_plot = True
 model_plot_path = "output/plots/"
 os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path))
 
+# set parameters for the sentiment analyzer prep
+asist_transcription_path = "../../Downloads/data_flatstructure"
+transcription_save_path = input_dir
+sentiment_save_path = "output"
+missions = ["mission_2"]
+acoustic_feature_set = "IS10"
+smile_path = "~/opensmile-2.3.0"
+
+
 
 if __name__ == "__main__":
     # 0. RUN ASIST DATA PREP AND REORGANIZATION FOR INPUT INTO THE MODEL
@@ -70,14 +80,32 @@ if __name__ == "__main__":
         os.system("time python data_prep/asist_data/asist_prep.py")
     elif len(sys.argv) > 1 and sys.argv[1] == "mp4_data":
         os.system("time python data_prep/asist_data/asist_prep.py mp4_data")  # fixme
-    elif len(sys.argv) > 1 and sys.argv[1] == "use_sentiment_analyzer":
-        os.system("time python data_prep/asist_data/asist_prep.py prep_for_sentiment_analyzer")
+    # elif len(sys.argv) > 1 and sys.argv[1] == "use_sentiment_analyzer":
+    #     os.system("time python data_prep/asist_data/asist_prep.py prep_for_sentiment_analyzer")
 
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
     acoustic_dict = make_acoustic_dict(input_dir, "_avgd.csv", data_type="asist")
 
     print("Acoustic dict created")
+
+    # 1b. IMPORT SENTIMENT SCORES FOR INPUTS IF DESIRED
+    if len(sys.argv) > 1 and sys.argv[1] == "use_sentiment_analyzer":
+        sentiment_input = asist_prep.ASISTInput(asist_transcription_path, transcription_save_path, smile_path,
+                                                missions=missions, acoustic_feature_set=acoustic_feature_set)
+        sentiment_score_files = asist_prep.run_sentiment_analysis_pipeline(sentiment_input, sentiment_save_path)
+
+        print("Sentiment scores created and saved")
+
+        # 1c. READ SENTIMENT SCORES INTO DICT AND GET THEM
+        sentiment_utterance_files = glob.glob(sentiment_save_path + "/*_video_transcript_split.txt")
+
+        sent_scores = score_prep.SentimentScores(sentiment_save_path, sentiment_score_files)
+        sent_scores.join_words_with_predictions(sentiment_save_path, sentiment_utterance_files)
+
+        print("Sentiment scores and their corresponding utterances loaded")
+
+        sys.exit(1)
 
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
     glove_dict = make_glove_dict(glove_file)

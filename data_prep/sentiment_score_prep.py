@@ -70,8 +70,8 @@ class SentimentScores:
         """
         self.score_text_names = score_text_names
         self.path_to_scores = path_to_scores
-        self.scores_paths = [os.path.join(self.path_to_scores, name)
-                             for name in score_text_names]
+        # self.scores_paths = [os.path.join(self.path_to_scores, name)
+        #                      for name in score_text_names]
 
     def prepare_scores(self, counts=True, probabilities=True):
         """
