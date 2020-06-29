@@ -12,7 +12,9 @@ from collections import OrderedDict
 
 
 class MELDData(Dataset):
-    # a dataset to manipulate the MELD data before passing to NNs
+    """
+    A dataset to manipulate the MELD data before passing to NNs
+    """
     def __init__(self, meld_path, glove, acoustic_length, f_end="_IS10.csv", use_cols=None):
         self.train_path = meld_path + "/train"
         self.dev_path = meld_path + "/dev"
@@ -30,12 +32,12 @@ class MELDData(Dataset):
         print("Collecting acoustic features")
 
         # ordered dicts of acoustic data
-        self.train_dict = OrderedDict(self.make_acoustic_dict_meld("{0}/audios".format(self.train_path),
-                                                                   f_end, use_cols))
-        self.dev_dict = OrderedDict(self.make_acoustic_dict_meld("{0}/audios".format(self.dev_path),
-                                                                 f_end, use_cols))
-        self.test_dict = OrderedDict(self.make_acoustic_dict_meld("{0}/audios".format(self.test_path),
-                                                                  f_end, use_cols))
+        self.train_dict = OrderedDict(make_acoustic_dict_meld("{0}/audios".format(self.train_path),
+                                                              f_end, use_cols))
+        self.dev_dict = OrderedDict(make_acoustic_dict_meld("{0}/audios".format(self.dev_path),
+                                                            f_end, use_cols))
+        self.test_dict = OrderedDict(make_acoustic_dict_meld("{0}/audios".format(self.test_path),
+                                                             f_end, use_cols))
 
         # utterance-level dict
         self.longest_utt, self.longest_dia = self.get_longest_utt_meld()
@@ -61,22 +63,29 @@ class MELDData(Dataset):
         # get the data organized for input into the NNs
         self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
 
-        self.emotion_weights = self.get_class_weights(self.train_y_emo)
+        self.emotion_weights = get_class_weights(self.train_y_emo)
 
-    def get_class_weights(self, y_set):
-        class_counts = {}
-        y_values = [item.index(max(item)) for item in y_set.tolist()]
-        for item in y_values:
-            if item not in class_counts:
-                class_counts[item] = 1
-            else:
-                class_counts[item] += 1
-        class_weights = []
-        for k,v in sorted(class_counts.items()):
-            class_weights.append(float(v))
-        class_weights = torch.tensor(class_weights)
-        return 1.0 / class_weights
+        self.split = self.train_data
 
+    def set_split(self, split):
+        """
+        Set the split (used for __len__)
+        """
+        if split == "train":
+            self.split = self.train_data
+        elif split == "dev":
+            self.split = self.dev_data
+        elif split == "test":
+            self.split = self.test_data
+
+    def __len__(self):
+        return len(self.split)
+
+    def __getitem__(self, item):
+        """
+        item (int) : the index to a data point
+        """
+        return self.split[item]
 
     def combine_xs_and_ys(self):
         """
@@ -91,8 +100,6 @@ class MELDData(Dataset):
                                self.train_y_emo[i], self.train_y_sent[i], self.train_utt_lengths[i]))
 
         for i, item in enumerate(self.dev_acoustic):
-            # print(i)
-            # print(self.dev_utt_lengths[i])
             dev_data.append((item, self.dev_utts[i], self.dev_spkrs[i],
                              self.dev_y_emo[i], self.dev_y_sent[i], self.dev_utt_lengths[i]))
 
@@ -281,24 +288,6 @@ class MELDData(Dataset):
         # return data
         return all_utts, all_speakers, all_emotions, all_sentiments
 
-    def make_acoustic_dict_meld(self, acoustic_path, f_end="_IS10.csv", use_cols=None):
-        """
-        makes a dict of (sid, call): data for use in ClinicalDataset objects
-        f_end: end of acoustic file names
-        use_cols: if set, should be a list [] of column names to include
-        """
-        acoustic_dict = {}
-        for f in os.listdir(acoustic_path):
-            if f.endswith(f_end):
-                if use_cols is not None:
-                    feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
-                else:
-                    feats = pd.read_csv(acoustic_path + "/" + f)
-                dia_id = f.split("_")[0]
-                utt_id = f.split("_")[1]
-                acoustic_dict[(dia_id, utt_id)] = feats.values.tolist()[0]
-        return acoustic_dict
-
     def make_acoustic_set(self, text_path, acoustic_dict):
         """
         Prep the acoustic data using the acoustic dict
@@ -306,74 +295,99 @@ class MELDData(Dataset):
         :param acoustic_dict:
         :return:
         """
+        # read in the acoustic csv
         all_utts_df = pd.read_csv(text_path)
+        # get lists of valid dialogues and utterances
         valid_dia_utt = all_utts_df['DiaID_UttID'].tolist()
         valid_dia = all_utts_df['Dialogue_ID'].tolist()
         valid_utt = all_utts_df['Utterance_ID'].tolist()
 
-        # make sure this works
-        # print(valid_dia_utt)
-        # print(sorted(acoustic_dict.keys()))
-
-        # for i, item in enumerate(valid_dia_utt):
-        #     print("{0}\t{1}\t{2}".format(item, valid_dia[i], valid_utt[i]))
-
+        # set counter for dialogue number
         dialogue = 0
 
+        # set holders for acoustic data
         all_acoustic = []
         usable_utts = []
+        intermediate_acoustic = [[0] * self.acoustic_length] * self.longest_utt
 
-        intermediate_acoustic = [[0] * self.acoustic_length] * self.longest_dia
-        # print(len(intermediate_acoustic))
-        # print(len(intermediate_acoustic[0]))
-        # print(len(intermediate_acoustic))
-        # print(len(valid_dia_utt))
-        # print(len(valid_dia))
-        # sys.exit(1)
-        # c = 0
-
+        # for all items with audio + gold label
         for idx, item in enumerate(valid_dia_utt):
-            # print(item.split("_")[0], item.split("_")[1])
+            # if that dialogue and utterance appears has an acoustic feats file
             if (item.split("_")[0], item.split("_")[1]) in acoustic_dict.keys():
+                # pull out the acoustic feats dataframe
                 acoustic_data = acoustic_dict[(item.split("_")[0], item.split("_")[1])]
+                # add this dialogue + utt combo to the list of possible ones
                 usable_utts.append((item.split("_")[0], item.split("_")[1]))
 
-                # print(acoustic_data)
-                # sys.exit(1)
-
+                # if the dialogue is one that's used
                 if dialogue == valid_dia[idx]:
+                    # get the utterance number
                     utt_num = valid_utt[idx]
-                    # intermediate_acoustic[utt_num] = acoustic_data
+                    # add the acoustic features to the holder of features
                     for i, feat in enumerate(acoustic_data):
                         intermediate_acoustic[utt_num][i] = feat
-                    # print("This is working")
-                    # c += 1
+                # if dialogue isn't one that's used
                 else:
-                    # print(intermediate_acoustic)
-                    # print(type(intermediate_acoustic))
-                    # print(len(intermediate_acoustic))
-                    # print(len(intermediate_acoustic[0]))
+                    # we know we have changed dialogues, so...
+                    # add a tensor of acoustic features to the list of all
                     all_acoustic.append(torch.tensor(intermediate_acoustic))
-                    # sys.exit(1)
-                    # print(len(all_acoustic))
 
+                    # set the dialogue
                     dialogue = valid_dia[idx]
 
-                    intermediate_acoustic = [[0] * self.acoustic_length] * self.longest_dia
+                    # zero the holder for intermediate acoustic data
+                    intermediate_acoustic = [[0] * self.acoustic_length] * self.longest_utt
 
+                    # get the utterance number
                     utt_num = valid_utt[idx]
-                    # intermediate_acoustic[utt_num] = acoustic_data
+                    # add the acoustic features to the holder of features
                     for i, feat in enumerate(acoustic_data):
                         intermediate_acoustic[utt_num][i] = feat
 
+        # pad the sequence and reshape it to proper format
         all_acoustic = nn.utils.rnn.pad_sequence(all_acoustic)
         all_acoustic = all_acoustic.transpose(0, 1)
-        # print(c)
-        # all_acoustic = np.asarray(all_acoustic)
-        # print(type(all_acoustic))
-        # print(all_acoustic.shape)
-        # print(type(all_acoustic[0]))
-        # print(all_acoustic[0].shape)
-        # sys.exit(1)
 
         return all_acoustic, usable_utts
+
+
+# helper functions
+def get_class_weights(y_set):
+    class_counts = {}
+    y_values = [item.index(max(item)) for item in y_set.tolist()]
+    for item in y_values:
+        if item not in class_counts:
+            class_counts[item] = 1
+        else:
+            class_counts[item] += 1
+    class_weights = []
+    for k,v in sorted(class_counts.items()):
+        class_weights.append(float(v))
+    class_weights = torch.tensor(class_weights)
+    return 1.0 / class_weights
+
+
+def make_acoustic_dict_meld(acoustic_path, f_end="_IS10.csv", use_cols=None):
+    """
+    makes a dict of (sid, call): data for use in ClinicalDataset objects
+    f_end: end of acoustic file names
+    use_cols: if set, should be a list [] of column names to include
+    """
+    acoustic_dict = {}
+    # find acoustic features files
+    for f in os.listdir(acoustic_path):
+        if f.endswith(f_end):
+            # read in the file as a dataframe
+            if use_cols is not None:
+                feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
+            else:
+                feats = pd.read_csv(acoustic_path + "/" + f)
+
+            # get the dialogue and utterance IDs
+            dia_id = f.split("_")[0]
+            utt_id = f.split("_")[1]
+
+            # save the dataframe to a dict with (dialogue, utt) as key
+            acoustic_dict[(dia_id, utt_id)] = feats.values.tolist()[0]
+
+    return acoustic_dict

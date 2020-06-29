@@ -1,4 +1,4 @@
-# holds the models needed in order to prepare input data to the main models
+# the models used for multimodal, multitask classification
 
 import torch
 import torch.nn as nn
@@ -136,24 +136,35 @@ class BaseGRU(nn.Module):
             self.fc2 = None
 
     def forward(self, inputs, input_lengths):
-        # todo: try the below for packing padded sequences
-        inputs = nn.utils.rnn.pack_padded_sequence(inputs, input_lengths, batch_first=True, enforce_sorted=False)
-        # print("Input shape is: {}".format(inputs.data.shape))
+        inputs = nn.utils.rnn.pack_padded_sequence(inputs, input_lengths,
+                                                   batch_first=True, enforce_sorted=False)
+        # # print("Input shape is: {}".format(inputs.data.shape))
+        # print("Now printing input info: ###########################################################")
+        # print(inputs.data.shape)
+        # print(inputs.data.requires_grad)
 
         # feats = F.leaky_relu(self.GRU(inputs))
         rnn_feats, hidden = self.GRU(inputs)
+        #
+        # print("Now priting output of GRU: ###########################################################")
+        # print(rnn_feats.data.shape)
+        # print(rnn_feats.data.requires_grad)
+        # print(hidden.shape)
+        # print(hidden.requires_grad)
 
-        feats, _ = nn.utils.rnn.pad_packed_sequence(rnn_feats)
-        feats = feats.permute(1, 0, 2)
-        feats = F.leaky_relu(feats)
+        # fixme: i think this might be a problem
+        # feats, _ = nn.utils.rnn.pad_packed_sequence(rnn_feats)
+        # feats = feats.permute(1, 0, 2)
+        # feats = F.leaky_relu(feats)
 
-        # feats = torch.max(feats, dim=2)[0]
-
-        # if self.dialogue_aware:
-        #     feats = torch.max(feats, dim=3)[0]
-        #     feats = feats.permute(0, 2, 1)
-        # else:
-        #     feats = torch.max(feats, dim=2)[0]
+        feats = hidden.permute(1, 0, 2)
+        # feats = F.tanh(hidden)
+        # feats = F.leaky_relu(hidden)
+        #
+        # print("Now printing FEATS: ########################################################### ")
+        # print(feats)
+        # print(feats.shape)
+        # print(feats.requires_grad)
 
         # use pooled, squeezed feats as input into fc layers
         if self.fc2 is not None:
@@ -161,11 +172,19 @@ class BaseGRU(nn.Module):
             output = self.fc2(F.dropout(fc1_out, self.dropout))
         else:
             output = self.fc1(F.dropout(feats, self.dropout))
+        #
+        # print("Now printing OUTPUT: ###########################################################")
+        # print(output)
+        # print(output.shape)
+        # print(output.requires_grad)
 
         # squeeze to 1 dimension for binary categorization
         if self.output_dim == 1:
             output = output.squeeze(1)
 
+        # print(output)
+        # print(output.shape)
+        # sys.exit(1)
         # return the output
         # output is NOT fed through softmax or sigmoid layer here
         # assumption: output is intermediate layer of larger NN
@@ -309,8 +328,8 @@ class BasicEncoder(nn.Module):
                 if self.use_GRU:
                     acoustic_input = self.audio_gru(acoustic_input, length_input)
                     acoustic_input = acoustic_input.permute(0, 2, 1)
-                    # print(acoustic_input.shape)
-                    acoustic_input = torch.max(acoustic_input, dim=2)[0]
+                    acoustic_input = torch.mean(acoustic_input, dim=2)
+                    # acoustic_input = torch.max(acoustic_input, dim=2)[0]
                 else:
                     acoustic_input = self.audio_conv(acoustic_input)
             elif not self.dialogue_aware:
@@ -335,7 +354,8 @@ class BasicEncoder(nn.Module):
                     utt_embs = self.text_gru(embs, length_input)
                     utt_embs = utt_embs.permute(0, 2, 1)
                     # take max (or avg, etc) to reduce dimensionality
-                    utt_embs = torch.max(utt_embs, dim=2)[0]
+                    # utt_embs = torch.max(utt_embs, dim=2)[0]
+                    utt_embs = torch.mean(utt_embs, dim=2)
                 else:
                     utt_embs = self.text_conv(embs)
             else:

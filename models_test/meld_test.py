@@ -37,21 +37,25 @@ if cuda:
 
 # set parameters for data prep
 # todo: should be updated later to a glove subset appropriate for this task
-# glove_file = "../../glove.short.300d.txt"
-glove_file = "../../glove.42B.300d.txt"
+glove_file = "../../glove.short.300d.txt"
+# glove_file = "../../glove.42B.300d.txt"
 
 meld_path = "../../MELD_formatted"
 # set number of splits
 num_splits = params.num_splits
 # set model name and model type
 model = params.model
-model_type = "Multitask_2lyrGRU_fullGloVe"
+model_type = "DELETE_ME"
 # set number of columns to skip in data input files
 cols_to_skip = params.cols_to_skip
 # path to directory where best models are saved
 model_save_path = "output/models/"
+# make sure the full save path exists; if not, create it
+os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_save_path))
 # decide if you want to plot the loss/accuracy curves for training
 get_plot = True
+model_plot_path = "output/plots/"
+os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path))
 
 
 if __name__ == "__main__":
@@ -122,11 +126,12 @@ if __name__ == "__main__":
             bimodal_predictor.to(device)
 
         # set loss function, optimization, and scheduler, if using
-        # todo: do we want to include the class weights in the loss function?
-        #   here we know it, but we won't with new tasks/classes
-        # loss_func = nn.CrossEntropyLoss(data.emotion_weights)
-        loss_func = nn.CrossEntropyLoss()
-        # loss_func = nn.CrossEntropyLoss()
+        if params.use_class_weights:
+            loss_func = nn.CrossEntropyLoss(data.emotion_weights)
+        else:
+            loss_func = nn.CrossEntropyLoss()
+
+        # optimizer = torch.optim.SGD(bimodal_trial.parameters(), lr=lr, momentum=0.9)
         optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
                                      weight_decay=params.weight_decay)
         if params.use_scheduler:

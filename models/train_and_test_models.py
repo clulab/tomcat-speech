@@ -155,9 +155,11 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
                 y_pred = class_pred
 
             # uncomment for prediction spot-checking during training
-            # print(y_pred)
-            # print(y_gold)
-            # sys.exit(1)
+            # if epoch_index % 10 == 0:
+            #     print(y_pred)
+            #     print(y_gold)
+            # if epoch_index == 35:
+            #     sys.exit(1)
 
             # step 3. compute the loss
             y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
