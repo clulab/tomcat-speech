@@ -1,6 +1,13 @@
 # test the models created in models directory with MELD data
 # currently the main entry point into the system
 
+import numpy as np
+import random
+import torch
+import sys
+
+sys.path.append("/net/kate/storage/work/johnculnan/github/asist-speech")
+
 from models.bimodal_models import BimodalCNN, MultichannelCNN
 from models.baselines import LRBaseline, EmbeddingsOnly
 from models.train_and_test_models import *
@@ -12,18 +19,13 @@ from data_prep.meld_input_formatting import *
 # import parameters for model
 from models.parameters.multitask_params import params
 
-import numpy as np
-import random
-import torch
-import sys
-
 
 # set device
-cuda = True
+cuda = False
 
 # Check CUDA
-if not torch.cuda.is_available():
-    cuda = False
+# if not torch.cuda.is_available():
+#     cuda = False
 
 device = torch.device("cuda" if cuda else "cpu")
 
@@ -40,7 +42,8 @@ if cuda:
 glove_file = "../../glove.short.300d.txt"
 # glove_file = "../../glove.42B.300d.txt"
 
-meld_path = "../../MELD_formatted"
+# meld_path = "../../MELD_formatted"
+meld_path = "/data/nlp/corpora/MM/MELD_formatted"
 # set number of splits
 num_splits = params.num_splits
 # set model name and model type
