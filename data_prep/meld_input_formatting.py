@@ -7,7 +7,7 @@ import torch
 from torch import nn
 from torch.utils.data import Dataset
 
-from data_prep.data_prep import clean_up_word
+from data_prep.prepare_data import clean_up_word
 from collections import OrderedDict
 
 

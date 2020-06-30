@@ -99,7 +99,8 @@ def generate_batches(data, batch_size, shuffle=True, device="cpu"):
     acoustic_batches = [item[0] for item in batched_split]
     embedding_batches = [item[1] for item in batched_split]
     speaker_batches = [item[2] for item in batched_split]
-    y_batches = [item[3] for item in batched_split]
+    # y_batches = [item[3] for item in batched_split]
+    y_batches = [item[4] for item in batched_split]
     length_batches = [item[5] for item in batched_split]
 
     [acoustic.append(item.to(device)) for item in acoustic_batches]

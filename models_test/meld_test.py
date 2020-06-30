@@ -6,7 +6,7 @@ from models.baselines import LRBaseline, EmbeddingsOnly
 from models.train_and_test_models import *
 
 from models.input_models import *
-from data_prep.data_prep import *
+from data_prep.prepare_data import *
 from data_prep.meld_input_formatting import *
 
 # import parameters for model

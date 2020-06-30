@@ -12,7 +12,7 @@ params = Namespace(
             batch_size=45,  # 32
             early_stopping_criteria=10,
             text_network=True,  # where to use sub-networks
-            alignment=None,  # "utt",  # None,
+            alignment="utt",  # "utt",  # None,
             use_class_weights=False,
 
             use_GRU=True,  # whether sub-networks use cnn or gru
@@ -47,7 +47,7 @@ params = Namespace(
             audio_gru_hidden_dim=20,
 
             # outputs
-            output_dim=7,  # length of output vector
+            output_dim=3,   # 7,  # length of output vector
             softmax=True,
 
             # CNN-specific parameters
