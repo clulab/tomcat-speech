@@ -127,11 +127,7 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         # set classifier(s) to training mode
         classifier.train()
 
-        if model2 is not None:
-            train_state2['epoch_index'] = epoch_index
-            model2.train()
-
-        acoustic_batches, embedding_batches, speaker_batches, y_batches, length_batches = \
+        acoustic_batches, embedding_batches, _, y_batches, length_batches = \
             generate_batches(train_splits, batch_size, shuffle=True, device=device)
 
         # for each batch in the list of batches created by the dataloader
@@ -143,16 +139,8 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             optimizer.zero_grad()
 
             # step 2. compute the output
-            class_pred = classifier(acoustic_input=batch_array, text_input=embedding_batches[batch_index],
-                                    speaker_input=speaker_batches[batch_index],
+            y_pred = classifier(acoustic_input=batch_array, text_input=embedding_batches[batch_index],
                                     length_input=length_batches[batch_index])
-
-            # if we're using multitask, include the decoder
-            if model2 is not None:
-                # get output of model 2, if using
-                y_pred = model2(class_pred)
-            else:
-                y_pred = class_pred
 
             # uncomment for prediction spot-checking during training
             # if epoch_index % 10 == 0:
@@ -199,7 +187,7 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         # print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
 
         # Iterate over validation set--put it in a dataloader
-        acoustic_batches, embedding_batches, speaker_batches, y_batches, length_batches = \
+        acoustic_batches, embedding_batches, _, y_batches, length_batches = \
             generate_batches(val_data, batch_size, shuffle=True, device=device)
 
         # reset loss and accuracy to zero
@@ -216,16 +204,8 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         # for each batch in the dataloader
         for batch_index, batch_array in enumerate(acoustic_batches):
             # compute the output
-            class_pred = classifier(acoustic_input=batch_array, text_input=embedding_batches[batch_index],
-                                    speaker_input=speaker_batches[batch_index],
+            y_pred = classifier(acoustic_input=batch_array, text_input=embedding_batches[batch_index],
                                     length_input=length_batches[batch_index])
-
-            # if we're using multitask, include the decoder
-            if model2 is not None:
-                # get output of model 2, if using
-                y_pred = model2(class_pred)
-            else:
-                y_pred = class_pred
 
             # get the gold labels
             y_gold = y_batches[batch_index].float()
@@ -270,42 +250,3 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         # if it's time to stop, end the training process
         if train_state['stop_early']:
             break
-
-
-def test(model, state_loadpath, test_data, loss_func):
-    """
-    Test the best model on the held-out data fold
-    :param model: the model (class)
-    :param state_loadpath: the path to the saved .pth file for trained state dict
-    :param test_data: the held-out data fold
-    :param loss_func: the loss function
-    :return: loss, accuracy on test set
-    """
-    # load the state dict into model and set to evaluate
-    model.load_state_dict(torch.load(state_loadpath))
-    model.eval()
-
-    # split test data
-    test_split = DataLoader(test_data)
-    acoustic = [item[0] for item in test_split]
-    embedding = [item[1] for item in test_split]
-    speaker = [item[2] for item in test_split]
-    gold_labels = [item[3] for item in test_split]
-
-    # initialize loss and accuracy
-    running_loss = 0.
-    running_acc = 0.
-
-    for index, acoustic_batch in enumerate(acoustic):
-        y_pred = model(acoustic_input=acoustic_batch, text_input=embedding[index], speaker_input=speaker[index])
-        y_gold = gold_labels[index].float()
-
-        loss = loss_func(y_pred, y_gold)
-        running_loss += (loss.item() - running_loss) / (index + 1)
-
-        y_pred = torch.round(y_pred)
-
-        acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
-        running_acc += (acc_t - running_acc) / (index + 1)
-
-    return running_loss, running_acc

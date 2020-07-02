@@ -202,92 +202,6 @@ class MELDData(Dataset):
         # return data
         return all_utts, all_speakers, all_emotions, all_sentiments, utt_lengths
 
-    def make_dialogue_aware_meld_data_tensors(self, text_path, all_utts_list):
-        """
-        Prepare the tensors of utterances + speakers, emotion and sentiment scores
-        This preserves dialogue structure for use within networks
-        todo: add usage of this back into the class as needed
-            or (better) combine with make_meld_data_tensors
-        :param text_path: the FULL path to a csv containing the text (in column 0)
-        :param all_utts_list: a list of all usable utterances
-        :return:
-        """
-        # holders for the data
-        all_utts = []
-        all_speakers = []
-        all_emotions = []
-        all_sentiments = []
-
-        all_utts_df = pd.read_csv(text_path)
-        dialogue = 0
-
-        # dialogue-level holders
-        utts = [[0] * self.longest_utt] * self.longest_dia
-        spks = [0] * self.longest_dia
-        emos = [[0] * 7] * self.longest_dia
-        sents = [[0] * 3] * self.longest_dia
-
-        for idx, row in all_utts_df.iterrows():
-
-            # check to make sure this utterance is used
-            dia_num, utt_num = row['DiaID_UttID'].split("_")[:2]
-            if (dia_num, utt_num) in all_utts_list:
-
-                dia_id = row['Dialogue_ID']
-                utt_id = row['Utterance_ID']
-                utt = row["Utterance"]
-                utt = [clean_up_word(wd) for wd in utt.strip().split(" ")]
-
-                spk_id = row['Speaker']
-                emo = row['Emotion']
-                sent = row['Sentiment']
-
-                # utterance-level holder
-                idxs = [0] * self.longest_utt
-
-                # convert words to indices for glove
-                for ix, wd in enumerate(utt):
-                    if wd in self.glove.wd2idx.keys():
-                        idxs[ix] = self.glove.wd2idx[wd]
-                    else:
-                        idxs[ix] = self.glove.wd2idx['<UNK>']
-
-                if dialogue == dia_id:
-                    utts[utt_id] = idxs
-                    spks[utt_id] = spk_id
-                    emos[utt_id][emo] = 1 # assign 1 to the emotion tagged
-                    sents[utt_id][sent] = 1 # assign 1 to the sentiment tagged
-                else:
-                    all_utts.append(torch.tensor(utts))
-                    all_speakers.append(spks)
-                    all_emotions.append(emos)
-                    all_sentiments.append(sents)
-
-                    # utt_dict[dia_id] = utts
-                    dialogue = dia_id
-
-                    # dialogue-level holders
-                    utts = [[0] * self.longest_utt] * self.longest_dia
-                    spks = [0] * self.longest_dia
-                    emos = [[0] * 7] * self.longest_dia
-                    sents = [[0] * 3] * self.longest_dia
-
-                    # utts.append(idxs)
-                    utts[utt_id] = idxs
-                    spks[utt_id] = spk_id
-                    emos[utt_id][emo] = 1 # assign 1 to the emotion tagged
-                    sents[utt_id][sent] = 1 # assign 1 to the sentiment tagged
-
-        all_speakers = torch.tensor(all_speakers)
-        all_emotions = torch.tensor(all_emotions)
-        all_sentiments = torch.tensor(all_sentiments)
-
-        all_utts = nn.utils.rnn.pad_sequence(all_utts)
-        all_utts = all_utts.transpose(0, 1)
-
-        # return data
-        return all_utts, all_speakers, all_emotions, all_sentiments
-
     def make_acoustic_set(self, text_path, acoustic_dict):
         """
         Prep the acoustic data using the acoustic dict
@@ -302,47 +216,23 @@ class MELDData(Dataset):
         valid_dia = all_utts_df['Dialogue_ID'].tolist()
         valid_utt = all_utts_df['Utterance_ID'].tolist()
 
-        # set counter for dialogue number
-        dialogue = 0
-
         # set holders for acoustic data
         all_acoustic = []
         usable_utts = []
-        intermediate_acoustic = [[0] * self.acoustic_length] * self.longest_utt
 
         # for all items with audio + gold label
         for idx, item in enumerate(valid_dia_utt):
             # if that dialogue and utterance appears has an acoustic feats file
             if (item.split("_")[0], item.split("_")[1]) in acoustic_dict.keys():
                 # pull out the acoustic feats dataframe
+                # here, it's an average, so this is a single list
                 acoustic_data = acoustic_dict[(item.split("_")[0], item.split("_")[1])]
+
                 # add this dialogue + utt combo to the list of possible ones
                 usable_utts.append((item.split("_")[0], item.split("_")[1]))
 
-                # if the dialogue is one that's used
-                if dialogue == valid_dia[idx]:
-                    # get the utterance number
-                    utt_num = valid_utt[idx]
-                    # add the acoustic features to the holder of features
-                    for i, feat in enumerate(acoustic_data):
-                        intermediate_acoustic[utt_num][i] = feat
-                # if dialogue isn't one that's used
-                else:
-                    # we know we have changed dialogues, so...
-                    # add a tensor of acoustic features to the list of all
-                    all_acoustic.append(torch.tensor(intermediate_acoustic))
-
-                    # set the dialogue
-                    dialogue = valid_dia[idx]
-
-                    # zero the holder for intermediate acoustic data
-                    intermediate_acoustic = [[0] * self.acoustic_length] * self.longest_utt
-
-                    # get the utterance number
-                    utt_num = valid_utt[idx]
-                    # add the acoustic features to the holder of features
-                    for i, feat in enumerate(acoustic_data):
-                        intermediate_acoustic[utt_num][i] = feat
+                # append the acoustic data to all_acoustic
+                all_acoustic.append(torch.tensor(acoustic_data))
 
         # pad the sequence and reshape it to proper format
         all_acoustic = nn.utils.rnn.pad_sequence(all_acoustic)
@@ -388,6 +278,7 @@ def make_acoustic_dict_meld(acoustic_path, f_end="_IS10.csv", use_cols=None):
             utt_id = f.split("_")[1]
 
             # save the dataframe to a dict with (dialogue, utt) as key
+
             acoustic_dict[(dia_id, utt_id)] = feats.values.tolist()[0]
 
     return acoustic_dict
