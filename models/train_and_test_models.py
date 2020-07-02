@@ -126,7 +126,7 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
 
         # set classifier(s) to training mode
         classifier.train()
-
+        
         acoustic_batches, embedding_batches, _, y_batches, length_batches = \
             generate_batches(train_splits, batch_size, shuffle=True, device=device)
 
@@ -150,6 +150,7 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             #     sys.exit(1)
 
             # step 3. compute the loss
+            # BECKY: if you store the label as an index in the first place, rather than a one-hot, you won't need to do this
             y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
 
             # print(y_pred)
