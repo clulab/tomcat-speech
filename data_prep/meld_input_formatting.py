@@ -162,8 +162,6 @@ class MELDData(Dataset):
             if (dia_num, utt_num) in all_utts_list:
 
                 # create utterance-level holders
-                emos = [0] * 7
-                sents = [0] * 3
                 utts = [0] * self.longest_utt
 
                 # get values from row
@@ -182,22 +180,16 @@ class MELDData(Dataset):
                     else:
                         utts[ix] = self.glove.wd2idx['<UNK>']
 
-                all_utts.append(torch.tensor(utts))
+                all_utts.append(utts)
                 all_speakers.append([spk_id])
-
-                emos[emo] = 1  # assign 1 to the emotion tagged
-                sents[sent] = 1  # assign 1 to the sentiment tagged
-                all_emotions.append(emos)
-                all_sentiments.append(sents)
+                all_emotions.append(emo)
+                all_sentiments.append(sent)
 
         # create pytorch tensors for each
         all_speakers = torch.tensor(all_speakers)
         all_emotions = torch.tensor(all_emotions)
         all_sentiments = torch.tensor(all_sentiments)
-
-        # padd and transpose utterance sequences
-        all_utts = nn.utils.rnn.pad_sequence(all_utts)
-        all_utts = all_utts.transpose(0, 1)
+        all_utts = torch.tensor(all_utts)
 
         # return data
         return all_utts, all_speakers, all_emotions, all_sentiments, utt_lengths
@@ -244,7 +236,8 @@ class MELDData(Dataset):
 # helper functions
 def get_class_weights(y_set):
     class_counts = {}
-    y_values = [item.index(max(item)) for item in y_set.tolist()]
+    y_values = y_set.tolist()
+    # y_values = [item.index(max(item)) for item in y_set.tolist()]
     for item in y_values:
         if item not in class_counts:
             class_counts[item] = 1

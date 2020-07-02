@@ -21,16 +21,8 @@ class BaseGRU(nn.Module):
         self.num_gru_layers = num_gru_layers
         self.dropout = dropout
 
-        self.GRU = nn.GRU(input_dim, hidden_size, num_gru_layers, batch_first=True, dropout=dropout,
+        self.GRU = nn.GRU(input_dim, output_dim, num_gru_layers, batch_first=True, dropout=dropout,
                           bidirectional=bidirectional)
-
-        # fc layers
-        if num_fc_layers > 1:
-            self.fc1 = nn.Linear(hidden_size, hidden_size)
-            self.fc2 = nn.Linear(hidden_size, output_dim)
-        else:
-            self.fc1 = nn.Linear(hidden_size, output_dim)
-            self.fc2 = None
 
     def forward(self, inputs, input_lengths):
         inputs = nn.utils.rnn.pack_padded_sequence(inputs, input_lengths,
@@ -38,13 +30,8 @@ class BaseGRU(nn.Module):
 
         rnn_feats, hidden = self.GRU(inputs)
 
-        # reshape features for e
-        feats = hidden.permute(1, 0, 2)
+        output = hidden[-1].squeeze()
 
-        # use pooled, squeezed feats as input into fc layers
-        output = self.fc1(F.dropout(feats, self.dropout))
-
-        # return the output
         # output is NOT fed through softmax or sigmoid layer here
         # assumption: output is intermediate layer of larger NN
         return output
@@ -86,23 +73,22 @@ class BasicEncoder(nn.Module):
                                       _weight=pretrained_embeddings, max_norm=1.0)
 
         # initialize fully connected layers
-        self.fc1 = nn.Linear(self.fc_input_dim, params.output_dim)
+        self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
+        self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
 
     def forward(self, acoustic_input, text_input, length_input=None):
         # using pretrained embeddings, so detach to not update weights
-        embs = self.embedding(text_input).detach()
+        embs = self.embedding(text_input)  # .detach()
 
         # feed embeddings through GRU
         utt_embs = self.text_gru(embs, length_input)
-        utt_embs = utt_embs.permute(0, 2, 1)
-        # take max (or avg, etc) to reduce dimensionality
-        utt_embs = torch.mean(utt_embs, dim=2)
 
         # combine modalities as required by architecture
         inputs = torch.cat((acoustic_input, utt_embs), 1)
 
         # use pooled, squeezed feats as input into fc layers
-        output = self.fc1(F.dropout(inputs, self.dropout))
+        output = torch.tanh(self.fc1(F.dropout(inputs, self.dropout)))
+        output = self.fc2(F.dropout(output, self.dropout))
         output = F.softmax(output, dim=1)
 
         # return the output

@@ -30,11 +30,13 @@ random.seed(seed)
 # set parameters for data prep
 # todo: should be updated later to a glove subset appropriate for this task
 glove_file = "../../glove.short.300d.txt"
+# glove_file = "../../glove.42B.300d.txt"
 
 meld_path = "/data/nlp/corpora/MM/MELD_formatted"
+# meld_path = "../../datasets/multimodal_datasets/MELD_formatted"
 # set model name and model type
 model = params.model
-model_type = "DELETE_ME"
+model_type = "DELETE_ME_FULL"
 # path to directory where best models are saved
 model_save_path = "output/models/"
 # make sure the full save path exists; if not, create it
@@ -79,6 +81,7 @@ if __name__ == "__main__":
 
         # set loss function, optimization, and scheduler, if using
         loss_func = nn.CrossEntropyLoss()
+        # loss_func = nn.CrossEntropyLoss(data.emotion_weights)
 
         # optimizer = torch.optim.SGD(bimodal_trial.parameters(), lr=lr, momentum=0.9)
         optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),

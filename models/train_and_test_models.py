@@ -133,7 +133,7 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         # for each batch in the list of batches created by the dataloader
         for batch_index, batch_array in enumerate(acoustic_batches):
             # get the gold labels
-            y_gold = y_batches[batch_index].float()
+            y_gold = y_batches[batch_index]
 
             # step 1. zero the gradients
             optimizer.zero_grad()
@@ -150,10 +150,6 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             #     sys.exit(1)
 
             # step 3. compute the loss
-            y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
-
-            # print(y_pred)
-
             loss = loss_func(y_pred, y_gold)
             loss_t = loss.item()  # loss for the item
 
@@ -208,13 +204,11 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
                                     length_input=length_batches[batch_index])
 
             # get the gold labels
-            y_gold = y_batches[batch_index].float()
+            y_gold = y_batches[batch_index]
 
             # add ys to holder for error analysis
             # preds_holder.extend(y_pred)
             # ys_holder.extend(y_gold)
-
-            y_gold = torch.tensor([item.index(max(item)) for item in y_gold.tolist()])
 
             loss = loss_func(y_pred, y_gold)
             running_loss += (loss.item() - running_loss) / (batch_index + 1)
