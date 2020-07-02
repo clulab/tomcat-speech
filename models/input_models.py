@@ -94,6 +94,13 @@ class BasicEncoder(nn.Module):
 
         # feed embeddings through GRU
         utt_embs = self.text_gru(embs, length_input)
+        
+        # Becky -- this part seems weird.  With a GRU, typically you would use the final state of the GRU (the hidden state at the
+        # location of the last word, or a concatenation if it's bidir, else you'd add attention.  
+        # I also note you're not using packing for the padding, so be careful with what vector you use.
+        # But, with a GRU you shouldn't be taking the mean etc.
+        # Also -- I don't know why you're permuting here, not that you should keep pooling, but i think this may be 
+        # equivalent to torch.mean(utt_emps, dim=1)...?
         utt_embs = utt_embs.permute(0, 2, 1)
         # take max (or avg, etc) to reduce dimensionality
         utt_embs = torch.mean(utt_embs, dim=2)
@@ -102,6 +109,9 @@ class BasicEncoder(nn.Module):
         inputs = torch.cat((acoustic_input, utt_embs), 1)
 
         # use pooled, squeezed feats as input into fc layers
+        # Becky -- we may want to add another fc layer with an activation (e.g., tanh or something) before we get to the 
+        # output layer, to allow the features a change to interact with each other.  As it is, you kinda have a linear classifier
+        # where the features come from your NN (with text and acoustic completely independent of each other).
         output = self.fc1(F.dropout(inputs, self.dropout))
         output = F.softmax(output, dim=1)
 
