@@ -8,6 +8,7 @@ from models.train_and_test_models import *
 from models.input_models import *
 from data_prep.prepare_data import *
 from data_prep.meld_input_formatting import *
+from data_prep.mustard_data_prep import *
 
 # import parameters for model
 from models.parameters.multitask_params import params
@@ -40,7 +41,11 @@ if cuda:
 glove_file = "../../glove.short.300d.txt"
 # glove_file = "../../glove.42B.300d.txt"
 
-meld_path = "../../MELD_formatted"
+# meld_path = "../../datasets/multimodal_datasets/MELD_formatted"
+meld_path = "../../datasets/multimodal_datasets/MUStARD"
+
+data_type = "mustard"
+
 # set number of splits
 num_splits = params.num_splits
 # set model name and model type
@@ -66,8 +71,19 @@ if __name__ == "__main__":
     print("Glove object created")
 
     # 2. MAKE DATASET
-    data = MELDData(meld_path=meld_path, glove=glove, acoustic_length=params.audio_dim)
-    data.emotion_weights = data.emotion_weights.to(device)  # add class weights to device
+    meld_data = MustardPrep(mustard_path=meld_path)
+    # meld_data = MeldPrep(meld_path=meld_path)
+
+    data = MultitaskData(data=meld_data, glove=glove, acoustic_length=params.audio_dim, data_type="mustard")
+    # data = MultitaskData(data=meld_data, glove=glove, acoustic_length=params.audio_dim, data_type="meld")
+
+    # add class weights to device
+    if data_type == "meld":
+        data.emotion_weights = data.emotion_weights.to(device)
+        data.sentiment_weights = data.sentiment_weights.to(device)
+    elif data_type == "mustard":
+        data.sarcasm_weights = data.sarcasm_weights.to(device)
+
     print("Dataset created")
 
     # 3. CREATE NN

@@ -2,13 +2,55 @@
 
 import os
 import json
+from collections import OrderedDict
+
 from data_prep.audio_extraction import convert_mp4_to_wav, ExtractAudio
+from data_prep.meld_input_formatting import make_acoustic_dict, get_longest_utt, get_max_num_acoustic_frames
 import pandas as pd
+
+
+class MustardPrep:
+    """
+    A class to prepare mustard for input into a generic Dataset
+    """
+    def __init__(self, mustard_path, train_prop=.6, test_prop=.2,
+                 utts_file_name="mustard_utts.tsv", f_end="_IS10.csv",
+                 use_cols=None):
+        # path to dataset
+        self.path = mustard_path
+        # path to file with utterances and gold labels
+        self.utts_gold_file = os.path.join(mustard_path, utts_file_name)
+        self.utterances = pd.read_csv(self.utts_gold_file, sep="\t")
+        # path to acoustic files
+        self.acoustic_path = os.path.join(mustard_path, "acoustic_feats")
+
+        # train, dev, and test dataframes
+        self.train, self.dev, self.test = \
+            create_data_folds(self.utterances, train_prop, test_prop)
+
+        # train, dev, and test acoustic data
+        self.train_dict = OrderedDict(make_acoustic_dict(self.acoustic_path,
+                                                         files_to_get=set(self.train['clip_id'].tolist()),
+                                                         f_end=f_end, use_cols=use_cols, data_type="mustard"))
+        self.dev_dict = OrderedDict(make_acoustic_dict(self.acoustic_path,
+                                                       files_to_get=set(self.dev['clip_id'].tolist()),
+                                                       f_end=f_end, use_cols=use_cols, data_type="mustard"))
+        self.test_dict = OrderedDict(make_acoustic_dict(self.acoustic_path,
+                                                        files_to_get=set(self.test['clip_id'].tolist()),
+                                                        f_end=f_end, use_cols=use_cols, data_type="mustard"))
+
+        self.longest_utt = get_longest_utt(self.utterances['utterance'])
+        self.longest_dia = None  # mustard is not organized as dialogues
+
+        self.longest_acoustic = get_max_num_acoustic_frames(list(self.train_dict.values()) +
+                                                            list(self.dev_dict.values()) +
+                                                            list(self.test_dict.values()))
 
 
 def organize_labels_from_json(jsonfile, savepath, save_name):
     """
-    Take the jsonfile containing the text,
+    Take the jsonfile containing the text, speaker, and y values
+    Prepares relevant information as a csv file
     """
     with open(jsonfile, 'r') as jfile:
         json_data = json.load(jfile)

@@ -85,7 +85,7 @@ def update_train_state(model, train_state):
     return train_state
 
 
-def generate_batches(data, batch_size, shuffle=True, device="cpu"):
+def generate_batches(data, batch_size, shuffle=True, data_type="meld", device="cpu"):
     # feed data into dataloader for automatic batch splitting and shuffling
     batched_split = DataLoader(data, batch_size=batch_size, shuffle=shuffle)
 
@@ -96,12 +96,20 @@ def generate_batches(data, batch_size, shuffle=True, device="cpu"):
     y = []
     lengths = []
 
+    # get acoustic, text, and speaker batches
+    # alwasy at index 0, 1, and 2
     acoustic_batches = [item[0] for item in batched_split]
     embedding_batches = [item[1] for item in batched_split]
     speaker_batches = [item[2] for item in batched_split]
-    # y_batches = [item[3] for item in batched_split]
-    y_batches = [item[4] for item in batched_split]
-    length_batches = [item[5] for item in batched_split]
+
+    # get the
+    length_batches = [item[-1] for item in batched_split]
+
+    if data_type == "meld":
+        # y_batches = [item[3] for item in batched_split]
+        y_batches = [item[4] for item in batched_split]
+    elif data_type == "mustard":
+        y_batches = [item[3] for item in batched_split]
 
     [acoustic.append(item.to(device)) for item in acoustic_batches]
     [embedding.append(item.to(device)) for item in embedding_batches]
@@ -115,6 +123,13 @@ def generate_batches(data, batch_size, shuffle=True, device="cpu"):
 def train_and_predict(classifier, train_state, train_splits, val_data, batch_size, num_epochs,
                       loss_func, optimizer, device="cpu", scheduler=None, model2=None,
                       train_state2=None):
+    print(len(train_splits[0]))
+    print(train_splits[0][0].shape)
+    print(train_splits[0][1].shape)
+    print(train_splits[0][2].shape)
+    print(train_splits[0][3].shape)
+    print(train_splits[0][4])
+    # sys.exit()
 
     for epoch_index in range(num_epochs):
         print("Now starting epoch {0}".format(epoch_index))

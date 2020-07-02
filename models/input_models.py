@@ -303,7 +303,8 @@ class BasicEncoder(nn.Module):
             self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
             self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
 
-    def forward(self, acoustic_input, text_input, speaker_input=None, length_input=None):
+    def forward(self, acoustic_input, text_input, speaker_input=None, length_input=None,
+                acoustic_length_input=None):
         # set number to use in calculations
         # using "dialogue aware" means every tensor will
         # have an additional dimension
@@ -326,7 +327,7 @@ class BasicEncoder(nn.Module):
             # if not using utt_avgd acoustic feats, feed acoustic through CNN
             if self.alignment is not "utt":
                 if self.use_GRU:
-                    acoustic_input = self.audio_gru(acoustic_input, length_input)
+                    acoustic_input = self.audio_gru(acoustic_input, acoustic_length_input)
                     acoustic_input = acoustic_input.permute(0, 2, 1)
                     acoustic_input = torch.mean(acoustic_input, dim=2)
                     # acoustic_input = torch.max(acoustic_input, dim=2)[0]
