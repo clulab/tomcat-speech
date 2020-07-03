@@ -77,12 +77,20 @@ class BasicEncoder(nn.Module):
         self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
 
     def forward(self, acoustic_input, text_input, length_input=None):
+        # for i in range(text_input.shape[0]):
+        #     print("starting on: " + str(i))
+        #     print(text_input[i])
+        #     print(len(text_input[i]))
+        #     print(length_input[i])
+        # sys.exit(1)
         # using pretrained embeddings, so detach to not update weights
-        embs = self.embedding(text_input)  # .detach()
+        embs = self.embedding(text_input).detach()
 
         # feed embeddings through GRU
         utt_embs = self.text_gru(embs, length_input)
 
+        print(utt_embs.shape)
+        print(acoustic_input.shape)
         # combine modalities as required by architecture
         inputs = torch.cat((acoustic_input, utt_embs), 1)
 

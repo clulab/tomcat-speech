@@ -32,11 +32,12 @@ random.seed(seed)
 glove_file = "../../glove.short.300d.txt"
 # glove_file = "../../glove.42B.300d.txt"
 
-meld_path = "/data/nlp/corpora/MM/MELD_formatted"
+# meld_path = "/data/nlp/corpora/MM/MELD_formatted"
 # meld_path = "../../datasets/multimodal_datasets/MELD_formatted"
+meld_path = "../../datasets/multimodal_datasets/MELD_five_utterances"
 # set model name and model type
 model = params.model
-model_type = "DELETE_ME_FULL"
+model_type = "TOY_MODEL"
 # path to directory where best models are saved
 model_save_path = "output/models/"
 # make sure the full save path exists; if not, create it

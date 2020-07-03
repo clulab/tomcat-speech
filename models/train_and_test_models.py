@@ -1,6 +1,7 @@
 # implement training and testing for models
 
 from collections import OrderedDict
+import random
 
 import torch
 import torch.nn as nn
@@ -12,8 +13,10 @@ import numpy as np
 from torch.utils.data import DataLoader
 
 from models.bimodal_models import BimodalCNN
-from models.parameters.bimodal_params import *
+from models.parameters.multitask_params import *
 from models.plot_training import *
+
+from sklearn.metrics import confusion_matrix
 
 
 # adapted from https://github.com/joosthub/PyTorchNLPBook/blob/master/chapters/chapter_6/classifying-surnames/Chapter-6-Surname-Classification-with-RNNs.ipynb
@@ -140,7 +143,7 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
 
             # step 2. compute the output
             y_pred = classifier(acoustic_input=batch_array, text_input=embedding_batches[batch_index],
-                                    length_input=length_batches[batch_index])
+                                length_input=length_batches[batch_index])
 
             # uncomment for prediction spot-checking during training
             # if epoch_index % 10 == 0:
@@ -180,7 +183,7 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         train_state['train_loss'].append(running_loss)
         train_state['train_acc'].append(running_acc)
 
-        # print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
+        print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
 
         # Iterate over validation set--put it in a dataloader
         acoustic_batches, embedding_batches, _, y_batches, length_batches = \
@@ -194,8 +197,8 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         classifier.eval()
 
         # set holders to use for error analysis
-        # ys_holder = []
-        # preds_holder = []
+        ys_holder = []
+        preds_holder = []
 
         # for each batch in the dataloader
         for batch_index, batch_array in enumerate(acoustic_batches):
@@ -207,8 +210,8 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             y_gold = y_batches[batch_index]
 
             # add ys to holder for error analysis
-            # preds_holder.extend(y_pred)
-            # ys_holder.extend(y_gold)
+            preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+            ys_holder.extend(y_gold.tolist())
 
             loss = loss_func(y_pred, y_gold)
             running_loss += (loss.item() - running_loss) / (batch_index + 1)
@@ -228,6 +231,12 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             #                                                                       acc_t, running_acc))
 
         # print("Overall val loss: {0}, overall val acc: {1}".format(running_loss, running_acc))
+
+        # get confusion matrix if it's in the right epoch(s)
+        if epoch_index % 50 == 0:
+            # print(ys_holder)
+            # print(preds_holder)
+            print(confusion_matrix(ys_holder, preds_holder))
 
         # add loss and accuracy to train state
         train_state['val_loss'].append(running_loss)

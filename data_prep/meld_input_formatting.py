@@ -205,8 +205,6 @@ class MELDData(Dataset):
         all_utts_df = pd.read_csv(text_path)
         # get lists of valid dialogues and utterances
         valid_dia_utt = all_utts_df['DiaID_UttID'].tolist()
-        valid_dia = all_utts_df['Dialogue_ID'].tolist()
-        valid_utt = all_utts_df['Utterance_ID'].tolist()
 
         # set holders for acoustic data
         all_acoustic = []
@@ -226,10 +224,6 @@ class MELDData(Dataset):
                 # append the acoustic data to all_acoustic
                 all_acoustic.append(torch.tensor(acoustic_data))
 
-        # pad the sequence and reshape it to proper format
-        all_acoustic = nn.utils.rnn.pad_sequence(all_acoustic)
-        all_acoustic = all_acoustic.transpose(0, 1)
-
         return all_acoustic, usable_utts
 
 
@@ -237,7 +231,6 @@ class MELDData(Dataset):
 def get_class_weights(y_set):
     class_counts = {}
     y_values = y_set.tolist()
-    # y_values = [item.index(max(item)) for item in y_set.tolist()]
     for item in y_values:
         if item not in class_counts:
             class_counts[item] = 1

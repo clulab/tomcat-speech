@@ -6,11 +6,11 @@ params = Namespace(
 
             # overall model parameters
             model="Multitask-meld",
-            num_epochs=50,
+            num_epochs=100,
             batch_size=45,  # 32
             early_stopping_criteria=10,
 
-            num_gru_layers=2,  # 4, 2,
+            num_gru_layers=4,  # 4, 2,
             bidirectional=False,
 
             # input dimension parameters
@@ -27,7 +27,7 @@ params = Namespace(
             # FC layer parameters
             num_fc_layers=1,  # 1,  # 2,
             fc_hidden_dim=15,
-            dropout=0.2,  # 0.2
+            dropout=0.5,  # 0.2
 
             # optimizer parameters
             lrs=[1e-4],
