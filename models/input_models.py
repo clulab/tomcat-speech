@@ -21,7 +21,7 @@ class BaseGRU(nn.Module):
         self.num_gru_layers = num_gru_layers
         self.dropout = dropout
 
-        self.GRU = nn.GRU(input_dim, output_dim, num_gru_layers, batch_first=True, dropout=dropout,
+        self.GRU = nn.LSTM(input_dim, output_dim, num_gru_layers, batch_first=True, dropout=dropout,
                           bidirectional=bidirectional)
 
     def forward(self, inputs, input_lengths):

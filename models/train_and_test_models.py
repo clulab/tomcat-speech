@@ -116,6 +116,7 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
                       train_state2=None):
 
     for epoch_index in range(num_epochs):
+        
         print("Now starting epoch {0}".format(epoch_index))
 
         train_state['epoch_index'] = epoch_index
@@ -127,20 +128,30 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         # set classifier(s) to training mode
         classifier.train()
 
-        acoustic_batches, embedding_batches, _, y_batches, length_batches = \
-            generate_batches(train_splits, batch_size, shuffle=True, device=device)
+        batches = DataLoader(train_splits, batch_size=batch_size, shuffle=True)
+
+        # acoustic_batches, embedding_batches, _, y_batches, length_batches = \
+        #     generate_batches(train_splits, batch_size, shuffle=True, device=device)
 
         # for each batch in the list of batches created by the dataloader
-        for batch_index, batch_array in enumerate(acoustic_batches):
+        for batch_index, batch in enumerate(batches):
             # get the gold labels
-            y_gold = y_batches[batch_index]
+            y_gold = batch[3].to(device)
 
             # step 1. zero the gradients
             optimizer.zero_grad()
 
             # step 2. compute the output
-            y_pred = classifier(acoustic_input=batch_array, text_input=embedding_batches[batch_index],
-                                    length_input=length_batches[batch_index])
+            # acoustic_batches = [item[0] for item in batched_split]
+            # embedding_batches = [item[1] for item in batched_split]
+            # speaker_batches = [item[2] for item in batched_split]
+            # y_batches = [item[3] for item in batched_split]
+            # length_batches = [item[5] for item in batched_split]
+            batch_acoustic = batch[0].to(device)
+            batch_text = batch[1].to(device)
+            batch_lengths = batch[5].to(device)
+            y_pred = classifier(acoustic_input=batch_acoustic, text_input=batch_text,
+                                    length_input=batch_lengths)
 
             # uncomment for prediction spot-checking during training
             # if epoch_index % 10 == 0:
@@ -183,8 +194,9 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         # print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
 
         # Iterate over validation set--put it in a dataloader
-        acoustic_batches, embedding_batches, _, y_batches, length_batches = \
-            generate_batches(val_data, batch_size, shuffle=True, device=device)
+        val_batches = DataLoader(train_splits, batch_size=batch_size, shuffle=True)
+        # acoustic_batches, embedding_batches, _, y_batches, length_batches = \
+        #     generate_batches(val_data, batch_size, shuffle=False, device=device)
 
         # reset loss and accuracy to zero
         running_loss = 0.
@@ -198,13 +210,16 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         # preds_holder = []
 
         # for each batch in the dataloader
-        for batch_index, batch_array in enumerate(acoustic_batches):
+        for batch_index, batch in enumerate(val_batches):
             # compute the output
-            y_pred = classifier(acoustic_input=batch_array, text_input=embedding_batches[batch_index],
-                                    length_input=length_batches[batch_index])
+            batch_acoustic = batch[0].to(device)
+            batch_text = batch[1].to(device)
+            batch_lengths = batch[5].to(device)
+            y_pred = classifier(acoustic_input=batch_acoustic, text_input=batch_text,
+                                    length_input=batch_lengths)
 
             # get the gold labels
-            y_gold = y_batches[batch_index]
+            y_gold = batch[3].to(device)
 
             # add ys to holder for error analysis
             # preds_holder.extend(y_pred)

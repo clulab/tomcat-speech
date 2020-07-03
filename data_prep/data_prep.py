@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import Dataset
 
 import statistics
+import string  
 
 
 def clean_up_word(word):
@@ -51,6 +52,16 @@ class Glove(object):
         if "<UNK>" not in self.glove_dict.keys():
             mean_vec = self.get_avg_embedding()
             self.add_vector("<UNK>", mean_vec)
+
+    def id_or_unk(self, t):
+        if t in self.wd2idx:
+            return self.wd2idx[t]
+        else:
+            return self.wd2idx['<UNK>']
+
+    def index(self, toks):
+        return [self.id_or_unk(t) for t in toks]
+        
 
     def create_embedding(self):
         emb = []

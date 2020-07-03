@@ -10,7 +10,7 @@ params = Namespace(
             batch_size=45,  # 32
             early_stopping_criteria=10,
 
-            num_gru_layers=2,  # 4, 2,
+            num_gru_layers=1,  # 4, 2,
             bidirectional=False,
 
             # input dimension parameters

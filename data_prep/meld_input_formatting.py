@@ -10,6 +10,10 @@ from torch.utils.data import Dataset
 from data_prep.data_prep import clean_up_word
 from collections import OrderedDict
 
+import torchtext
+from torchtext.data import get_tokenizer
+from torch.nn.utils.rnn import pad_sequence
+
 
 class MELDData(Dataset):
     """
@@ -22,6 +26,7 @@ class MELDData(Dataset):
         self.meld_train = "{0}/train_sent_emo.csv".format(self.train_path)
         self.meld_dev = "{0}/dev_sent_emo.csv".format(self.dev_path)
         self.meld_test = "{0}/test_sent_emo.csv".format(self.test_path)
+        self.tokenizer = get_tokenizer("basic_english")
 
         # get the number of acoustic features
         self.acoustic_length = acoustic_length
@@ -40,7 +45,7 @@ class MELDData(Dataset):
                                                              f_end, use_cols))
 
         # utterance-level dict
-        self.longest_utt, self.longest_dia = self.get_longest_utt_meld()
+        # self.longest_utt, self.longest_dia = self.get_longest_utt_meld()
 
         print("Finalizing acoustic organization")
 
@@ -162,11 +167,11 @@ class MELDData(Dataset):
             if (dia_num, utt_num) in all_utts_list:
 
                 # create utterance-level holders
-                utts = [0] * self.longest_utt
+                # utts = [0] * self.longest_utt
 
                 # get values from row
-                utt = row["Utterance"]
-                utt = [clean_up_word(wd) for wd in utt.strip().split(" ")]
+                utt = row["Utterance"].replace('\x92', "'")
+                utt = self.tokenizer(utt)
                 utt_lengths.append(len(utt))
 
                 spk_id = row['Speaker']
@@ -174,22 +179,22 @@ class MELDData(Dataset):
                 sent = row['Sentiment']
 
                 # convert words to indices for glove
-                for ix, wd in enumerate(utt):
-                    if wd in self.glove.wd2idx.keys():
-                        utts[ix] = self.glove.wd2idx[wd]
-                    else:
-                        utts[ix] = self.glove.wd2idx['<UNK>']
+                utt_indexed = self.glove.index(utt)
 
-                all_utts.append(utts)
+                all_utts.append(torch.tensor(utt_indexed))
                 all_speakers.append([spk_id])
                 all_emotions.append(emo)
                 all_sentiments.append(sent)
+
+        max_utt_len = max(utt_lengths)
+        # todo: is it batch first?
+        # all_utts = pad_sequence(all_utts, batch_first=True, padding_value=0)
 
         # create pytorch tensors for each
         all_speakers = torch.tensor(all_speakers)
         all_emotions = torch.tensor(all_emotions)
         all_sentiments = torch.tensor(all_sentiments)
-        all_utts = torch.tensor(all_utts)
+        all_utts = pad_sequence(all_utts, batch_first=True, padding_value=0)
 
         # return data
         return all_utts, all_speakers, all_emotions, all_sentiments, utt_lengths
@@ -226,10 +231,7 @@ class MELDData(Dataset):
                 # append the acoustic data to all_acoustic
                 all_acoustic.append(torch.tensor(acoustic_data))
 
-        # pad the sequence and reshape it to proper format
-        all_acoustic = nn.utils.rnn.pad_sequence(all_acoustic)
-        all_acoustic = all_acoustic.transpose(0, 1)
-
+        
         return all_acoustic, usable_utts
 
 
