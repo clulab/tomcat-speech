@@ -23,12 +23,16 @@ class BaseGRU(nn.Module):
 
         self.GRU = nn.LSTM(input_dim, output_dim, num_gru_layers, batch_first=True, dropout=dropout,
                           bidirectional=bidirectional)
+        # self.GRU = nn.GRU(input_dim, output_dim, num_gru_layers, batch_first=True, dropout=dropout,
+        #                   bidirectional=bidirectional)
 
     def forward(self, inputs, input_lengths):
         inputs = nn.utils.rnn.pack_padded_sequence(inputs, input_lengths,
                                                    batch_first=True, enforce_sorted=False)
 
-        rnn_feats, hidden = self.GRU(inputs)
+        # todo: look at this--make sure we're taking hidden from the right place
+        rnn_feats, (hidden, _) = self.GRU(inputs)
+        # rnn_feats, hidden = self.GRU(inputs)
 
         output = hidden[-1].squeeze()
 
@@ -78,10 +82,13 @@ class BasicEncoder(nn.Module):
 
     def forward(self, acoustic_input, text_input, length_input=None):
         # using pretrained embeddings, so detach to not update weights
-        embs = self.embedding(text_input)  # .detach()
+        embs = self.embedding(text_input).detach()
 
         # feed embeddings through GRU
         utt_embs = self.text_gru(embs, length_input)
+
+        # print(utt_embs.shape)
+        # print(acoustic_input.shape)
 
         # combine modalities as required by architecture
         inputs = torch.cat((acoustic_input, utt_embs), 1)
