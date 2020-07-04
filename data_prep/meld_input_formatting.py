@@ -53,6 +53,10 @@ class MELDData(Dataset):
         self.dev_acoustic, self.dev_usable_utts = self.make_acoustic_set(self.meld_dev, self.dev_dict)
         self.test_acoustic, self.test_usable_utts = self.make_acoustic_set(self.meld_test, self.test_dict)
 
+        # acoustic feature normalization based on train
+        self.acoutic_means = torch.stack(self.train_acoustic).mean(dim=0, keepdim=False)
+        self.acoustic_deviations = torch.stack(self.train_acoustic).std(dim=0, keepdim=False)
+
         print("Getting text, speaker, and y features")
 
         # get utterance, speaker, y matrices for train, dev, and test sets
@@ -101,15 +105,19 @@ class MELDData(Dataset):
         test_data = []
 
         for i, item in enumerate(self.train_acoustic):
-            train_data.append((item, self.train_utts[i], self.train_spkrs[i],
+            # normalize
+            item_transformed = (item - self.acoutic_means) / self.acoustic_deviations
+            train_data.append((item_transformed, self.train_utts[i], self.train_spkrs[i],
                                self.train_y_emo[i], self.train_y_sent[i], self.train_utt_lengths[i]))
 
         for i, item in enumerate(self.dev_acoustic):
-            dev_data.append((item, self.dev_utts[i], self.dev_spkrs[i],
+            item_transformed = (item - self.acoutic_means) / self.acoustic_deviations
+            dev_data.append((item_transformed, self.dev_utts[i], self.dev_spkrs[i],
                              self.dev_y_emo[i], self.dev_y_sent[i], self.dev_utt_lengths[i]))
 
         for i, item in enumerate(self.test_acoustic):
-            test_data.append((item, self.test_utts[i], self.test_spkrs[i],
+            item_transformed = (item - self.acoutic_means) / self.acoustic_deviations
+            test_data.append((item_transformed, self.test_utts[i], self.test_spkrs[i],
                               self.test_y_emo[i], self.test_y_sent[i], self.test_utt_lengths[i]))
 
         return train_data, dev_data, test_data
@@ -170,7 +178,7 @@ class MELDData(Dataset):
                 # utts = [0] * self.longest_utt
 
                 # get values from row
-                utt = row["Utterance"].replace('\x92', "'")
+                utt = clean_up_word(row["Utterance"].replace('\x92', "'"))
                 utt = self.tokenizer(utt)
                 utt_lengths.append(len(utt))
 
@@ -239,17 +247,18 @@ class MELDData(Dataset):
 def get_class_weights(y_set):
     class_counts = {}
     y_values = y_set.tolist()
+    num_labels = max(y_values) + 1
     # y_values = [item.index(max(item)) for item in y_set.tolist()]
     for item in y_values:
         if item not in class_counts:
             class_counts[item] = 1
         else:
             class_counts[item] += 1
-    class_weights = []
-    for k,v in sorted(class_counts.items()):
-        class_weights.append(float(v))
+    class_weights = [0.0] * num_labels
+    for k,v in class_counts.items():
+        class_weights[k] = float(v)
     class_weights = torch.tensor(class_weights)
-    return 1.0 / class_weights
+    return class_weights
 
 
 def make_acoustic_dict_meld(acoustic_path, f_end="_IS10.csv", use_cols=None):
@@ -277,3 +286,26 @@ def make_acoustic_dict_meld(acoustic_path, f_end="_IS10.csv", use_cols=None):
             acoustic_dict[(dia_id, utt_id)] = feats.values.tolist()[0]
 
     return acoustic_dict
+
+
+class DatumListDataset(Dataset):
+    """
+    A dataset to hold a list of datums
+    """
+    def __init__(self, data_list, class_weights=None):
+        self.data_list = data_list
+
+        self.class_weights = class_weights
+
+    def __len__(self):
+        return len(self.data_list)
+
+    def __getitem__(self, item):
+        """
+        item (int) : the index to a data point
+        """
+        return self.data_list[item]
+
+    def targets(self):
+        for datum in self.data_list:
+            yield datum[3]

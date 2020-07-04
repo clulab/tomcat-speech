@@ -5,6 +5,7 @@ import numpy as np
 import random
 import torch
 import sys
+import pickle
 
 sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 
@@ -29,11 +30,12 @@ random.seed(seed)
 
 # set parameters for data prep
 # todo: should be updated later to a glove subset appropriate for this task
-glove_file = "/work/bsharp/glove.short.300d.punct.txt"
-# glove_file = "../../glove.42B.300d.txt"
+# glove_file = "/work/bsharp/glove.short.300d.punct.txt"
+glove_file = "/data/nlp/corpora/glove/glove.840B.300d.no_proc_header.txt"
 
-meld_path = "/data/nlp/corpora/MM/MELD_five_dialogues"
-# meld_path = "../../datasets/multimodal_datasets/MELD_five_dialogues"
+# meld_path = "/data/nlp/corpora/MM/MELD_five_dialogues"
+meld_path = "/data/nlp/corpora/MM/MELD_formatted"
+
 # set model name and model type
 model = params.model
 model_type = "DELETE_ME_FULL"
@@ -55,6 +57,11 @@ if __name__ == "__main__":
 
     # 2. MAKE DATASET
     data = MELDData(meld_path=meld_path, glove=glove, acoustic_length=params.audio_dim)
+    # with open('dataset_full', 'wb') as pickle_file:
+    #     pickle.dump(data, pickle_file)
+    # with open('dataset_full', 'rb') as pickle_file:
+    #     data = pickle.load(pickle_file)
+
     data.emotion_weights = data.emotion_weights.to(device)  # add class weights to device
     print("Dataset created")
 
@@ -78,10 +85,11 @@ if __name__ == "__main__":
 
         # set the classifier(s) to the right device
         bimodal_trial = bimodal_trial.to(device)
+        print(bimodal_trial)
 
         # set loss function, optimization, and scheduler, if using
-        loss_func = nn.CrossEntropyLoss()
-        # loss_func = nn.CrossEntropyLoss(data.emotion_weights)
+        loss_func = nn.CrossEntropyLoss(reduction='mean')
+        # loss_func = nn.CrossEntropyLoss(data.emotion_weights, reduction='mean')
 
         # optimizer = torch.optim.SGD(bimodal_trial.parameters(), lr=lr, momentum=0.9)
         optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
@@ -91,8 +99,14 @@ if __name__ == "__main__":
 
         # set the train, dev, and set data
         train_data = data.train_data
-        dev_data = data.dev_data
-        test_data = data.test_data
+        train_ds = DatumListDataset(train_data, data.emotion_weights)
+        train_targets = torch.stack(list(train_ds.targets()))
+        sampler_weights = data.emotion_weights
+        train_samples_weights = sampler_weights[train_targets]
+        sampler = torch.utils.data.sampler.WeightedRandomSampler(train_samples_weights, len(train_samples_weights))
+
+        dev_ds = DatumListDataset(data.dev_data, data.emotion_weights)
+        test_ds = DatumListDataset(data.test_data, data.emotion_weights)
 
         # create a a save path and file for the model
         model_save_file = "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
@@ -105,8 +119,8 @@ if __name__ == "__main__":
         load_path = model_save_path + model_save_file
 
         # train the model and evaluate on development set
-        train_and_predict(bimodal_trial, train_state, train_data, dev_data, params.batch_size,
-                            params.num_epochs, loss_func, optimizer, device, scheduler=None)
+        train_and_predict(bimodal_trial, train_state, train_ds, dev_ds, params.batch_size,
+                            params.num_epochs, loss_func, optimizer, device, scheduler=None, sampler=None)
 
         # plot the loss and accuracy curves
         # set plot titles

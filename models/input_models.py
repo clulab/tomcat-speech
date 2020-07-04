@@ -31,10 +31,10 @@ class BaseGRU(nn.Module):
                                                    batch_first=True, enforce_sorted=False)
 
         # todo: look at this--make sure we're taking hidden from the right place
-        rnn_feats, (hidden, _) = self.GRU(inputs)
+        packed_output, (hidden, cell) = self.GRU(inputs)
         # rnn_feats, hidden = self.GRU(inputs)
 
-        output = hidden[-1].squeeze()
+        output = hidden[:,-1,:]
 
         # output is NOT fed through softmax or sigmoid layer here
         # assumption: output is intermediate layer of larger NN
@@ -59,9 +59,12 @@ class BasicEncoder(nn.Module):
 
         # if we feed text through additional layer(s)
         self.text_output_dim = params.text_output_dim
-        self.text_gru = BaseGRU(params.text_dim, params.text_gru_hidden_dim, params.text_output_dim,
-                                params.num_gru_layers, params.num_fc_layers, params.dropout,
-                                params.bidirectional)
+        self.text_rnn = nn.LSTM(
+            input_size=params.text_dim, 
+            hidden_size=params.text_gru_hidden_dim,
+            num_layers=params.num_gru_layers, 
+            batch_first=True,
+            bidirectional=False)
 
         # set the size of the input into the fc layers
         self.fc_input_dim = params.text_output_dim + params.audio_dim
@@ -74,7 +77,7 @@ class BasicEncoder(nn.Module):
 
         # initialize word embeddings
         self.embedding = nn.Embedding(num_embeddings, self.text_dim,
-                                      _weight=pretrained_embeddings, max_norm=1.0)
+                                      _weight=pretrained_embeddings)
 
         # initialize fully connected layers
         self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
@@ -82,21 +85,22 @@ class BasicEncoder(nn.Module):
 
     def forward(self, acoustic_input, text_input, length_input=None):
         # using pretrained embeddings, so detach to not update weights
-        embs = self.embedding(text_input).detach()
-
+        # embs: (batch_size, seq_len, emb_dim)
+        embs = F.dropout(self.embedding(text_input), self.dropout).detach()
+        packed = nn.utils.rnn.pack_padded_sequence(embs, length_input, batch_first=True, enforce_sorted=False)
+        
         # feed embeddings through GRU
-        utt_embs = self.text_gru(embs, length_input)
-
-        # print(utt_embs.shape)
-        # print(acoustic_input.shape)
+        packed_output, (hidden, cell) = self.text_rnn(packed)
+        padded_output, lens = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True)
+        encoded_text = F.dropout(padded_output[:,-1,:], self.dropout)
 
         # combine modalities as required by architecture
-        inputs = torch.cat((acoustic_input, utt_embs), 1)
+        inputs = torch.cat((acoustic_input, encoded_text), 1)
 
         # use pooled, squeezed feats as input into fc layers
-        output = torch.tanh(self.fc1(F.dropout(inputs, self.dropout)))
-        output = self.fc2(F.dropout(output, self.dropout))
-        output = F.softmax(output, dim=1)
+        output = torch.tanh(self.fc1(inputs))
+        output = torch.relu(self.fc2(output))
+        # output = F.softmax(output, dim=1)
 
         # return the output
         return output

@@ -16,6 +16,7 @@ from models.parameters.multitask_params import *
 from models.plot_training import *
 
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import f1_score
 
 
 # adapted from https://github.com/joosthub/PyTorchNLPBook/blob/master/chapters/chapter_6/classifying-surnames/Chapter-6-Surname-Classification-with-RNNs.ipynb
@@ -113,9 +114,9 @@ def generate_batches(data, batch_size, shuffle=True, device="cpu"):
     return acoustic, embedding, speaker, y, lengths
 
 
-def train_and_predict(classifier, train_state, train_splits, val_data, batch_size, num_epochs,
+def train_and_predict(classifier, train_state, train_ds, val_ds, batch_size, num_epochs,
                       loss_func, optimizer, device="cpu", scheduler=None, model2=None,
-                      train_state2=None):
+                      train_state2=None, sampler=None):
 
     for epoch_index in range(num_epochs):
         
@@ -130,7 +131,7 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         # set classifier(s) to training mode
         classifier.train()
 
-        batches = DataLoader(train_splits, batch_size=batch_size, shuffle=True)
+        batches = DataLoader(train_ds, batch_size=batch_size, shuffle=True, sampler=sampler)
 
         # acoustic_batches, embedding_batches, _, y_batches, length_batches = \
         #     generate_batches(train_splits, batch_size, shuffle=True, device=device)
@@ -196,7 +197,7 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
 
         # Iterate over validation set--put it in a dataloader
-        val_batches = DataLoader(train_splits, batch_size=batch_size, shuffle=True)
+        val_batches = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
         # acoustic_batches, embedding_batches, _, y_batches, length_batches = \
         #     generate_batches(val_data, batch_size, shuffle=False, device=device)
 
@@ -244,10 +245,10 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             # print("val_loss: {0}, running_val_loss: {1}, val_acc: {0}, running_val_acc: {1}".format(loss_t, running_loss,
             #                                                                       acc_t, running_acc))
 
-        # print("Overall val loss: {0}, overall val acc: {1}".format(running_loss, running_acc))
+        print("Overall val loss: {0}, overall val acc: {1}".format(running_loss, running_acc))
 
         # get confusion matrix
-        if epoch_index % 25 == 0:
+        if epoch_index % 5 == 0:
             print(confusion_matrix(ys_holder, preds_holder))
 
         # add loss and accuracy to train state
