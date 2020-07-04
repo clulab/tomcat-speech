@@ -31,10 +31,12 @@ random.seed(seed)
 # set parameters for data prep
 # todo: should be updated later to a glove subset appropriate for this task
 # glove_file = "/work/bsharp/glove.short.300d.punct.txt"
-glove_file = "/data/nlp/corpora/glove/glove.840B.300d.no_proc_header.txt"
+# glove_file = "/data/nlp/corpora/glove/glove.840B.300d.no_proc_header.txt"
+glove_file = "../../glove.short.300d.punct.txt"
 
 # meld_path = "/data/nlp/corpora/MM/MELD_five_dialogues"
-meld_path = "/data/nlp/corpora/MM/MELD_formatted"
+# meld_path = "/data/nlp/corpora/MM/MELD_formatted"
+meld_path = "../../datasets/multimodal_datasets/MELD_formatted"
 
 # set model name and model type
 model = params.model
