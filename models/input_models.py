@@ -92,7 +92,7 @@ class BasicEncoder(nn.Module):
         # feed embeddings through GRU
         packed_output, (hidden, cell) = self.text_rnn(packed)
         padded_output, lens = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True)
-        encoded_text = F.dropout(padded_output[:,-1,:], self.dropout)
+        encoded_text = F.dropout(hidden[-1], self.dropout)
 
         # combine modalities as required by architecture
         inputs = torch.cat((acoustic_input, encoded_text), 1)

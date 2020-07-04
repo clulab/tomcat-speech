@@ -9,6 +9,8 @@ import string
 
 
 def clean_up_word(word):
+    word = word.replace('\x92', "'")
+    word = word.replace('\x91', "")
     # clean up word by putting in lowercase + removing punct
     punct = [",", ".", "!", "?", ";", ":", "'", '"', "-", "$", "’", "…", "[", "]", "(", ")"]  # don't include hyphen - becky added it back... :/
     for char in word:

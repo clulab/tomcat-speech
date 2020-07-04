@@ -6,9 +6,9 @@ params = Namespace(
 
             # overall model parameters
             model="Multitask-meld",
-            num_epochs=50,
+            num_epochs=100,
             batch_size=128,  # 32
-            early_stopping_criteria=10,
+            early_stopping_criteria=30,
 
             num_gru_layers=1,  # 4, 2,
             bidirectional=False,

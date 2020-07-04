@@ -178,7 +178,7 @@ class MELDData(Dataset):
                 # utts = [0] * self.longest_utt
 
                 # get values from row
-                utt = clean_up_word(row["Utterance"].replace('\x92', "'"))
+                utt = clean_up_word(row["Utterance"])
                 utt = self.tokenizer(utt)
                 utt_lengths.append(len(utt))
 
