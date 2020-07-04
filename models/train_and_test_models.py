@@ -17,6 +17,9 @@ from models.plot_training import *
 
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
+from sklearn.metrics import classification_report
+from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import accuracy_score
 
 
 # adapted from https://github.com/joosthub/PyTorchNLPBook/blob/master/chapters/chapter_6/classifying-surnames/Chapter-6-Surname-Classification-with-RNNs.ipynb
@@ -250,6 +253,10 @@ def train_and_predict(classifier, train_state, train_ds, val_ds, batch_size, num
         # get confusion matrix
         if epoch_index % 5 == 0:
             print(confusion_matrix(ys_holder, preds_holder))
+            print("Classification report: ")
+            print(classification_report(ys_holder, preds_holder, digits=4))
+            print("Weighted F=score: " + str(precision_recall_fscore_support(ys_holder, preds_holder, average="weighted")))
+
 
         # add loss and accuracy to train state
         train_state['val_loss'].append(running_loss)
@@ -266,3 +273,19 @@ def train_and_predict(classifier, train_state, train_ds, val_ds, batch_size, num
         # if it's time to stop, end the training process
         if train_state['stop_early']:
             break
+
+
+def calc_test_result(pred_label, test_label, test_mask):
+    true_label = []
+    predicted_label = []
+
+    for i in range(pred_label.shape[0]):
+        for j in range(pred_label.shape[1]):
+            if test_mask[i, j] == 1:
+                true_label.append(np.argmax(test_label[i, j]))
+                predicted_label.append(np.argmax(pred_label[i, j]))
+    print("Confusion Matrix :")
+    print(confusion_matrix(true_label, predicted_label))
+    print("Classification Report :")
+    print(classification_report(true_label, predicted_label, digits=4))
+    print('Weighted FScore: \n ', precision_recall_fscore_support(true_label, predicted_label, average='weighted'))
