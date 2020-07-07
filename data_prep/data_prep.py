@@ -11,6 +11,7 @@ import string
 def clean_up_word(word):
     word = word.replace('\x92', "'")
     word = word.replace('\x91', "")
+    word = word.replace('\x97', "-")
     # clean up word by putting in lowercase + removing punct
     punct = [",", ".", "!", "?", ";", ":", "'", '"', "-", "$", "’", "…", "[", "]", "(", ")"]  # don't include hyphen - becky added it back... :/
     for char in word:
@@ -61,12 +62,11 @@ class Glove(object):
         if t.strip() in self.wd2idx:
             return self.wd2idx[t]
         else:
-            print(f"OOV: [[{t}]]")
+            # print(f"OOV: [[{t}]]")
             return self.wd2idx['<UNK>']
 
     def index(self, toks):
         return [self.id_or_unk(t) for t in toks]
-        
 
     def create_embedding(self):
         emb = []

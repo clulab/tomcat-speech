@@ -7,6 +7,8 @@ import torch
 import sys
 import pickle
 
+from models.baselines import UttLRBaseline
+
 sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 
 from models.train_and_test_models import *
@@ -33,14 +35,16 @@ random.seed(seed)
 # glove_file = "/work/bsharp/glove.short.300d.punct.txt"
 # glove_file = "/data/nlp/corpora/glove/glove.840B.300d.no_proc_header.txt"
 glove_file = "../../glove.short.300d.punct.txt"
+# glove_file = "../../glove.42B.300d.txt"
 
 # meld_path = "/data/nlp/corpora/MM/MELD_five_dialogues"
 # meld_path = "/data/nlp/corpora/MM/MELD_formatted"
 meld_path = "../../datasets/multimodal_datasets/MELD_formatted"
+# meld_path = "../../datasets/multimodal_datasets/MELD_five_utterances"
 
 # set model name and model type
 model = params.model
-model_type = "DELETE_ME_FULL"
+model_type = "audioRNN_1lyr_128batch"
 # path to directory where best models are saved
 model_save_path = "output/models/"
 # make sure the full save path exists; if not, create it
@@ -58,7 +62,7 @@ if __name__ == "__main__":
     print("Glove object created")
 
     # 2. MAKE DATASET
-    data = MELDData(meld_path=meld_path, glove=glove, acoustic_length=params.audio_dim)
+    data = MELDData(meld_path=meld_path, glove=glove, acoustic_length=params.audio_dim, avgd=False)
     # with open('dataset_full', 'wb') as pickle_file:
     #     pickle.dump(data, pickle_file)
     # with open('dataset_full', 'rb') as pickle_file:
@@ -84,6 +88,8 @@ if __name__ == "__main__":
         # create instance of model
         bimodal_trial = BasicEncoder(params=params, num_embeddings=num_embeddings,
                                      pretrained_embeddings=pretrained_embeddings)
+        # bimodal_trial = UttLRBaseline(params=params, num_embeddings=num_embeddings,
+        #                               pretrained_embeddings=pretrained_embeddings)
 
         # set the classifier(s) to the right device
         bimodal_trial = bimodal_trial.to(device)
@@ -109,6 +115,10 @@ if __name__ == "__main__":
 
         dev_ds = DatumListDataset(data.dev_data, data.emotion_weights)
         test_ds = DatumListDataset(data.test_data, data.emotion_weights)
+        #
+        # train_ds = data.train_data
+        # dev_ds = data.dev_data
+        # test_ds = data.test_data
 
         # create a a save path and file for the model
         model_save_file = "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
@@ -122,7 +132,7 @@ if __name__ == "__main__":
 
         # train the model and evaluate on development set
         train_and_predict(bimodal_trial, train_state, train_ds, dev_ds, params.batch_size,
-                            params.num_epochs, loss_func, optimizer, device, scheduler=None, sampler=None)
+                          params.num_epochs, loss_func, optimizer, device, scheduler=None, sampler=None)
 
         # plot the loss and accuracy curves
         # set plot titles
@@ -131,16 +141,20 @@ if __name__ == "__main__":
 
         # set save names
         loss_save = "output/plots/{0}_lr{1}_loss.png".format(model_type, lr)
-        acc_save = "output/plots/{0}_lr{1}_acc.png".format(model_type, lr)
+        acc_save = "output/plots/{0}_lr{1}_avg_f1.png".format(model_type, lr)
 
         # plot the loss from model
         plot_train_dev_curve(train_state['train_loss'], train_state['val_loss'], x_label="Epoch",
                                 y_label="Loss", title=loss_title, save_name=loss_save,
                                 set_axis_boundaries=False)
         # plot the accuracy from model
-        plot_train_dev_curve(train_state['train_acc'], train_state['val_acc'], x_label="Epoch",
-                                y_label="Accuracy", title=acc_title, save_name=acc_save, losses=False,
+        plot_train_dev_curve(train_state['train_avg_f1'], train_state['val_avg_f1'], x_label="Epoch",
+                                y_label="Weighted AVG F1", title=acc_title, save_name=acc_save, losses=False,
                                 set_axis_boundaries=False)
+
+        # plot_train_dev_curve(train_state['train_acc'], train_state['val_acc'], x_label="Epoch",
+        #                         y_label="Accuracy", title=acc_title, save_name=acc_save, losses=False,
+        #                         set_axis_boundaries=False)
 
         # add best evaluation losses and accuracy from training to set
         all_test_losses.append(train_state['early_stopping_best_val'])

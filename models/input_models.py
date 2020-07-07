@@ -58,16 +58,26 @@ class BasicEncoder(nn.Module):
         self.num_embeddings = num_embeddings
 
         # if we feed text through additional layer(s)
-        self.text_output_dim = params.text_output_dim
+        # self.text_output_dim = params.text_output_dim
         self.text_rnn = nn.LSTM(
-            input_size=params.text_dim, 
+            input_size=params.text_dim + params.short_emb_dim,
             hidden_size=params.text_gru_hidden_dim,
             num_layers=params.num_gru_layers, 
             batch_first=True,
             bidirectional=False)
 
+        self.acoustic_rnn = nn.LSTM(
+            input_size=params.audio_dim,
+            hidden_size=params.acoustic_gru_hidden_dim,
+            num_layers=params.num_gru_layers,
+            batch_first=True,
+            bidirectional=False
+        )
+
         # set the size of the input into the fc layers
-        self.fc_input_dim = params.text_output_dim + params.audio_dim
+        self.fc_input_dim = params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
+        # self.fc_input_dim = params.text_output_dim + params.audio_dim
+        # self.fc_input_dim = params.text_output_dim
 
         # set number of classes
         self.output_dim = params.output_dim
@@ -78,24 +88,45 @@ class BasicEncoder(nn.Module):
         # initialize word embeddings
         self.embedding = nn.Embedding(num_embeddings, self.text_dim,
                                       _weight=pretrained_embeddings)
+        self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
+        # self.embedding = nn.Embedding(num_embeddings, self.text_dim)
 
         # initialize fully connected layers
         self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
         self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
 
-    def forward(self, acoustic_input, text_input, length_input=None):
+    def forward(self, acoustic_input, text_input, length_input=None, acoustic_len_input=None):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
+        # embs = F.dropout(self.embedding(text_input), self.dropout)
+        #
         embs = F.dropout(self.embedding(text_input), self.dropout).detach()
-        packed = nn.utils.rnn.pack_padded_sequence(embs, length_input, batch_first=True, enforce_sorted=False)
-        
+        short_embs = F.dropout(self.short_embedding(text_input), self.dropout)
+
+        all_embs = torch.cat((embs, short_embs), dim=2)
+        # packed = nn.utils.rnn.pack_padded_sequence(embs, length_input, batch_first=True, enforce_sorted=False)
+        packed = nn.utils.rnn.pack_padded_sequence(all_embs, length_input, batch_first=True, enforce_sorted=False)
+
+
         # feed embeddings through GRU
         packed_output, (hidden, cell) = self.text_rnn(packed)
-        padded_output, lens = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True)
+        # padded_output, lens = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True)
         encoded_text = F.dropout(hidden[-1], self.dropout)
 
+        if acoustic_len_input is not None:
+            packed_acoustic = nn.utils.rnn.pack_padded_sequence(acoustic_input, acoustic_len_input, batch_first=True,
+                                                                enforce_sorted=False)
+
+            packed_acoustic_output, (acoustic_hidden, acoustic_cell) = self.acoustic_rnn(packed_acoustic)
+            encoded_acoustic = F.dropout(acoustic_hidden[-1], self.dropout)
+
+        else:
+            encoded_acoustic = acoustic_input
+
+        # inputs = encoded_text
         # combine modalities as required by architecture
-        inputs = torch.cat((acoustic_input, encoded_text), 1)
+        # inputs = torch.cat((acoustic_input, encoded_text), 1)
+        inputs = torch.cat((encoded_acoustic, encoded_text), 1)
 
         # use pooled, squeezed feats as input into fc layers
         output = torch.tanh(self.fc1(inputs))
