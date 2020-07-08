@@ -120,8 +120,8 @@ def generate_batches(data, batch_size, shuffle=True, device="cpu"):
 
 
 def train_and_predict(classifier, train_state, train_ds, val_ds, batch_size, num_epochs,
-                      loss_func, optimizer, device="cpu", scheduler=None, model2=None,
-                      train_state2=None, sampler=None, avgd_acoustic=True):
+                      loss_func, optimizer, device="cpu", scheduler=None, sampler=None,
+                      avgd_acoustic=True, use_speaker=True):
 
     for epoch_index in range(num_epochs):
         
@@ -163,13 +163,18 @@ def train_and_predict(classifier, train_state, train_ds, val_ds, batch_size, num
             batch_text = batch[1].to(device)
             batch_lengths = batch[5].to(device)
             batch_acoustic_lengths = batch[6].to(device)
+            if use_speaker:
+                batch_speakers = batch[2].to(device)
+            else:
+                batch_speakers = None
+
             if avgd_acoustic:
-                y_pred = classifier(acoustic_input=batch_acoustic, text_input=batch_text,
-                                    length_input=batch_lengths,
-                                    acoustic_len_input=batch_acoustic_lengths)
+                y_pred = classifier(acoustic_input=batch_acoustic, text_input=batch_text, speaker_input=batch_speakers,
+                                    length_input=batch_lengths)
             else:
                 y_pred = classifier(acoustic_input=batch_acoustic, text_input=batch_text,
-                                    length_input=batch_lengths)
+                                    speaker_input=batch_speakers, length_input=batch_lengths,
+                                    acoustic_len_input=batch_acoustic_lengths)
 
             # uncomment for prediction spot-checking during training
             # if epoch_index % 10 == 0:
@@ -241,14 +246,18 @@ def train_and_predict(classifier, train_state, train_ds, val_ds, batch_size, num
             batch_text = batch[1].to(device)
             batch_lengths = batch[5].to(device)
             batch_acoustic_lengths = batch[6].to(device)
+            if use_speaker:
+                batch_speakers = batch[2].to(device)
+            else:
+                batch_speakers = None
 
             if avgd_acoustic:
-                y_pred = classifier(acoustic_input=batch_acoustic, text_input=batch_text,
-                                    length_input=batch_lengths,
-                                    acoustic_len_input=batch_acoustic_lengths)
+                y_pred = classifier(acoustic_input=batch_acoustic, text_input=batch_text, speaker_input=batch_speakers,
+                                    length_input=batch_lengths)
             else:
                 y_pred = classifier(acoustic_input=batch_acoustic, text_input=batch_text,
-                                    length_input=batch_lengths)
+                                    speaker_input=batch_speakers, length_input=batch_lengths,
+                                    acoustic_len_input=batch_acoustic_lengths)
 
             # get the gold labels
             y_gold = batch[3].to(device)

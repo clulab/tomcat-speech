@@ -28,6 +28,9 @@ class MELDData(Dataset):
         self.meld_test = "{0}/test_sent_emo.csv".format(self.test_path)
         self.tokenizer = get_tokenizer("basic_english")
 
+        # to determine whether incoming acoustic features are averaged
+        self.avgd = avgd
+
         if avgd:
             self.avgd = True
             self.train_dir = "audios"
@@ -50,15 +53,15 @@ class MELDData(Dataset):
         # ordered dicts of acoustic data
         self.train_dict, self.train_acoustic_lengths = make_acoustic_dict_meld("{0}/{1}".format(self.train_path,
                                                                                                 self.train_dir),
-                                                                               f_end, use_cols)
+                                                                               f_end, use_cols, avgd=avgd)
         self.train_dict = OrderedDict(self.train_dict)
         self.dev_dict, self.dev_acoustic_lengths = make_acoustic_dict_meld("{0}/{1}".format(self.dev_path,
-                                                                                            self.train_dir),
-                                                                           f_end, use_cols)
+                                                                                            self.dev_dir),
+                                                                           f_end, use_cols, avgd=avgd)
         self.dev_dict = OrderedDict(self.dev_dict)
         self.test_dict, self.test_acoustic_lengths = make_acoustic_dict_meld("{0}/{1}".format(self.test_path,
-                                                                                              self.train_dir),
-                                                                             f_end, use_cols)
+                                                                                              self.test_dir),
+                                                                             f_end, use_cols, avgd=avgd)
         self.test_dict = OrderedDict(self.test_dict)
 
         # utterance-level dict
@@ -254,23 +257,25 @@ class MELDData(Dataset):
         for idx, item in enumerate(valid_dia_utt):
             # if that dialogue and utterance appears has an acoustic feats file
             if (item.split("_")[0], item.split("_")[1]) in acoustic_dict.keys():
-                # set size of acoustic data holder
-                acoustic_holder = [[0] * self.acoustic_length] * longest_acoustic
-
                 # pull out the acoustic feats dataframe
-                # here, it's an average, so this is a single list
                 acoustic_data = acoustic_dict[(item.split("_")[0], item.split("_")[1])]
-
-                for i, row in enumerate(acoustic_data):
-                    # for now, using longest acoustic file in TRAIN only
-                    if i >= longest_acoustic:
-                        break
-                    # needed because some files allegedly had length 0
-                    for j, feat in enumerate(row):
-                        acoustic_holder[i][j] = feat
 
                 # add this dialogue + utt combo to the list of possible ones
                 usable_utts.append((item.split("_")[0], item.split("_")[1]))
+
+                if not self.avgd:
+                    # set size of acoustic data holder
+                    acoustic_holder = [[0] * self.acoustic_length] * longest_acoustic
+
+                    for i, row in enumerate(acoustic_data):
+                        # for now, using longest acoustic file in TRAIN only
+                        if i >= longest_acoustic:
+                            break
+                        # needed because some files allegedly had length 0
+                        for j, feat in enumerate(row):
+                            acoustic_holder[i][j] = feat
+                else:
+                    acoustic_holder = acoustic_data
 
                 all_acoustic.append(torch.tensor(acoustic_holder))
 
@@ -306,12 +311,20 @@ def make_acoustic_dict_meld(acoustic_path, f_end="_IS10.csv", use_cols=None, avg
     # find acoustic features files
     for f in os.listdir(acoustic_path):
         if f.endswith(f_end):
+            # set the separator--averaged files are actually CSV, others are ;SV
+            if avgd:
+                separator = ","
+            else:
+                separator = ";"
+
             # read in the file as a dataframe
             if use_cols is not None:
-                feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
+                feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols,
+                                    sep=separator)
             else:
-                feats = pd.read_csv(acoustic_path + "/" + f, sep=";")
-                feats.drop(['name', 'frameTime'], axis=1, inplace=True)
+                feats = pd.read_csv(acoustic_path + "/" + f, sep=separator)
+                if not avgd:
+                    feats.drop(['name', 'frameTime'], axis=1, inplace=True)
 
             # get the dialogue and utterance IDs
             dia_id = f.split("_")[0]
