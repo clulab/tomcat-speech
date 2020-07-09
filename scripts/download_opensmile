@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -u
+
 #Script to download OpenSmile v2.3.0
 
 # Set the ROOTDIR environment variable, assuming that the directory structure
@@ -7,12 +9,20 @@
 ROOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../" >/dev/null 2>&1 && pwd)"
 export ROOTDIR
 
+ZIPFILE=opensmile-2.3.0.zip
 URL="https://www.audeering.com/download/opensmile-2-3-0-zip/?wpdmdl=4781&refresh=5f06534ad91f31594250058"
-pushd "$ROOTDIR"/external
-    if ! curl "$URL"-o opensmile-2.3.0.zip; then
+pushd "$ROOTDIR"/external > /dev/null
+    echo "Downloading OpenSmile to ${pwd}/${ZIPFILE}"
+    if ! curl "$URL" -o "$ZIPFILE"; then
         echo "Could not download OpenSmile."
         exit 1
     fi
-popd
 
-exit 1
+    echo "Extracting OpenSmile..."
+    if ! unzip "$ZIPFILE"; then
+        echo "Could not unzip ${ZIPFILE}"
+        exit 1
+    fi
+popd > /dev/null
+
+exit 0
