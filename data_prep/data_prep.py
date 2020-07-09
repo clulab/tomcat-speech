@@ -6,15 +6,21 @@ from sklearn.feature_selection import SelectKBest, chi2
 from torch.utils.data import Dataset
 
 import statistics
+import string  
 
 
 def clean_up_word(word):
+    word = word.replace('\x92', "'")
+    word = word.replace('\x91', "")
+    word = word.replace('\x97', "-")
     # clean up word by putting in lowercase + removing punct
-    punct = [",", ".", "!", "?", ";", ":"]  # don't include hyphen
+    punct = [",", ".", "!", "?", ";", ":", "'", '"', "-", "$", "’", "…", "[", "]", "(", ")"]  # don't include hyphen - becky added it back... :/
     for char in word:
         if char in punct:
-            word = word.replace(char, "")
-    return word.lower()
+            word = word.replace(char, " ")
+    if word.strip() == '':
+        word = "<UNK>" 
+    return word
 
 
 def get_avg_vec(nested_list):
@@ -31,7 +37,7 @@ def make_glove_dict(glove_path):
     glove_dict = {}
     with open(glove_path) as glove_file:
         for line in glove_file:
-            line = line.strip().split()
+            line = line.rstrip().split(' ')
             glove_dict[line[0]] = [float(item) for item in line[1:]]
     return glove_dict
 
@@ -52,6 +58,16 @@ class Glove(object):
         if "<UNK>" not in self.glove_dict.keys():
             mean_vec = self.get_avg_embedding()
             self.add_vector("<UNK>", mean_vec)
+
+    def id_or_unk(self, t):
+        if t.strip() in self.wd2idx:
+            return self.wd2idx[t]
+        else:
+            # print(f"OOV: [[{t}]]")
+            return self.wd2idx['<UNK>']
+
+    def index(self, toks):
+        return [self.id_or_unk(t) for t in toks]
 
     def create_embedding(self):
         emb = []

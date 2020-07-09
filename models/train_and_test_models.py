@@ -17,6 +17,11 @@ from models.parameters.multitask_params import *
 from models.plot_training import *
 
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import f1_score
+from sklearn.metrics import classification_report
+from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import accuracy_score
+
 
 
 # adapted from https://github.com/joosthub/PyTorchNLPBook/blob/master/chapters/chapter_6/classifying-surnames/Chapter-6-Surname-Classification-with-RNNs.ipynb
@@ -29,8 +34,10 @@ def make_train_state(learning_rate, model_save_path, model_save_file):
             'epoch_index': 0,
             'train_loss': [],
             'train_acc': [],
+            'train_avg_f1': [],
             'val_loss': [],
             'val_acc': [],
+            'val_avg_f1': [],
             'best_val_loss': [],
             'best_val_acc': [],
             'best_loss': 100,
@@ -114,11 +121,12 @@ def generate_batches(data, batch_size, shuffle=True, device="cpu"):
     return acoustic, embedding, speaker, y, lengths
 
 
-def train_and_predict(classifier, train_state, train_splits, val_data, batch_size, num_epochs,
-                      loss_func, optimizer, device="cpu", scheduler=None, model2=None,
-                      train_state2=None):
+def train_and_predict(classifier, train_state, train_ds, val_ds, batch_size, num_epochs,
+                      loss_func, optimizer, device="cpu", scheduler=None, sampler=None,
+                      avgd_acoustic=True, use_speaker=True):
 
     for epoch_index in range(num_epochs):
+        
         print("Now starting epoch {0}".format(epoch_index))
 
         train_state['epoch_index'] = epoch_index
@@ -130,20 +138,45 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         # set classifier(s) to training mode
         classifier.train()
 
-        acoustic_batches, embedding_batches, _, y_batches, length_batches = \
-            generate_batches(train_splits, batch_size, shuffle=True, device=device)
+        batches = DataLoader(train_ds, batch_size=batch_size, shuffle=True, sampler=sampler)
+
+        # acoustic_batches, embedding_batches, _, y_batches, length_batches = \
+        #     generate_batches(train_splits, batch_size, shuffle=True, device=device)
+
+        # set holders to use for error analysis
+        ys_holder = []
+        preds_holder = []
 
         # for each batch in the list of batches created by the dataloader
-        for batch_index, batch_array in enumerate(acoustic_batches):
+        for batch_index, batch in enumerate(batches):
             # get the gold labels
-            y_gold = y_batches[batch_index]
+            y_gold = batch[3].to(device)
 
             # step 1. zero the gradients
             optimizer.zero_grad()
 
             # step 2. compute the output
-            y_pred = classifier(acoustic_input=batch_array, text_input=embedding_batches[batch_index],
-                                length_input=length_batches[batch_index])
+            # acoustic_batches = [item[0] for item in batched_split]
+            # embedding_batches = [item[1] for item in batched_split]
+            # speaker_batches = [item[2] for item in batched_split]
+            # y_batches = [item[3] for item in batched_split]
+            # length_batches = [item[5] for item in batched_split]
+            batch_acoustic = batch[0].to(device)
+            batch_text = batch[1].to(device)
+            batch_lengths = batch[5].to(device)
+            batch_acoustic_lengths = batch[6].to(device)
+            if use_speaker:
+                batch_speakers = batch[2].to(device)
+            else:
+                batch_speakers = None
+
+            if avgd_acoustic:
+                y_pred = classifier(acoustic_input=batch_acoustic, text_input=batch_text, speaker_input=batch_speakers,
+                                    length_input=batch_lengths)
+            else:
+                y_pred = classifier(acoustic_input=batch_acoustic, text_input=batch_text,
+                                    speaker_input=batch_speakers, length_input=batch_lengths,
+                                    acoustic_len_input=batch_acoustic_lengths)
 
             # uncomment for prediction spot-checking during training
             # if epoch_index % 10 == 0:
@@ -151,6 +184,10 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             #     print(y_gold)
             # if epoch_index == 35:
             #     sys.exit(1)
+
+            # add ys to holder for error analysis
+            preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+            ys_holder.extend(y_gold.tolist())
 
             # step 3. compute the loss
             loss = loss_func(y_pred, y_gold)
@@ -183,11 +220,15 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         train_state['train_loss'].append(running_loss)
         train_state['train_acc'].append(running_acc)
 
-        print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
+        avg_f1 = precision_recall_fscore_support(ys_holder, preds_holder, average="weighted")
+        train_state['train_avg_f1'].append(avg_f1[2])
+        # print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
+        print("Training weighted F=score: " + str(avg_f1))
 
         # Iterate over validation set--put it in a dataloader
-        acoustic_batches, embedding_batches, _, y_batches, length_batches = \
-            generate_batches(val_data, batch_size, shuffle=True, device=device)
+        val_batches = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
+        # acoustic_batches, embedding_batches, _, y_batches, length_batches = \
+        #     generate_batches(val_data, batch_size, shuffle=False, device=device)
 
         # reset loss and accuracy to zero
         running_loss = 0.
@@ -201,13 +242,27 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
         preds_holder = []
 
         # for each batch in the dataloader
-        for batch_index, batch_array in enumerate(acoustic_batches):
+        for batch_index, batch in enumerate(val_batches):
             # compute the output
-            y_pred = classifier(acoustic_input=batch_array, text_input=embedding_batches[batch_index],
-                                    length_input=length_batches[batch_index])
+            batch_acoustic = batch[0].to(device)
+            batch_text = batch[1].to(device)
+            batch_lengths = batch[5].to(device)
+            batch_acoustic_lengths = batch[6].to(device)
+            if use_speaker:
+                batch_speakers = batch[2].to(device)
+            else:
+                batch_speakers = None
+
+            if avgd_acoustic:
+                y_pred = classifier(acoustic_input=batch_acoustic, text_input=batch_text, speaker_input=batch_speakers,
+                                    length_input=batch_lengths)
+            else:
+                y_pred = classifier(acoustic_input=batch_acoustic, text_input=batch_text,
+                                    speaker_input=batch_speakers, length_input=batch_lengths,
+                                    acoustic_len_input=batch_acoustic_lengths)
 
             # get the gold labels
-            y_gold = y_batches[batch_index]
+            y_gold = batch[3].to(device)
 
             # add ys to holder for error analysis
             preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
@@ -231,6 +286,15 @@ def train_and_predict(classifier, train_state, train_splits, val_data, batch_siz
             #                                                                       acc_t, running_acc))
 
         # print("Overall val loss: {0}, overall val acc: {1}".format(running_loss, running_acc))
+        avg_f1 = precision_recall_fscore_support(ys_holder, preds_holder, average="weighted")
+        train_state['val_avg_f1'].append(avg_f1[2])
+        print("Weighted F=score: " + str(avg_f1))
+
+        # get confusion matrix
+        if epoch_index % 5 == 0:
+            print(confusion_matrix(ys_holder, preds_holder))
+            print("Classification report: ")
+            print(classification_report(ys_holder, preds_holder, digits=4))
 
         # get confusion matrix if it's in the right epoch(s)
         if epoch_index % 50 == 0:

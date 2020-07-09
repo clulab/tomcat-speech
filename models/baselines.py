@@ -4,51 +4,43 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class EmbeddingsOnly(nn.Module):
+class UttLRBaseline(nn.Module):
     """
-    Only uses word embeddings to predict call outcome
+    LR model for utterance-level predictions on bimodal data
     """
     def __init__(self, params, num_embeddings, pretrained_embeddings=None):
-        super(EmbeddingsOnly, self).__init__()
-
-        # input dimensions
+        super(UttLRBaseline, self).__init__()
         self.text_dim = params.text_dim
+        self.audio_dim = params.audio_dim
+        self.input_dim = params.text_dim + params.audio_dim
 
-        # dropout for fully connected layer
-        self.dropout = params.dropout
+        # set embeddings layer
+        self.embedding = nn.Embedding(num_embeddings, self.text_dim,
+                                      _weight=pretrained_embeddings)
 
-        # word embeddings
-        if pretrained_embeddings is None:
-            self.embedding = nn.Embedding(num_embeddings, self.text_dim, params.padding_idx)
-        else:
-            self.embedding = nn.Embedding(num_embeddings, self.text_dim, params.padding_idx,
-                                          _weight=pretrained_embeddings)
+        self.linear = nn.Linear(self.input_dim, params.output_dim)
+        self.sigmoid = nn.Sigmoid()
 
-        # convolutional layers
-        self.conv1 = nn.Conv1d(self.text_dim, params.out_channels, kernel_size=params.kernel_size)
-        self.conv2 = nn.Conv1d(params.out_channels, params.out_channels, kernel_size=params.kernel_size, stride=2)
-        self.conv3 = nn.Conv1d(params.out_channels, params.out_channels, kernel_size=params.kernel_size)
+    def forward(self, acoustic_input, text_input, length_input=None):
+        embs = self.embedding(text_input).detach()
 
-        # fully connected layer
-        self.linear = nn.Linear(params.out_channels, params.output_dim)
+        avgd_embs = []
 
-    def forward(self, text_input):
-        # get word embeddings
-        embs = self.embedding(text_input).permute(0, 2, 1)
+        for i, emb in enumerate(embs):
 
-        # feed through convolutional layers
-        intermediate1 = F.relu(self.conv1(embs))
-        intermediate2 = F.relu(self.conv2(intermediate1))
-        intermediate3 = F.relu(self.conv3(intermediate2))
+            emb.narrow(0, 0, length_input[i])
+            emb = torch.mean(emb, dim=0).squeeze()
+            avgd_embs.append(emb.tolist())
 
-        # squeeze and put through fully connected layer
-        squeezed_size = intermediate3.size(dim=2)
-        feats = F.max_pool1d(intermediate3, squeezed_size).squeeze(dim=2)
-        fc_out = torch.sigmoid(self.linear(F.dropout(feats, self.dropout)))
+        embs = torch.tensor(avgd_embs)
 
-        # return predictions
-        return fc_out.squeeze(dim=1)
+        inputs = torch.cat((acoustic_input, embs), 1)
 
+        # feed through layer with sigmoid activation
+        outputs = self.sigmoid(self.linear(inputs))
+
+        # get predictions
+        return outputs.squeeze(dim=1)
 
 class LRBaseline(nn.Module):
     """
