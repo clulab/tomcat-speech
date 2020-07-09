@@ -76,7 +76,7 @@ class BasicEncoder(nn.Module):
         )
 
         # set the size of the input into the fc layers
-        if params.avgd_acoustic:
+        if params.avgd_acoustic or params.add_avging:
             self.fc_input_dim = params.text_gru_hidden_dim + params.audio_dim
         else:
             self.fc_input_dim = params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
@@ -108,10 +108,11 @@ class BasicEncoder(nn.Module):
     def forward(self, acoustic_input, text_input, speaker_input=None, length_input=None, acoustic_len_input=None):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
-        # embs = F.dropout(self.embedding(text_input), self.dropout)
-        #
-        embs = F.dropout(self.embedding(text_input), self.dropout).detach()
-        short_embs = F.dropout(self.short_embedding(text_input), self.dropout)
+        # embs = F.dropout(self.embedding(text_input), self.dropout).detach()
+        embs = self.embedding(text_input).detach()
+
+        # short_embs = F.dropout(self.short_embedding(text_input), self.dropout)
+        short_embs = self.short_embedding(text_input)
 
         all_embs = torch.cat((embs, short_embs), dim=2)
 
@@ -135,7 +136,7 @@ class BasicEncoder(nn.Module):
             encoded_acoustic = F.dropout(acoustic_hidden[-1], self.dropout)
 
         else:
-            encoded_acoustic = acoustic_input.squeeze(dim=1)
+            encoded_acoustic = acoustic_input.squeeze()
 
         # inputs = encoded_text
         # combine modalities as required by architecture
@@ -152,3 +153,98 @@ class BasicEncoder(nn.Module):
 
         # return the output
         return output
+
+
+class TextOnlyCNN(nn.Module):
+    """
+    A CNN with multiple input channels with different kernel size operating over input
+    Used with only text modality.
+    """
+    def __init__(self, params, num_embeddings, pretrained_embeddings=None):
+        super(TextOnlyCNN, self).__init__()
+        # input dimensions
+        self.text_dim = params.text_dim
+        self.in_channels = params.text_dim
+
+        # number of classes
+        self.output_dim = params.output_dim
+
+        # self.num_cnn_layers = params.num_cnn_layers
+        self.dropout = params.dropout
+
+        # kernels for each layer
+        self.k1_size = params.kernel_1_size
+        self.k2_size = params.kernel_2_size
+        self.k3_size = params.kernel_3_size
+
+        # number of output channels from conv layers
+        self.out_channels = params.out_channels
+
+        # word embeddings
+        if pretrained_embeddings is None:
+            self.embedding = nn.Embedding(num_embeddings, self.text_dim, padding_idx=0, max_norm=1.0)
+            self.pretrained_embeddings = False
+        else:
+            self.embedding = nn.Embedding(num_embeddings, self.text_dim, padding_idx=0,
+                                          _weight=pretrained_embeddings, max_norm=1.0)
+            self.pretrained_embeddings = True
+
+        self.conv1 = nn.Conv1d(self.in_channels, self.out_channels, self.k1_size)
+        self.maxconv1 = nn.MaxPool1d(kernel_size=self.k1_size)
+        self.conv2 = nn.Conv1d(self.in_channels, self.out_channels, self.k2_size)
+        self.maxconv2 = nn.MaxPool1d(kernel_size=self.k2_size)
+        self.conv3 = nn.Conv1d(self.in_channels, self.out_channels, self.k3_size)
+        self.maxconv3 = nn.MaxPool1d(kernel_size=self.k3_size)
+
+        # fully connected layers
+        self.fc1 = nn.Linear(self.out_channels * 3, params.text_cnn_hidden_dim)
+        self.fc2 = nn.Linear(params.text_cnn_hidden_dim, self.output_dim)
+
+    def forward(self, acoustic_input, text_input, speaker_input=None, length_input=None):
+        # get word embeddings
+        if self.pretrained_embeddings:
+            # detach to avoid training them if using pretrained
+            inputs = self.embedding(text_input).detach()
+        else:
+            inputs = self.embedding(text_input)
+
+        inputs = inputs.permute(0, 2, 1)
+
+        # feed data into convolutional layers
+        # dim=2 says it's an unexpected argument, but it is needed for this to work
+        conv1_out = F.leaky_relu(self.conv1(inputs))
+        feats1 = F.max_pool1d(conv1_out, conv1_out.size(dim=2)).squeeze(dim=2)
+        conv2_out = F.leaky_relu(self.conv2(inputs))
+        feats2 = F.max_pool1d(conv2_out, conv2_out.size(dim=2)).squeeze(dim=2)
+        conv3_out = F.leaky_relu(self.conv3(inputs))
+        feats3 = F.max_pool1d(conv3_out, conv3_out.size(dim=2)).squeeze(dim=2)
+
+        # combine output of convolutional layers
+        intermediate = torch.cat((feats1, feats2, feats3), 1)
+
+        # feed this through fully connected layer
+        fc1_out = torch.tanh(self.fc1((F.dropout(intermediate, self.dropout))))
+
+        output = torch.relu(self.fc2(F.dropout(fc1_out, self.dropout)))
+        # output = self.fc2(fc1_out)
+
+        return output.squeeze(dim=1)
+
+
+class PredictionLayer(nn.Module):
+    """
+    A final layer for predictions
+    """
+    def __init__(self, params, out_dim):
+        super(PredictionLayer, self).__init__()
+        self.input_dim = params.text_gru_hidden_dim
+
+        # specify out_dim explicity so we can do multiple tasks at once
+        self.output_dim = out_dim
+
+        self.fc1 = nn.Linear(self.input_dim, self.output_dim)
+
+    def forward(self, combined_inputs):
+        out = torch.relu(self.fc1(F.dropout(combined_inputs, self.dropout)))
+
+        return out
