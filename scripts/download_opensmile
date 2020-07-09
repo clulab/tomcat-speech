@@ -1,0 +1,18 @@
+#!/bin/bash
+
+#Script to download OpenSmile v2.3.0
+
+# Set the ROOTDIR environment variable, assuming that the directory structure
+# mirrors that of the git repository.
+ROOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../" >/dev/null 2>&1 && pwd)"
+export ROOTDIR
+
+URL="https://www.audeering.com/download/opensmile-2-3-0-zip/?wpdmdl=4781&refresh=5f06534ad91f31594250058"
+pushd "$ROOTDIR"/external
+    if ! curl "$URL"-o opensmile-2.3.0.zip; then
+        echo "Could not download OpenSmile."
+        exit 1
+    fi
+popd
+
+exit 1
