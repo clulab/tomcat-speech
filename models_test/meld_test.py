@@ -46,7 +46,6 @@ meld_path = "../../datasets/multimodal_datasets/MELD_formatted"
 
 # set model name and model type
 model = params.model
-
 # path to directory where best models are saved
 model_save_path = "output/models/"
 # make sure the full save path exists; if not, create it

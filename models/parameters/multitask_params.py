@@ -14,6 +14,7 @@ params = Namespace(
             early_stopping_criteria=30,
 
             num_gru_layers=2, # 1,   # 3,  # 1,  # 4, 2,
+
             bidirectional=False,
 
             # input dimension parameters

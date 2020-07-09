@@ -1,6 +1,7 @@
 # implement training and testing for models
 
 from collections import OrderedDict
+import random
 
 import torch
 import torch.nn as nn
@@ -20,6 +21,7 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import accuracy_score
+
 
 
 # adapted from https://github.com/joosthub/PyTorchNLPBook/blob/master/chapters/chapter_6/classifying-surnames/Chapter-6-Surname-Classification-with-RNNs.ipynb
@@ -293,6 +295,12 @@ def train_and_predict(classifier, train_state, train_ds, val_ds, batch_size, num
             print(confusion_matrix(ys_holder, preds_holder))
             print("Classification report: ")
             print(classification_report(ys_holder, preds_holder, digits=4))
+
+        # get confusion matrix if it's in the right epoch(s)
+        if epoch_index % 50 == 0:
+            # print(ys_holder)
+            # print(preds_holder)
+            print(confusion_matrix(ys_holder, preds_holder))
 
         # add loss and accuracy to train state
         train_state['val_loss'].append(running_loss)

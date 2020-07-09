@@ -139,6 +139,7 @@ class BasicEncoder(nn.Module):
             encoded_acoustic = acoustic_input.squeeze()
 
         # inputs = encoded_text
+        
         # combine modalities as required by architecture
         # inputs = torch.cat((acoustic_input, encoded_text), 1)
         if speaker_input is not None:

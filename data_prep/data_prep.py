@@ -2,6 +2,7 @@
 from collections import OrderedDict
 
 import torch
+from sklearn.feature_selection import SelectKBest, chi2
 from torch.utils.data import Dataset
 
 import statistics
@@ -168,3 +169,11 @@ def get_longest_utterance(pd_dataframes):
                 max_length = utt_length
                 # print(max_length)
     return max_length
+
+
+def feature_selection(xs, ys, num_to_keep):
+    """
+    Perform feature selection on the dataset
+    """
+    new_xs = SelectKBest(chi2, k=num_to_keep).fit_transform(xs, ys)
+    return new_xs

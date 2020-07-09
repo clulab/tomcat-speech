@@ -311,8 +311,10 @@ class MELDData(Dataset):
 def get_class_weights(y_set):
     class_counts = {}
     y_values = y_set.tolist()
+
     num_labels = max(y_values) + 1
     # y_values = [item.index(max(item)) for item in y_set.tolist()]
+
     for item in y_values:
         if item not in class_counts:
             class_counts[item] = 1
