@@ -11,7 +11,7 @@ params = Namespace(
             model="Multitask-meld",
             num_epochs=100,
             batch_size=100,  # 128,  # 32
-            early_stopping_criteria=100,
+            early_stopping_criteria=30,
 
             num_gru_layers=2,  # 1,   # 3,  # 1,  # 4, 2,
 
@@ -50,7 +50,7 @@ params = Namespace(
 
             # outputs
             output_dim=7,  # length of output vector
-            output_2_dim=3,    # length of second task output vec
+            output_2_dim=None, # 3,    # length of second task output vec
 
             # FC layer parameters
             num_fc_layers=1,  # 1,  # 2,

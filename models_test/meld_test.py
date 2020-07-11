@@ -36,8 +36,8 @@ random.seed(seed)
 # todo: should be updated later to a glove subset appropriate for this task
 # glove_file = "/work/bsharp/glove.short.300d.punct.txt"
 # glove_file = "/data/nlp/corpora/glove/glove.840B.300d.no_proc_header.txt"
-glove_file = "../../glove.short.300d.punct.txt"
-# glove_file = "../../glove.42B.300d.txt"
+# glove_file = "../../glove.short.300d.punct.txt"
+glove_file = "../../glove.42B.300d.txt"
 
 # meld_path = "/data/nlp/corpora/MM/MELD_five_dialogues"
 # meld_path = "/data/nlp/corpora/MM/MELD_formatted"
@@ -72,8 +72,10 @@ if __name__ == "__main__":
                               'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
                               'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
                     add_avging=params.add_avging)
-    # with open('dataset_full', 'wb') as pickle_file:
+    # with open('meld_IS10_small_avgd_fullGloVe.p', 'wb') as pickle_file:
     #     pickle.dump(data, pickle_file)
+    #
+    # sys.exit()
     # with open('dataset_full', 'rb') as pickle_file:
     #     data = pickle.load(pickle_file)
 
@@ -93,7 +95,8 @@ if __name__ == "__main__":
     # mini search through different learning_rate values
     for lr in params.lrs:
         for wd in params.weight_decay:
-            model_type = f"Multitask_TextOnly_100batch_wd{str(wd)}_.2split" #todo: try with 200 batch
+            # model_type = f"Multitask_1.6vs1lossWeighting_Adagrad_TextOnly_100batch_wd{str(wd)}_.2split"
+            model_type = f"TextOnly_FullGloVe_100batch_wd{str(wd)}_.2split"
             # model_type = "GenderEmbs_.2splitTrainDev_avgdAI_fullGloVe_100batch_wd{}".format(str(wd))
 
             # this uses train-dev-test folds
@@ -104,13 +107,17 @@ if __name__ == "__main__":
                 multitask = True
                 bimodal_trial = MultitaskModel(params=params, num_embeddings=num_embeddings,
                                                pretrained_embeddings=pretrained_embeddings)
-                optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
-                                             weight_decay=wd)
+                optimizer = torch.optim.Adagrad(lr=lr, params=bimodal_trial.parameters(),
+                                                weight_decay=wd)
+                # optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
+                #                              weight_decay=wd)
             elif params.text_only:
                 bimodal_trial = TextOnlyCNN(params=params, num_embeddings=num_embeddings,
                                             pretrained_embeddings=pretrained_embeddings)
-                optimizer = torch.optim.Adagrad(lr=lr, params=bimodal_trial.parameters(),
+                optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
                                              weight_decay=wd)
+                # optimizer = torch.optim.Adagrad(lr=lr, params=bimodal_trial.parameters(),
+                #                              weight_decay=wd)
                 # optimizer = torch.optim.Adadelta(lr=lr, params=bimodal_trial.parameters(),
                                                  # weight_decay=wd)
             else:

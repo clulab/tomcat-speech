@@ -20,6 +20,7 @@ smile.log
 *.wav
 *.mp3
 *.mp4
+*.p
 ./output
 glove.short.300d.txt
 python_readme.md

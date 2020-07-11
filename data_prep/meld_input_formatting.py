@@ -403,4 +403,4 @@ class DatumListDataset(Dataset):
 
     def targets(self):
         for datum in self.data_list:
-            yield datum[3]
+            yield datum[4]
