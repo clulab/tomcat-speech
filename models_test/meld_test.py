@@ -70,7 +70,8 @@ if __name__ == "__main__":
     data = MELDData(meld_path=meld_path, glove=glove, acoustic_length=params.audio_dim, avgd=avgd_acoustic,
                     use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
                               'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
-                              'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'])
+                              'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
+                    add_avging=params.add_avging)
     # with open('dataset_full', 'wb') as pickle_file:
     #     pickle.dump(data, pickle_file)
     # with open('dataset_full', 'rb') as pickle_file:
@@ -92,16 +93,31 @@ if __name__ == "__main__":
     # mini search through different learning_rate values
     for lr in params.lrs:
         for wd in params.weight_decay:
-            model_type = "paperDrpt_splitTrainDev_avgdAI_10batch_wd{}_spkr".format(str(wd))
+            model_type = f"Multitask_TextOnly_100batch_wd{str(wd)}_.2split" #todo: try with 200 batch
+            # model_type = "GenderEmbs_.2splitTrainDev_avgdAI_fullGloVe_100batch_wd{}".format(str(wd))
 
             # this uses train-dev-test folds
             # create instance of model
-            if params.text_only:
+            multitask = False
+
+            if params.output_2_dim is not None:
+                multitask = True
+                bimodal_trial = MultitaskModel(params=params, num_embeddings=num_embeddings,
+                                               pretrained_embeddings=pretrained_embeddings)
+                optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
+                                             weight_decay=wd)
+            elif params.text_only:
                 bimodal_trial = TextOnlyCNN(params=params, num_embeddings=num_embeddings,
                                             pretrained_embeddings=pretrained_embeddings)
+                optimizer = torch.optim.Adagrad(lr=lr, params=bimodal_trial.parameters(),
+                                             weight_decay=wd)
+                # optimizer = torch.optim.Adadelta(lr=lr, params=bimodal_trial.parameters(),
+                                                 # weight_decay=wd)
             else:
                 bimodal_trial = BasicEncoder(params=params, num_embeddings=num_embeddings,
                                              pretrained_embeddings=pretrained_embeddings)
+                optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
+                                             weight_decay=wd)
                 # bimodal_trial = UttLRBaseline(params=params, num_embeddings=num_embeddings,
                 #                               pretrained_embeddings=pretrained_embeddings)
 
@@ -114,8 +130,7 @@ if __name__ == "__main__":
             # loss_func = nn.CrossEntropyLoss(data.emotion_weights, reduction='mean')
 
             # optimizer = torch.optim.SGD(bimodal_trial.parameters(), lr=lr, momentum=0.9)
-            optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
-                                         weight_decay=wd)
+
 
             print("Model, loss function, and optimization created")
 
@@ -125,7 +140,7 @@ if __name__ == "__main__":
             # combine train and dev data
             train_and_dev = data.train_data + data.dev_data
 
-            train_data, dev_data = train_test_split(train_and_dev, test_size=.3)
+            train_data, dev_data = train_test_split(train_and_dev, test_size=.2) #.3
 
             train_ds = DatumListDataset(train_data, data.emotion_weights)
             train_targets = torch.stack(list(train_ds.targets()))
@@ -153,14 +168,21 @@ if __name__ == "__main__":
             load_path = model_save_path + model_save_file
 
             # train the model and evaluate on development set
-            train_and_predict(bimodal_trial, train_state, train_ds, dev_ds, params.batch_size,
-                              params.num_epochs, loss_func, optimizer, device, scheduler=None, sampler=None,
-                              avgd_acoustic=avgd_acoustic_in_network, use_speaker=params.use_speaker)
+            if multitask:
+                multitask_train_and_predict(bimodal_trial, train_state, train_ds, dev_ds, params.batch_size,
+                                            params.num_epochs, loss_func, optimizer, device, scheduler=None,
+                                            sampler=None, avgd_acoustic=avgd_acoustic_in_network,
+                                            use_speaker=params.use_speaker, use_gender=params.use_gender)
+            else:
+                train_and_predict(bimodal_trial, train_state, train_ds, dev_ds, params.batch_size,
+                                  params.num_epochs, loss_func, optimizer, device, scheduler=None, sampler=None,
+                                  avgd_acoustic=avgd_acoustic_in_network, use_speaker=params.use_speaker,
+                                  use_gender=params.use_gender)
 
             # plot the loss and accuracy curves
             # set plot titles
             loss_title = "Training and Dev loss for model {0} with lr {1}".format(model_type, lr)
-            acc_title = "Training and Dev accuracy for model {0} with lr {1}".format(model_type, lr)
+            acc_title = "Avg F scores for model {0} with lr {1}".format(model_type, lr)
 
             # set save names
             loss_save = "output/plots/{0}_lr{1}_loss.png".format(model_type, lr)
@@ -181,9 +203,9 @@ if __name__ == "__main__":
 
             # add best evaluation losses and accuracy from training to set
             all_test_losses.append(train_state['early_stopping_best_val'])
-            all_test_accs.append(train_state['best_val_acc'])
+            # all_test_accs.append(train_state['best_val_acc'])
 
     # print the best model losses and accuracies for each development set in the cross-validation
     for i, item in enumerate(all_test_losses):
         print("Losses for model with lr={0}: {1}".format(params.lrs[i], item))
-        print("Accuracy for model with lr={0}: {1}".format(params.lrs[i], all_test_accs[i]))
+        # print("Accuracy for model with lr={0}: {1}".format(params.lrs[i], all_test_accs[i]))

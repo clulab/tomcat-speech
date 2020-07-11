@@ -10,10 +10,10 @@ params = Namespace(
             # overall model parameters
             model="Multitask-meld",
             num_epochs=100,
-            batch_size=10,  # 128,  # 32
-            early_stopping_criteria=30,
+            batch_size=100,  # 128,  # 32
+            early_stopping_criteria=100,
 
-            num_gru_layers=2, # 1,   # 3,  # 1,  # 4, 2,
+            num_gru_layers=2,  # 1,   # 3,  # 1,  # 4, 2,
 
             bidirectional=False,
 
@@ -40,12 +40,17 @@ params = Namespace(
             acoustic_gru_hidden_dim=20,
 
             # speaker embeddings
-            use_speaker=True,
-            num_speakers=500,
+            use_speaker=False,
+            num_speakers=261,  # check this number
             speaker_emb_dim=3,
 
+            # gender embeddings
+            use_gender=True,
+            gender_emb_dim=3,
+
             # outputs
-            output_dim=7,   # 3,  # length of output vector
+            output_dim=7,  # length of output vector
+            output_2_dim=3,    # length of second task output vec
 
             # FC layer parameters
             num_fc_layers=1,  # 1,  # 2,
@@ -53,8 +58,8 @@ params = Namespace(
             dropout=0.4,  # 0.2
 
             # optimizer parameters
-            lrs=[1e-2, 1e-4],
+            lrs=[1e-3],
             beta_1=0.9,
             beta_2=0.999,  
-            weight_decay=[0.0001, 0.001, 0.00001],
+            weight_decay=[0.0001],
 )

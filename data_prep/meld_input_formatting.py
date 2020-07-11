@@ -49,6 +49,9 @@ class MELDData(Dataset):
         # Glove object
         self.glove = glove
 
+        # get speaker to gender dict
+        self.speaker2gender = get_speaker_gender(f"{meld_path}/speaker2idx.csv")
+
         print("Collecting acoustic features")
 
         # ordered dicts of acoustic data
@@ -87,13 +90,16 @@ class MELDData(Dataset):
         print("Getting text, speaker, and y features")
 
         # get utterance, speaker, y matrices for train, dev, and test sets
-        self.train_utts, self.train_spkrs, self.train_y_emo, self.train_y_sent, self.train_utt_lengths = \
+        self.train_utts, self.train_spkrs, self.train_genders, \
+            self.train_y_emo, self.train_y_sent, self.train_utt_lengths = \
             self.make_meld_data_tensors(self.meld_train, self.train_usable_utts)
 
-        self.dev_utts, self.dev_spkrs, self.dev_y_emo, self.dev_y_sent, self.dev_utt_lengths = \
+        self.dev_utts, self.dev_spkrs, self.dev_genders,\
+            self.dev_y_emo, self.dev_y_sent, self.dev_utt_lengths = \
             self.make_meld_data_tensors(self.meld_dev, self.dev_usable_utts)
 
-        self.test_utts, self.test_spkrs, self.test_y_emo, self.test_y_sent, self.test_utt_lengths = \
+        self.test_utts, self.test_spkrs, self.test_genders,\
+            self.test_y_emo, self.test_y_sent, self.test_utt_lengths = \
             self.make_meld_data_tensors(self.meld_test, self.test_usable_utts)
 
         # get the data organized for input into the NNs
@@ -133,20 +139,23 @@ class MELDData(Dataset):
 
         for i, item in enumerate(self.train_acoustic):
             # normalize
-            item_transformed = (item - self.acoustic_means) / self.acoustic_deviations
-            train_data.append((item_transformed, self.train_utts[i], self.train_spkrs[i],
+            item_transformed = item
+            # item_transformed = (item - self.acoustic_means) / self.acoustic_deviations
+            train_data.append((item_transformed, self.train_utts[i], self.train_spkrs[i], self.train_genders[i],
                                self.train_y_emo[i], self.train_y_sent[i], self.train_utt_lengths[i],
                                self.train_acoustic_lengths[i]))
 
         for i, item in enumerate(self.dev_acoustic):
-            item_transformed = (item - self.acoustic_means) / self.acoustic_deviations
-            dev_data.append((item_transformed, self.dev_utts[i], self.dev_spkrs[i],
+            item_transformed = item
+            # item_transformed = (item - self.acoustic_means) / self.acoustic_deviations
+            dev_data.append((item_transformed, self.dev_utts[i], self.dev_spkrs[i], self.dev_genders[i],
                              self.dev_y_emo[i], self.dev_y_sent[i], self.dev_utt_lengths[i],
                              self.dev_acoustic_lengths[i]))
 
         for i, item in enumerate(self.test_acoustic):
-            item_transformed = (item - self.acoustic_means) / self.acoustic_deviations
-            test_data.append((item_transformed, self.test_utts[i], self.test_spkrs[i],
+            item_transformed = item
+            # item_transformed = (item - self.acoustic_means) / self.acoustic_deviations
+            test_data.append((item_transformed, self.test_utts[i], self.test_spkrs[i], self.test_genders[i],
                               self.test_y_emo[i], self.test_y_sent[i], self.test_utt_lengths[i],
                               self.test_acoustic_lengths[i]))
 
@@ -174,19 +183,8 @@ class MELDData(Dataset):
             if len(item) > longest:
                 longest = len(item)
 
-        # utt = clean_up_word(row["Utterance"])
-        # utt = self.tokenizer(utt)
-        # utt_lengths.append(len(utt))
-
         # get longest dialogue length
         longest_dia = max(all_utts_df['Utterance_ID'].tolist()) + 1  # because 0-indexed
-
-        # check lengths and return len of longest
-        # for utt in all_utts:
-        #     split_utt = utt.strip().split(" ")
-        #     utt_len = len(split_utt)
-        #     if utt_len > longest:
-        #         longest = utt_len
 
         print(longest)
 
@@ -202,6 +200,7 @@ class MELDData(Dataset):
         # create holders for the data
         all_utts = []
         all_speakers = []
+        all_genders = []
         all_emotions = []
         all_sentiments = []
 
@@ -225,6 +224,7 @@ class MELDData(Dataset):
                 utt_lengths.append(len(utt))
 
                 spk_id = row['Speaker']
+                gen = self.speaker2gender[spk_id]
                 emo = row['Emotion']
                 sent = row['Sentiment']
 
@@ -238,21 +238,19 @@ class MELDData(Dataset):
                 all_utts.append(torch.tensor(utts))
                 # all_utts.append(torch.tensor(utt_indexed))
                 all_speakers.append([spk_id])
+                all_genders.append(gen)
                 all_emotions.append(emo)
                 all_sentiments.append(sent)
 
-        max_utt_len = max(utt_lengths)
-        # todo: is it batch first?
-        # all_utts = pad_sequence(all_utts, batch_first=True, padding_value=0)
-
         # create pytorch tensors for each
         all_speakers = torch.tensor(all_speakers)
+        all_genders = torch.tensor(all_genders)
         all_emotions = torch.tensor(all_emotions)
         all_sentiments = torch.tensor(all_sentiments)
         all_utts = pad_sequence(all_utts, batch_first=True, padding_value=0)
 
         # return data
-        return all_utts, all_speakers, all_emotions, all_sentiments, utt_lengths
+        return all_utts, all_speakers, all_genders, all_emotions, all_sentiments, utt_lengths
 
     def make_acoustic_set(self, text_path, acoustic_dict, acoustic_lengths, add_avging=True):
         """
@@ -290,6 +288,7 @@ class MELDData(Dataset):
                     acoustic_holder = [[0] * self.acoustic_length] * longest_acoustic
 
                     for i, row in enumerate(acoustic_data):
+                        # print("i'm in the right spot")
                         # for now, using longest acoustic file in TRAIN only
                         if i >= longest_acoustic:
                             break
@@ -297,12 +296,19 @@ class MELDData(Dataset):
                         for j, feat in enumerate(row):
                             acoustic_holder[i][j] = feat
                 else:
+                    # print("something is wrong...")
                     if self.avgd:
+                        # print("self.avgd is true")
                         acoustic_holder = acoustic_data
                     elif add_avging:
+                        # print("add_avging is true")
                         acoustic_holder = torch.mean(torch.tensor(acoustic_data), dim=0)
 
                 all_acoustic.append(torch.tensor(acoustic_holder))
+
+        # print(all_acoustic[0].shape)
+        # print(len(all_acoustic))
+        # sys.exit()
 
         return all_acoustic, usable_utts
 
@@ -365,6 +371,16 @@ def make_acoustic_dict_meld(acoustic_path, f_end="_IS10.csv", use_cols=None, avg
     return acoustic_dict, acoustic_lengths
 
 
+def get_speaker_gender(idx2gender_path):
+    """
+    Get the gender of each speaker in the list
+    Includes 0 as UNK, 1 == F, 2 == M
+    """
+    speaker_df = pd.read_csv(idx2gender_path, usecols=['idx', 'gender'])
+
+    return dict(zip(speaker_df.idx, speaker_df.gender))
+    # idxs = speaker_df['idx'].tolist()
+    # gender = speaker_df['gender'].tolist()
 
 
 class DatumListDataset(Dataset):
