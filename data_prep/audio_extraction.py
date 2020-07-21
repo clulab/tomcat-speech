@@ -311,7 +311,7 @@ def convert_mp4_to_wav(mp4_file):
     file_name = mp4_file.split(".mp4")[0]
     wav_name = "{}.wav".format(file_name)
     # check if the file already exists
-    if not os.path.exists(mp4_file):
+    if not os.path.exists(wav_name):
         os.system("ffmpeg -i {0} {1}".format(mp4_file, wav_name))
     # otherwise, print that it exists
     else:
