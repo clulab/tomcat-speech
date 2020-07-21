@@ -6,20 +6,37 @@ from sklearn.feature_selection import SelectKBest, chi2
 from torch.utils.data import Dataset
 
 import statistics
-import string  
+import string
 
 
 def clean_up_word(word):
-    word = word.replace('\x92', "'")
-    word = word.replace('\x91', "")
-    word = word.replace('\x97', "-")
+    word = word.replace("\x92", "'")
+    word = word.replace("\x91", "")
+    word = word.replace("\x97", "-")
     # clean up word by putting in lowercase + removing punct
-    punct = [",", ".", "!", "?", ";", ":", "'", '"', "-", "$", "’", "…", "[", "]", "(", ")"]  # don't include hyphen - becky added it back... :/
+    punct = [
+        ",",
+        ".",
+        "!",
+        "?",
+        ";",
+        ":",
+        "'",
+        '"',
+        "-",
+        "$",
+        "’",
+        "…",
+        "[",
+        "]",
+        "(",
+        ")",
+    ]
     for char in word:
         if char in punct:
             word = word.replace(char, " ")
-    if word.strip() == '':
-        word = "<UNK>" 
+    if word.strip() == "":
+        word = "<UNK>"
     return word
 
 
@@ -37,7 +54,7 @@ def make_glove_dict(glove_path):
     glove_dict = {}
     with open(glove_path) as glove_file:
         for line in glove_file:
-            line = line.rstrip().split(' ')
+            line = line.rstrip().split(" ")
             glove_dict[line[0]] = [float(item) for item in line[1:]]
     return glove_dict
 
@@ -64,7 +81,7 @@ class Glove(object):
             return self.wd2idx[t]
         else:
             # print(f"OOV: [[{t}]]")
-            return self.wd2idx['<UNK>']
+            return self.wd2idx["<UNK>"]
 
     def index(self, toks):
         return [self.id_or_unk(t) for t in toks]
@@ -103,7 +120,9 @@ class Glove(object):
             self.glove_dict[word] = vec  # add to the glove dict
             self.wd2idx[word] = self.max_idx  # add to the wd2idx dict
             self.idx2glove[self.max_idx] = vec  # add to the idx2 glove dict
-            torch.cat((self.data, vec.unsqueeze(dim=0)), dim=0)  # add to the data tensor
+            torch.cat(
+                (self.data, vec.unsqueeze(dim=0)), dim=0
+            )  # add to the data tensor
 
     def get_avg_embedding(self):
         # get an average of all embeddings in dataset
@@ -116,14 +135,19 @@ class MinMaxScaleRange:
     A class to calculate mins and maxes for each feature in the data in order to
     use min-max scaling
     """
-    def __init__(self, ):
+
+    def __init__(self,):
         self.mins = {}
         self.maxes = {}
 
     def update(self, key, val):
-        if (key in self.mins.keys() and val < self.mins[key]) or key not in self.mins.keys():
+        if (
+            key in self.mins.keys() and val < self.mins[key]
+        ) or key not in self.mins.keys():
             self.mins[key] = val
-        if (key in self.maxes.keys() and val > self.maxes[key]) or key not in self.maxes.keys():
+        if (
+            key in self.maxes.keys() and val > self.maxes[key]
+        ) or key not in self.maxes.keys():
             self.maxes[key] = val
 
     def contains(self, key):
@@ -145,7 +169,7 @@ class MinMaxScaleRange:
             return "The key {0} does not exist in maxes".format(key)
 
 
-def scale_feature(value, min_val, max_val, lower=0., upper=1.):
+def scale_feature(value, min_val, max_val, lower=0.0, upper=1.0):
     # scales a single feature using min-max normalization
     if min_val == max_val:
         return upper
@@ -162,8 +186,8 @@ def get_longest_utterance(pd_dataframes):
     """
     max_length = 0
     for item in pd_dataframes:
-        for i in range(item['utt_num'].max()):
-            utterance = item.loc[item['utt_num'] == i + 1]
+        for i in range(item["utt_num"].max()):
+            utterance = item.loc[item["utt_num"] == i + 1]
             utt_length = utterance.shape[0]
             if utt_length > max_length:
                 max_length = utt_length

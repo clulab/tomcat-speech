@@ -16,6 +16,7 @@ class TranscriptPrepper:
     Prepares transcripts to be entered into the sentiment analyzer
     Identifies transcripts and splits them at utterance boundary
     """
+
     def __init__(self, path_to_transcripts, save_path):
         self.transcript_path = path_to_transcripts
         self.save_path = save_path
@@ -29,7 +30,7 @@ class TranscriptPrepper:
         find all transcript files in a given directory
         location : the path to directory containing transcripts
         """
-        fold = self.transcript_path + '/*video_transcript.txt'
+        fold = self.transcript_path + "/*video_transcript.txt"
         files = glob.glob(fold)
 
         if len(files) == 0:
@@ -53,10 +54,10 @@ class TranscriptPrepper:
             # find utterances
             with open(item) as f:
                 my_list = list(f)
-                split_utts = re.split('\.\s|\?\s|\!\s', my_list[0])
+                split_utts = re.split("\.\s|\?\s|\!\s", my_list[0])
 
             # save the split transcript to a file
-            with open(output_name, 'w') as file_handler:
+            with open(output_name, "w") as file_handler:
                 for utt in split_utts:
                     file_handler.write("%s\n" % utt)
 
@@ -82,24 +83,27 @@ class SentimentScores:
         score_text_dict = {}
 
         # prepare to extract only the necessary columns
-        cols, colnames = set_cols_and_colnames(counts, probabilities,
-                                               include_utts=False)
+        cols, colnames = set_cols_and_colnames(
+            counts, probabilities, include_utts=False
+        )
 
         for name in self.score_text_names:
             # get the path for a given score text
             score_path = os.path.join(self.path_to_scores, name)
 
             # load the score text as a pandas df
-            score_text = pd.read_csv(score_path, delim_whitespace=True,
-                                     usecols=cols, names=colnames)
+            score_text = pd.read_csv(
+                score_path, delim_whitespace=True, usecols=cols, names=colnames
+            )
 
             # save score text to dict
             score_text_dict[name] = score_text
 
         return score_text_dict
 
-    def join_words_with_predictions(self, input_path, utterance_input_names,
-                                    counts=True, probabilities=True):
+    def join_words_with_predictions(
+        self, input_path, utterance_input_names, counts=True, probabilities=True
+    ):
         """
         Connects scores with the utterances they were predicted on
         input_path : the path to the files containing input utterances
@@ -113,8 +117,7 @@ class SentimentScores:
         utterances_with_preds = {}
 
         # prepare to extract only the necessary columns
-        cols, colnames = set_cols_and_colnames(counts, probabilities,
-                                               include_utts=True)
+        cols, colnames = set_cols_and_colnames(counts, probabilities, include_utts=True)
 
         # for each item in the output list
         for input_name in utterance_input_names:
@@ -129,8 +132,11 @@ class SentimentScores:
             utterance_text_path = os.path.join(input_path, input_name)
 
             # ID the equivalent output item
-            output_name = [name for name in self.score_text_names
-                           if study_id in name and participant_id in name]
+            output_name = [
+                name
+                for name in self.score_text_names
+                if study_id in name and participant_id in name
+            ]
             if len(output_name) == 1:
                 output_path = os.path.join(self.path_to_scores, output_name[0])
             else:
@@ -138,18 +144,21 @@ class SentimentScores:
 
             # extract the columns needed into pandas DFs
             # we want one column per line, so sep should be something not found
-            utterance_text = pd.read_csv(utterance_text_path, sep="\t\t",
-                                         engine="python", names=["utt"])
+            utterance_text = pd.read_csv(
+                utterance_text_path, sep="\t\t", engine="python", names=["utt"]
+            )
 
-            scores_text = pd.read_csv(output_path, delim_whitespace=True,
-                                      names=colnames)
+            scores_text = pd.read_csv(
+                output_path, delim_whitespace=True, names=colnames
+            )
 
             # merge dataframes
             utts_with_scores = pd.concat([utterance_text, scores_text], axis=1)
 
             # add to holder
-            utterances_with_preds["{0}_{1}".format(study_id,
-                                                   participant_id)] = utts_with_scores
+            utterances_with_preds[
+                "{0}_{1}".format(study_id, participant_id)
+            ] = utts_with_scores
 
         return utterances_with_preds
 
@@ -175,4 +184,3 @@ def set_cols_and_colnames(counts=True, probabilities=True, include_utts=True):
         colnames = ["pos_prob", "neg_prob"]
 
     return cols, colnames
-

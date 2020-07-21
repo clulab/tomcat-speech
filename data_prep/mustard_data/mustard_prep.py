@@ -5,8 +5,8 @@ import json
 from collections import OrderedDict
 
 from data_prep.audio_extraction import convert_mp4_to_wav, ExtractAudio
-from data_prep.meld_input_formatting import get_longest_utt, get_max_num_acoustic_frames
-from data_prep.lives_data.lives_data_prep import make_acoustic_dict
+from data_prep.meld_data.meld_prep import get_longest_utt, get_max_num_acoustic_frames
+from data_prep.lives_data.lives_prep import make_acoustic_dict
 import pandas as pd
 
 
@@ -14,9 +14,16 @@ class MustardPrep:
     """
     A class to prepare mustard for input into a generic Dataset
     """
-    def __init__(self, mustard_path, train_prop=.6, test_prop=.2,
-                 utts_file_name="mustard_utts.tsv", f_end="_IS10.csv",
-                 use_cols=None):
+
+    def __init__(
+        self,
+        mustard_path,
+        train_prop=0.6,
+        test_prop=0.2,
+        utts_file_name="mustard_utts.tsv",
+        f_end="_IS10.csv",
+        use_cols=None,
+    ):
         # path to dataset
         self.path = mustard_path
         # path to file with utterances and gold labels
@@ -26,26 +33,47 @@ class MustardPrep:
         self.acoustic_path = os.path.join(mustard_path, "acoustic_feats")
 
         # train, dev, and test dataframes
-        self.train, self.dev, self.test = \
-            create_data_folds(self.utterances, train_prop, test_prop)
+        self.train, self.dev, self.test = create_data_folds(
+            self.utterances, train_prop, test_prop
+        )
 
         # train, dev, and test acoustic data
-        self.train_dict = OrderedDict(make_acoustic_dict(self.acoustic_path,
-                                                         files_to_get=set(self.train['clip_id'].tolist()),
-                                                         f_end=f_end, use_cols=use_cols, data_type="mustard"))
-        self.dev_dict = OrderedDict(make_acoustic_dict(self.acoustic_path,
-                                                       files_to_get=set(self.dev['clip_id'].tolist()),
-                                                       f_end=f_end, use_cols=use_cols, data_type="mustard"))
-        self.test_dict = OrderedDict(make_acoustic_dict(self.acoustic_path,
-                                                        files_to_get=set(self.test['clip_id'].tolist()),
-                                                        f_end=f_end, use_cols=use_cols, data_type="mustard"))
+        self.train_dict = OrderedDict(
+            make_acoustic_dict(
+                self.acoustic_path,
+                files_to_get=set(self.train["clip_id"].tolist()),
+                f_end=f_end,
+                use_cols=use_cols,
+                data_type="mustard",
+            )
+        )
+        self.dev_dict = OrderedDict(
+            make_acoustic_dict(
+                self.acoustic_path,
+                files_to_get=set(self.dev["clip_id"].tolist()),
+                f_end=f_end,
+                use_cols=use_cols,
+                data_type="mustard",
+            )
+        )
+        self.test_dict = OrderedDict(
+            make_acoustic_dict(
+                self.acoustic_path,
+                files_to_get=set(self.test["clip_id"].tolist()),
+                f_end=f_end,
+                use_cols=use_cols,
+                data_type="mustard",
+            )
+        )
 
-        self.longest_utt = get_longest_utt(self.utterances['utterance'])
+        self.longest_utt = get_longest_utt(self.utterances["utterance"])
         self.longest_dia = None  # mustard is not organized as dialogues
 
-        self.longest_acoustic = get_max_num_acoustic_frames(list(self.train_dict.values()) +
-                                                            list(self.dev_dict.values()) +
-                                                            list(self.test_dict.values()))
+        self.longest_acoustic = get_max_num_acoustic_frames(
+            list(self.train_dict.values())
+            + list(self.dev_dict.values())
+            + list(self.test_dict.values())
+        )
 
 
 def organize_labels_from_json(jsonfile, savepath, save_name):
@@ -53,7 +81,7 @@ def organize_labels_from_json(jsonfile, savepath, save_name):
     Take the jsonfile containing the text, speaker, and y values
     Prepares relevant information as a csv file
     """
-    with open(jsonfile, 'r') as jfile:
+    with open(jsonfile, "r") as jfile:
         json_data = json.load(jfile)
 
     # create holder for relevant information
@@ -69,7 +97,7 @@ def organize_labels_from_json(jsonfile, savepath, save_name):
         data_holder.append([clip_id, utt, spk, sarc])
 
     # save the data to a new csv file
-    with open(os.path.join(savepath, save_name), 'w') as savefile:
+    with open(os.path.join(savepath, save_name), "w") as savefile:
         for item in data_holder:
             savefile.write("\t".join(item))
             savefile.write("\n")
@@ -94,16 +122,21 @@ def create_data_folds(data, perc_train, perc_test):
     test_len = perc_test * length
 
     # get slices of dataset
-    train_data = shuffled.iloc[:int(train_len)]
-    test_data = shuffled.iloc[int(train_len):int(train_len) + int(test_len)]
-    dev_data = shuffled.iloc[int(train_len) + int(test_len):]
+    train_data = shuffled.iloc[: int(train_len)]
+    test_data = shuffled.iloc[int(train_len) : int(train_len) + int(test_len)]
+    dev_data = shuffled.iloc[int(train_len) + int(test_len) :]
 
     # return data
     return train_data, dev_data, test_data
 
 
-def preprocess_mustard_data(base_path, gold_save_name, acoustic_save_dir,
-                            smile_path, acoustic_feature_set="IS10"):
+def preprocess_mustard_data(
+    base_path,
+    gold_save_name,
+    acoustic_save_dir,
+    smile_path,
+    acoustic_feature_set="IS10",
+):
     """
     Preprocess the mustard data by getting an organized CSV from the json gold file,
     converting mp4 clips to wav files and extracting acoustic features from the wavs
@@ -137,7 +170,9 @@ def preprocess_mustard_data(base_path, gold_save_name, acoustic_save_dir,
         if audio_file.endswith(".wav"):
             audio_name = audio_file.split(".wav")[0]
             audio_save_name = str(audio_name) + "_" + acoustic_feature_set + ".csv"
-            extractor = ExtractAudio(path_to_files, audio_file, acoustic_save_path,
-                                     smile_path)
-            extractor.save_acoustic_csv(feature_set=acoustic_feature_set,
-                                        savename=audio_save_name)
+            extractor = ExtractAudio(
+                path_to_files, audio_file, acoustic_save_path, smile_path
+            )
+            extractor.save_acoustic_csv(
+                feature_set=acoustic_feature_set, savename=audio_save_name
+            )

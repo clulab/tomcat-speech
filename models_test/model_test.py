@@ -6,13 +6,14 @@ from models.baselines import LRBaseline
 from models.train_and_test_models import *
 
 from models.input_models import *
-from data_prep.lives_data.lives_data_prep import *
+from data_prep.lives_data.lives_prep import *
 from data_prep.prepare_data import *
 
 # import parameters for model
 # comment or uncomment as needed
 # from models.parameters.bimodal_params import params
 from models.parameters.multitask_params import params
+
 # from models.parameters.lr_baseline_1_params import params
 # from models.parameters.multichannel_cnn_params import params
 
@@ -64,12 +65,12 @@ if __name__ == "__main__":
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
     # uncomment use_cols=... to use only specific columns from input data
-    acoustic_dict = make_acoustic_dict(input_dir, "_IS10_avgd.csv") #,
-                                       # use_cols=['word', 'speaker', 'utt_num', 'word_num',
-                                       #           'pcm_loudness_sma', 'F0final_sma', 'jitterLocal_sma',
-                                       #           'shimmerLocal_sma', 'pcm_loudness_sma_de',
-                                       #           'F0final_sma_de', 'jitterLocal_sma_de',
-                                       #           'shimmerLocal_sma_de'])
+    acoustic_dict = make_acoustic_dict(input_dir, "_IS10_avgd.csv")  # ,
+    # use_cols=['word', 'speaker', 'utt_num', 'word_num',
+    #           'pcm_loudness_sma', 'F0final_sma', 'jitterLocal_sma',
+    #           'shimmerLocal_sma', 'pcm_loudness_sma_de',
+    #           'F0final_sma_de', 'jitterLocal_sma_de',
+    #           'shimmerLocal_sma_de'])
     print("Acoustic dict created")
 
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
@@ -78,8 +79,16 @@ if __name__ == "__main__":
     print("Glove object created")
 
     # 3. MAKE DATASET
-    data = ClinicalDataset(acoustic_dict, glove, cols_to_skip=cols_to_skip, ys_path=y_path, splits=num_splits,
-                           sequence_prep="pad", truncate_from="start", alignment=params.alignment)
+    data = ClinicalDataset(
+        acoustic_dict,
+        glove,
+        cols_to_skip=cols_to_skip,
+        ys_path=y_path,
+        splits=num_splits,
+        sequence_prep="pad",
+        truncate_from="start",
+        alignment=params.alignment,
+    )
     print("Dataset created")
 
     # 6. CREATE NN
@@ -115,24 +124,43 @@ if __name__ == "__main__":
             # create instance of model
             if params.model == "LRBaseline":
                 # cleanup needed for baselines
-                bimodal_trial = LRBaseline(params=params, num_embeddings=num_embeddings,
-                                           pretrained_embeddings=pretrained_embeddings)
+                bimodal_trial = LRBaseline(
+                    params=params,
+                    num_embeddings=num_embeddings,
+                    pretrained_embeddings=pretrained_embeddings,
+                )
             elif params.model == "MultichannelCNN":
-                bimodal_trial = MultichannelCNN(params=params, num_embeddings=num_embeddings,
-                                                pretrained_embeddings=pretrained_embeddings)
+                bimodal_trial = MultichannelCNN(
+                    params=params,
+                    num_embeddings=num_embeddings,
+                    pretrained_embeddings=pretrained_embeddings,
+                )
             elif params.model == "EmbeddingsOnly":
-                bimodal_trial = EmbeddingsOnly(params=params, num_embeddings=num_embeddings,
-                                               pretrained_embeddings=pretrained_embeddings)
+                bimodal_trial = EmbeddingsOnly(
+                    params=params,
+                    num_embeddings=num_embeddings,
+                    pretrained_embeddings=pretrained_embeddings,
+                )
             elif params.model == "Multitask":
-                bimodal_trial = BasicEncoder(params=params, num_embeddings=num_embeddings,
-                                             pretrained_embeddings=pretrained_embeddings)
-                bimodal_predictor = EmotionToSuccessFFNN(params=params, num_utts=num_utts,
-                                                         num_layers=2, hidden_dim=4,
-                                                         output_dim=1)
+                bimodal_trial = BasicEncoder(
+                    params=params,
+                    num_embeddings=num_embeddings,
+                    pretrained_embeddings=pretrained_embeddings,
+                )
+                bimodal_predictor = EmotionToSuccessFFNN(
+                    params=params,
+                    num_utts=num_utts,
+                    num_layers=2,
+                    hidden_dim=4,
+                    output_dim=1,
+                )
             else:
                 # default to bimodal cnn
-                bimodal_trial = BimodalCNN(params=params, num_embeddings=num_embeddings,
-                                           pretrained_embeddings=pretrained_embeddings)
+                bimodal_trial = BimodalCNN(
+                    params=params,
+                    num_embeddings=num_embeddings,
+                    pretrained_embeddings=pretrained_embeddings,
+                )
 
             # set the classifier(s) to the right device
             bimodal_trial = bimodal_trial.to(device)
@@ -142,12 +170,18 @@ if __name__ == "__main__":
             # set loss function, optimization, and scheduler, if using
             loss_func = nn.BCELoss()
             # loss_func = nn.CrossEntropyLoss()
-            optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
-                                         weight_decay=params.weight_decay)
+            optimizer = torch.optim.Adam(
+                lr=lr,
+                params=bimodal_trial.parameters(),
+                weight_decay=params.weight_decay,
+            )
             if params.use_scheduler:
-                scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
-                                                                       mode='min', factor=params.scheduler_factor,
-                                                                       patience=params.scheduler_patience)
+                scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                    optimizer=optimizer,
+                    mode="min",
+                    factor=params.scheduler_factor,
+                    patience=params.scheduler_patience,
+                )
 
             print("Model, loss function, and optimization created")
 
@@ -160,19 +194,34 @@ if __name__ == "__main__":
 
             # create a a save path and file for the model
             model_save_file = "{0}_{1}_batch{2}_{3}hidden_{4}lyrs_lr{5}_{6}batch.pth".format(
-                model_type, split, params.batch_size, params.hidden_dim, params.num_layers, lr,
-                params.batch_size
+                model_type,
+                split,
+                params.batch_size,
+                params.hidden_dim,
+                params.num_layers,
+                lr,
+                params.batch_size,
             )
 
             # create 2 save paths for models if using both encoder + decoder
             if params.model == "Multitask":
                 model_save_file = "{0}_{1}_batch{2}_{3}hidden_{4}lyrs_lr{5}_{6}batch_encoder.pth".format(
-                                  model_type, split, params.batch_size, params.hidden_dim, params.num_layers, lr,
-                                  params.batch_size
+                    model_type,
+                    split,
+                    params.batch_size,
+                    params.hidden_dim,
+                    params.num_layers,
+                    lr,
+                    params.batch_size,
                 )
                 model2_save_file = "{0}_{1}_batch{2}_{3}hidden_{4}lyrs_lr{5}_{6}batch_decoder.pth".format(
-                                   model_type, split, params.batch_size, params.hidden_dim, params.num_layers, lr,
-                                   params.batch_size
+                    model_type,
+                    split,
+                    params.batch_size,
+                    params.hidden_dim,
+                    params.num_layers,
+                    lr,
+                    params.batch_size,
                 )
 
                 train_state_2 = make_train_state(lr, model_save_path, model2_save_file)
@@ -185,52 +234,95 @@ if __name__ == "__main__":
 
             # train the model and evaluate on development split
             if params.model == "Multitask":
-                train_and_predict(bimodal_trial, train_state, training_data, val_split, params.batch_size,
-                                  params.num_epochs, loss_func, optimizer, device, scheduler=None,
-                                  model2=bimodal_predictor, train_state2=train_state_2)
+                train_and_predict(
+                    bimodal_trial,
+                    train_state,
+                    training_data,
+                    val_split,
+                    params.batch_size,
+                    params.num_epochs,
+                    loss_func,
+                    optimizer,
+                    device,
+                    scheduler=None,
+                    model2=bimodal_predictor,
+                    train_state2=train_state_2,
+                )
             else:
-                train_and_predict(bimodal_trial, train_state, training_data, val_split, params.batch_size,
-                                  params.num_epochs, loss_func, optimizer, device, scheduler=None)
+                train_and_predict(
+                    bimodal_trial,
+                    train_state,
+                    training_data,
+                    val_split,
+                    params.batch_size,
+                    params.num_epochs,
+                    loss_func,
+                    optimizer,
+                    device,
+                    scheduler=None,
+                )
 
             # plot the loss and accuracy curves
             if get_plot:
                 if params.model == "Multitask":
-                    plot_train_dev_curve(train_state_2['train_loss'], train_state_2['val_loss'], x_label="Epoch",
-                                         y_label="Loss",
-                                         title="Training and Dev loss for normed model {0} split {1} with lr {2}".format(
-                                             model_type, split,
-                                             lr),
-                                         save_name="output/plots/{0}_{1}_lr{2}_loss.png".format(model_type, split, lr))
+                    plot_train_dev_curve(
+                        train_state_2["train_loss"],
+                        train_state_2["val_loss"],
+                        x_label="Epoch",
+                        y_label="Loss",
+                        title="Training and Dev loss for normed model {0} split {1} with lr {2}".format(
+                            model_type, split, lr
+                        ),
+                        save_name="output/plots/{0}_{1}_lr{2}_loss.png".format(
+                            model_type, split, lr
+                        ),
+                    )
                     # plot the accuracy
-                    plot_train_dev_curve(train_state_2['train_acc'], train_state_2['val_acc'], x_label="Epoch",
-                                         y_label="Accuracy",
-                                         title="Training and Dev accuracy for normed model {0} split {1} with lr {2}".format(
-                                             model_type,
-                                             split,
-                                             lr),
-                                         save_name="output/plots/{0}_{1}_lr{2}_acc.png".format(model_type, split, lr),
-                                         losses=False)
+                    plot_train_dev_curve(
+                        train_state_2["train_acc"],
+                        train_state_2["val_acc"],
+                        x_label="Epoch",
+                        y_label="Accuracy",
+                        title="Training and Dev accuracy for normed model {0} split {1} with lr {2}".format(
+                            model_type, split, lr
+                        ),
+                        save_name="output/plots/{0}_{1}_lr{2}_acc.png".format(
+                            model_type, split, lr
+                        ),
+                        losses=False,
+                    )
                 else:
-                # loss curve
-                    plot_train_dev_curve(train_state['train_loss'], train_state['val_loss'], x_label="Epoch",
-                                         y_label="Loss",
-                                         title="Training and Dev loss for normed model {0} split {1} with lr {2}".format(
-                                             model_type, split,
-                                             lr),
-                                         save_name="output/plots/{0}_{1}_lr{2}_loss.png".format(model_type, split, lr))
+                    # loss curve
+                    plot_train_dev_curve(
+                        train_state["train_loss"],
+                        train_state["val_loss"],
+                        x_label="Epoch",
+                        y_label="Loss",
+                        title="Training and Dev loss for normed model {0} split {1} with lr {2}".format(
+                            model_type, split, lr
+                        ),
+                        save_name="output/plots/{0}_{1}_lr{2}_loss.png".format(
+                            model_type, split, lr
+                        ),
+                    )
                     # plot the accuracy
-                    plot_train_dev_curve(train_state['train_acc'], train_state['val_acc'], x_label="Epoch",
-                                         y_label="Accuracy",
-                                         title="Training and Dev accuracy for normed model {0} split {1} with lr {2}".format(
-                                             model_type,
-                                             split,
-                                             lr),
-                                         save_name="output/plots/{0}_{1}_lr{2}_acc.png".format(model_type, split, lr),
-                                         losses=False)
+                    plot_train_dev_curve(
+                        train_state["train_acc"],
+                        train_state["val_acc"],
+                        x_label="Epoch",
+                        y_label="Accuracy",
+                        title="Training and Dev accuracy for normed model {0} split {1} with lr {2}".format(
+                            model_type, split, lr
+                        ),
+                        save_name="output/plots/{0}_{1}_lr{2}_acc.png".format(
+                            model_type, split, lr
+                        ),
+                        losses=False,
+                    )
 
             # add best evaluation losses and accuracy from training to set
-            all_y_loss.append(train_state['early_stopping_best_val'])
-            all_y_acc.append(train_state['best_val_acc'])
+            all_y_loss.append(train_state["early_stopping_best_val"])
+            all_y_acc.append(train_state["best_val_acc"])
 
         # print("Test loss on all folds: {0}".format(all_test_loss))
         # print("Test accuracy on all folds: {0}".format(all_test_acc))
@@ -241,4 +333,8 @@ if __name__ == "__main__":
     # print the best model losses and accuracies for each development set in the cross-validation
     for i, item in enumerate(all_test_losses):
         print("Losses for model with lr={0}: {1}".format(params.lrs[i], item))
-        print("Accuracy for model with lr={0}: {1}".format(params.lrs[i], all_test_accs[i]))
+        print(
+            "Accuracy for model with lr={0}: {1}".format(
+                params.lrs[i], all_test_accs[i]
+            )
+        )

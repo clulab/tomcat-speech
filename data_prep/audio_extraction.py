@@ -21,14 +21,15 @@ class TRSToCSV:
         utt_num   = the utterance number within the conversation
         word_num  = the word number (useful for averaging over words)
     """
+
     def __init__(self, path, trsfile):
-        self.path  = path
+        self.path = path
         self.tname = trsfile
         self.tfile = "{0}/{1}.trs".format(path, trsfile)
 
     def convert_trs(self, savepath):
         trs_arr = [["speaker", "timestart", "timeend", "word", "utt_num", "word_num"]]
-        with open(self.tfile, 'r') as trs:
+        with open(self.tfile, "r") as trs:
             print(self.tfile)
             # for line in trs:
             # try:
@@ -46,12 +47,18 @@ class TRSToCSV:
                     timestart = re.search(r'startTime="(\d+.\d+)"', line).group(1)
                     timeend = re.search(r'endTime="(\d+.\d+)"', line).group(1)
                     speaker = re.search(r'spkr(\d)">', line).group(1)
-                    word = re.search(r'/>(\S+)</Turn>', line).group(1)
+                    word = re.search(r"/>(\S+)</Turn>", line).group(1)
 
-                    if coach_participant[speaker] == "coach" or coach_participant[speaker] == "Coach":
+                    if (
+                        coach_participant[speaker] == "coach"
+                        or coach_participant[speaker] == "Coach"
+                    ):
                         # print("Coach found")
                         real_speaker = 2
-                    elif coach_participant[speaker] == "participant" or coach_participant == "Participant":
+                    elif (
+                        coach_participant[speaker] == "participant"
+                        or coach_participant == "Participant"
+                    ):
                         # print("Participant found")
                         real_speaker = 1
                     else:
@@ -63,17 +70,32 @@ class TRSToCSV:
                         spkr = real_speaker
                         utt += 1
 
-                    trs_arr.append([real_speaker, timestart, timeend, word, utt, wd_num])
-        with open("{0}/{1}.tsv".format(savepath, self.tname), 'w') as cfile:
+                    trs_arr.append(
+                        [real_speaker, timestart, timeend, word, utt, wd_num]
+                    )
+        with open("{0}/{1}.tsv".format(savepath, self.tname), "w") as cfile:
             for item in trs_arr:
-                cfile.write(str(item[0]) + "\t" + str(item[1]) + "\t" + str(item[2]) + "\t" +
-                            str(item[3]) + "\t" + str(item[4]) + "\t" + str(item[5]) + "\n")
+                cfile.write(
+                    str(item[0])
+                    + "\t"
+                    + str(item[1])
+                    + "\t"
+                    + str(item[2])
+                    + "\t"
+                    + str(item[3])
+                    + "\t"
+                    + str(item[4])
+                    + "\t"
+                    + str(item[5])
+                    + "\n"
+                )
 
 
 class ExtractAudio:
     """
     Takes audio and extracts features from it using openSMILE
     """
+
     def __init__(self, path, audiofile, savedir, smilepath="~/opensmile-2.3.0"):
         self.path = path
         self.afile = path + "/" + audiofile
@@ -104,19 +126,23 @@ class ExtractAudio:
         os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(self.savedir))
 
         # run openSMILE
-        os.system("{0}/SMILExtract -C {0}/config/{1} -I {2} -lldcsvoutput {3}/{4}".format(self.smile, fconf, self.afile,
-                                                                                          self.savedir, savename))
+        os.system(
+            "{0}/SMILExtract -C {0}/config/{1} -I {2} -lldcsvoutput {3}/{4}".format(
+                self.smile, fconf, self.afile, self.savedir, savename
+            )
+        )
 
 
 class AudioSplit:
     """Takes audio, can split and join using ffmpeg"""
+
     def __init__(self, path, pathext, audio_name, diarized_csv):
-        self.path  = path
+        self.path = path
         self.aname = audio_name
         self.cname = diarized_csv
         self.afile = "{0}/{1}".format(path, audio_name)
         self.cfile = "{0}/{1}".format(path, diarized_csv)
-        self.ext   = pathext
+        self.ext = pathext
         self.fullp = "{0}/{1}".format(path, pathext)
 
     def split_audio(self):
@@ -133,15 +159,18 @@ class AudioSplit:
         if not os.path.exists(self.fullp):
             os.mkdir(self.fullp)
 
-        with open(self.cfile, 'r') as csvfile:
+        with open(self.cfile, "r") as csvfile:
             for line in csvfile:
                 speaker, timestart, timeend = line.strip().split(",")[:3]
-                if not os.path.exists("{0}/{1}".format(self.fullp,speaker)):
-                    os.mkdir("{0}/{1}".format(self.fullp,speaker))
-                os.system("ffmpeg -i {0} -ss {1} -to {2} {3}/{4}/{5}.wav -loglevel quiet".format(
-                          self.afile, timestart, timeend, self.fullp, speaker, n))
-                if n%1000 == 0:
-                    print("Completed {0} lines".format(n+1))
+                if not os.path.exists("{0}/{1}".format(self.fullp, speaker)):
+                    os.mkdir("{0}/{1}".format(self.fullp, speaker))
+                os.system(
+                    "ffmpeg -i {0} -ss {1} -to {2} {3}/{4}/{5}.wav -loglevel quiet".format(
+                        self.afile, timestart, timeend, self.fullp, speaker, n
+                    )
+                )
+                if n % 1000 == 0:
+                    print("Completed {0} lines".format(n + 1))
                 n += 1
 
     def make_textfile(self, audiodir, speaker):
@@ -151,9 +180,9 @@ class AudioSplit:
         """
         txtfilename = "{0}-{1}.txt".format(self.ext, speaker)
         txtfilepath = "{0}/{1}/{2}".format(self.fullp, speaker, txtfilename)
-        with open(txtfilepath, 'w') as txtfile:
+        with open(txtfilepath, "w") as txtfile:
             for item in os.listdir(audiodir):
-                if item[-4:] == '.wav':
+                if item[-4:] == ".wav":
                     txtfile.write("file '{0}'\n".format(item))
 
     def join_audio(self, txtfile, speaker):
@@ -164,11 +193,17 @@ class AudioSplit:
             os.mkdir("{0}/output".format(self.path))
 
         outputname = "{0}-{1}.wav".format(self.ext, speaker)
-        print("ffmpeg -f concat -safe 0 -i {0}/{1}/{2} -c copy {3}/output/{4}".format(
-                self.fullp, speaker, txtfile, self.path, outputname))
+        print(
+            "ffmpeg -f concat -safe 0 -i {0}/{1}/{2} -c copy {3}/output/{4}".format(
+                self.fullp, speaker, txtfile, self.path, outputname
+            )
+        )
 
-        os.system("ffmpeg -f concat -safe 0 -i {0}/{1}/{2} -c copy {3}/output/{4} -loglevel quiet".format(
-                self.fullp, speaker, txtfile, self.path, outputname))
+        os.system(
+            "ffmpeg -f concat -safe 0 -i {0}/{1}/{2} -c copy {3}/output/{4} -loglevel quiet".format(
+                self.fullp, speaker, txtfile, self.path, outputname
+            )
+        )
         print("Concatenation completed for {0}".format(self.fullp))
 
 
@@ -182,7 +217,7 @@ def transform_audio(txtfile):
         callwav : the name of wav file being transformed
     todo: does this need to be changed to be relevant for this input?
     """
-    with open(txtfile, 'r') as tfile:
+    with open(txtfile, "r") as tfile:
         # print("textfile opened!")
         for line in tfile:
             # print("Line is: " + line)
@@ -192,8 +227,8 @@ def transform_audio(txtfile):
             extension = callwav.split(".")[0]
             speakers = ["1", "2"]
 
-            #diarized_input = DiarizedToCSV(path, jsonfile)
-            diarized_input = TRSToCSV(path,trsfile)
+            # diarized_input = DiarizedToCSV(path, jsonfile)
+            diarized_input = TRSToCSV(path, trsfile)
             # print("diarized_input created")
             diarized_input.convert_trs()
             # print("conversion to json happened")
@@ -202,10 +237,14 @@ def transform_audio(txtfile):
             audio_input.split_audio()
 
             for speaker in speakers:
-                audio_input.make_textfile("{0}/{1}/{2}".format(path,extension,speaker),speaker)
-                audio_input.join_audio("{0}-{1}.txt".format(extension,speaker),speaker)
+                audio_input.make_textfile(
+                    "{0}/{1}/{2}".format(path, extension, speaker), speaker
+                )
+                audio_input.join_audio(
+                    "{0}-{1}.txt".format(extension, speaker), speaker
+                )
 
-            os.system("rm -r {0}/{1}".format(path,extension))
+            os.system("rm -r {0}/{1}".format(path, extension))
 
 
 def load_feature_csv(audio_csv):
@@ -234,18 +273,20 @@ def expand_words(trscsv, file_to_save):
     :param file_to_save:
     :return:
     """
-    saver = [['frameTime', 'speaker', 'word', 'utt_num', 'word_num']]
-    with open(trscsv, 'r') as tcsv:
+    saver = [["frameTime", "speaker", "word", "utt_num", "word_num"]]
+    with open(trscsv, "r") as tcsv:
         tcsv.readline()
         for line in tcsv:
-            speaker, timestart, timeend, word, utt_num, wd_num = line.strip().split("\t")
+            speaker, timestart, timeend, word, utt_num, wd_num = line.strip().split(
+                "\t"
+            )
             saver.append([timestart, speaker, word, utt_num, wd_num])
             newtime = float(timestart) + 0.01
             while newtime < float(timeend):
                 newtime += 0.01
                 saver.append([str(newtime), speaker, word, utt_num, wd_num])
             saver.append([timeend, speaker, word, utt_num, wd_num])
-    with open(file_to_save, 'w') as wfile:
+    with open(file_to_save, "w") as wfile:
         for item in saver:
             wfile.write("\t".join(item))
             wfile.write("\n")
@@ -259,7 +300,9 @@ def avg_feats_across_words(feature_df):
     :return: a new pandas df
     """
     # summarize + avg like dplyr in R
-    feature_df = feature_df.groupby(['word', 'speaker', 'utt_num', 'word_num'], sort=False).mean()
+    feature_df = feature_df.groupby(
+        ["word", "speaker", "utt_num", "word_num"], sort=False
+    ).mean()
     feature_df = feature_df.reset_index()
     return feature_df
 
@@ -270,6 +313,7 @@ class GetFeatures:
     Organizes features as required for this project
     Combines data from acoustic csv + transcription csv
     """
+
     def __init__(self, path, acoustic_csv, trscsv):
         self.path = path
         self.acoustic_csv = acoustic_csv
@@ -284,15 +328,19 @@ class GetFeatures:
 
         # iterate through csv files created by openSMILE
         for csvfile in os.listdir(self.savepath):
-            if csvfile.endswith('.csv'):
+            if csvfile.endswith(".csv"):
                 csv_name = csvfile.split(".")[0]
                 # get data from these files
-                csv_data = pd.read_csv("{0}/{1}".format(self.savepath, csvfile), sep=';')
+                csv_data = pd.read_csv(
+                    "{0}/{1}".format(self.savepath, csvfile), sep=";"
+                )
                 # drop name and time frame, as these aren't useful
                 if dropped_cols:
                     csv_data = self.drop_cols(csv_data, dropped_cols)
                 else:
-                    csv_data = csv_data.drop(['name', 'frameTime'], axis=1).to_numpy().tolist()
+                    csv_data = (
+                        csv_data.drop(["name", "frameTime"], axis=1).to_numpy().tolist()
+                    )
                 if "nan" in csv_data or "NaN" in csv_data or "inf" in csv_data:
                     pprint.pprint(csv_data)
                     print("Data contains problematic data points")
@@ -320,8 +368,14 @@ def convert_mp4_to_wav(mp4_file):
     return wav_name
 
 
-def extract_portions_of_mp4_or_wav(path_to_sound_file, sound_file, start_time,
-                                   end_time, save_path=None, short_file_name=None):
+def extract_portions_of_mp4_or_wav(
+    path_to_sound_file,
+    sound_file,
+    start_time,
+    end_time,
+    save_path=None,
+    short_file_name=None,
+):
     """
     Extracts only necessary portions of a sound file
     sound_file : the name of the full file to be adjusted
@@ -339,8 +393,9 @@ def extract_portions_of_mp4_or_wav(path_to_sound_file, sound_file, start_time,
 
     if not short_file_name:
         print("short file name not found")
-        short_file_name = "{0}_{1}_{2}.wav".format(sound_file.split(".")[0],
-                                                   start_time, end_time)
+        short_file_name = "{0}_{1}_{2}.wav".format(
+            sound_file.split(".")[0], start_time, end_time
+        )
 
     if save_path is not None:
         save_name = save_path + "/" + short_file_name
@@ -348,5 +403,8 @@ def extract_portions_of_mp4_or_wav(path_to_sound_file, sound_file, start_time,
         save_name = path_to_sound_file + "/" + short_file_name
 
     # get shortened version of file
-    os.system("ffmpeg -i {0} -ss {1} -to {2} {3}".format(full_sound_path, start_time,
-                                                         end_time, save_name))
+    os.system(
+        "ffmpeg -i {0} -ss {1} -to {2} {3}".format(
+            full_sound_path, start_time, end_time, save_name
+        )
+    )

@@ -20,8 +20,8 @@ def get_all_vocab(data_dir):
     #
     for f in os.listdir(data_dir):
         if f.endswith("IS09_avgd.csv"):
-            wds = pd.read_csv(data_dir + "/" + f, usecols=['word'])
-            wds = wds['word'].tolist()
+            wds = pd.read_csv(data_dir + "/" + f, usecols=["word"])
+            wds = wds["word"].tolist()
             for item in wds:
                 item = clean_up_word(item)
                 all_vocab.add(item)
@@ -29,7 +29,7 @@ def get_all_vocab(data_dir):
 
 
 def subset_glove(glove_path, vocab_set, vec_len=100, add_unk=True):
-    with open(glove_path, 'r') as glove:
+    with open(glove_path, "r") as glove:
         subset = []
         num_items = 0
         if add_unk:
@@ -50,7 +50,7 @@ def subset_glove(glove_path, vocab_set, vec_len=100, add_unk=True):
 
 
 def save_subset(subset, save_path):
-    with open(save_path, 'w') as gfile:
+    with open(save_path, "w") as gfile:
         for item in subset:
             gfile.write(" ".join(item))
             gfile.write("\n")
