@@ -5,7 +5,7 @@ params = Namespace(
             seed=88,  # 1007
 
             # trying text only model or not
-            text_only=True,
+            text_only=False,
 
             # overall model parameters
             model="Multitask-meld",
@@ -20,19 +20,19 @@ params = Namespace(
             # input dimension parameters
             text_dim=300,  # text vector length
             short_emb_dim=30,  # length of trainable embeddings vec
-            # audio_dim=76,  # 79,  # 10 # audio vector length
-            audio_dim=10,
+            audio_dim=76,  # 79,  # 10 # audio vector length
+            # audio_dim=10,
 
             # text NN
             # text_output_dim=30,   # 100,   # 50, 300,
-            text_gru_hidden_dim=300,   # 30,  # 50,  # 20
+            text_gru_hidden_dim=30,   # 30,  # 50,  # 20
 
             # text-only CNN
             kernel_1_size=3,
             kernel_2_size=4,
             kernel_3_size=5,
             out_channels=512,
-            text_cnn_hidden_dim=100,
+            text_cnn_hidden_dim=500,
 
             # acoustic NN
             avgd_acoustic=False,  # set true to use avgd acoustic feat vectors without RNN

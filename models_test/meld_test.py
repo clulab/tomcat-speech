@@ -36,8 +36,8 @@ random.seed(seed)
 # todo: should be updated later to a glove subset appropriate for this task
 # glove_file = "/work/bsharp/glove.short.300d.punct.txt"
 # glove_file = "/data/nlp/corpora/glove/glove.840B.300d.no_proc_header.txt"
-# glove_file = "../../glove.short.300d.punct.txt"
-glove_file = "../../glove.42B.300d.txt"
+glove_file = "../../glove.short.300d.punct.txt"
+# glove_file = "../../glove.42B.300d.txt"
 
 # meld_path = "/data/nlp/corpora/MM/MELD_five_dialogues"
 # meld_path = "/data/nlp/corpora/MM/MELD_formatted"
@@ -67,10 +67,12 @@ if __name__ == "__main__":
     print("Glove object created")
 
     # 2. MAKE DATASET
+    # data = MELDData(meld_path=meld_path, glove=glove, acoustic_length=params.audio_dim, avgd=avgd_acoustic,
+    #                 use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
+    #                           'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
+    #                           'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
+    #                 add_avging=params.add_avging)
     data = MELDData(meld_path=meld_path, glove=glove, acoustic_length=params.audio_dim, avgd=avgd_acoustic,
-                    use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
-                              'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
-                              'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
                     add_avging=params.add_avging)
     # with open('meld_IS10_small_avgd_fullGloVe.p', 'wb') as pickle_file:
     #     pickle.dump(data, pickle_file)
@@ -96,8 +98,9 @@ if __name__ == "__main__":
     for lr in params.lrs:
         for wd in params.weight_decay:
             # model_type = f"Multitask_1.6vs1lossWeighting_Adagrad_TextOnly_100batch_wd{str(wd)}_.2split"
-            model_type = f"TextOnly_FullGloVe_100batch_wd{str(wd)}_.2split"
-            # model_type = "GenderEmbs_.2splitTrainDev_avgdAI_fullGloVe_100batch_wd{}".format(str(wd))
+            # model_type = f"TextOnly_smallerPool_100batch_wd{str(wd)}_.2split_500hidden"
+            model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
+            # model_type = "DELETE_ME"
 
             # this uses train-dev-test folds
             # create instance of model

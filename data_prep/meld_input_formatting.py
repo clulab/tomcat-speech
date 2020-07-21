@@ -83,10 +83,6 @@ class MELDData(Dataset):
                                                                            self.train_acoustic_lengths,
                                                                            add_avging-add_avging) # keep train
 
-        # acoustic feature normalization based on train
-        self.acoustic_means = torch.stack(self.train_acoustic).mean(dim=0, keepdim=False)
-        self.acoustic_deviations = torch.stack(self.train_acoustic).std(dim=0, keepdim=False)
-
         print("Getting text, speaker, and y features")
 
         # get utterance, speaker, y matrices for train, dev, and test sets
@@ -101,6 +97,13 @@ class MELDData(Dataset):
         self.test_utts, self.test_spkrs, self.test_genders,\
             self.test_y_emo, self.test_y_sent, self.test_utt_lengths = \
             self.make_meld_data_tensors(self.meld_test, self.test_usable_utts)
+
+        # acoustic feature normalization based on train
+        self.all_acoustic_means = torch.stack(self.train_acoustic).mean(dim=0, keepdim=False)
+        self.all_acoustic_deviations = torch.stack(self.train_acoustic).std(dim=0, keepdim=False)
+
+        self.male_acoustic_means, self.male_deviations = self.get_gender_avgs(gender=2)
+        self.female_acoustic_means, self.female_deviations = self.get_gender_avgs(gender=1)
 
         # get the data organized for input into the NNs
         self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
@@ -140,26 +143,52 @@ class MELDData(Dataset):
         for i, item in enumerate(self.train_acoustic):
             # normalize
             item_transformed = item
+            if self.train_genders[i] == 1:
+                item_transformed = self.transform_acoustic_item(item, self.train_genders[i])
             # item_transformed = (item - self.acoustic_means) / self.acoustic_deviations
             train_data.append((item_transformed, self.train_utts[i], self.train_spkrs[i], self.train_genders[i],
                                self.train_y_emo[i], self.train_y_sent[i], self.train_utt_lengths[i],
                                self.train_acoustic_lengths[i]))
 
         for i, item in enumerate(self.dev_acoustic):
-            item_transformed = item
+            item_transformed = self.transform_acoustic_item(item, self.dev_genders[i])
             # item_transformed = (item - self.acoustic_means) / self.acoustic_deviations
             dev_data.append((item_transformed, self.dev_utts[i], self.dev_spkrs[i], self.dev_genders[i],
                              self.dev_y_emo[i], self.dev_y_sent[i], self.dev_utt_lengths[i],
                              self.dev_acoustic_lengths[i]))
 
         for i, item in enumerate(self.test_acoustic):
-            item_transformed = item
+            item_transformed = self.transform_acoustic_item(item, self.test_genders[i])
             # item_transformed = (item - self.acoustic_means) / self.acoustic_deviations
             test_data.append((item_transformed, self.test_utts[i], self.test_spkrs[i], self.test_genders[i],
                               self.test_y_emo[i], self.test_y_sent[i], self.test_utt_lengths[i],
                               self.test_acoustic_lengths[i]))
 
         return train_data, dev_data, test_data
+
+    def get_gender_avgs(self, gender=1):
+        """
+        Get averages and standard deviations split by gender
+        param gender : the gender to return avgs for; 0 = all, 1 = f, 2 = m
+        """
+        all_items = []
+
+        for i, item in enumerate(self.train_acoustic):
+            if self.train_genders[i] == gender:
+                all_items.append(torch.tensor(item))
+
+        print(all_items[0].shape)
+        print(len(all_items))
+
+        all_items = torch.stack(all_items)
+
+        mean = all_items.mean(dim=0, keepdim=False)
+        stdev = all_items.std(dim=0, keepdim=False)
+
+        print(mean)
+        print(stdev)
+
+        return mean, stdev
 
     def get_longest_utt_meld(self):
         """
@@ -311,6 +340,21 @@ class MELDData(Dataset):
         # sys.exit()
 
         return all_acoustic, usable_utts
+
+    def transform_acoustic_item(self, item, gender):
+        """
+        Use gender averages and stdev to transform an acoustic item
+        item : a 1D tensor
+        gender : an int (1=female, 2=male, 0=all)
+        """
+        if gender == 1:
+            item_transformed = (item - self.female_acoustic_means) / self.female_deviations
+        elif gender == 2:
+            item_transformed = (item - self.male_acoustic_means) / self.male_deviations
+        else:
+            item_transformed = (item - self.all_acoustic_means) / self.all_acoustic_deviations
+
+        return item_transformed
 
 
 # helper functions

@@ -46,9 +46,6 @@ class BasicEncoder(nn.Module):
     An encoder to take a sequence of inputs and produce a sequence of intermediate representations
     Can include convolutions over text input and/or acoustic input--BUT NOT TOGETHER bc MELD isn't
     aligned at the word-level
-    todo: for now, we assume utterance-level aggregation of acoustic features, so only conv option
-        fully built is for text input; need to add acoustic conv--will involve reformatting input
-        data for utterance.
     """
     def __init__(self, params, num_embeddings=None, pretrained_embeddings=None):
         super(BasicEncoder, self).__init__()
@@ -57,6 +54,7 @@ class BasicEncoder(nn.Module):
         self.audio_dim = params.audio_dim
         self.num_embeddings = num_embeddings
         self.num_speakers = params.num_speakers
+        self.text_gru_hidden_dim = params.text_gru_hidden_dim
 
         # if we feed text through additional layer(s)
         # self.text_output_dim = params.text_output_dim
@@ -65,7 +63,7 @@ class BasicEncoder(nn.Module):
             hidden_size=params.text_gru_hidden_dim,
             num_layers=params.num_gru_layers, 
             batch_first=True,
-            bidirectional=False)
+            bidirectional=True)
 
         self.acoustic_rnn = nn.LSTM(
             input_size=params.audio_dim,
@@ -86,6 +84,7 @@ class BasicEncoder(nn.Module):
         elif params.use_gender:
             self.fc_input_dim = self.fc_input_dim + params.gender_emb_dim
 
+        # print(self.fc_input_dim)
         # self.fc_input_dim = params.text_output_dim
 
         # set number of classes
@@ -99,27 +98,28 @@ class BasicEncoder(nn.Module):
                                       _weight=pretrained_embeddings)
         self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
         # self.embedding = nn.Embedding(num_embeddings, self.text_dim)
-        self.text_batch_norm = nn.BatchNorm1d(self.text_dim + params.short_emb_dim)
+        # self.text_batch_norm = nn.BatchNorm1d(self.text_dim + params.short_emb_dim)
 
         # initialize speaker embeddings
         self.speaker_embedding = nn.Embedding(params.num_speakers, params.speaker_emb_dim)
 
-        self.speaker_batch_norm = nn.BatchNorm1d(params.speaker_emb_dim)
+        # self.speaker_batch_norm = nn.BatchNorm1d(params.speaker_emb_dim)
 
         self.gender_embedding = nn.Embedding(3, params.gender_emb_dim)
 
         # acoustic batch normalization
-        self.acoustic_batch_norm = nn.BatchNorm1d(params.audio_dim)
+        # self.acoustic_batch_norm = nn.BatchNorm1d(params.audio_dim)
         # self.acoustic_unk_norm = nn.BatchNorm1d(params.audio_dim)
         # self.acoustic_female_norm = nn.BatchNorm1d(params.audio_dim)
         # self.acoustic_male_norm = nn.BatchNorm1d(params.audio_dim)
 
         # initialize fully connected layers
+        # self.fc1 = nn.Linear(self.fc_input_dim, params.output_dim)
         self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
 
         # self.interfc_batch_norm = nn.BatchNorm1d(params.fc_hidden_dim)
 
-        # self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
+        self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
 
     def forward(self, acoustic_input, text_input, speaker_input=None, length_input=None, acoustic_len_input=None,
                 gender_input=None):
@@ -133,8 +133,8 @@ class BasicEncoder(nn.Module):
 
         all_embs = torch.cat((embs, short_embs), dim=2)
         # add text normalization -- must operate over dim 1 so permute
-        all_embs = self.text_batch_norm(all_embs.permute(0, 2, 1))
-        all_embs = all_embs.permute(0, 2, 1)
+        # all_embs = self.text_batch_norm(all_embs.permute(0, 2, 1))
+        # all_embs = all_embs.permute(0, 2, 1)
 
         # get speaker embeddings, if needed
         if speaker_input is not None:
@@ -148,15 +148,35 @@ class BasicEncoder(nn.Module):
 
         # feed embeddings through GRU
         packed_output, (hidden, cell) = self.text_rnn(packed)
+        # print(hidden.shape)
+        # print(packed_output.data.shape)
+        # print(cell.shape)
+        # sys.exit()
+        # split_point = int(self.text_gru_hidden_dim / 2)
+        # forward_hidden = hidden[-1, :, :split_point]
+        # backward_hidden = hidden[0, :, split_point:]
+        #
+        # print(split_point)
+        # print(forward_hidden.shape)
+        # print(backward_hidden.shape)
+        # sys.exit()
+
+        # all_hidden = torch.cat((forward_hidden, backward_hidden), dim=1)
+        # print(all_hidden.shape)
+        # sys.exit()
         # padded_output, lens = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True)
         encoded_text = F.dropout(hidden[-1], self.dropout)
+        # encoded_text = F.dropout(all_hidden, self.dropout)
+
         # encoded_text = hidden[-1]
+
+        # print(encoded_text.shape)
 
         if acoustic_len_input is not None:
             # print(acoustic_input.shape)
-            acoustic_input = self.acoustic_batch_norm(acoustic_input.permute(0, 2, 1))
+            # acoustic_input = self.acoustic_batch_norm(acoustic_input.permute(0, 2, 1))
             # print(acoustic_input.shape)
-            acoustic_input = acoustic_input.permute(0, 2, 1)
+            # acoustic_input = acoustic_input.permute(0, 2, 1)
             packed_acoustic = nn.utils.rnn.pack_padded_sequence(acoustic_input, acoustic_len_input, batch_first=True,
                                                                 enforce_sorted=False)
 
@@ -166,10 +186,16 @@ class BasicEncoder(nn.Module):
             # encoded_acoustic = acoustic_hidden[-1]
 
         else:
-            encoded_acoustic = acoustic_input.squeeze()
-            encoded_acoustic = self.acoustic_batch_norm(encoded_acoustic)
+            # print(acoustic_input.shape)
+            if len(acoustic_input.shape) > 2:
+                encoded_acoustic = acoustic_input.squeeze()
+            else:
+                encoded_acoustic = acoustic_input
+            # print(encoded_acoustic.shape)
+            # encoded_acoustic = self.acoustic_batch_norm(encoded_acoustic)
 
         # inputs = encoded_text
+        # print(encoded_acoustic.shape)
         
         # combine modalities as required by architecture
         # inputs = torch.cat((acoustic_input, encoded_text), 1)
@@ -180,11 +206,14 @@ class BasicEncoder(nn.Module):
         else:
             inputs = torch.cat((encoded_acoustic, encoded_text), 1)
 
+        # print(inputs.shape)
         # use pooled, squeezed feats as input into fc layers
         output = torch.tanh(F.dropout(self.fc1(inputs), self.dropout))
         # output = self.interfc_batch_norm(output)
-        # output = torch.relu(self.fc2(output))
+        # todo: abstract this so it's only calculated if not multitask
+        output = torch.relu(self.fc2(output))
         # output = F.softmax(output, dim=1)
+        # output = torch.tanh(self.fc1(inputs))
 
         # return the output
         return output
@@ -231,8 +260,16 @@ class TextOnlyCNN(nn.Module):
         self.conv3 = nn.Conv1d(self.in_channels, self.out_channels, self.k3_size)
         self.maxconv3 = nn.MaxPool1d(kernel_size=self.k3_size)
 
+        # a second convolutional layer to run on top of the first ones
+        # self.conv4 = nn.Conv1d(self.out_channels * 3, self.out_channels, self.k1_size)
+        # self.conv5 = nn.Conv1d(self.out_channels * 3, self.out_channels, self.k2_size)
+        #
+        # # a third to go on the second
+        # self.conv6 = nn.Conv1d(self.out_channels * 2, self.out_channels, self.k3_size)
+
         # fully connected layers
         self.fc1 = nn.Linear(self.out_channels * 3, params.text_cnn_hidden_dim)
+        # self.fc1 = nn.Linear(self.out_channels, params.text_cnn_hidden_dim)
         self.fc2 = nn.Linear(params.text_cnn_hidden_dim, self.output_dim)
 
     def forward(self, acoustic_input, text_input, speaker_input=None, length_input=None,
@@ -249,17 +286,38 @@ class TextOnlyCNN(nn.Module):
         # feed data into convolutional layers
         # dim=2 says it's an unexpected argument, but it is needed for this to work
         conv1_out = F.leaky_relu(self.conv1(inputs))
-        feats1 = F.max_pool1d(conv1_out, conv1_out.size(dim=2)).squeeze(dim=2)
+        # print(conv1_out.size())
+        feats1 = F.max_pool1d(conv1_out, 5, stride=1)  # .squeeze(dim=2)
+        # print(feats1.shape)
         conv2_out = F.leaky_relu(self.conv2(inputs))
-        feats2 = F.max_pool1d(conv2_out, conv2_out.size(dim=2)).squeeze(dim=2)
+        feats2 = F.max_pool1d(conv2_out, 4, stride=1)  #.squeeze(dim=2)
+        # print(feats1.shape)
         conv3_out = F.leaky_relu(self.conv3(inputs))
-        feats3 = F.max_pool1d(conv3_out, conv3_out.size(dim=2)).squeeze(dim=2)
+        feats3 = F.max_pool1d(conv3_out, 3, stride=1)  # .squeeze(dim=2)
+        # print(feats1.shape)
 
         # combine output of convolutional layers
+        # intermediate = torch.cat((conv1_out, conv2_out, conv3_out), 1)
         intermediate = torch.cat((feats1, feats2, feats3), 1)
 
+        # conv4_out = F.leaky_relu(self.conv4(intermediate))
+        # feats4 = F.max_pool1d(conv4_out, conv4_out.size(dim=2)).squeeze(dim=2)
+        # feats4 = F.max_pool1d(conv4_out, 3)
+        # conv5_out = F.leaky_relu(self.conv5(intermediate))
+        # feats5 = F.max_pool1d(conv5_out, 3)
+
+        # feats5 = F.max_pool1d(conv5_out, conv5_out.size(dim=2)).squeeze(dim=2)
+        # conv6_out = F.leaky_relu(self.conv6(intermediate))
+        # conv6_out = F.leaky_relu(self.conv6(torch.cat((feats4, feats5), 1)))
+
+        #feats6
+        all_feats = F.max_pool1d(intermediate, intermediate.size(dim=2)).squeeze(dim=2)
+
+        # all_feats = torch.cat((feats4, feats5, feats6), 1)
+
         # feed this through fully connected layer
-        fc1_out = torch.tanh(self.fc1((F.dropout(intermediate, self.dropout))))
+        fc1_out = torch.tanh(self.fc1((F.dropout(all_feats, self.dropout))))
+        # fc1_out = torch.tanh(self.fc1((F.dropout(intermediate, self.dropout))))
 
         output = torch.relu(self.fc2(F.dropout(fc1_out, self.dropout)))
         # output = self.fc2(fc1_out)
