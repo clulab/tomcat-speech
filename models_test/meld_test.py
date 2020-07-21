@@ -25,6 +25,11 @@ from models.parameters.multitask_params import params
 
 # set device
 cuda = False
+
+# # Check CUDA
+# if not torch.cuda.is_available():
+#     cuda = False
+
 device = torch.device("cuda" if cuda else "cpu")
 
 # set random seed
@@ -32,6 +37,8 @@ seed = params.seed
 torch.manual_seed(seed)
 np.random.seed(seed)
 random.seed(seed)
+# if cuda:
+#     torch.cuda.manual_seed_all(seed)
 
 # set parameters for data prep
 # todo: should be updated later to a glove subset appropriate for this task
