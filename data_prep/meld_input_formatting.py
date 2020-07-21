@@ -12,12 +12,17 @@ from torch.utils.data import Dataset
 from data_prep.prepare_data import clean_up_word
 from collections import OrderedDict
 
+import torchtext
+from torchtext.data import get_tokenizer
+from torch.nn.utils.rnn import pad_sequence
+
 
 class MeldPrep:
     """
     A class to prepare meld for input into a generic Dataset
     """
-    def __init__(self, meld_path, f_end="_IS10.csv", use_cols=None):
+    def __init__(self, meld_path, f_end="_IS10.csv", use_cols=None, avgd=True):
+        self.path = meld_path
         self.train_path = meld_path + "/train"
         self.dev_path = meld_path + "/dev"
         self.test_path = meld_path + "/test"
@@ -25,13 +30,38 @@ class MeldPrep:
         self.dev = "{0}/dev_sent_emo.csv".format(self.dev_path)
         self.test = "{0}/test_sent_emo.csv".format(self.test_path)
 
+        # get tokenizer
+        self.tokenizer = get_tokenizer("basic_english")
+
+        # to determine whether incoming acoustic features are averaged
+        self.avgd = avgd
+
+        if avgd:
+            self.avgd = True
+            self.train_dir = "audios"
+            self.dev_dir = "audios"
+            self.test_dir = "audios"
+        else:
+            self.avgd = False
+            self.train_dir = "IS10_train"
+            self.dev_dir = "IS10_dev"
+            self.test_dir = "IS10_test"
+
+        print("Collecting acoustic features")
+
         # ordered dicts of acoustic data
-        self.train_dict = OrderedDict(make_acoustic_dict("{0}/audios".format(self.train_path),
-                                                         f_end=f_end, use_cols=use_cols, data_type="meld"))
-        self.dev_dict = OrderedDict(make_acoustic_dict("{0}/audios".format(self.dev_path),
-                                                       f_end=f_end, use_cols=use_cols, data_type="meld"))
-        self.test_dict = OrderedDict(make_acoustic_dict("{0}/audios".format(self.test_path),
-                                                        f_end=f_end, use_cols=use_cols, data_type="meld"))
+        self.train_dict, self.train_acoustic_lengths = make_acoustic_dict_meld("{0}/{1}".format(self.train_path,
+                                                                                                self.train_dir),
+                                                                               f_end, use_cols, avgd=avgd)
+        self.train_dict = OrderedDict(self.train_dict)
+        self.dev_dict, self.dev_acoustic_lengths = make_acoustic_dict_meld("{0}/{1}".format(self.dev_path,
+                                                                                            self.dev_dir),
+                                                                           f_end, use_cols, avgd=avgd)
+        self.dev_dict = OrderedDict(self.dev_dict)
+        self.test_dict, self.test_acoustic_lengths = make_acoustic_dict_meld("{0}/{1}".format(self.test_path,
+                                                                                              self.test_dir),
+                                                                             f_end, use_cols, avgd=avgd)
+        self.test_dict = OrderedDict(self.test_dict)
 
         # utterance-level dict
         self.longest_utt, self.longest_dia = self.get_longest_utt_meld()
@@ -41,9 +71,6 @@ class MeldPrep:
                                                             list(self.dev_dict.values()) +
                                                             list(self.test_dict.values()))
 
-        print(self.longest_acoustic)
-        sys.exit()
-
         print("Finalizing acoustic organization")
 
     def get_longest_utt_meld(self):
@@ -51,6 +78,8 @@ class MeldPrep:
         Get the length of the longest utterance and dialogue in the meld
         :return: length of longest utt, length of longest dialogue
         """
+        longest = 0
+
         # get all data splits
         train_utts_df = pd.read_csv(self.train)
         dev_utts_df = pd.read_csv(self.dev)
@@ -60,10 +89,14 @@ class MeldPrep:
         all_utts_df = pd.concat([train_utts_df, dev_utts_df, test_utts_df], axis=0)
         all_utts = all_utts_df["Utterance"].tolist()
 
+        for i, item in enumerate(all_utts):
+            item = clean_up_word(item)
+            item = self.tokenizer(item)
+            if len(item) > longest:
+                longest = len(item)
+
         # get longest dialogue length
         longest_dia = max(all_utts_df['Utterance_ID'].tolist()) + 1  # because 0-indexed
-
-        longest = get_longest_utt(all_utts)
 
         return longest, longest_dia
 
@@ -72,15 +105,24 @@ class MultitaskData(Dataset):
     """
     A dataset to manipulate the MELD data before passing to NNs
     """
-    def __init__(self, data, glove, acoustic_length, data_type="meld"):
+    def __init__(self, data, glove, acoustic_length, data_type="meld", add_avging=True):
         # get the data--a dict that is the output of a Prep class
         self.data = data
+        self.data_path = data.path
         self.train = data.train
         self.dev = data.dev
         self.test = data.test
         self.train_dict = data.train_dict
         self.dev_dict = data.dev_dict
         self.test_dict = data.test_dict
+
+        # get acoustic length counters
+        self.train_acoustic_lengths = data.train_acoustic_lengths
+        self.dev_acoustic_lengths = data.dev_acoustic_lengths
+        self.test_acoustic_lengths = data.test_acoustic_lengths
+
+        # get tokenizer
+        self.tokenizer = data.tokenizer
 
         # longest utterance, dialogue, and acoustic df
         self.longest_utt = data.longest_utt
@@ -96,26 +138,31 @@ class MultitaskData(Dataset):
         # Glove object
         self.glove = glove
 
-        print("Collecting acoustic features")
-
-        self.train_acoustic, self.train_usable_utts, self.train_acoustic_lengths = \
-            self.make_acoustic_set(self.train, self.train_dict)
-        self.dev_acoustic, self.dev_usable_utts, self.dev_acoustic_lengths = \
-            self.make_acoustic_set(self.dev, self.dev_dict)
-        self.test_acoustic, self.test_usable_utts, self.test_acoustic_lengths = \
-            self.make_acoustic_set(self.test, self.test_dict)
+        # get speaker to gender dict
+        if data_type == "meld":
+            self.speaker2gender = get_speaker_gender(f"{self.data_path}/speaker2idx.csv")
 
         print("Getting text, speaker, and y features")
 
-        # get utterance, speaker, y matrices for train, dev, and test sets
+        self.train_acoustic, self.train_usable_utts = self.make_acoustic_set(self.train, self.train_dict,
+                                                                             add_avging=add_avging)
+        self.dev_acoustic, self.dev_usable_utts = self.make_acoustic_set(self.dev, self.dev_dict,
+                                                                         add_avging=add_avging)
+        self.test_acoustic, self.test_usable_utts = self.make_acoustic_set(self.test, self.test_dict,
+                                                                           add_avging-add_avging)
+
         if data_type == "meld":
-            self.train_utts, self.train_spkrs, self.train_y_emo, self.train_y_sent, self.train_utt_lengths = \
+            # get utterance, speaker, y matrices for train, dev, and test sets
+            self.train_utts, self.train_spkrs, self.train_genders, \
+                self.train_y_emo, self.train_y_sent, self.train_utt_lengths = \
                 self.make_meld_data_tensors(self.train, self.train_usable_utts)
 
-            self.dev_utts, self.dev_spkrs, self.dev_y_emo, self.dev_y_sent, self.dev_utt_lengths = \
+            self.dev_utts, self.dev_spkrs, self.dev_genders,\
+                self.dev_y_emo, self.dev_y_sent, self.dev_utt_lengths = \
                 self.make_meld_data_tensors(self.dev, self.dev_usable_utts)
 
-            self.test_utts, self.test_spkrs, self.test_y_emo, self.test_y_sent, self.test_utt_lengths = \
+            self.test_utts, self.test_spkrs, self.test_genders,\
+                self.test_y_emo, self.test_y_sent, self.test_utt_lengths = \
                 self.make_meld_data_tensors(self.test, self.test_usable_utts)
 
             # set emotion and sentiment weights
@@ -132,6 +179,13 @@ class MultitaskData(Dataset):
 
             # set the sarcasm weights
             self.sarcasm_weights = get_class_weights(self.train_y_sarcasm)
+
+        # acoustic feature normalization based on train
+        self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
+        self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
+
+        self.male_acoustic_means, self.male_deviations = self.get_gender_avgs(gender=2)
+        self.female_acoustic_means, self.female_deviations = self.get_gender_avgs(gender=1)
 
         # get the data organized for input into the NNs
         self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
@@ -167,36 +221,60 @@ class MultitaskData(Dataset):
         test_data = []
 
         for i, item in enumerate(self.train_acoustic):
+            # normalize
+            item_transformed = item
+            if self.train_genders[i] == 1:
+                item_transformed = self.transform_acoustic_item(item, self.train_genders[i])
             if self.data_type == "meld":
-                train_data.append((item, self.train_utts[i], self.train_spkrs[i],
+                train_data.append((item_transformed, self.train_utts[i], self.train_spkrs[i], self.train_genders[i],
                                    self.train_y_emo[i], self.train_y_sent[i], self.train_utt_lengths[i],
                                    self.train_acoustic_lengths[i]))
             elif self.data_type == "mustard":
-                train_data.append((item, self.train_utts[i], self.train_spkrs[i],
+                train_data.append((item_transformed, self.train_utts[i], self.train_spkrs[i],
                                    self.train_y_sarcasm[i], self.train_utt_lengths[i],
                                    self.train_acoustic_lengths[i]))
 
         for i, item in enumerate(self.dev_acoustic):
+            item_transformed = self.transform_acoustic_item(item, self.dev_genders[i])
             if self.data_type == "meld":
-                dev_data.append((item, self.dev_utts[i], self.dev_spkrs[i],
+                dev_data.append((item_transformed, self.dev_utts[i], self.dev_spkrs[i], self.dev_genders[i],
                                  self.dev_y_emo[i], self.dev_y_sent[i], self.dev_utt_lengths[i],
                                  self.dev_acoustic_lengths[i]))
             elif self.data_type == "mustard":
-                train_data.append((item, self.dev_utts[i], self.dev_spkrs[i],
+                train_data.append((item_transformed, self.dev_utts[i], self.dev_spkrs[i],
                                    self.dev_y_sarcasm[i], self.dev_utt_lengths[i],
                                    self.dev_acoustic_lengths[i]))
 
         for i, item in enumerate(self.test_acoustic):
+            item_transformed = self.transform_acoustic_item(item, self.test_genders[i])
             if self.data_type == "meld":
-                test_data.append((item, self.test_utts[i], self.test_spkrs[i],
+                test_data.append((item_transformed, self.test_utts[i], self.test_spkrs[i], self.test_genders[i],
                                   self.test_y_emo[i], self.test_y_sent[i], self.test_utt_lengths[i],
                                   self.test_acoustic_lengths[i]))
             elif self.data_type == "mustard":
-                train_data.append((item, self.test_utts[i], self.test_spkrs[i],
+                train_data.append((item_transformed, self.test_utts[i], self.test_spkrs[i],
                                    self.test_y_sarcasm[i], self.test_utt_lengths[i],
                                    self.test_acoustic_lengths[i]))
 
         return train_data, dev_data, test_data
+
+    def get_gender_avgs(self, gender=1):
+        """
+        Get averages and standard deviations split by gender
+        param gender : the gender to return avgs for; 0 = all, 1 = f, 2 = m
+        """
+        all_items = []
+
+        for i, item in enumerate(self.train_acoustic):
+            if self.train_genders[i] == gender:
+                all_items.append(torch.tensor(item))
+
+        all_items = torch.stack(all_items)
+
+        mean = all_items.mean(dim=0, keepdim=False)
+        stdev = all_items.std(dim=0, keepdim=False)
+
+        return mean, stdev
 
     def make_meld_data_tensors(self, text_path, all_utts_list):
         """
@@ -208,6 +286,7 @@ class MultitaskData(Dataset):
         # create holders for the data
         all_utts = []
         all_speakers = []
+        all_genders = []
         all_emotions = []
         all_sentiments = []
 
@@ -223,45 +302,46 @@ class MultitaskData(Dataset):
             if (dia_num, utt_num) in all_utts_list:
 
                 # create utterance-level holders
-                emos = [0] * 7
-                sents = [0] * 3
                 utts = [0] * self.longest_utt
 
                 # get values from row
-                utt = row["Utterance"]
-                utt = [clean_up_word(wd) for wd in utt.strip().split(" ")]
+                utt = clean_up_word(row["Utterance"])
+                utt = self.tokenizer(utt)
                 utt_lengths.append(len(utt))
 
                 spk_id = row['Speaker']
+                gen = self.speaker2gender[spk_id]
                 emo = row['Emotion']
                 sent = row['Sentiment']
 
                 # convert words to indices for glove
-                for ix, wd in enumerate(utt):
-                    if wd in self.glove.wd2idx.keys():
-                        utts[ix] = self.glove.wd2idx[wd]
-                    else:
-                        utts[ix] = self.glove.wd2idx['<UNK>']
+                utt_indexed = self.glove.index(utt)
+                for i, item in enumerate(utt_indexed):
+                    if i >= self.longest_utt:
+                        print(i)
+                    utts[i] = item
 
                 all_utts.append(torch.tensor(utts))
+                # all_utts.append(torch.tensor(utt_indexed))
                 all_speakers.append([spk_id])
-
-                emos[emo] = 1  # assign 1 to the emotion tagged
-                sents[sent] = 1  # assign 1 to the sentiment tagged
-                all_emotions.append(emos)
-                all_sentiments.append(sents)
+                all_genders.append(gen)
+                all_emotions.append(emo)
+                all_sentiments.append(sent)
 
         # create pytorch tensors for each
         all_speakers = torch.tensor(all_speakers)
+        all_genders = torch.tensor(all_genders)
         all_emotions = torch.tensor(all_emotions)
         all_sentiments = torch.tensor(all_sentiments)
 
-        # padd and transpose utterance sequences
+        all_utts = pad_sequence(all_utts, batch_first=True, padding_value=0)
+
+        # pad and transpose utterance sequences
         all_utts = nn.utils.rnn.pad_sequence(all_utts)
         all_utts = all_utts.transpose(0, 1)
 
         # return data
-        return all_utts, all_speakers, all_emotions, all_sentiments, utt_lengths
+        return all_utts, all_speakers, all_genders, all_emotions, all_sentiments, utt_lengths
 
     def make_mustard_data_tensors(self, all_utts_df):
         """
@@ -403,11 +483,12 @@ class MultitaskData(Dataset):
         # return data
         return all_utts, all_speakers, all_emotions, all_sentiments
 
-    def make_acoustic_set(self, text_path, acoustic_dict):
+    def make_acoustic_set(self, text_path, acoustic_dict, add_avging=True):
         """
         Prep the acoustic data using the acoustic dict
         :param text_path: FULL path to file containing utterances + labels
         :param acoustic_dict:
+        :param add_avging: whether to average the feature sets
         :return:
         """
         # read in the acoustic csv
@@ -417,27 +498,21 @@ class MultitaskData(Dataset):
             all_utts_df = text_path
         else:
             sys.exit("text_path is of unaccepted type.")
+
         # get lists of valid dialogues and utterances
         if self.data_type == "meld":
             valid_dia_utt = all_utts_df['DiaID_UttID'].tolist()
-            valid_dia = all_utts_df['Dialogue_ID'].tolist()
-            valid_utt = all_utts_df['Utterance_ID'].tolist()
         else:
             valid_dia_utt = all_utts_df['clip_id'].tolist()
-            valid_utt = all_utts_df['utterance'].tolist()
 
         # set holders for acoustic data
         all_acoustic = []
         usable_utts = []
 
-        acoustic_lengths = []
-
         # for all items with audio + gold label
         for idx, item in enumerate(valid_dia_utt):
             # if that dialogue and utterance appears has an acoustic feats file
             if (item.split("_")[0], item.split("_")[1]) in acoustic_dict.keys():
-                # set intermediate acoustic holder
-                intermediate_acoustic = [[0] * self.acoustic_length] * self.longest_acoustic
 
                 # pull out the acoustic feats dataframe
                 acoustic_data = acoustic_dict[(item.split("_")[0], item.split("_")[1])]
@@ -445,77 +520,30 @@ class MultitaskData(Dataset):
                 # add this dialogue + utt combo to the list of possible ones
                 usable_utts.append((item.split("_")[0], item.split("_")[1]))
 
-                # save length of the data
-                acoustic_lengths.append(len(acoustic_data))
+                if not self.data.avgd and not add_avging:
+                    # set intermediate acoustic holder
+                    acoustic_holder = [[0] * self.acoustic_length] * self.longest_acoustic
 
-                # add the acoustic features to the holder of features
-                for i, feats in enumerate(acoustic_data):
-                    intermediate_acoustic[i] = feats
+                    # add the acoustic features to the holder of features
+                    for i, feats in enumerate(acoustic_data):
+                        # print("i'm in the right spot")
+                        # for now, using longest acoustic file in TRAIN only
+                        if i >= self.longest_acoustic:
+                            break
+                        # needed because some files allegedly had length 0
+                        for j, feat in enumerate(feats):
+                            acoustic_holder[i][j] = feat
+                else:
+                    # print("something is wrong...")
+                    if self.data.avgd:
+                        # print("self.avgd is true")
+                        acoustic_holder = acoustic_data
+                    elif add_avging:
+                        # print("add_avging is true")
+                        acoustic_holder = torch.mean(torch.tensor(acoustic_data), dim=0)
 
                 # add features as tensor to acoustic data
-                all_acoustic.append(torch.tensor(intermediate_acoustic))
-
-        # pad the sequence and reshape it to proper format
-        all_acoustic = nn.utils.rnn.pad_sequence(all_acoustic)
-        all_acoustic = all_acoustic.transpose(0, 1)
-
-        return all_acoustic, usable_utts, acoustic_lengths
-
-    def make_dialogue_aware_acoustic_set(self, text_path, acoustic_dict):
-        """
-        Prep the acoustic data using the acoustic dict
-        :param text_path: FULL path to file containing utterances + labels
-        :param acoustic_dict:
-        :return:
-        """
-        # read in the acoustic csv
-        all_utts_df = pd.read_csv(text_path)
-        # get lists of valid dialogues and utterances
-        valid_dia_utt = all_utts_df['DiaID_UttID'].tolist()
-        valid_dia = all_utts_df['Dialogue_ID'].tolist()
-        valid_utt = all_utts_df['Utterance_ID'].tolist()
-
-        # set counter for dialogue number
-        dialogue = 0
-
-        # set holders for acoustic data
-        all_acoustic = []
-        usable_utts = []
-        intermediate_acoustic = [[0] * self.acoustic_length] * self.longest_utt
-
-        # for all items with audio + gold label
-        for idx, item in enumerate(valid_dia_utt):
-            # if that dialogue and utterance appears has an acoustic feats file
-            if (item.split("_")[0], item.split("_")[1]) in acoustic_dict.keys():
-                # pull out the acoustic feats dataframe
-                acoustic_data = acoustic_dict[(item.split("_")[0], item.split("_")[1])]
-                # add this dialogue + utt combo to the list of possible ones
-                usable_utts.append((item.split("_")[0], item.split("_")[1]))
-
-                # if the dialogue is one that's used
-                if dialogue == valid_dia[idx]:
-                    # get the utterance number
-                    utt_num = valid_utt[idx]
-                    # add the acoustic features to the holder of features
-                    for i, feat in enumerate(acoustic_data):
-                        intermediate_acoustic[utt_num][i] = feat
-                # if dialogue isn't one that's used
-                else:
-                    # we know we have changed dialogues, so...
-                    # add a tensor of acoustic features to the list of all
-                    all_acoustic.append(torch.tensor(intermediate_acoustic))
-
-                    # set the dialogue
-                    dialogue = valid_dia[idx]
-
-                    # zero the holder for intermediate acoustic data
-                    intermediate_acoustic = [[0] * self.acoustic_length] * self.longest_utt
-
-                    # get the utterance number
-                    utt_num = valid_utt[idx]
-                    # add the acoustic features to the holder of features
-                    for i, feat in enumerate(acoustic_data):
-                        intermediate_acoustic[utt_num][i] = feat
+                all_acoustic.append(torch.tensor(acoustic_holder))
 
         # pad the sequence and reshape it to proper format
         all_acoustic = nn.utils.rnn.pad_sequence(all_acoustic)
@@ -523,31 +551,135 @@ class MultitaskData(Dataset):
 
         return all_acoustic, usable_utts
 
+    def make_dialogue_aware_acoustic_set(self, text_path, acoustic_dict, add_avging=True):
+        """
+        Prep the acoustic data using the acoustic dict
+        :param text_path: FULL path to file containing utterances + labels
+        :param acoustic_dict:
+        :param add_avging:
+        :return:
+        """
+        # read in the acoustic csv
+        all_utts_df = pd.read_csv(text_path)
+        # get lists of valid dialogues and utterances
+        valid_dia_utt = all_utts_df['DiaID_UttID'].tolist()
+
+        # set holders for acoustic data
+        all_acoustic = []
+        usable_utts = []
+
+        # for all items with audio + gold label
+        for idx, item in enumerate(valid_dia_utt):
+            # if that dialogue and utterance appears has an acoustic feats file
+            if (item.split("_")[0], item.split("_")[1]) in acoustic_dict.keys():
+                # pull out the acoustic feats dataframe
+                acoustic_data = acoustic_dict[(item.split("_")[0], item.split("_")[1])]
+
+                # add this dialogue + utt combo to the list of possible ones
+                usable_utts.append((item.split("_")[0], item.split("_")[1]))
+
+                if not self.data.avgd and not add_avging:
+                    # set size of acoustic data holder
+                    acoustic_holder = [[0] * self.acoustic_length] * self.longest_acoustic
+
+                    for i, row in enumerate(acoustic_data):
+                        # print("i'm in the right spot")
+                        # for now, using longest acoustic file in TRAIN only
+                        if i >= self.longest_acoustic:
+                            break
+                        # needed because some files allegedly had length 0
+                        for j, feat in enumerate(row):
+                            acoustic_holder[i][j] = feat
+                else:
+                    # print("something is wrong...")
+                    if self.data.avgd:
+                        # print("self.avgd is true")
+                        acoustic_holder = acoustic_data
+                    elif add_avging:
+                        # print("add_avging is true")
+                        acoustic_holder = torch.mean(torch.tensor(acoustic_data), dim=0)
+
+                all_acoustic.append(torch.tensor(acoustic_holder))
+
+        # print(all_acoustic[0].shape)
+        # print(len(all_acoustic))
+        # sys.exit()
+
+        return all_acoustic, usable_utts
+
+    def transform_acoustic_item(self, item, gender):
+        """
+        Use gender averages and stdev to transform an acoustic item
+        item : a 1D tensor
+        gender : an int (1=female, 2=male, 0=all)
+        """
+        if gender == 1:
+            item_transformed = (item - self.female_acoustic_means) / self.female_deviations
+        elif gender == 2:
+            item_transformed = (item - self.male_acoustic_means) / self.male_deviations
+        else:
+            item_transformed = (item - self.all_acoustic_means) / self.all_acoustic_deviations
+
+        return item_transformed
+
 
 # helper functions
 def get_class_weights(y_set ):
     class_counts = {}
-    if type(y_set[0]) == list or type(y_set[0]) == torch.Tensor:
-        print("type of data is: " + str(type(y_set[0])))
-        if len(y_set[0]) > 1:
-            print("length of data[0] is: " + str(len(y_set[0])))
-            y_values = [item.index(max(item)) for item in y_set.tolist()]
-        else:
-            print("data[0] is of length 1")
-            y_values = [value for item in y_set.tolist() for value in item]
-    else:
-        y_values = y_set.tolist()
-    print(y_values)
+    y_values = y_set.tolist()
+
+    num_labels = max(y_values) + 1
+    # y_values = [item.index(max(item)) for item in y_set.tolist()]
+
     for item in y_values:
         if item not in class_counts:
             class_counts[item] = 1
         else:
             class_counts[item] += 1
-    class_weights = []
-    for k,v in sorted(class_counts.items()):
-        class_weights.append(float(v))
+    class_weights = [0.0] * num_labels
+    for k,v in class_counts.items():
+        class_weights[k] = float(v)
     class_weights = torch.tensor(class_weights)
-    return 1.0 / class_weights
+    return class_weights
+
+
+def make_acoustic_dict_meld(acoustic_path, f_end="_IS10.csv", use_cols=None, avgd=True):
+    """
+    makes a dict of (sid, call): data for use in ClinicalDataset objects
+    f_end: end of acoustic file names
+    use_cols: if set, should be a list [] of column names to include
+    n_to_skip : the number of columns at the start to ignore (e.g. name, time)
+    """
+    acoustic_dict = {}
+    acoustic_lengths = []
+    # find acoustic features files
+    for f in os.listdir(acoustic_path):
+        if f.endswith(f_end):
+            # set the separator--averaged files are actually CSV, others are ;SV
+            if avgd:
+                separator = ","
+            else:
+                separator = ";"
+
+            # read in the file as a dataframe
+            if use_cols is not None:
+                feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols,
+                                    sep=separator)
+            else:
+                feats = pd.read_csv(acoustic_path + "/" + f, sep=separator)
+                if not avgd:
+                    feats.drop(['name', 'frameTime'], axis=1, inplace=True)
+
+                # get the dialogue and utterance IDs
+                dia_id = f.split("_")[0]
+                utt_id = f.split("_")[1]
+
+            # save the dataframe to a dict with (dialogue, utt) as key
+            if feats.shape[0] > 0:
+                acoustic_dict[(dia_id, utt_id)] = feats.values.tolist()
+                acoustic_lengths.append(feats.shape[0])
+
+    return acoustic_dict, acoustic_lengths
 
 
 def get_speaker_to_index_dict(speaker_set):
@@ -585,40 +717,39 @@ def get_longest_utt(utts_list):
     return longest
 
 
-def make_acoustic_dict(acoustic_path, files_to_get=None, f_end="_IS10.csv",
-                       use_cols=None, data_type="meld", n_to_skip=2):
+def get_speaker_gender(idx2gender_path):
     """
-    makes a dict of (sid, call): data for use in ClinicalDataset objects
-    f_end: end of acoustic file names
-    use_cols: if set, should be a list [] of column names to include
-    n_to_skip : the number of columns at the start to ignore (e.g. name, time)
+    Get the gender of each speaker in the list
+    Includes 0 as UNK, 1 == F, 2 == M
     """
-    acoustic_dict = {}
-    # find acoustic features files
-    for f in os.listdir(acoustic_path):
-        if f.endswith(f_end):
-            if files_to_get is None or "_".join(f.split("_")[:2]) in files_to_get:
+    speaker_df = pd.read_csv(idx2gender_path, usecols=['idx', 'gender'])
 
-                # read in the file as a dataframe
-                if use_cols is not None:
-                    feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols,
-                                        sep=";")
-                    feats = feats.drop(feats.columns[:n_to_skip], axis=1)
-                else:
-                    feats = pd.read_csv(acoustic_path + "/" + f, sep=";")
-                    feats = feats.drop(feats.columns[:n_to_skip], axis=1)
+    return dict(zip(speaker_df.idx, speaker_df.gender))
+    # idxs = speaker_df['idx'].tolist()
+    # gender = speaker_df['gender'].tolist()
 
-                # get the dialogue and utterance IDs
-                dia_id = f.split("_")[0]
-                utt_id = f.split("_")[1]
 
-                # save the dataframe to a dict with (dialogue, utt) as key
-                if data_type == "meld":
-                    acoustic_dict[(dia_id, utt_id)] = feats.values.tolist()[0]
-                else:
-                    acoustic_dict[(dia_id, utt_id)] = feats.values.tolist()
+class DatumListDataset(Dataset):
+    """
+    A dataset to hold a list of datums
+    """
+    def __init__(self, data_list, class_weights=None):
+        self.data_list = data_list
 
-    return acoustic_dict
+        self.class_weights = class_weights
+
+    def __len__(self):
+        return len(self.data_list)
+
+    def __getitem__(self, item):
+        """
+        item (int) : the index to a data point
+        """
+        return self.data_list[item]
+
+    def targets(self):
+        for datum in self.data_list:
+            yield datum[4]
 
 
 def get_max_num_acoustic_frames(acoustic_set):
@@ -636,4 +767,3 @@ def get_max_num_acoustic_frames(acoustic_set):
             longest = utt_len
 
     return longest
-

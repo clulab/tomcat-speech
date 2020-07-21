@@ -5,7 +5,8 @@ import json
 from collections import OrderedDict
 
 from data_prep.audio_extraction import convert_mp4_to_wav, ExtractAudio
-from data_prep.meld_input_formatting import make_acoustic_dict, get_longest_utt, get_max_num_acoustic_frames
+from data_prep.meld_input_formatting import get_longest_utt, get_max_num_acoustic_frames
+from data_prep.lives_data.lives_data_prep import make_acoustic_dict
 import pandas as pd
 
 
