@@ -6,8 +6,8 @@ from models.baselines import LRBaseline
 from models.train_and_test_models import *
 
 from models.input_models import *
-from data_prep.data_prep import *
 from data_prep.lives_data.lives_data_prep import *
+from data_prep.prepare_data import *
 
 # import parameters for model
 # comment or uncomment as needed

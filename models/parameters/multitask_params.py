@@ -25,7 +25,7 @@ params = Namespace(
 
             # text NN
             # text_output_dim=30,   # 100,   # 50, 300,
-            text_gru_hidden_dim=30,   # 30,  # 50,  # 20
+            text_gru_hidden_dim=100,   # 30,  # 50,  # 20
 
             # text-only CNN
             kernel_1_size=3,

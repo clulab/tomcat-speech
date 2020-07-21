@@ -16,8 +16,9 @@ sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 from models.train_and_test_models import *
 
 from models.input_models import *
-from data_prep.data_prep import *
+from data_prep.prepare_data import *
 from data_prep.meld_input_formatting import *
+from data_prep.mustard_data_prep import *
 
 # import parameters for model
 from models.parameters.multitask_params import params
@@ -43,6 +44,9 @@ glove_file = "../../glove.short.300d.punct.txt"
 # meld_path = "/data/nlp/corpora/MM/MELD_formatted"
 meld_path = "../../datasets/multimodal_datasets/MELD_formatted"
 # meld_path = "../../datasets/multimodal_datasets/MELD_five_utterances"
+# meld_path = "../../datasets/multimodal_datasets/MUStARD"
+
+data_type = "meld"
 
 # set model name and model type
 model = params.model
@@ -67,21 +71,22 @@ if __name__ == "__main__":
     print("Glove object created")
 
     # 2. MAKE DATASET
-    # data = MELDData(meld_path=meld_path, glove=glove, acoustic_length=params.audio_dim, avgd=avgd_acoustic,
-    #                 use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
-    #                           'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
-    #                           'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
-    #                 add_avging=params.add_avging)
-    data = MELDData(meld_path=meld_path, glove=glove, acoustic_length=params.audio_dim, avgd=avgd_acoustic,
-                    add_avging=params.add_avging)
-    # with open('meld_IS10_small_avgd_fullGloVe.p', 'wb') as pickle_file:
-    #     pickle.dump(data, pickle_file)
-    #
-    # sys.exit()
-    # with open('dataset_full', 'rb') as pickle_file:
-    #     data = pickle.load(pickle_file)
+    # meld_data = MustardPrep(mustard_path=meld_path)
+    meld_data = MeldPrep(meld_path=meld_path)
 
-    data.emotion_weights = data.emotion_weights.to(device)  # add class weights to device
+    # data = MultitaskData(data=meld_data, glove=glove, acoustic_length=params.audio_dim, data_type="mustard")
+    data = MultitaskData(data=meld_data, glove=glove, acoustic_length=params.audio_dim, data_type="meld")
+#                 use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
+#                           'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
+#                           'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
+
+    # add class weights to device
+    if data_type == "meld":
+        data.emotion_weights = data.emotion_weights.to(device)
+        data.sentiment_weights = data.sentiment_weights.to(device)
+    elif data_type == "mustard":
+        data.sarcasm_weights = data.sarcasm_weights.to(device)
+
     print("Dataset created")
 
     # 3. CREATE NN

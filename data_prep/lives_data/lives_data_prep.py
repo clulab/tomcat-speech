@@ -11,7 +11,7 @@ import functools
 import operator
 import os
 
-from data_prep.data_prep import MinMaxScaleRange, get_longest_utterance, clean_up_word, get_avg_vec, scale_feature
+from data_prep.prepare_data import MinMaxScaleRange, get_longest_utterance, clean_up_word, get_avg_vec, scale_feature
 
 
 class ClinicalDataset(Dataset):
