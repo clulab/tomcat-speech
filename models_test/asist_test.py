@@ -2,14 +2,14 @@
 # currently the main entry point into the system
 # add "prep_data" as an argument when running this from command line
 #       if your acoustic features have not been extracted from audio
-import glob
 
 from models.bimodal_models import BimodalCNN, MultichannelCNN
-from models.baselines import LRBaseline, EmbeddingsOnly
+from models.baselines import LRBaseline
 from models.train_and_test_models import *
 from models.input_models import *
 
 from data_prep.prepare_data import *
+from data_prep.lives_data.lives_data_prep import make_acoustic_dict, ClinicalDataset
 import data_prep.sentiment_score_prep as score_prep
 import data_prep.asist_data.asist_prep as asist_prep
 
@@ -24,6 +24,8 @@ import numpy as np
 import random
 import torch
 import sys
+import glob
+import os
 
 
 # set device
