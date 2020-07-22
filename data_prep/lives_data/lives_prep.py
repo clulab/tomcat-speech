@@ -11,7 +11,7 @@ import functools
 import operator
 import os
 
-from data_prep.prepare_data import (
+from data_prep.data_prep_helpers import (
     MinMaxScaleRange,
     get_longest_utterance,
     clean_up_word,
@@ -362,15 +362,6 @@ class ClinicalDataset(Dataset):
             ordered_speakers = torch.tensor(ordered_speakers)
         print("Acoustic data size is: " + str(acoustic_data.shape))
         print("Ordered words is: " + str(ordered_words.shape))
-        # print(len(acoustic_data))
-        # print(len(acoustic_data[0]))
-        # print(len(acoustic_data[0][0]))
-        # print(type(ordered_words))
-        # print(type(ordered_words[0]))
-
-        # sys.exit(1)
-
-        # print("Size of acoustic data is now: " + str(acoustic_data.shape))
 
         print("Data prep and normalization complete")
 
@@ -439,27 +430,3 @@ class ClinicalDataset(Dataset):
         self.skipped_files = skipped_files
 
         return smallest_item
-
-
-def make_acoustic_dict(
-    acoustic_path, f_end="_IS09_avgd.csv", use_cols=None, data_type="clinical"
-):
-    """
-    makes a dict of (sid, call): data for use in ClinicalDataset objects
-    f_end: end of acoustic file names
-    use_cols: if set, should be a list [] of column names to include
-    """
-    acoustic_dict = {}
-    for f in os.listdir(acoustic_path):
-        if f.endswith(f_end):
-            if use_cols is not None:
-                feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
-            else:
-                feats = pd.read_csv(acoustic_path + "/" + f)
-            sid = f.split("_")[0]
-            if data_type == "asist":
-                callid = f.split("_")[2]  # asist data has format sid_mission_num
-            else:
-                callid = f.split("_")[1]  # clinical data has format sid_callid
-            acoustic_dict[(sid, callid)] = feats
-    return acoustic_dict

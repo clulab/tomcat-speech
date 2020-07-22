@@ -4,9 +4,19 @@ import os
 import json
 from collections import OrderedDict
 
+import torch
+from torch import nn
+
 from data_prep.audio_extraction import convert_mp4_to_wav, ExtractAudio
-from data_prep.meld_data.meld_prep import get_longest_utt, get_max_num_acoustic_frames
-from data_prep.lives_data.lives_prep import make_acoustic_dict
+from data_prep.data_prep_helpers import (
+    clean_up_word,
+    get_speaker_to_index_dict,
+    make_acoustic_dict,
+    get_longest_utt,
+    get_class_weights,
+    make_acoustic_set,
+)
+from data_prep.meld_data.meld_prep import get_max_num_acoustic_frames
 import pandas as pd
 
 
@@ -18,11 +28,14 @@ class MustardPrep:
     def __init__(
         self,
         mustard_path,
+        acoustic_length,
         train_prop=0.6,
         test_prop=0.2,
         utts_file_name="mustard_utts.tsv",
         f_end="_IS10.csv",
         use_cols=None,
+        add_avging=True,
+        avgd=False,
     ):
         # path to dataset
         self.path = mustard_path
@@ -74,6 +87,170 @@ class MustardPrep:
             + list(self.dev_dict.values())
             + list(self.test_dict.values())
         )
+
+        # get acoustic and usable utterance data
+        self.train_acoustic, self.train_usable_utts = make_acoustic_set(
+            self.train,
+            self.train_dict,
+            data_type="mustard",
+            acoustic_length=acoustic_length,
+            longest_acoustic=self.longest_acoustic,
+            add_avging=add_avging,
+            avgd=avgd,
+        )
+        self.dev_acoustic, self.dev_usable_utts = make_acoustic_set(
+            self.dev,
+            self.dev_dict,
+            data_type="mustard",
+            acoustic_length=acoustic_length,
+            longest_acoustic=self.longest_acoustic,
+            add_avging=add_avging,
+            avgd=avgd,
+        )
+        self.test_acoustic, self.test_usable_utts = make_acoustic_set(
+            self.test,
+            self.test_dict,
+            data_type="mustard",
+            acoustic_length=acoustic_length,
+            longest_acoustic=self.longest_acoustic,
+            add_avging=add_avging,
+            avgd=avgd,
+        )
+
+        # get utterance, speaker, and gold label information
+        (
+            self.train_utts,
+            self.train_spkrs,
+            self.train_y_sarcasm,
+            self.train_utt_lengths,
+        ) = self.make_mustard_data_tensors(self.train)
+        (
+            self.dev_utts,
+            self.dev_spkrs,
+            self.dev_y_sarcasm,
+            self.dev_utt_lengths,
+        ) = self.make_mustard_data_tensors(self.dev)
+        (
+            self.test_utts,
+            self.test_spkrs,
+            self.test_y_sarcasm,
+            self.test_utt_lengths,
+        ) = self.make_mustard_data_tensors(self.test)
+
+        # set the sarcasm weights
+        self.sarcasm_weights = get_class_weights(self.train_y_sarcasm)
+
+        # get the data organized for input into the NNs
+        self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
+
+    def combine_xs_and_ys(self):
+        # todo: get this into the individual dataset classes
+        """
+        Combine all x and y data into list of tuples for easier access with DataLoader
+        """
+        train_data = []
+        dev_data = []
+        test_data = []
+
+        for i, item in enumerate(self.train_acoustic):
+            # normalize
+            item_transformed = item
+            if self.train_genders[i] == 1:
+                item_transformed = self.transform_acoustic_item(
+                    item, self.train_genders[i]
+                )
+            train_data.append(
+                (
+                    item_transformed,
+                    self.train_utts[i],
+                    self.train_spkrs[i],
+                    self.train_y_sarcasm[i],
+                    self.train_utt_lengths[i],
+                    self.train_acoustic_lengths[i],
+                )
+            )
+
+        for i, item in enumerate(self.dev_acoustic):
+            item_transformed = self.transform_acoustic_item(item, self.dev_genders[i])
+            dev_data.append(
+                (
+                    item_transformed,
+                    self.dev_utts[i],
+                    self.dev_spkrs[i],
+                    self.dev_y_sarcasm[i],
+                    self.dev_utt_lengths[i],
+                    self.dev_acoustic_lengths[i],
+                )
+            )
+
+        for i, item in enumerate(self.test_acoustic):
+            item_transformed = self.transform_acoustic_item(item, self.test_genders[i])
+            test_data.append(
+                (
+                    item_transformed,
+                    self.test_utts[i],
+                    self.test_spkrs[i],
+                    self.test_y_sarcasm[i],
+                    self.test_utt_lengths[i],
+                    self.test_acoustic_lengths[i],
+                )
+            )
+
+        return train_data, dev_data, test_data
+
+    def make_mustard_data_tensors(self, all_utts_df):
+        """
+        Prepare the tensors of utterances + speakers, emotion and sentiment scores
+        :param all_utts_df: the dataframe of all utterances
+        :return:
+        """
+        # create holders for the data
+        all_utts = []
+        all_speakers = []
+        all_sarcasm = []
+
+        # create holder for sequence lengths information
+        utt_lengths = []
+
+        for idx, row in all_utts_df.iterrows():
+
+            # create utterance-level holders
+            utts = [0] * self.longest_utt
+
+            # get values from row
+            utt = row["utterance"]
+            utt = [clean_up_word(wd) for wd in utt.strip().split(" ")]
+            utt_lengths.append(len(utt))
+
+            spk_id = row["speaker"]
+            sarc = row["sarcasm"]
+
+            # convert words to indices for glove
+            for ix, wd in enumerate(utt):
+                if wd in self.glove.wd2idx.keys():
+                    utts[ix] = self.glove.wd2idx[wd]
+                else:
+                    utts[ix] = self.glove.wd2idx["<UNK>"]
+
+            all_utts.append(torch.tensor(utts))
+            all_speakers.append(spk_id)
+            all_sarcasm.append([sarc])
+
+        # get set of all speakers, create lookup dict, and get list of all speaker IDs
+        speaker_set = set([speaker for speaker in all_speakers])
+        speaker2idx = get_speaker_to_index_dict(speaker_set)
+        speaker_ids = [[speaker2idx[speaker]] for speaker in all_speakers]
+
+        # create pytorch tensors for each
+        speaker_ids = torch.tensor(speaker_ids)
+        all_sarcasm = torch.tensor(all_sarcasm)
+
+        # padd and transpose utterance sequences
+        all_utts = nn.utils.rnn.pad_sequence(all_utts)
+        all_utts = all_utts.transpose(0, 1)
+
+        # return data
+        return all_utts, speaker_ids, all_sarcasm, utt_lengths
 
 
 def organize_labels_from_json(jsonfile, savepath, save_name):

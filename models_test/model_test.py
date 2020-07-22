@@ -7,7 +7,7 @@ from models.train_and_test_models import *
 
 from models.input_models import *
 from data_prep.lives_data.lives_prep import *
-from data_prep.prepare_data import *
+from data_prep.data_prep_helpers import *
 
 # import parameters for model
 # comment or uncomment as needed

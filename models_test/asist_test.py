@@ -3,14 +3,14 @@
 # add "prep_data" as an argument when running this from command line
 #       if your acoustic features have not been extracted from audio
 
-from models.bimodal_models import BimodalCNN, MultichannelCNN
+from models.bimodal_models import MultichannelCNN
 from models.baselines import LRBaseline
 from models.train_and_test_models import *
 from models.input_models import *
 
-from data_prep.prepare_data import *
+from data_prep.data_prep_helpers import *
 from data_prep.lives_data.lives_prep import make_acoustic_dict, ClinicalDataset
-import data_prep.sentiment_score_prep as score_prep
+import data_prep.asist_data.sentiment_score_prep as score_prep
 import data_prep.asist_data.asist_prep as asist_prep
 
 # import parameters for model

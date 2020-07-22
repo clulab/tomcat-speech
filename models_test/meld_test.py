@@ -10,7 +10,7 @@ sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 from models.train_and_test_models import *
 
 from models.input_models import *
-from data_prep.prepare_data import *
+from data_prep.data_prep_helpers import *
 from data_prep.meld_data.meld_prep import *
 from data_prep.mustard_data.mustard_prep import *
 

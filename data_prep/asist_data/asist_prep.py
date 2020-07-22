@@ -1,16 +1,15 @@
 # prepare the asist-produced audio and transcription data for neural classifiers
 
 import data_prep.audio_extraction as audio_extraction
-import data_prep.sentiment_score_prep as sent_prep
+import data_prep.asist_data.sentiment_score_prep as sent_prep
 
 import os
 import sys
 import pandas as pd
-import pprint
 import ast
 import random
 import re
-import time
+
 
 ################################################################################
 ############               TRANSCRIPT-ALTERING CLASS                ############
