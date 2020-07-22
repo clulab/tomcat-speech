@@ -3,6 +3,7 @@
 
 import pickle
 
+from data_prep.data_prep_helpers import DatumListDataset
 from models.train_and_test_models import *
 
 from models.input_models import *

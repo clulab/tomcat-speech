@@ -35,6 +35,7 @@ class MeldPrep:
         self,
         meld_path,
         acoustic_length,
+        glove,
         f_end="_IS10.csv",
         use_cols=None,
         add_avging=True,
@@ -138,7 +139,7 @@ class MeldPrep:
             self.train_y_emo,
             self.train_y_sent,
             self.train_utt_lengths,
-        ) = self.make_meld_data_tensors(self.train, self.train_usable_utts)
+        ) = self.make_meld_data_tensors(self.train, self.train_usable_utts, glove)
 
         (
             self.dev_utts,
@@ -147,7 +148,7 @@ class MeldPrep:
             self.dev_y_emo,
             self.dev_y_sent,
             self.dev_utt_lengths,
-        ) = self.make_meld_data_tensors(self.dev, self.dev_usable_utts)
+        ) = self.make_meld_data_tensors(self.dev, self.dev_usable_utts, glove)
 
         (
             self.test_utts,
@@ -156,7 +157,7 @@ class MeldPrep:
             self.test_y_emo,
             self.test_y_sent,
             self.test_utt_lengths,
-        ) = self.make_meld_data_tensors(self.test, self.test_usable_utts)
+        ) = self.make_meld_data_tensors(self.test, self.test_usable_utts, glove)
 
         # set emotion and sentiment weights
         self.emotion_weights = get_class_weights(self.train_y_emo)
@@ -167,10 +168,10 @@ class MeldPrep:
         self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
 
         self.male_acoustic_means, self.male_deviations = get_gender_avgs(
-            self.train_acoustic, gender=2
+            self.train_acoustic, self.train_genders, gender=2
         )
         self.female_acoustic_means, self.female_deviations = get_gender_avgs(
-            self.train_acoustic, gender=1
+            self.train_acoustic, self.train_genders, gender=1
         )
 
         # get the data organized for input into the NNs

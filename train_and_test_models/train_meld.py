@@ -1,4 +1,4 @@
-# test the models created in models directory with MELD data
+# train the models created in models directory with MELD data
 # currently the main entry point into the system
 
 import sys
@@ -73,15 +73,19 @@ if __name__ == "__main__":
 
     # 2. MAKE DATASET
     # meld_data = MustardPrep(mustard_path=meld_path)
-    meld_data = MeldPrep(meld_path=meld_path)
-
-    # data = MultitaskData(data=meld_data, glove=glove, acoustic_length=params.audio_dim, data_type="mustard")
-    data = MultitaskData(
-        data=meld_data, glove=glove, acoustic_length=params.audio_dim, data_type="meld"
+    data = MeldPrep(
+        meld_path=meld_path,
+        acoustic_length=params.audio_dim,
+        glove=glove,
+        add_avging=params.add_avging,
+        avgd=avgd_acoustic,
     )
+
+    # data = MeldPrep(meld_path=meld_path, acoustic_length=params.audio_dim, add_avging=params.add_avging,
     #                 use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
     #                           'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
     #                           'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
+    #                 avgd=avgd_acoustic)
 
     # add class weights to device
     if data_type == "meld":
@@ -94,9 +98,9 @@ if __name__ == "__main__":
 
     # 3. CREATE NN
     # get set of pretrained embeddings and their shape
-    pretrained_embeddings = data.glove.data
+    pretrained_embeddings = glove.data
     num_embeddings = pretrained_embeddings.size()[0]
-    print("shape of pretrained embeddings is: {0}".format(data.glove.data.size()))
+    print("shape of pretrained embeddings is: {0}".format(glove.data.size()))
 
     # prepare holders for loss and accuracy of best model versions
     all_test_losses = []
@@ -107,8 +111,8 @@ if __name__ == "__main__":
         for wd in params.weight_decay:
             # model_type = f"Multitask_1.6vs1lossWeighting_Adagrad_TextOnly_100batch_wd{str(wd)}_.2split"
             # model_type = f"TextOnly_smallerPool_100batch_wd{str(wd)}_.2split_500hidden"
-            model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
-            # model_type = "DELETE_ME"
+            # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
+            model_type = "DELETE_ME"
 
             # this uses train-dev-test folds
             # create instance of model

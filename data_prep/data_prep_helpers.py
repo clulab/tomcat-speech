@@ -14,6 +14,7 @@ import statistics
 
 # classes
 
+
 class DatumListDataset(Dataset):
     """
     A dataset to hold a list of datums
@@ -206,7 +207,7 @@ def get_class_weights(y_set):
     return class_weights
 
 
-def get_gender_avgs(acoustic_set, gender=1):
+def get_gender_avgs(acoustic_set, gender_set, gender=1):
     """
     Get averages and standard deviations split by gender
     param acoustic_set : the acoustic data
@@ -215,7 +216,7 @@ def get_gender_avgs(acoustic_set, gender=1):
     all_items = []
 
     for i, item in enumerate(acoustic_set):
-        if acoustic_set[i] == gender:
+        if gender_set[i] == gender:
             all_items.append(torch.tensor(item))
 
     all_items = torch.stack(all_items)
