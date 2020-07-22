@@ -88,11 +88,8 @@ if __name__ == "__main__":
     #                 avgd=avgd_acoustic)
 
     # add class weights to device
-    if data_type == "meld":
-        data.emotion_weights = data.emotion_weights.to(device)
-        data.sentiment_weights = data.sentiment_weights.to(device)
-    elif data_type == "mustard":
-        data.sarcasm_weights = data.sarcasm_weights.to(device)
+    data.emotion_weights = data.emotion_weights.to(device)
+    data.sentiment_weights = data.sentiment_weights.to(device)
 
     print("Dataset created")
 

@@ -154,8 +154,8 @@ def train_and_predict(
             # length_batches = [item[5] for item in batched_split]
             batch_acoustic = batch[0].to(device)
             batch_text = batch[1].to(device)
-            batch_lengths = batch[6].to(device)
-            batch_acoustic_lengths = batch[7].to(device)
+            batch_lengths = batch[-2].to(device)
+            batch_acoustic_lengths = batch[-1].to(device)
             if use_speaker:
                 batch_speakers = batch[2].to(device)
             else:
@@ -256,8 +256,8 @@ def train_and_predict(
             # compute the output
             batch_acoustic = batch[0].to(device)
             batch_text = batch[1].to(device)
-            batch_lengths = batch[6].to(device)
-            batch_acoustic_lengths = batch[7].to(device)
+            batch_lengths = batch[-2].to(device)
+            batch_acoustic_lengths = batch[-1].to(device)
             if use_speaker:
                 batch_speakers = batch[2].to(device)
             else:

@@ -454,7 +454,7 @@ class MeldPrep:
 
 
 # helper functions
-def make_acoustic_dict_meld(acoustic_path, f_end="_IS10.csv", use_cols=None, avgd=True):
+def make_acoustic_dict_meld(acoustic_path, f_end="_IS10.csv", files_to_get=None, use_cols=None, avgd=True):
     """
     makes a dict of (sid, call): data for use in ClinicalDataset objects
     f_end: end of acoustic file names
@@ -473,23 +473,24 @@ def make_acoustic_dict_meld(acoustic_path, f_end="_IS10.csv", use_cols=None, avg
                 separator = ";"
 
             # read in the file as a dataframe
-            if use_cols is not None:
-                feats = pd.read_csv(
-                    acoustic_path + "/" + f, usecols=use_cols, sep=separator
-                )
-            else:
-                feats = pd.read_csv(acoustic_path + "/" + f, sep=separator)
-                if not avgd:
-                    feats.drop(["name", "frameTime"], axis=1, inplace=True)
+            if files_to_get is None or "_".join(f.split("_")[:2]) in files_to_get:
+                if use_cols is not None:
+                    feats = pd.read_csv(
+                        acoustic_path + "/" + f, usecols=use_cols, sep=separator
+                    )
+                else:
+                    feats = pd.read_csv(acoustic_path + "/" + f, sep=separator)
+                    if not avgd:
+                        feats.drop(["name", "frameTime"], axis=1, inplace=True)
 
-                # get the dialogue and utterance IDs
-                dia_id = f.split("_")[0]
-                utt_id = f.split("_")[1]
+                    # get the dialogue and utterance IDs
+                    dia_id = f.split("_")[0]
+                    utt_id = f.split("_")[1]
 
-            # save the dataframe to a dict with (dialogue, utt) as key
-            if feats.shape[0] > 0:
-                acoustic_dict[(dia_id, utt_id)] = feats.values.tolist()
-                acoustic_lengths.append(feats.shape[0])
+                # save the dataframe to a dict with (dialogue, utt) as key
+                if feats.shape[0] > 0:
+                    acoustic_dict[(dia_id, utt_id)] = feats.values.tolist()
+                    acoustic_lengths.append(feats.shape[0])
 
     return acoustic_dict, acoustic_lengths
 

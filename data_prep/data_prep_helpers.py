@@ -20,8 +20,9 @@ class DatumListDataset(Dataset):
     A dataset to hold a list of datums
     """
 
-    def __init__(self, data_list, class_weights=None):
+    def __init__(self, data_list, data_type="meld_emotion", class_weights=None):
         self.data_list = data_list
+        self.data_type = data_type
 
         self.class_weights = class_weights
 
@@ -35,8 +36,15 @@ class DatumListDataset(Dataset):
         return self.data_list[item]
 
     def targets(self):
-        for datum in self.data_list:
-            yield datum[4]
+        if self.data_type == "meld_emotion":
+            for datum in self.data_list:
+                yield datum[4]
+        elif self.data_type == "meld_sentiment":
+            for datum in self.data_list:
+                yield datum[5]
+        elif self.data_type == "mustard":
+            for datum in self.data_list:
+                yield datum[4]
 
 
 class Glove(object):
