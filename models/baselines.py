@@ -8,6 +8,7 @@ class UttLRBaseline(nn.Module):
     """
     LR model for utterance-level predictions on bimodal data
     """
+
     def __init__(self, params, num_embeddings, pretrained_embeddings=None):
         super(UttLRBaseline, self).__init__()
         self.text_dim = params.text_dim
@@ -15,8 +16,9 @@ class UttLRBaseline(nn.Module):
         self.input_dim = params.text_dim + params.audio_dim
 
         # set embeddings layer
-        self.embedding = nn.Embedding(num_embeddings, self.text_dim,
-                                      _weight=pretrained_embeddings)
+        self.embedding = nn.Embedding(
+            num_embeddings, self.text_dim, _weight=pretrained_embeddings
+        )
 
         self.linear = nn.Linear(self.input_dim, params.output_dim)
         self.sigmoid = nn.Sigmoid()
@@ -42,6 +44,7 @@ class UttLRBaseline(nn.Module):
         # get predictions
         return outputs.squeeze(dim=1)
 
+
 class LRBaseline(nn.Module):
     """
     A logistic regression model for bimodal (text, audio) data
@@ -49,6 +52,7 @@ class LRBaseline(nn.Module):
     audio_dim : number of dimensions in each audio input vector (e.g. 20)
     output_dim : number of dimensions in output vector (binary default)
     """
+
     def __init__(self, params, num_embeddings, pretrained_embeddings=None):
         super(LRBaseline, self).__init__()
         self.text_dim = params.text_dim
@@ -56,15 +60,23 @@ class LRBaseline(nn.Module):
         self.input_dim = params.text_dim + params.audio_dim + params.spkr_emb_dim
 
         if params.use_speaker:
-            self.speaker_embeddings = nn.Embedding(params.num_speakers, params.spkr_emb_dim)
+            self.speaker_embeddings = nn.Embedding(
+                params.num_speakers, params.spkr_emb_dim
+            )
 
         # create model layer
         if pretrained_embeddings is None:
-            self.embedding = nn.Embedding(num_embeddings, self.text_dim, params.padding_idx)
+            self.embedding = nn.Embedding(
+                num_embeddings, self.text_dim, params.padding_idx
+            )
             self.pretrained_embeddings = False
         else:
-            self.embedding = nn.Embedding(num_embeddings, self.text_dim, params.padding_idx,
-                                          _weight=pretrained_embeddings)
+            self.embedding = nn.Embedding(
+                num_embeddings,
+                self.text_dim,
+                params.padding_idx,
+                _weight=pretrained_embeddings,
+            )
             self.pretrained_embeddings = True
         self.linear = nn.Linear(self.input_dim, params.output_dim)
         self.sigmoid = nn.Sigmoid()

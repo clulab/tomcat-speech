@@ -11,8 +11,17 @@ class BaseGRU(nn.Module):
     Abstracted out since it may be used TWICE within the encoder
     (1x for text, 1x for audio)
     """
-    def __init__(self, input_dim, hidden_size, output_dim, num_gru_layers,
-                 num_fc_layers, dropout, bidirectional):
+
+    def __init__(
+        self,
+        input_dim,
+        hidden_size,
+        output_dim,
+        num_gru_layers,
+        num_fc_layers,
+        dropout,
+        bidirectional,
+    ):
         super(BaseGRU, self).__init__()
 
         # input text
@@ -21,20 +30,27 @@ class BaseGRU(nn.Module):
         self.num_gru_layers = num_gru_layers
         self.dropout = dropout
 
-        self.GRU = nn.LSTM(input_dim, output_dim, num_gru_layers, batch_first=True, dropout=dropout,
-                          bidirectional=bidirectional)
+        self.GRU = nn.LSTM(
+            input_dim,
+            output_dim,
+            num_gru_layers,
+            batch_first=True,
+            dropout=dropout,
+            bidirectional=bidirectional,
+        )
         # self.GRU = nn.GRU(input_dim, output_dim, num_gru_layers, batch_first=True, dropout=dropout,
         #                   bidirectional=bidirectional)
 
     def forward(self, inputs, input_lengths):
-        inputs = nn.utils.rnn.pack_padded_sequence(inputs, input_lengths,
-                                                   batch_first=True, enforce_sorted=False)
+        inputs = nn.utils.rnn.pack_padded_sequence(
+            inputs, input_lengths, batch_first=True, enforce_sorted=False
+        )
 
         # todo: look at this--make sure we're taking hidden from the right place
         packed_output, (hidden, cell) = self.GRU(inputs)
         # rnn_feats, hidden = self.GRU(inputs)
 
-        output = hidden[:,-1,:]
+        output = hidden[:, -1, :]
 
         # output is NOT fed through softmax or sigmoid layer here
         # assumption: output is intermediate layer of larger NN
@@ -47,6 +63,7 @@ class BasicEncoder(nn.Module):
     Can include convolutions over text input and/or acoustic input--BUT NOT TOGETHER bc MELD isn't
     aligned at the word-level
     """
+
     def __init__(self, params, num_embeddings=None, pretrained_embeddings=None):
         super(BasicEncoder, self).__init__()
         # input text + acoustic + speaker
@@ -61,23 +78,26 @@ class BasicEncoder(nn.Module):
         self.text_rnn = nn.LSTM(
             input_size=params.text_dim + params.short_emb_dim,
             hidden_size=params.text_gru_hidden_dim,
-            num_layers=params.num_gru_layers, 
+            num_layers=params.num_gru_layers,
             batch_first=True,
-            bidirectional=True)
+            bidirectional=True,
+        )
 
         self.acoustic_rnn = nn.LSTM(
             input_size=params.audio_dim,
             hidden_size=params.acoustic_gru_hidden_dim,
             num_layers=params.num_gru_layers,
             batch_first=True,
-            bidirectional=False
+            bidirectional=False,
         )
 
         # set the size of the input into the fc layers
         if params.avgd_acoustic or params.add_avging:
             self.fc_input_dim = params.text_gru_hidden_dim + params.audio_dim
         else:
-            self.fc_input_dim = params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
+            self.fc_input_dim = (
+                params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
+            )
 
         if params.use_speaker:
             self.fc_input_dim = self.fc_input_dim + params.speaker_emb_dim
@@ -94,14 +114,17 @@ class BasicEncoder(nn.Module):
         self.dropout = params.dropout
 
         # initialize word embeddings
-        self.embedding = nn.Embedding(num_embeddings, self.text_dim,
-                                      _weight=pretrained_embeddings)
+        self.embedding = nn.Embedding(
+            num_embeddings, self.text_dim, _weight=pretrained_embeddings
+        )
         self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
         # self.embedding = nn.Embedding(num_embeddings, self.text_dim)
         # self.text_batch_norm = nn.BatchNorm1d(self.text_dim + params.short_emb_dim)
 
         # initialize speaker embeddings
-        self.speaker_embedding = nn.Embedding(params.num_speakers, params.speaker_emb_dim)
+        self.speaker_embedding = nn.Embedding(
+            params.num_speakers, params.speaker_emb_dim
+        )
 
         # self.speaker_batch_norm = nn.BatchNorm1d(params.speaker_emb_dim)
 
@@ -121,8 +144,15 @@ class BasicEncoder(nn.Module):
 
         self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
 
-    def forward(self, acoustic_input, text_input, speaker_input=None, length_input=None, acoustic_len_input=None,
-                gender_input=None):
+    def forward(
+        self,
+        acoustic_input,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        acoustic_len_input=None,
+        gender_input=None,
+    ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
         embs = F.dropout(self.embedding(text_input), self.dropout).detach()
@@ -144,7 +174,9 @@ class BasicEncoder(nn.Module):
             gender_embs = self.gender_embedding(gender_input)
 
         # packed = nn.utils.rnn.pack_padded_sequence(embs, length_input, batch_first=True, enforce_sorted=False)
-        packed = nn.utils.rnn.pack_padded_sequence(all_embs, length_input, batch_first=True, enforce_sorted=False)
+        packed = nn.utils.rnn.pack_padded_sequence(
+            all_embs, length_input, batch_first=True, enforce_sorted=False
+        )
 
         # feed embeddings through GRU
         packed_output, (hidden, cell) = self.text_rnn(packed)
@@ -177,11 +209,18 @@ class BasicEncoder(nn.Module):
             # acoustic_input = self.acoustic_batch_norm(acoustic_input.permute(0, 2, 1))
             # print(acoustic_input.shape)
             # acoustic_input = acoustic_input.permute(0, 2, 1)
-            packed_acoustic = nn.utils.rnn.pack_padded_sequence(acoustic_input, acoustic_len_input, batch_first=True,
-                                                                enforce_sorted=False)
+            packed_acoustic = nn.utils.rnn.pack_padded_sequence(
+                acoustic_input,
+                acoustic_len_input,
+                batch_first=True,
+                enforce_sorted=False,
+            )
 
             # print(packed_acoustic.data.shape)
-            packed_acoustic_output, (acoustic_hidden, acoustic_cell) = self.acoustic_rnn(packed_acoustic)
+            (
+                packed_acoustic_output,
+                (acoustic_hidden, acoustic_cell),
+            ) = self.acoustic_rnn(packed_acoustic)
             encoded_acoustic = F.dropout(acoustic_hidden[-1], self.dropout)
             # encoded_acoustic = acoustic_hidden[-1]
 
@@ -196,7 +235,7 @@ class BasicEncoder(nn.Module):
 
         # inputs = encoded_text
         # print(encoded_acoustic.shape)
-        
+
         # combine modalities as required by architecture
         # inputs = torch.cat((acoustic_input, encoded_text), 1)
         if speaker_input is not None:
@@ -224,6 +263,7 @@ class TextOnlyCNN(nn.Module):
     A CNN with multiple input channels with different kernel size operating over input
     Used with only text modality.
     """
+
     def __init__(self, params, num_embeddings, pretrained_embeddings=None):
         super(TextOnlyCNN, self).__init__()
         # input dimensions
@@ -246,11 +286,18 @@ class TextOnlyCNN(nn.Module):
 
         # word embeddings
         if pretrained_embeddings is None:
-            self.embedding = nn.Embedding(num_embeddings, self.text_dim, padding_idx=0, max_norm=1.0)
+            self.embedding = nn.Embedding(
+                num_embeddings, self.text_dim, padding_idx=0, max_norm=1.0
+            )
             self.pretrained_embeddings = False
         else:
-            self.embedding = nn.Embedding(num_embeddings, self.text_dim, padding_idx=0,
-                                          _weight=pretrained_embeddings, max_norm=1.0)
+            self.embedding = nn.Embedding(
+                num_embeddings,
+                self.text_dim,
+                padding_idx=0,
+                _weight=pretrained_embeddings,
+                max_norm=1.0,
+            )
             self.pretrained_embeddings = True
 
         self.conv1 = nn.Conv1d(self.in_channels, self.out_channels, self.k1_size)
@@ -272,8 +319,14 @@ class TextOnlyCNN(nn.Module):
         # self.fc1 = nn.Linear(self.out_channels, params.text_cnn_hidden_dim)
         self.fc2 = nn.Linear(params.text_cnn_hidden_dim, self.output_dim)
 
-    def forward(self, acoustic_input, text_input, speaker_input=None, length_input=None,
-                gender_input=None):
+    def forward(
+        self,
+        acoustic_input,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        gender_input=None,
+    ):
         # get word embeddings
         if self.pretrained_embeddings:
             # detach to avoid training them if using pretrained
@@ -290,7 +343,7 @@ class TextOnlyCNN(nn.Module):
         feats1 = F.max_pool1d(conv1_out, 5, stride=1)  # .squeeze(dim=2)
         # print(feats1.shape)
         conv2_out = F.leaky_relu(self.conv2(inputs))
-        feats2 = F.max_pool1d(conv2_out, 4, stride=1)  #.squeeze(dim=2)
+        feats2 = F.max_pool1d(conv2_out, 4, stride=1)  # .squeeze(dim=2)
         # print(feats1.shape)
         conv3_out = F.leaky_relu(self.conv3(inputs))
         feats3 = F.max_pool1d(conv3_out, 3, stride=1)  # .squeeze(dim=2)
@@ -310,7 +363,7 @@ class TextOnlyCNN(nn.Module):
         # conv6_out = F.leaky_relu(self.conv6(intermediate))
         # conv6_out = F.leaky_relu(self.conv6(torch.cat((feats4, feats5), 1)))
 
-        #feats6
+        # feats6
         all_feats = F.max_pool1d(intermediate, intermediate.size(dim=2)).squeeze(dim=2)
 
         # all_feats = torch.cat((feats4, feats5, feats6), 1)
@@ -329,6 +382,7 @@ class PredictionLayer(nn.Module):
     """
     A final layer for predictions
     """
+
     def __init__(self, params, out_dim):
         super(PredictionLayer, self).__init__()
         self.input_dim = params.fc_hidden_dim
@@ -349,7 +403,10 @@ class MultitaskModel(nn.Module):
     """
     A model combining base + output layers for multitask learning
     """
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None,):
+
+    def __init__(
+        self, params, num_embeddings=None, pretrained_embeddings=None,
+    ):
         super(MultitaskModel, self).__init__()
         # set base of model
         self.base = BasicEncoder(params, num_embeddings, pretrained_embeddings)
@@ -358,12 +415,24 @@ class MultitaskModel(nn.Module):
         self.class_1_predictor = PredictionLayer(params, params.output_dim)
         self.class_2_predictor = PredictionLayer(params, params.output_2_dim)
 
-    def forward(self, acoustic_input, text_input, speaker_input=None, length_input=None,
-                acoustic_len_input=None, gender_input=None):
+    def forward(
+        self,
+        acoustic_input,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        acoustic_len_input=None,
+        gender_input=None,
+    ):
         # call forward on base model
-        final_base_layer = self.base(acoustic_input, text_input, speaker_input=speaker_input,
-                                     length_input=length_input, acoustic_len_input=acoustic_len_input,
-                                     gender_input=gender_input)
+        final_base_layer = self.base(
+            acoustic_input,
+            text_input,
+            speaker_input=speaker_input,
+            length_input=length_input,
+            acoustic_len_input=acoustic_len_input,
+            gender_input=gender_input,
+        )
 
         # get first output prediction
         class_1_out = self.class_1_predictor(final_base_layer)

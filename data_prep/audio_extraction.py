@@ -74,7 +74,7 @@ class TRSToCSV:
                     )
         with open(f"{savepath}/{self.tname}.tsv", "w") as cfile:
             for item in trs_arr:
-                cfile.write("\t".join([str(x) for x in item[0:6]]) + "\n")
+                cfile.write("\t".join([str(x) for x in item]) + "\n")
 
 
 class ExtractAudio:
@@ -145,12 +145,11 @@ class AudioSplit:
           timestart = time of start of turn
           timeend   = time of turn end
         """
-        n = 0
 
         os.makedirs(self.fullp, exist_ok=True)
 
         with open(self.cfile, "r") as csvfile:
-            for line in csvfile:
+            for n, line in enumerate(csvfile):
                 speaker, timestart, timeend = line.strip().split(",")[:3]
                 os.makedirs(f"{self.fullp}/{speaker}", exist_ok=True)
                 sp.run(
@@ -163,12 +162,13 @@ class AudioSplit:
                         "-to",
                         str(timeend),
                         f"{self.fullp}/{speaker}/{n}",
+                        "-loglevel",
+                        "quiet"
                     ]
                 )
                 # Consider using a tqdm progress bar here - Adarsh
                 if n % 1000 == 0:
                     print(f"Completed {n+1} lines")
-                n += 1
 
     def make_textfile(self, audiodir, speaker):
         """
@@ -244,7 +244,6 @@ def transform_audio(txtfile):
                 audio_input.join_audio(f"{extension}-{speaker}.txt", speaker)
 
             sp.run(["rm", "-r", f"{path}/{extension}"])
-
 
 def load_feature_csv(audio_csv):
     """
