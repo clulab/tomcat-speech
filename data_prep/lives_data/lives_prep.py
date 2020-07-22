@@ -11,12 +11,28 @@ import functools
 import operator
 import os
 
-from data_prep.prepare_data import MinMaxScaleRange, get_longest_utterance, clean_up_word, get_avg_vec, scale_feature
+from data_prep.data_prep_helpers import (
+    MinMaxScaleRange,
+    get_longest_utterance,
+    clean_up_word,
+    get_avg_vec,
+    scale_feature,
+)
 
 
 class ClinicalDataset(Dataset):
-    def __init__(self, acoustic_dict, glove, ys_path, splits=5, cols_to_skip=3, norm="minmax",
-                 sequence_prep=None, truncate_from="start", alignment=None):
+    def __init__(
+        self,
+        acoustic_dict,
+        glove,
+        ys_path,
+        splits=5,
+        cols_to_skip=3,
+        norm="minmax",
+        sequence_prep=None,
+        truncate_from="start",
+        alignment=None,
+    ):
         """
         :param acoustic_dict: dict of {(sid, call) : data}
         :param glove: an instance of class Glove
@@ -41,13 +57,21 @@ class ClinicalDataset(Dataset):
             self.min_max_scaler = MinMaxScaleRange()
             self.get_min_max_scales()
 
-        self.valid_files = self.ys_df['sid'].tolist()
+        self.valid_files = self.ys_df["sid"].tolist()
         self.skipped_files = []
 
         if self.alignment == "utt":
-            self.x_acoustic, self.x_glove, self.x_speaker = self.combine_data_utt_level()
+            (
+                self.x_acoustic,
+                self.x_glove,
+                self.x_speaker,
+            ) = self.combine_data_utt_level()
         else:
-            self.x_acoustic, self.x_glove, self.x_speaker = self.combine_acoustic_and_glove()
+            (
+                self.x_acoustic,
+                self.x_glove,
+                self.x_speaker,
+            ) = self.combine_acoustic_and_glove()
         self.y_data = self.create_ordered_ys()
         self.data = self.combine_xs_and_ys()
         self.splits = splits
@@ -65,8 +89,8 @@ class ClinicalDataset(Dataset):
         for call in self.acoustic_dict.values():
             for row in call.itertuples():
                 for i, wd in enumerate(row):
-                    if i >= self.cols_to_skip+1:
-                        self.min_max_scaler.update((i-(self.cols_to_skip+1)), wd)
+                    if i >= self.cols_to_skip + 1:
+                        self.min_max_scaler.update((i - (self.cols_to_skip + 1)), wd)
 
     def __len__(self):
         return len(self.current_split)
@@ -83,7 +107,11 @@ class ClinicalDataset(Dataset):
         else:
             prev = max(self.data_for_model_input.keys())
         self.val_split = self.data_for_model_input[prev]
-        remaining_splits = [val for key, val in self.data_for_model_input.items() if (key != n and key != prev)]
+        remaining_splits = [
+            val
+            for key, val in self.data_for_model_input.items()
+            if (key != n and key != prev)
+        ]
         self.remaining_splits = functools.reduce(operator.iconcat, remaining_splits, [])
 
     def get_data_splits(self):
@@ -97,9 +125,9 @@ class ClinicalDataset(Dataset):
         # get split indices
         c = 0
         # for all but final split
-        for split in range(self.splits-1):
+        for split in range(self.splits - 1):
             split_data = []
-            split_idx = indices[split_len*c:split_len*(c+1)]
+            split_idx = indices[split_len * c : split_len * (c + 1)]
             # get data for each of the indices
             for i in split_idx:
                 split_data.append(self.data[i])
@@ -107,7 +135,7 @@ class ClinicalDataset(Dataset):
             data_dict[c] = split_data
             c += 1
         # for final split do the same
-        split_idx = indices[split_len*c:]
+        split_idx = indices[split_len * c :]
         split_data = []
         for i in split_idx:
             split_data.append(self.data[i])
@@ -134,7 +162,7 @@ class ClinicalDataset(Dataset):
         # counter for smallest dataframe for truncation
         # get skipped files based on number of items
         #   e.g. too few utts
-        if self.sequence_prep == 'truncate':
+        if self.sequence_prep == "truncate":
             smallest = self.truncate_seq()
 
         # get longest utterance
@@ -151,15 +179,17 @@ class ClinicalDataset(Dataset):
                 intermediate_speakers = []
                 intermediate_acoustic = []
 
-                for i in range(item['utt_num'].max()):
+                for i in range(item["utt_num"].max()):
 
-                    utterance = item.loc[item['utt_num'] == i + 1]
+                    utterance = item.loc[item["utt_num"] == i + 1]
 
                     utt_wds = [0] * longest_utt
                     # utt_speakers = []
                     utt_acoustic = []
 
-                    utt_speaker = utterance['speaker'].max()  # they should all be the same number
+                    utt_speaker = utterance[
+                        "speaker"
+                    ].max()  # they should all be the same number
 
                     wd_idx = 0
 
@@ -169,7 +199,7 @@ class ClinicalDataset(Dataset):
                     for idx, row in utterance.iterrows():
 
                         # get the word
-                        wd = row['word']
+                        wd = row["word"]
                         wd = clean_up_word(wd)
                         # save that word's index
                         if wd in self.glove.wd2idx.keys():
@@ -257,7 +287,7 @@ class ClinicalDataset(Dataset):
         # counter for smallest dataframe for truncation
         # get skipped files based on number of items
         #   e.g. too few utts
-        if self.sequence_prep == 'truncate':
+        if self.sequence_prep == "truncate":
             smallest = self.truncate_seq()
 
         # iterate through items in the acoustic dict
@@ -272,11 +302,13 @@ class ClinicalDataset(Dataset):
                 # for each row in that item's dataframe
                 for idx, row in item.iterrows():
                     # get the speaker
-                    spkr = row['speaker']
-                    intermediate_speakers.append(spkr - 1)  # speakers are currently 1 and 2, we want 0 and 1
+                    spkr = row["speaker"]
+                    intermediate_speakers.append(
+                        spkr - 1
+                    )  # speakers are currently 1 and 2, we want 0 and 1
 
                     # get the word
-                    wd = row['word']
+                    wd = row["word"]
                     wd = clean_up_word(wd)
                     # save that word's index
                     if wd in self.glove.wd2idx.keys():
@@ -330,15 +362,6 @@ class ClinicalDataset(Dataset):
             ordered_speakers = torch.tensor(ordered_speakers)
         print("Acoustic data size is: " + str(acoustic_data.shape))
         print("Ordered words is: " + str(ordered_words.shape))
-        # print(len(acoustic_data))
-        # print(len(acoustic_data[0]))
-        # print(len(acoustic_data[0][0]))
-        # print(type(ordered_words))
-        # print(type(ordered_words[0]))
-
-        # sys.exit(1)
-
-        # print("Size of acoustic data is now: " + str(acoustic_data.shape))
 
         print("Data prep and normalization complete")
 
@@ -353,7 +376,7 @@ class ClinicalDataset(Dataset):
         ordered_ys = []
 
         # set index for ys dataframe to sid to use it in search
-        ys = self.ys_df.set_index(['sid'])
+        ys = self.ys_df.set_index(["sid"])
 
         # for each (sid, callid) pair in acoustic dict's keys
         for tup in self.acoustic_dict.keys():
@@ -380,8 +403,13 @@ class ClinicalDataset(Dataset):
     def minmax_scale(self, df, lower=0, upper=1):
         # perform min-max scaling
         for i, val in enumerate(df):
-            new_val = scale_feature(val, self.min_max_scaler.min(i), self.min_max_scaler.max(i),
-                                    lower, upper)
+            new_val = scale_feature(
+                val,
+                self.min_max_scaler.min(i),
+                self.min_max_scaler.max(i),
+                lower,
+                upper,
+            )
             df[i] = new_val
         return df
 
@@ -402,25 +430,3 @@ class ClinicalDataset(Dataset):
         self.skipped_files = skipped_files
 
         return smallest_item
-
-
-def make_acoustic_dict(acoustic_path, f_end="_IS09_avgd.csv", use_cols=None, data_type="clinical"):
-    """
-    makes a dict of (sid, call): data for use in ClinicalDataset objects
-    f_end: end of acoustic file names
-    use_cols: if set, should be a list [] of column names to include
-    """
-    acoustic_dict = {}
-    for f in os.listdir(acoustic_path):
-        if f.endswith(f_end):
-            if use_cols is not None:
-                feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
-            else:
-                feats = pd.read_csv(acoustic_path + "/" + f)
-            sid = f.split("_")[0]
-            if data_type == "asist":
-                callid = f.split("_")[2]  # asist data has format sid_mission_num
-            else:
-                callid = f.split("_")[1]  # clinical data has format sid_callid
-            acoustic_dict[(sid, callid)] = feats
-    return acoustic_dict

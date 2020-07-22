@@ -31,21 +31,29 @@ for item in os.listdir(trs_path):
 
             # extract audio features with OpenSMILE
             acoustic_savename = "{0}_{1}".format(item_name, feature_set)
-            audio_extract = extraction.ExtractAudio(audio_path, "{0}.wav".format(item_name), save_path)
-            audio_extract.save_acoustic_csv(feature_set, "{0}.csv".format(acoustic_savename))
+            audio_extract = extraction.ExtractAudio(
+                audio_path, "{0}.wav".format(item_name), save_path
+            )
+            audio_extract.save_acoustic_csv(
+                feature_set, "{0}.csv".format(acoustic_savename)
+            )
 
             # load csv of features + csv of transcription information
-            audio_df = extraction.load_feature_csv("{0}/{1}".format(save_path, "{0}.csv".format(acoustic_savename)))
+            audio_df = extraction.load_feature_csv(
+                "{0}/{1}".format(save_path, "{0}.csv".format(acoustic_savename))
+            )
 
             # uncomment the first time using
             # extraction.expand_words("{0}/{1}.tsv".format(save_path, item_name),
             #                         "{0}/{1}-expanded.csv".format(save_path, item_name))
 
             # read in the saved csv
-            expanded_wds_df = pd.read_csv("{0}/{1}-expanded.csv".format(save_path, item_name), sep='\t')
+            expanded_wds_df = pd.read_csv(
+                "{0}/{1}-expanded.csv".format(save_path, item_name), sep="\t"
+            )
 
             # combine the files
-            combined = pd.merge(audio_df, expanded_wds_df, on='frameTime')
+            combined = pd.merge(audio_df, expanded_wds_df, on="frameTime")
 
             # average across words and save as new csv
             wd_avgd = extraction.avg_feats_across_words(combined)
@@ -54,7 +62,7 @@ for item in os.listdir(trs_path):
         except:
             failed_list.append(item)
 
-with open("/Volumes/LIvES/multimodal_data_updated/failed_items.txt", 'w') as tfile:
+with open("/Volumes/LIvES/multimodal_data_updated/failed_items.txt", "w") as tfile:
     for item in failed_list:
         tfile.write(item)
         tfile.write("\n")

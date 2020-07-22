@@ -9,6 +9,7 @@ class MultichannelCNN(nn.Module):
     """
     A CNN with multiple input channels with different kernel size operating over input
     """
+
     def __init__(self, params, num_embeddings, pretrained_embeddings=None):
         super(MultichannelCNN, self).__init__()
         # input dimensions
@@ -32,15 +33,24 @@ class MultichannelCNN(nn.Module):
 
         # speaker embeddings
         if params.spkr_embedding_size > 0:
-            self.speaker_embeddings = nn.Embedding(params.num_speakers, params.spkr_emb_dim, max_norm=1.0)
+            self.speaker_embeddings = nn.Embedding(
+                params.num_speakers, params.spkr_emb_dim, max_norm=1.0
+            )
 
         # word embeddings
         if pretrained_embeddings is None:
-            self.embedding = nn.Embedding(num_embeddings, self.text_dim, params.padding_idx, max_norm=1.0)
+            self.embedding = nn.Embedding(
+                num_embeddings, self.text_dim, params.padding_idx, max_norm=1.0
+            )
             self.pretrained_embeddings = False
         else:
-            self.embedding = nn.Embedding(num_embeddings, self.text_dim, params.padding_idx,
-                                          _weight=pretrained_embeddings, max_norm=1.0)
+            self.embedding = nn.Embedding(
+                num_embeddings,
+                self.text_dim,
+                params.padding_idx,
+                _weight=pretrained_embeddings,
+                max_norm=1.0,
+            )
             self.pretrained_embeddings = True
 
         # convolutional layers and max pool of outputs
@@ -101,6 +111,7 @@ class BimodalCNN(nn.Module):
     hidden_dim : size of hidden layer
     output_dim : length of output vector
     """
+
     def __init__(self, params, num_embeddings=None, pretrained_embeddings=None):
         super(BimodalCNN, self).__init__()
         # set dimensions of input
@@ -130,20 +141,31 @@ class BimodalCNN(nn.Module):
 
         # initialize speaker embeddings
         if params.use_speaker:
-            self.speaker_embeddings = nn.Embedding(params.num_speakers, params.spkr_emb_dim, max_norm=1.0)
+            self.speaker_embeddings = nn.Embedding(
+                params.num_speakers, params.spkr_emb_dim, max_norm=1.0
+            )
 
         # initialize word embeddings
         if num_embeddings is not None:
             if pretrained_embeddings is None:
-                self.embedding = nn.Embedding(num_embeddings, self.text_dim, params.padding_idx, max_norm=1.0)
+                self.embedding = nn.Embedding(
+                    num_embeddings, self.text_dim, params.padding_idx, max_norm=1.0
+                )
                 self.pretrained_embeddings = False
             else:
-                self.embedding = nn.Embedding(num_embeddings, self.text_dim, params.padding_idx,
-                                              _weight=pretrained_embeddings, max_norm=1.0)
+                self.embedding = nn.Embedding(
+                    num_embeddings,
+                    self.text_dim,
+                    params.padding_idx,
+                    _weight=pretrained_embeddings,
+                    max_norm=1.0,
+                )
                 self.pretrained_embeddings = True
 
         # initialize mandatory convolutional layer
-        self.conv1 = nn.Conv1d(self.in_channels, params.out_channels, self.kernel_size, stride=1)
+        self.conv1 = nn.Conv1d(
+            self.in_channels, params.out_channels, self.kernel_size, stride=1
+        )
 
         # initialize fully connected layers
         if params.num_fc_layers == 1:
@@ -155,13 +177,21 @@ class BimodalCNN(nn.Module):
 
         # add optional layers as required
         if params.num_layers > 1:
-            self.conv2 = nn.Conv1d(params.out_channels, params.out_channels, self.kernel_size, stride=2)
+            self.conv2 = nn.Conv1d(
+                params.out_channels, params.out_channels, self.kernel_size, stride=2
+            )
             if params.num_layers == 3:
-                self.conv3 = nn.Conv1d(params.out_channels, params.out_channels, self.kernel_size, stride=1)
+                self.conv3 = nn.Conv1d(
+                    params.out_channels, params.out_channels, self.kernel_size, stride=1
+                )
             elif params.num_layers == 4:
                 # different stride in layer 3 if using 4 layers
-                self.conv3 = nn.Conv1d(params.out_channels, params.out_channels, self.kernel_size, stride=2)
-                self.conv4 = nn.Conv1d(params.out_channels, params.out_channels, self.kernel_size)
+                self.conv3 = nn.Conv1d(
+                    params.out_channels, params.out_channels, self.kernel_size, stride=2
+                )
+                self.conv4 = nn.Conv1d(
+                    params.out_channels, params.out_channels, self.kernel_size
+                )
 
     def forward(self, acoustic_input, text_input, speaker_input=None):
         # create word embeddings
@@ -287,6 +317,7 @@ class BimodalCNN(nn.Module):
 #                                                                        #
 ##########################################################################
 
+
 class UttLevelBimodalCNN(nn.Module):
     """
     A CNN for bimodal (text, audio) data; layers after 1 operate over output of layer 1?
@@ -295,6 +326,7 @@ class UttLevelBimodalCNN(nn.Module):
     hidden_dim : size of hidden layer
     output_dim : length of output vector
     """
+
     def __init__(self, params, num_embeddings=None, pretrained_embeddings=None):
         super(UttLevelBimodalCNN, self).__init__()
         # set dimensions of input
@@ -324,20 +356,31 @@ class UttLevelBimodalCNN(nn.Module):
 
         # initialize speaker embeddings
         if params.use_speaker:
-            self.speaker_embeddings = nn.Embedding(params.num_speakers, params.spkr_emb_dim, max_norm=1.0)
+            self.speaker_embeddings = nn.Embedding(
+                params.num_speakers, params.spkr_emb_dim, max_norm=1.0
+            )
 
         # initialize word embeddings
         if num_embeddings is not None:
             if pretrained_embeddings is None:
-                self.embedding = nn.Embedding(num_embeddings, self.text_dim, params.padding_idx, max_norm=1.0)
+                self.embedding = nn.Embedding(
+                    num_embeddings, self.text_dim, params.padding_idx, max_norm=1.0
+                )
                 self.pretrained_embeddings = False
             else:
-                self.embedding = nn.Embedding(num_embeddings, self.text_dim, params.padding_idx,
-                                              _weight=pretrained_embeddings, max_norm=1.0)
+                self.embedding = nn.Embedding(
+                    num_embeddings,
+                    self.text_dim,
+                    params.padding_idx,
+                    _weight=pretrained_embeddings,
+                    max_norm=1.0,
+                )
                 self.pretrained_embeddings = True
 
         # initialize mandatory convolutional layer
-        self.conv1 = nn.Conv1d(self.in_channels, params.out_channels, self.kernel_size, stride=1)
+        self.conv1 = nn.Conv1d(
+            self.in_channels, params.out_channels, self.kernel_size, stride=1
+        )
 
         # initialize fully connected layers
         if params.num_fc_layers == 1:
@@ -349,13 +392,21 @@ class UttLevelBimodalCNN(nn.Module):
 
         # add optional layers as required
         if params.num_layers > 1:
-            self.conv2 = nn.Conv1d(params.out_channels, params.out_channels, self.kernel_size, stride=2)
+            self.conv2 = nn.Conv1d(
+                params.out_channels, params.out_channels, self.kernel_size, stride=2
+            )
             if params.num_layers == 3:
-                self.conv3 = nn.Conv1d(params.out_channels, params.out_channels, self.kernel_size, stride=1)
+                self.conv3 = nn.Conv1d(
+                    params.out_channels, params.out_channels, self.kernel_size, stride=1
+                )
             elif params.num_layers == 4:
                 # different stride in layer 3 if using 4 layers
-                self.conv3 = nn.Conv1d(params.out_channels, params.out_channels, self.kernel_size, stride=2)
-                self.conv4 = nn.Conv1d(params.out_channels, params.out_channels, self.kernel_size)
+                self.conv3 = nn.Conv1d(
+                    params.out_channels, params.out_channels, self.kernel_size, stride=2
+                )
+                self.conv4 = nn.Conv1d(
+                    params.out_channels, params.out_channels, self.kernel_size
+                )
 
     def forward(self, acoustic_input, text_input, speaker_input=None):
         # create word embeddings

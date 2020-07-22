@@ -1,6 +1,6 @@
 # test glove subsetting
 
-import data_prep.subset_glove as glove
+import data_prep.glove_subsetting as glove
 
 # set paths
 vocab_path = "/Volumes/LIvES/multimodal_data/"
