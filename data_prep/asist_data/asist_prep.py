@@ -9,6 +9,7 @@ import pandas as pd
 import ast
 import random
 import re
+import argparse
 
 
 ################################################################################
@@ -639,6 +640,27 @@ def run_sentiment_analysis_pipeline(asist, sentiment_text_path):
 ################################################################################
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--data_path",
+        help="Directory in which the data resides",
+        default="~/Downloads/data_flatstructure",
+    )
+    parser.add_argument(
+        "--save_path",
+        help="Directory to which the output should be written",
+        default="output/asist_audio",
+    )
+    parser.add_argument(
+        "--opensmile_path",
+        help="Path to OpenSMILE",
+        default="~/opensmile-2.3.0",
+    )
+    parser.add_argument(
+        "--sentiment_text_path",
+        help="Path to text-based sentiment analysis outputs",
+        default="output/",
+    )
     if len(sys.argv) <= 2:
         # define variables
         # data_path = "../../Downloads/real_search_data"
