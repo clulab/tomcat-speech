@@ -1,186 +1,17 @@
-# prepare text and audio for use in neural network models
-import os
-import pickle
-import sys
 from collections import OrderedDict
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
+from torch.utils.data import Dataset
 
-import numpy as np
+from collections import OrderedDict
 import pandas as pd
-import math
-import pprint
-import warnings
-import random
+import numpy as np
 import functools
 import operator
-import statistics
+import os
 
-from sklearn.metrics import classification_report
-from sklearn.utils import shuffle
-
-# set random seed
-from torch.utils.data import Dataset
-# from py_code.parameters.bimodal_params import params
-
-# seed = params.seed
-# torch.manual_seed(seed)
-# np.random.seed(seed)
-# random.seed(seed)
-
-
-def clean_up_word(word):
-    # clean up word by putting in lowercase + removing punct
-    punct = [",", ".", "!", "?", ";", ":"]  # don't include hyphen
-    for char in word:
-        if char in punct:
-            word = word.replace(char, "")
-    return word.lower()
-
-
-def get_avg_vec(nested_list):
-    # get the average vector of a nested list
-    # used for utterance-level feature averaging
-    return [statistics.mean(item) for item in zip(*nested_list)]
-
-
-def make_glove_dict(glove_path):
-    """creates a dict of word: embedding pairs
-    :param glove_path: the path to our glove file
-    (includes name of file and extension)
-    """
-    glove_dict = {}
-    with open(glove_path) as glove_file:
-        for line in glove_file:
-            line = line.strip().split()
-            glove_dict[line[0]] = [float(item) for item in line[1:]]
-    return glove_dict
-
-
-class Glove(object):
-    def __init__(self, glove_dict):
-        """
-        Use a dict of format {word: vec} to get nn.Embedding
-        :param glove_dict: a dict created with make_glove_dict
-        """
-        self.glove_dict = OrderedDict(glove_dict)
-        self.data = self.create_embedding()
-        # self.embedding = nn.Embedding.from_pretrained(self.data)
-        self.wd2idx = self.get_index_dict()
-        self.idx2glove = self.get_index2glove_dict()  # todo: get rid of me
-        self.max_idx = -1
-
-    def create_embedding(self):
-        emb = []
-        for vec in self.glove_dict.values():
-            emb.append(vec)
-        return torch.tensor(emb)
-
-    def get_embedding_from_index(self, idx):
-        return self.idx2glove[idx]
-
-    def get_index_dict(self):
-        # create word: index dict
-        c = 0
-        wd2idx = {}
-        for k in self.glove_dict.keys():
-            wd2idx[k] = c
-            c += 1
-        self.max_idx = c
-        return wd2idx
-
-    def get_index2glove_dict(self):
-        # create index: vector dict
-        c = 0
-        idx2glove = {}
-        for k, v in self.glove_dict.items():
-            idx2glove[self.wd2idx[k]] = v
-        return idx2glove
-
-    def add_vector(self, word, vec):
-        # adds a new word vector to the dictionaries
-        self.max_idx += 1
-        if self.max_idx not in self.wd2idx.keys():
-            self.wd2idx[self.max_idx] = word
-            self.idx2glove[self.max_idx] = vec
-
-
-def make_acoustic_dict(acoustic_path, f_end="_IS09_avgd.csv", use_cols=None, data_type="clinical"):
-    """
-    makes a dict of (sid, call): data for use in ClinicalDataset objects
-    f_end: end of acoustic file names
-    use_cols: if set, should be a list [] of column names to include
-    """
-    acoustic_dict = {}
-    for f in os.listdir(acoustic_path):
-        if f.endswith(f_end):
-            if use_cols is not None:
-                feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
-            else:
-                feats = pd.read_csv(acoustic_path + "/" + f)
-            sid = f.split("_")[0]
-            if data_type == "asist":
-                callid = f.split("_")[2]  # asist data has format sid_mission_num
-            else:
-                callid = f.split("_")[1]  # clinical data has format sid_callid
-            acoustic_dict[(sid, callid)] = feats
-    return acoustic_dict
-
-
-class MinMaxScaleRange:
-    """
-    A class to calculate mins and maxes for each feature in the data in order to
-    use min-max scaling
-    """
-    def __init__(self, ):
-        self.mins = {}
-        self.maxes = {}
-
-    def update(self, key, val):
-        if (key in self.mins.keys() and val < self.mins[key]) or key not in self.mins.keys():
-            self.mins[key] = val
-        if (key in self.maxes.keys() and val > self.maxes[key]) or key not in self.maxes.keys():
-            self.maxes[key] = val
-
-    def contains(self, key):
-        if key in self.mins.keys():
-            return True
-        else:
-            return False
-
-    def min(self, key):
-        try:
-            return self.mins[key]
-        except KeyError:
-            return "The key {0} does not exist in mins".format(key)
-
-    def max(self, key):
-        try:
-            return self.maxes[key]
-        except KeyError:
-            return "The key {0} does not exist in maxes".format(key)
-
-    def save(self, save_path, save_name):
-        if save_path.endswith("/"):
-            saver = save_path + save_name
-        else:
-            saver = save_path + "/" + save_name
-        with open(saver + "_mins.pkl", 'wb') as savefile:
-            pickle.dump(self.mins, savefile)
-        with open(saver + "_maxes.pkl", 'wb') as savefile:
-            pickle.dump(self.maxes, savefile)
-
-
-def scale_feature(value, min_val, max_val, lower=0., upper=1.):
-    # scales a single feature using min-max normalization
-    if min_val == max_val:
-        return upper
-    else:
-        # the result will be a value in [lower, upper]
-        return lower + (upper - lower) * (value - min_val) / (max_val - min_val)
+from data_prep.prepare_data import MinMaxScaleRange, get_longest_utterance, clean_up_word, get_avg_vec, scale_feature
 
 
 class ClinicalDataset(Dataset):
@@ -573,44 +404,23 @@ class ClinicalDataset(Dataset):
         return smallest_item
 
 
-def get_longest_utterance(pd_dataframes):
+def make_acoustic_dict(acoustic_path, f_end="_IS09_avgd.csv", use_cols=None, data_type="clinical"):
     """
-    Get the longest utterance in the dataset
-    :param pd_dataframes: the dataframes for the dataset
-    :return:
+    makes a dict of (sid, call): data for use in ClinicalDataset objects
+    f_end: end of acoustic file names
+    use_cols: if set, should be a list [] of column names to include
     """
-    max_length = 0
-    for item in pd_dataframes:
-        for i in range(item['utt_num'].max()):
-            utterance = item.loc[item['utt_num'] == i + 1]
-            utt_length = utterance.shape[0]
-            if utt_length > max_length:
-                max_length = utt_length
-                # print(max_length)
-    return max_length
-
-
-# not currently used, but could be useful
-# may need to be tested/cleaned up!
-class DemographicFeats:
-    """
-    Get and manipulate the set of demographic features to be included as an input
-    """
-    def __init__(self, feats_path, feats_file):
-        self.path = feats_path
-        self.ffile = feats_file
-        self.feats = pd.read_csv("{0}/{1}".format(self.path, self.ffile))
-        self.feat_names = list(self.feats.columns)
-        self.feat_values = self.feats.to_numpy()
-
-    def select_feats(self, colnames):
-        """
-        Get the values for a selected set of features
-        colnames : an array of desired feature names
-        """
-        # remove features that are not in the set of feature names
-        for name in colnames:
-            if name not in self.feat_names:
-                colnames.pop(name)
-                warnings.warn("Demographic feature {0} is not available".format(name))
-        return self.feats[colnames]
+    acoustic_dict = {}
+    for f in os.listdir(acoustic_path):
+        if f.endswith(f_end):
+            if use_cols is not None:
+                feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
+            else:
+                feats = pd.read_csv(acoustic_path + "/" + f)
+            sid = f.split("_")[0]
+            if data_type == "asist":
+                callid = f.split("_")[2]  # asist data has format sid_mission_num
+            else:
+                callid = f.split("_")[1]  # clinical data has format sid_callid
+            acoustic_dict[(sid, callid)] = feats
+    return acoustic_dict
