@@ -1,6 +1,5 @@
 library(stringr)
 ############ Read files ####################
-setwd("~/github/asist-speech/classifier_R/extra")
 speaker = read.csv("speaker2idx.csv",header=TRUE, stringsAsFactors = FALSE) #file with speaker details
 names(speaker) <- c("speaker", "Speaker", "gender") #rename columns
 
