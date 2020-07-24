@@ -66,7 +66,7 @@ class Glove(object):
 
     def id_or_unk(self, t):
         if t.strip() in self.wd2idx:
-            return self.wd2idx[t]
+            return self.wd2idx[t.strip()]
         else:
             # print(f"OOV: [[{t}]]")
             return self.wd2idx["<UNK>"]

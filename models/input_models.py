@@ -94,10 +94,15 @@ class BasicEncoder(nn.Module):
         # set the size of the input into the fc layers
         if params.avgd_acoustic or params.add_avging:
             self.fc_input_dim = params.text_gru_hidden_dim + params.audio_dim
+            # self.fc_input_dim = params.text_gru_hidden_dim + 100
+
         else:
             self.fc_input_dim = (
                 params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
             )
+
+        self.acoustic_fc_1 = nn.Linear(params.audio_dim, 100)
+        self.acoustic_fc_2 = nn.Linear(100, params.audio_dim)
 
         if params.use_speaker:
             self.fc_input_dim = self.fc_input_dim + params.speaker_emb_dim
@@ -230,6 +235,9 @@ class BasicEncoder(nn.Module):
                 encoded_acoustic = acoustic_input.squeeze()
             else:
                 encoded_acoustic = acoustic_input
+
+            encoded_acoustic = torch.tanh(F.dropout(self.acoustic_fc_1(encoded_acoustic), self.dropout))
+            encoded_acoustic = torch.tanh(F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout))
             # print(encoded_acoustic.shape)
             # encoded_acoustic = self.acoustic_batch_norm(encoded_acoustic)
 

@@ -109,7 +109,8 @@ if __name__ == "__main__":
             # model_type = f"Multitask_1.6vs1lossWeighting_Adagrad_TextOnly_100batch_wd{str(wd)}_.2split"
             # model_type = f"TextOnly_smallerPool_100batch_wd{str(wd)}_.2split_500hidden"
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
-            model_type = "DELETE_ME"
+            # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
+            model_type = "MELD_Both_Paddings"
 
             # this uses train-dev-test folds
             # create instance of model
@@ -172,7 +173,7 @@ if __name__ == "__main__":
 
             train_data, dev_data = train_test_split(train_and_dev, test_size=0.2)  # .3
 
-            train_ds = DatumListDataset(train_data, data.emotion_weights)
+            train_ds = DatumListDataset(train_data, data_type="meld_emotion", class_weights=data.emotion_weights)
             train_targets = torch.stack(list(train_ds.targets()))
             sampler_weights = data.emotion_weights
             train_samples_weights = sampler_weights[train_targets]

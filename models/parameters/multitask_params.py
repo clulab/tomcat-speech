@@ -8,7 +8,7 @@ params = Namespace(
     # overall model parameters
     model="Multitask-meld",
     num_epochs=100,
-    batch_size=100,  # 128,  # 32
+    batch_size=10,  # 128,  # 32
     early_stopping_criteria=30,
     num_gru_layers=2,  # 1,   # 3,  # 1,  # 4, 2,
     bidirectional=False,
@@ -36,7 +36,7 @@ params = Namespace(
     speaker_emb_dim=3,
     # gender embeddings
     use_gender=True,
-    gender_emb_dim=3,
+    gender_emb_dim=4,
     # outputs
     output_dim=7,  # length of output vector
     output_2_dim=None,  # 3,    # length of second task output vec

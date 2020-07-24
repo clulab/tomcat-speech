@@ -353,10 +353,6 @@ class MeldPrep:
 
         all_utts = pad_sequence(all_utts, batch_first=True, padding_value=0)
 
-        # pad and transpose utterance sequences
-        all_utts = nn.utils.rnn.pad_sequence(all_utts)
-        all_utts = all_utts.transpose(0, 1)
-
         # return data
         return (
             all_utts,

@@ -6,6 +6,7 @@ from collections import OrderedDict
 
 import torch
 from torch import nn
+from torchtext.data import get_tokenizer
 
 from data_prep.audio_extraction import convert_mp4_to_wav, ExtractAudio
 from data_prep.data_prep_helpers import (
@@ -50,6 +51,9 @@ class MustardPrep:
         self.train, self.dev, self.test = create_data_folds(
             self.utterances, train_prop, test_prop
         )
+
+        # get tokenizer
+        self.tokenizer = get_tokenizer("basic_english")
 
         # train, dev, and test acoustic data
         self.train_dict, self.train_acoustic_lengths = make_acoustic_dict_meld(
@@ -149,7 +153,6 @@ class MustardPrep:
         self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
 
     def combine_xs_and_ys(self):
-        # todo: get this into the individual dataset classes
         """
         Combine all x and y data into list of tuples for easier access with DataLoader
         """
@@ -213,6 +216,7 @@ class MustardPrep:
         """
         Prepare the tensors of utterances + speakers, emotion and sentiment scores
         :param all_utts_df: the dataframe of all utterances
+        :param glove: an instance of class Glove
         :return:
         """
         # create holders for the data
@@ -229,6 +233,9 @@ class MustardPrep:
             utts = [0] * self.longest_utt
 
             # get values from row
+            # performacne was better without the tokenizer
+            # utt = clean_up_word(row["utterance"])
+            # utt = self.tokenizer(utt)
             utt = row["utterance"]
             utt = [clean_up_word(wd) for wd in utt.strip().split(" ")]
             utt_lengths.append(len(utt))
@@ -237,11 +244,14 @@ class MustardPrep:
             sarc = row["sarcasm"]
 
             # convert words to indices for glove
-            for ix, wd in enumerate(utt):
-                if wd in glove.wd2idx.keys():
-                    utts[ix] = glove.wd2idx[wd]
-                else:
-                    utts[ix] = glove.wd2idx["<UNK>"]
+            utt_indexed = glove.index(utt)
+            for i, item in enumerate(utt_indexed):
+                utts[i] = item
+            # for ix, wd in enumerate(utt):
+            #     if wd in glove.wd2idx.keys():
+            #         utts[ix] = glove.wd2idx[wd]
+            #     else:
+            #         utts[ix] = glove.wd2idx["<UNK>"]
 
             all_utts.append(torch.tensor(utts))
             all_speakers.append(spk_id)
@@ -256,7 +266,7 @@ class MustardPrep:
         speaker_ids = torch.tensor(speaker_ids)
         all_sarcasm = torch.tensor(all_sarcasm)
 
-        # padd and transpose utterance sequences
+        # pad and transpose utterance sequences
         all_utts = nn.utils.rnn.pad_sequence(all_utts)
         all_utts = all_utts.transpose(0, 1)
 
@@ -348,19 +358,27 @@ def preprocess_mustard_data(
         convert_mp4_to_wav(os.path.join(path_to_files, clip))
 
     # set path to acoustic feats
-    acoustic_save_path = os.path.join(json_path, acoustic_save_dir)
+    acoustic_save_path = os.path.join(base_path, acoustic_save_dir)
     # create the save directory if it doesn't exist
     if not os.path.exists(acoustic_save_path):
         os.makedirs(acoustic_save_path)
 
     # extract features using opensmile
     for audio_file in os.listdir(path_to_files):
-        if audio_file.endswith(".wav"):
-            audio_name = audio_file.split(".wav")[0]
-            audio_save_name = str(audio_name) + "_" + acoustic_feature_set + ".csv"
-            extractor = ExtractAudio(
-                path_to_files, audio_file, acoustic_save_path, smile_path
-            )
-            extractor.save_acoustic_csv(
-                feature_set=acoustic_feature_set, savename=audio_save_name
-            )
+        audio_name = audio_file.split(".wav")[0]
+        audio_save_name = str(audio_name) + "_" + acoustic_feature_set + ".csv"
+        extractor = ExtractAudio(
+            path_to_files, audio_file, acoustic_save_path, smile_path
+        )
+        extractor.save_acoustic_csv(
+            feature_set=acoustic_feature_set, savename=audio_save_name
+        )
+
+
+if __name__ == "__main__":
+    base = "../../datasets/multimodal_datasets/MUStARD/"
+    gold_save = "mustard_utts_attempt_2.tsv"
+    savedir = "acoustic_feats_attempt_2"
+    smilepath = "~/opensmile-2.3.0"
+
+    preprocess_mustard_data(base, gold_save, savedir, smilepath)

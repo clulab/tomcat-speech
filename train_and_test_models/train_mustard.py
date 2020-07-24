@@ -166,7 +166,6 @@ if __name__ == "__main__":
 
             train_targets = torch.stack(list(train_ds.targets()))
             sampler_weights = data.sarcasm_weights
-            print(train_targets)
             train_samples_weights = sampler_weights[train_targets]
             sampler = torch.utils.data.sampler.WeightedRandomSampler(
                 train_samples_weights, len(train_samples_weights)
