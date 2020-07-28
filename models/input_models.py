@@ -73,6 +73,9 @@ class BasicEncoder(nn.Module):
         self.num_speakers = params.num_speakers
         self.text_gru_hidden_dim = params.text_gru_hidden_dim
 
+        # get number of output dims
+        self.out_dims = params.output_dim
+
         # if we feed text through additional layer(s)
         # self.text_output_dim = params.text_output_dim
         self.text_rnn = nn.LSTM(
@@ -94,7 +97,7 @@ class BasicEncoder(nn.Module):
         # set the size of the input into the fc layers
         if params.avgd_acoustic or params.add_avging:
             self.fc_input_dim = params.text_gru_hidden_dim + params.audio_dim
-            # self.fc_input_dim = params.text_gru_hidden_dim + 100
+            # self.fc_input_dim = params.text_gru_hidden_dim + 20
 
         else:
             self.fc_input_dim = (
@@ -102,6 +105,7 @@ class BasicEncoder(nn.Module):
             )
 
         self.acoustic_fc_1 = nn.Linear(params.audio_dim, 100)
+        # self.acoustic_fc_2 = nn.Linear(100, 20)
         self.acoustic_fc_2 = nn.Linear(100, params.audio_dim)
 
         if params.use_speaker:
@@ -160,10 +164,10 @@ class BasicEncoder(nn.Module):
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
-        embs = F.dropout(self.embedding(text_input), self.dropout).detach()
+        embs = F.dropout(self.embedding(text_input), 0.1).detach()
         # embs = self.embedding(text_input).detach()
 
-        short_embs = F.dropout(self.short_embedding(text_input), self.dropout)
+        short_embs = F.dropout(self.short_embedding(text_input), 0.1)
         # short_embs = self.short_embedding(text_input)
 
         all_embs = torch.cat((embs, short_embs), dim=2)
@@ -202,7 +206,7 @@ class BasicEncoder(nn.Module):
         # print(all_hidden.shape)
         # sys.exit()
         # padded_output, lens = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True)
-        encoded_text = F.dropout(hidden[-1], self.dropout)
+        encoded_text = F.dropout(hidden[-1], .3)
         # encoded_text = F.dropout(all_hidden, self.dropout)
 
         # encoded_text = hidden[-1]
@@ -236,8 +240,8 @@ class BasicEncoder(nn.Module):
             else:
                 encoded_acoustic = acoustic_input
 
-            encoded_acoustic = torch.tanh(F.dropout(self.acoustic_fc_1(encoded_acoustic), self.dropout))
-            encoded_acoustic = torch.tanh(F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout))
+        encoded_acoustic = torch.tanh(F.dropout(self.acoustic_fc_1(encoded_acoustic), self.dropout))
+        encoded_acoustic = torch.tanh(F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout))
             # print(encoded_acoustic.shape)
             # encoded_acoustic = self.acoustic_batch_norm(encoded_acoustic)
 
@@ -255,13 +259,16 @@ class BasicEncoder(nn.Module):
 
         # print(inputs.shape)
         # use pooled, squeezed feats as input into fc layers
-        output = torch.tanh(F.dropout(self.fc1(inputs), self.dropout))
+        output = torch.tanh(F.dropout(self.fc1(inputs), .5))
+        # output = torch.tanh(self.fc1(inputs))
         # output = self.interfc_batch_norm(output)
         # todo: abstract this so it's only calculated if not multitask
         output = torch.relu(self.fc2(output))
         # output = F.softmax(output, dim=1)
         # output = torch.tanh(self.fc1(inputs))
 
+        if self.out_dims == 1:
+            output = F.sigmoid(output)
         # return the output
         return output
 

@@ -1,13 +1,10 @@
-# train the models created in models directory with MELD data
-# currently the main entry point into the system
+# train the network on ravdess input
 
 import sys
 import numpy as np
-
 from sklearn.model_selection import train_test_split
 
-sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
-
+from data_prep.ravdess_data.ravdess_prep import RavdessPrep
 from models.train_and_test_models import *
 
 from models.input_models import *
@@ -17,6 +14,8 @@ from data_prep.mustard_data.mustard_prep import *
 
 # import parameters for model
 from models.parameters.multitask_params import params
+
+sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 
 # set device
 cuda = False
@@ -42,13 +41,9 @@ random.seed(seed)
 glove_file = "../../glove.short.300d.punct.txt"
 # glove_file = "../../glove.42B.300d.txt"
 
-# meld_path = "/data/nlp/corpora/MM/MELD_five_dialogues"
-# meld_path = "/data/nlp/corpora/MM/MELD_formatted"
-meld_path = "../../datasets/multimodal_datasets/MELD_formatted"
-# meld_path = "../../datasets/multimodal_datasets/MELD_five_utterances"
-# meld_path = "../../datasets/multimodal_datasets/MUStARD"
+ravdess_path = "../../datasets/multimodal_datasets/RAVDESS_Speech/IS10"
 
-data_type = "meld"
+data_type = "ravdess_emotion"
 
 # set model name and model type
 model = params.model
@@ -73,24 +68,16 @@ if __name__ == "__main__":
     print("Glove object created")
 
     # 2. MAKE DATASET
-    # meld_data = MustardPrep(mustard_path=meld_path)
-    # data = MeldPrep(
-    #     meld_path=meld_path,
-    #     acoustic_length=params.audio_dim,
-    #     glove=glove,
-    #     add_avging=params.add_avging,
-    #     avgd=avgd_acoustic,
-    # )
-
-    data = MeldPrep(meld_path=meld_path, acoustic_length=params.audio_dim, glove=glove, add_avging=params.add_avging,
-                    use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
+    data = RavdessPrep(ravdess_path=ravdess_path, acoustic_length=params.audio_dim, glove=glove,
+                       add_avging=params.add_avging,
+                       use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
                               'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
                               'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
-                    avgd=avgd_acoustic)
+                       avgd=avgd_acoustic)
 
     # add class weights to device
     data.emotion_weights = data.emotion_weights.to(device)
-    data.sentiment_weights = data.sentiment_weights.to(device)
+    data.intensity_weights = data.intensity_weights.to(device)
 
     print("Dataset created")
 
@@ -106,52 +93,19 @@ if __name__ == "__main__":
     # mini search through different learning_rate values
     for lr in params.lrs:
         for wd in params.weight_decay:
-            # model_type = f"Multitask_1.6vs1lossWeighting_Adagrad_TextOnly_100batch_wd{str(wd)}_.2split"
-            # model_type = f"TextOnly_smallerPool_100batch_wd{str(wd)}_.2split_500hidden"
-            # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
-            # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
-            model_type = "MELD_IS10sm_500txthid_.1InDrpt_.3textdrpt_.4acdrpt_.5finalFCdrpt"
+            model_type = "RAVDESS_IS10sm_500txthid_.1InDrpt_.3textdrpt_.4acdrpt_.5finalFCdrpt"
 
             # this uses train-dev-test folds
             # create instance of model
-            multitask = False
-
-            if params.output_2_dim is not None:
-                multitask = True
-                bimodal_trial = MultitaskModel(
-                    params=params,
-                    num_embeddings=num_embeddings,
-                    pretrained_embeddings=pretrained_embeddings,
-                )
-                optimizer = torch.optim.Adagrad(
-                    lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
-                )
-                # optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
-                #                              weight_decay=wd)
-            elif params.text_only:
-                bimodal_trial = TextOnlyCNN(
-                    params=params,
-                    num_embeddings=num_embeddings,
-                    pretrained_embeddings=pretrained_embeddings,
-                )
-                optimizer = torch.optim.Adam(
-                    lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
-                )
-                # optimizer = torch.optim.Adagrad(lr=lr, params=bimodal_trial.parameters(),
-                #                              weight_decay=wd)
-                # optimizer = torch.optim.Adadelta(lr=lr, params=bimodal_trial.parameters(),
-                # weight_decay=wd)
-            else:
-                bimodal_trial = BasicEncoder(
-                    params=params,
-                    num_embeddings=num_embeddings,
-                    pretrained_embeddings=pretrained_embeddings,
-                )
-                optimizer = torch.optim.Adam(
-                    lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
-                )
-                # bimodal_trial = UttLRBaseline(params=params, num_embeddings=num_embeddings,
-                #                               pretrained_embeddings=pretrained_embeddings)
+            # TODO: WE WILL WANT TO REPLACE THIS WITH AN ACOUSTIC-ONLY MODEL, PROBABLY
+            bimodal_trial = BasicEncoder(
+                params=params,
+                num_embeddings=num_embeddings,
+                pretrained_embeddings=pretrained_embeddings,
+            )
+            optimizer = torch.optim.Adam(
+                lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
+            )
 
             # set the classifier(s) to the right device
             bimodal_trial = bimodal_trial.to(device)
@@ -161,29 +115,16 @@ if __name__ == "__main__":
             loss_func = nn.CrossEntropyLoss(reduction="mean")
             # loss_func = nn.CrossEntropyLoss(data.emotion_weights, reduction='mean')
 
-            # optimizer = torch.optim.SGD(bimodal_trial.parameters(), lr=lr, momentum=0.9)
-
             print("Model, loss function, and optimization created")
 
             # set the train, dev, and set data
             # train_data = data.train_data
 
             # combine train and dev data
-            train_and_dev = data.train_data + data.dev_data
-
-            train_data, dev_data = train_test_split(train_and_dev, test_size=0.2)  # .3
-
-            train_ds = DatumListDataset(train_data, data_type="meld_emotion", class_weights=data.emotion_weights)
-            # train_targets = torch.stack(list(train_ds.targets()))
-            # sampler_weights = data.emotion_weights
-            # train_samples_weights = sampler_weights[train_targets]
-            # sampler = torch.utils.data.sampler.WeightedRandomSampler(
-            #     train_samples_weights, len(train_samples_weights)
-            # )
-
-            dev_ds = DatumListDataset(dev_data, data.emotion_weights)
-            # dev_ds = DatumListDataset(data.dev_data, data.emotion_weights)
-            test_ds = DatumListDataset(data.test_data, data.emotion_weights)
+            # combine train and dev data
+            train_ds = DatumListDataset(data.train_data, data_type, data.emotion_weights)
+            dev_ds = DatumListDataset(data.dev_data, data_type, data.emotion_weights)
+            test_ds = DatumListDataset(data.test_data, data_type, data.emotion_weights)
 
             #
             # train_ds = data.train_data
@@ -199,40 +140,22 @@ if __name__ == "__main__":
             train_state = make_train_state(lr, model_save_path, model_save_file)
 
             # train the model and evaluate on development set
-            if multitask:
-                multitask_train_and_predict(
-                    bimodal_trial,
-                    train_state,
-                    train_ds,
-                    dev_ds,
-                    params.batch_size,
-                    params.num_epochs,
-                    loss_func,
-                    optimizer,
-                    device,
-                    scheduler=None,
-                    sampler=None,
-                    avgd_acoustic=avgd_acoustic_in_network,
-                    use_speaker=params.use_speaker,
-                    use_gender=params.use_gender,
-                )
-            else:
-                train_and_predict(
-                    bimodal_trial,
-                    train_state,
-                    train_ds,
-                    dev_ds,
-                    params.batch_size,
-                    params.num_epochs,
-                    loss_func,
-                    optimizer,
-                    device,
-                    scheduler=None,
-                    sampler=None,
-                    avgd_acoustic=avgd_acoustic_in_network,
-                    use_speaker=params.use_speaker,
-                    use_gender=params.use_gender,
-                )
+            train_and_predict(
+                bimodal_trial,
+                train_state,
+                train_ds,
+                dev_ds,
+                params.batch_size,
+                params.num_epochs,
+                loss_func,
+                optimizer,
+                device,
+                scheduler=None,
+                sampler=None,
+                avgd_acoustic=avgd_acoustic_in_network,
+                use_speaker=params.use_speaker,
+                use_gender=params.use_gender,
+            )
 
             # plot the loss and accuracy curves
             # set plot titles

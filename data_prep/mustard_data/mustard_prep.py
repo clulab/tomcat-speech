@@ -1,8 +1,9 @@
 # prepare the data from MUStARD dataset
-
+import math
 import os
 import json
 from collections import OrderedDict
+import random
 
 import torch
 from torch import nn
@@ -16,7 +17,7 @@ from data_prep.data_prep_helpers import (
     get_longest_utt,
     get_class_weights,
     make_acoustic_set,
-    transform_acoustic_item)
+    transform_acoustic_item, create_data_folds)
 from data_prep.meld_data.meld_prep import get_max_num_acoustic_frames, make_acoustic_dict_meld
 import pandas as pd
 
@@ -299,33 +300,6 @@ def organize_labels_from_json(jsonfile, savepath, save_name):
         for item in data_holder:
             savefile.write("\t".join(item))
             savefile.write("\n")
-
-
-def create_data_folds(data, perc_train, perc_test):
-    """
-    Create train, dev, and test folds for a dataset without them
-    Specify the percentage of the data that goes into each fold
-    data : a Pandas dataframe with (at a minimum) gold labels for all data
-    perc_* : the percentage for each fold
-    Percentage not included in train or test fold allocated to dev
-    """
-    # shuffle the rows of the dataframe
-    shuffled = data.sample(frac=1).reset_index(drop=True)
-
-    # get length of df
-    length = shuffled.shape[0]
-
-    # calculate length of each split
-    train_len = perc_train * length
-    test_len = perc_test * length
-
-    # get slices of dataset
-    train_data = shuffled.iloc[: int(train_len)]
-    test_data = shuffled.iloc[int(train_len) : int(train_len) + int(test_len)]
-    dev_data = shuffled.iloc[int(train_len) + int(test_len) :]
-
-    # return data
-    return train_data, dev_data, test_data
 
 
 def preprocess_mustard_data(

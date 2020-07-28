@@ -2,6 +2,7 @@
 # currently the main entry point into the system
 
 import sys
+import numpy as np
 
 from sklearn.model_selection import train_test_split
 
@@ -103,7 +104,7 @@ if __name__ == "__main__":
             # model_type = f"Multitask_1.6vs1lossWeighting_Adagrad_TextOnly_100batch_wd{str(wd)}_.2split"
             # model_type = f"TextOnly_smallerPool_100batch_wd{str(wd)}_.2split_500hidden"
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
-            model_type = "MUStARD_DELETE_ME"
+            model_type = "MUStARD_BCELoss"
 
             # this uses train-dev-test folds
             # create instance of model
@@ -151,7 +152,8 @@ if __name__ == "__main__":
             print(bimodal_trial)
 
             # set loss function, optimization, and scheduler, if using
-            loss_func = nn.CrossEntropyLoss(reduction="mean")
+            # loss_func = nn.CrossEntropyLoss(reduction="mean")
+            loss_func = nn.BCELoss(reduction="mean")
             # loss_func = nn.CrossEntropyLoss(data.sarcasm_weights, reduction='mean')
 
             print("Model, loss function, and optimization created")
@@ -216,6 +218,7 @@ if __name__ == "__main__":
                     avgd_acoustic=avgd_acoustic_in_network,
                     use_speaker=params.use_speaker,
                     use_gender=params.use_gender,
+                    binary=True
                 )
 
             # plot the loss and accuracy curves

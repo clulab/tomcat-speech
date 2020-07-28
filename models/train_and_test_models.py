@@ -7,7 +7,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import numpy as np
 
 # import parameters for model
 from torch.utils.data import DataLoader
@@ -112,6 +111,7 @@ def train_and_predict(
     avgd_acoustic=True,
     use_speaker=True,
     use_gender=False,
+    binary=False,
 ):
 
     for epoch_index in range(num_epochs):
@@ -131,9 +131,6 @@ def train_and_predict(
             train_ds, batch_size=batch_size, shuffle=True, sampler=sampler
         )
 
-        # acoustic_batches, embedding_batches, _, y_batches, length_batches = \
-        #     generate_batches(train_splits, batch_size, shuffle=True, device=device)
-
         # set holders to use for error analysis
         ys_holder = []
         preds_holder = []
@@ -147,11 +144,6 @@ def train_and_predict(
             optimizer.zero_grad()
 
             # step 2. compute the output
-            # acoustic_batches = [item[0] for item in batched_split]
-            # embedding_batches = [item[1] for item in batched_split]
-            # speaker_batches = [item[2] for item in batched_split]
-            # y_batches = [item[3] for item in batched_split]
-            # length_batches = [item[5] for item in batched_split]
             batch_acoustic = batch[0].to(device)
             batch_text = batch[1].to(device)
             batch_lengths = batch[-2].to(device)
@@ -184,6 +176,10 @@ def train_and_predict(
                     gender_input=batch_genders,
                 )
 
+            if binary:
+                y_pred = y_pred.float()
+                y_gold = y_gold.float()
+
             # uncomment for prediction spot-checking during training
             # if epoch_index % 10 == 0:
             #     print(y_pred)
@@ -192,7 +188,10 @@ def train_and_predict(
             #     sys.exit(1)
 
             # add ys to holder for error analysis
-            preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+            if binary:
+                preds_holder.extend([round(item[0]) for item in y_pred.tolist()])
+            else:
+                preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
             ys_holder.extend(y_gold.tolist())
 
             # step 3. compute the loss
@@ -200,9 +199,12 @@ def train_and_predict(
             loss_t = loss.item()  # loss for the item
 
             if len(list(y_pred.size())) > 1:
-                y_pred = torch.tensor(
-                    [item.index(max(item)) for item in y_pred.tolist()]
-                )
+                if binary:
+                    y_pred = torch.tensor([round(item[0]) for item in y_pred.tolist()])
+                else:
+                    y_pred = torch.tensor(
+                        [item.index(max(item)) for item in y_pred.tolist()]
+                    )
             else:
                 y_pred = torch.round(y_pred)
 
@@ -237,8 +239,6 @@ def train_and_predict(
 
         # Iterate over validation set--put it in a dataloader
         val_batches = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
-        # acoustic_batches, embedding_batches, _, y_batches, length_batches = \
-        #     generate_batches(val_data, batch_size, shuffle=False, device=device)
 
         # reset loss and accuracy to zero
         running_loss = 0.0
@@ -289,8 +289,15 @@ def train_and_predict(
             # get the gold labels
             y_gold = batch[4].to(device)
 
+            if binary:
+                y_pred = y_pred.float()
+                y_gold = y_gold.float()
+
             # add ys to holder for error analysis
-            preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+            if binary:
+                preds_holder.extend([round(item[0]) for item in y_pred.tolist()])
+            else:
+                preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
             ys_holder.extend(y_gold.tolist())
 
             loss = loss_func(y_pred, y_gold)
@@ -298,9 +305,12 @@ def train_and_predict(
 
             # compute the loss
             if len(list(y_pred.size())) > 1:
-                y_pred = torch.tensor(
-                    [item.index(max(item)) for item in y_pred.tolist()]
-                )
+                if binary:
+                    y_pred = torch.tensor([round(item[0]) for item in y_pred.tolist()])
+                else:
+                    y_pred = torch.tensor(
+                        [item.index(max(item)) for item in y_pred.tolist()]
+                    )
             else:
                 y_pred = torch.round(y_pred)
 
