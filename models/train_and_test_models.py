@@ -137,8 +137,11 @@ def train_and_predict(
 
         # for each batch in the list of batches created by the dataloader
         for batch_index, batch in enumerate(batches):
+            print(batch)
+            sys.exit()
             # get the gold labels
-            y_gold = batch[4].to(device)  # 4 is emotion, 5 is sentiment
+            # y_gold = batch[4].to(device)  # 4 is emotion, 5 is sentiment
+            y_gold = batch.targets()
 
             # step 1. zero the gradients
             optimizer.zero_grad()
@@ -186,7 +189,9 @@ def train_and_predict(
             #     print(y_gold)
             # if epoch_index == 35:
             #     sys.exit(1)
-
+            # print("THE PREDICTIONS ARE: ")
+            # print(y_pred)
+            # print(y_gold)
             # add ys to holder for error analysis
             if binary:
                 preds_holder.extend([round(item[0]) for item in y_pred.tolist()])
@@ -287,7 +292,8 @@ def train_and_predict(
                 )
 
             # get the gold labels
-            y_gold = batch[4].to(device)
+            # y_gold = batch[4].to(device)
+            y_gold = batch.targets()
 
             if binary:
                 y_pred = y_pred.float()

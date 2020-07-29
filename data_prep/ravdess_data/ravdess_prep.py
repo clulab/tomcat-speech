@@ -77,8 +77,8 @@ def make_ravdess_data_tensors(acoustic_path, glove, f_end="_IS10.csv", use_cols=
     # holder for all data
     data = []
 
-    utt_1 = glove.index("kids are talking by the door")
-    utt_2 = glove.index("dogs are sitting by the door")
+    utt_1 = glove.index(["kids", "are", "talking", "by", "the", "door"])
+    utt_2 = glove.index(["dogs", "are", "sitting", "by", "the", "door"])
 
     # will have to do two for loops
     # one to get the longest acoustic df

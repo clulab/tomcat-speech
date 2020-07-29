@@ -15,7 +15,7 @@ params = Namespace(
     # input dimension parameters
     text_dim=300,  # text vector length
     short_emb_dim=30,  # length of trainable embeddings vec
-    audio_dim=10,   # 76,  # 79,  # 10 # audio vector length
+    audio_dim=76,   # 76,  # 79,  # 10 # audio vector length
     # audio_dim=10,
     # text NN
     # text_output_dim=30,   # 100,   # 50, 300,
@@ -28,7 +28,7 @@ params = Namespace(
     text_cnn_hidden_dim=500,
     # acoustic NN
     avgd_acoustic=False,  # set true to use avgd acoustic feat vectors without RNN
-    add_avging=True,  # set to true if you want to avg acoustic feature vecs upon input
+    add_avging=False,  # set to true if you want to avg acoustic feature vecs upon input
     acoustic_gru_hidden_dim=100,
     # speaker embeddings
     use_speaker=False,
@@ -38,14 +38,14 @@ params = Namespace(
     use_gender=True,
     gender_emb_dim=4,
     # outputs
-    output_dim=8,   # 7,  # length of output vector
+    output_dim=2,   # 7,  # length of output vector
     output_2_dim=None,  # 3,    # length of second task output vec
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,
     fc_hidden_dim=100,  # 20,
     dropout=0.4,  # 0.2
     # optimizer parameters
-    lrs=[1e-3],
+    lrs=[1e-4],
     beta_1=0.9,
     beta_2=0.999,
     weight_decay=[0.0001],

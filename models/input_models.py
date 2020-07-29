@@ -273,6 +273,97 @@ class BasicEncoder(nn.Module):
         return output
 
 
+class AudioOnlyRNN(nn.Module):
+    """
+    An RNN used with RAVDESS, where primary information comes from audio
+    Has capacity to include gender embeddings, todo: add anything?
+    """
+    def __init__(self, params):
+        super(AudioOnlyRNN, self).__init__()
+
+        # input dimensions
+        self.audio_dim = params.audio_dim
+
+        self.acoustic_rnn = nn.LSTM(
+            input_size=params.audio_dim,
+            hidden_size=params.acoustic_gru_hidden_dim,
+            num_layers=params.num_gru_layers,
+            batch_first=True,
+            bidirectional=False,
+        )
+
+        # acoustic batch normalization
+        self.acoustic_batch_norm = nn.BatchNorm1d(params.audio_dim)
+
+        self.acoustic_fc_1 = nn.Linear(params.acoustic_gru_hidden_dim, 50)
+        # self.acoustic_fc_2 = nn.Linear(100, 20)
+        self.acoustic_fc_2 = nn.Linear(50, params.audio_dim)
+
+        # dimension of input into final fc layers
+        self.fc_input_dim = params.acoustic_gru_hidden_dim
+        # self.fc_input_dim = params.audio_dim
+
+        if params.use_speaker:
+            self.fc_input_dim = self.fc_input_dim + params.speaker_emb_dim
+        elif params.use_gender:
+            self.fc_input_dim = self.fc_input_dim + params.gender_emb_dim
+
+        # set number of classes
+        self.output_dim = params.output_dim
+
+        # set number of layers and dropout
+        self.dropout = params.dropout
+
+        self.gender_embedding = nn.Embedding(3, params.gender_emb_dim)
+
+        # initialize fully connected layers
+        self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
+
+        self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
+
+    def forward(self, acoustic_input, acoustic_len_input, speaker_input=None,
+                gender_input=None, text_input=None, length_input=None):
+        # get speaker embeddings, if needed
+        if speaker_input is not None:
+            speaker_embs = self.speaker_embedding(speaker_input).squeeze(dim=1)
+            # speaker_embs = self.speaker_batch_norm(speaker_embs)
+        if gender_input is not None:
+            gender_embs = self.gender_embedding(gender_input)
+
+        # normalize
+        # acoustic_input = self.acoustic_batch_norm(acoustic_input)
+        # pack acoustic input
+        packed = nn.utils.rnn.pack_padded_sequence(
+            acoustic_input, length_input, batch_first=True, enforce_sorted=False
+        )
+
+        # feed embeddings through GRU
+        packed_output, (hidden, cell) = self.acoustic_rnn(packed)
+
+        encoded_acoustic = F.dropout(hidden[-1], .3)
+
+        # encoded_acoustic = torch.tanh(F.dropout(self.acoustic_fc_1(encoded_acoustic), self.dropout))
+        # encoded_acoustic = torch.tanh(F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout))
+
+        # combine modalities as required by architecture
+        # inputs = torch.cat((acoustic_input, encoded_text), 1)
+        if speaker_input is not None:
+            inputs = torch.cat((encoded_acoustic, speaker_embs), 1)
+        elif gender_input is not None:
+            inputs = torch.cat((encoded_acoustic, gender_embs), 1)
+        else:
+            inputs = encoded_acoustic
+
+        output = torch.tanh(F.dropout(self.fc1(inputs), .5))
+        output = torch.relu(self.fc2(output))
+
+        if self.output_dim == 1:
+            output = F.sigmoid(output)
+
+        # return the output
+        return output
+
+
 class TextOnlyCNN(nn.Module):
     """
     A CNN with multiple input channels with different kernel size operating over input

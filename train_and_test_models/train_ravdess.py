@@ -43,7 +43,7 @@ glove_file = "../../glove.short.300d.punct.txt"
 
 ravdess_path = "../../datasets/multimodal_datasets/RAVDESS_Speech/IS10"
 
-data_type = "ravdess_emotion"
+data_type = "ravdess_intensity"
 
 # set model name and model type
 model = params.model
@@ -56,8 +56,10 @@ model_plot_path = "output/plots/"
 os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path))
 
 # decide if you want to use avgd feats
-avgd_acoustic = params.avgd_acoustic
-avgd_acoustic_in_network = params.avgd_acoustic or params.add_avging
+# avgd_acoustic = params.avgd_acoustic
+avgd_acoustic = False
+# avgd_acoustic_in_network = params.avgd_acoustic or params.add_avging
+avgd_acoustic_in_network = False
 
 
 if __name__ == "__main__":
@@ -70,9 +72,9 @@ if __name__ == "__main__":
     # 2. MAKE DATASET
     data = RavdessPrep(ravdess_path=ravdess_path, acoustic_length=params.audio_dim, glove=glove,
                        add_avging=params.add_avging,
-                       use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
-                              'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
-                              'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
+                       # use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
+                       #        'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
+                       #        'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
                        avgd=avgd_acoustic)
 
     # add class weights to device
@@ -93,16 +95,16 @@ if __name__ == "__main__":
     # mini search through different learning_rate values
     for lr in params.lrs:
         for wd in params.weight_decay:
-            model_type = "RAVDESS_IS10sm_500txthid_.1InDrpt_.3textdrpt_.4acdrpt_.5finalFCdrpt"
+            model_type = "RAVDESS_intensity_test_2lyr-acOnlyFcRemoved"
 
             # this uses train-dev-test folds
             # create instance of model
-            # TODO: WE WILL WANT TO REPLACE THIS WITH AN ACOUSTIC-ONLY MODEL, PROBABLY
-            bimodal_trial = BasicEncoder(
-                params=params,
-                num_embeddings=num_embeddings,
-                pretrained_embeddings=pretrained_embeddings,
-            )
+            # bimodal_trial = BasicEncoder(
+            #     params=params,
+            #     num_embeddings=num_embeddings,
+            #     pretrained_embeddings=pretrained_embeddings,
+            # )
+            bimodal_trial = AudioOnlyRNN(params=params)
             optimizer = torch.optim.Adam(
                 lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
             )
@@ -118,18 +120,9 @@ if __name__ == "__main__":
             print("Model, loss function, and optimization created")
 
             # set the train, dev, and set data
-            # train_data = data.train_data
-
-            # combine train and dev data
-            # combine train and dev data
             train_ds = DatumListDataset(data.train_data, data_type, data.emotion_weights)
             dev_ds = DatumListDataset(data.dev_data, data_type, data.emotion_weights)
             test_ds = DatumListDataset(data.test_data, data_type, data.emotion_weights)
-
-            #
-            # train_ds = data.train_data
-            # dev_ds = data.dev_data
-            # test_ds = data.test_data
 
             # create a a save path and file for the model
             model_save_file = "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
