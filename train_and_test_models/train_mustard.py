@@ -162,7 +162,9 @@ if __name__ == "__main__":
             # train_data = data.train_data
 
             # combine train and dev data
-            train_ds = DatumListDataset(data.train_data, data_type, data.sarcasm_weights)
+            train_ds = DatumListDataset(
+                data.train_data, data_type, data.sarcasm_weights
+            )
             dev_ds = DatumListDataset(data.dev_data, data_type, data.sarcasm_weights)
             test_ds = DatumListDataset(data.test_data, data_type, data.sarcasm_weights)
 
@@ -218,7 +220,7 @@ if __name__ == "__main__":
                     avgd_acoustic=avgd_acoustic_in_network,
                     use_speaker=params.use_speaker,
                     use_gender=params.use_gender,
-                    binary=True
+                    binary=True,
                 )
 
             # plot the loss and accuracy curves

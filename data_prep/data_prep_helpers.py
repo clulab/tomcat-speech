@@ -38,10 +38,16 @@ class DatumListDataset(Dataset):
         return self.data_list[item]
 
     def targets(self):
-        if self.data_type == "meld_emotion" or self.data_type == "mustard" or self.data_type == "ravdess_emotion":
+        if (
+            self.data_type == "meld_emotion"
+            or self.data_type == "mustard"
+            or self.data_type == "ravdess_emotion"
+        ):
             for datum in self.data_list:
                 yield datum[4]
-        elif self.data_type == "meld_sentiment" or self.data_type == "ravdess_intensity":
+        elif (
+            self.data_type == "meld_sentiment" or self.data_type == "ravdess_intensity"
+        ):
             for datum in self.data_list:
                 yield datum[5]
 
@@ -237,8 +243,8 @@ def create_data_folds_list(data, perc_train, perc_test):
 
     # get datasets
     train_data = data[:train_len]
-    test_data = data[train_len:train_len + test_len]
-    dev_data = data[train_len + test_len:]
+    test_data = data[train_len : train_len + test_len]
+    dev_data = data[train_len + test_len :]
 
     # return data
     return train_data, dev_data, test_data
@@ -479,12 +485,13 @@ def get_nonzero_avg(tensor):
     """
     Get the average of all non-padding vectors in a tensor
     """
-    nonzeros = (tensor.sum(axis=1) != 0)
+    nonzeros = tensor.sum(axis=1) != 0
     num_nonzeros = sum(i == True for i in nonzeros)
 
     nonzero_avg = tensor.sum(axis=0) / num_nonzeros
 
     return nonzero_avg
+
 
 def make_glove_dict(glove_path):
     """creates a dict of word: embedding pairs

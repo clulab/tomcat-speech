@@ -82,11 +82,25 @@ if __name__ == "__main__":
     #     avgd=avgd_acoustic,
     # )
 
-    data = MeldPrep(meld_path=meld_path, acoustic_length=params.audio_dim, glove=glove, add_avging=params.add_avging,
-                    use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
-                              'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
-                              'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
-                    avgd=avgd_acoustic)
+    data = MeldPrep(
+        meld_path=meld_path,
+        acoustic_length=params.audio_dim,
+        glove=glove,
+        add_avging=params.add_avging,
+        use_cols=[
+            "pcm_loudness_sma",
+            "F0finEnv_sma",
+            "voicingFinalUnclipped_sma",
+            "jitterLocal_sma",
+            "shimmerLocal_sma",
+            "pcm_loudness_sma_de",
+            "F0finEnv_sma_de",
+            "voicingFinalUnclipped_sma_de",
+            "jitterLocal_sma_de",
+            "shimmerLocal_sma_de",
+        ],
+        avgd=avgd_acoustic,
+    )
 
     # add class weights to device
     data.emotion_weights = data.emotion_weights.to(device)
@@ -110,7 +124,9 @@ if __name__ == "__main__":
             # model_type = f"TextOnly_smallerPool_100batch_wd{str(wd)}_.2split_500hidden"
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
             # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
-            model_type = "MELD_IS10sm_500txthid_.1InDrpt_.3textdrpt_.4acdrpt_.5finalFCdrpt"
+            model_type = (
+                "MELD_IS10sm_500txthid_.1InDrpt_.3textdrpt_.4acdrpt_.5finalFCdrpt"
+            )
 
             # this uses train-dev-test folds
             # create instance of model
@@ -173,7 +189,9 @@ if __name__ == "__main__":
 
             train_data, dev_data = train_test_split(train_and_dev, test_size=0.2)  # .3
 
-            train_ds = DatumListDataset(train_data, data_type="meld_emotion", class_weights=data.emotion_weights)
+            train_ds = DatumListDataset(
+                train_data, data_type="meld_emotion", class_weights=data.emotion_weights
+            )
             # train_targets = torch.stack(list(train_ds.targets()))
             # sampler_weights = data.emotion_weights
             # train_samples_weights = sampler_weights[train_targets]

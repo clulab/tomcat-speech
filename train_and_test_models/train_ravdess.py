@@ -70,12 +70,16 @@ if __name__ == "__main__":
     print("Glove object created")
 
     # 2. MAKE DATASET
-    data = RavdessPrep(ravdess_path=ravdess_path, acoustic_length=params.audio_dim, glove=glove,
-                       add_avging=params.add_avging,
-                       # use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
-                       #        'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
-                       #        'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
-                       avgd=avgd_acoustic)
+    data = RavdessPrep(
+        ravdess_path=ravdess_path,
+        acoustic_length=params.audio_dim,
+        glove=glove,
+        add_avging=params.add_avging,
+        # use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
+        #        'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
+        #        'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
+        avgd=avgd_acoustic,
+    )
 
     # add class weights to device
     data.emotion_weights = data.emotion_weights.to(device)
@@ -120,7 +124,9 @@ if __name__ == "__main__":
             print("Model, loss function, and optimization created")
 
             # set the train, dev, and set data
-            train_ds = DatumListDataset(data.train_data, data_type, data.emotion_weights)
+            train_ds = DatumListDataset(
+                data.train_data, data_type, data.emotion_weights
+            )
             dev_ds = DatumListDataset(data.dev_data, data_type, data.emotion_weights)
             test_ds = DatumListDataset(data.test_data, data_type, data.emotion_weights)
 

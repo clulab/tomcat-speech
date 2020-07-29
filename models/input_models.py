@@ -206,7 +206,7 @@ class BasicEncoder(nn.Module):
         # print(all_hidden.shape)
         # sys.exit()
         # padded_output, lens = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True)
-        encoded_text = F.dropout(hidden[-1], .3)
+        encoded_text = F.dropout(hidden[-1], 0.3)
         # encoded_text = F.dropout(all_hidden, self.dropout)
 
         # encoded_text = hidden[-1]
@@ -240,10 +240,14 @@ class BasicEncoder(nn.Module):
             else:
                 encoded_acoustic = acoustic_input
 
-        encoded_acoustic = torch.tanh(F.dropout(self.acoustic_fc_1(encoded_acoustic), self.dropout))
-        encoded_acoustic = torch.tanh(F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout))
-            # print(encoded_acoustic.shape)
-            # encoded_acoustic = self.acoustic_batch_norm(encoded_acoustic)
+        encoded_acoustic = torch.tanh(
+            F.dropout(self.acoustic_fc_1(encoded_acoustic), self.dropout)
+        )
+        encoded_acoustic = torch.tanh(
+            F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout)
+        )
+        # print(encoded_acoustic.shape)
+        # encoded_acoustic = self.acoustic_batch_norm(encoded_acoustic)
 
         # inputs = encoded_text
         # print(encoded_acoustic.shape)
@@ -259,7 +263,7 @@ class BasicEncoder(nn.Module):
 
         # print(inputs.shape)
         # use pooled, squeezed feats as input into fc layers
-        output = torch.tanh(F.dropout(self.fc1(inputs), .5))
+        output = torch.tanh(F.dropout(self.fc1(inputs), 0.5))
         # output = torch.tanh(self.fc1(inputs))
         # output = self.interfc_batch_norm(output)
         # todo: abstract this so it's only calculated if not multitask
@@ -278,6 +282,7 @@ class AudioOnlyRNN(nn.Module):
     An RNN used with RAVDESS, where primary information comes from audio
     Has capacity to include gender embeddings, todo: add anything?
     """
+
     def __init__(self, params):
         super(AudioOnlyRNN, self).__init__()
 
@@ -321,8 +326,15 @@ class AudioOnlyRNN(nn.Module):
 
         self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
 
-    def forward(self, acoustic_input, acoustic_len_input, speaker_input=None,
-                gender_input=None, text_input=None, length_input=None):
+    def forward(
+        self,
+        acoustic_input,
+        acoustic_len_input,
+        speaker_input=None,
+        gender_input=None,
+        text_input=None,
+        length_input=None,
+    ):
         # get speaker embeddings, if needed
         if speaker_input is not None:
             speaker_embs = self.speaker_embedding(speaker_input).squeeze(dim=1)
@@ -340,7 +352,7 @@ class AudioOnlyRNN(nn.Module):
         # feed embeddings through GRU
         packed_output, (hidden, cell) = self.acoustic_rnn(packed)
 
-        encoded_acoustic = F.dropout(hidden[-1], .3)
+        encoded_acoustic = F.dropout(hidden[-1], 0.3)
 
         # encoded_acoustic = torch.tanh(F.dropout(self.acoustic_fc_1(encoded_acoustic), self.dropout))
         # encoded_acoustic = torch.tanh(F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout))
@@ -354,7 +366,7 @@ class AudioOnlyRNN(nn.Module):
         else:
             inputs = encoded_acoustic
 
-        output = torch.tanh(F.dropout(self.fc1(inputs), .5))
+        output = torch.tanh(F.dropout(self.fc1(inputs), 0.5))
         output = torch.relu(self.fc2(output))
 
         if self.output_dim == 1:

@@ -17,8 +17,13 @@ from data_prep.data_prep_helpers import (
     get_longest_utt,
     get_class_weights,
     make_acoustic_set,
-    transform_acoustic_item, create_data_folds)
-from data_prep.meld_data.meld_prep import get_max_num_acoustic_frames, make_acoustic_dict_meld
+    transform_acoustic_item,
+    create_data_folds,
+)
+from data_prep.meld_data.meld_prep import (
+    get_max_num_acoustic_frames,
+    make_acoustic_dict_meld,
+)
 import pandas as pd
 
 
@@ -58,31 +63,31 @@ class MustardPrep:
 
         # train, dev, and test acoustic data
         self.train_dict, self.train_acoustic_lengths = make_acoustic_dict_meld(
-                self.acoustic_path,
-                files_to_get=set(self.train["clip_id"].tolist()),
-                f_end=f_end,
-                use_cols=use_cols,
-                avgd=avgd
-                # data_type="mustard",
-            )
+            self.acoustic_path,
+            files_to_get=set(self.train["clip_id"].tolist()),
+            f_end=f_end,
+            use_cols=use_cols,
+            avgd=avgd
+            # data_type="mustard",
+        )
         self.train_dict = OrderedDict(self.train_dict)
         self.dev_dict, self.dev_acoustic_lengths = make_acoustic_dict_meld(
-                self.acoustic_path,
-                files_to_get=set(self.dev["clip_id"].tolist()),
-                f_end=f_end,
-                use_cols=use_cols,
-                avgd=avgd
-                # data_type="mustard",
-            )
+            self.acoustic_path,
+            files_to_get=set(self.dev["clip_id"].tolist()),
+            f_end=f_end,
+            use_cols=use_cols,
+            avgd=avgd
+            # data_type="mustard",
+        )
         self.dev_dict = OrderedDict(self.dev_dict)
         self.test_dict, self.test_acoustic_lengths = make_acoustic_dict_meld(
-                self.acoustic_path,
-                files_to_get=set(self.test["clip_id"].tolist()),
-                f_end=f_end,
-                use_cols=use_cols,
-                avgd=avgd
-                # data_type="mustard",
-            )
+            self.acoustic_path,
+            files_to_get=set(self.test["clip_id"].tolist()),
+            f_end=f_end,
+            use_cols=use_cols,
+            avgd=avgd
+            # data_type="mustard",
+        )
         self.test_dict = OrderedDict(self.test_dict)
 
         self.longest_utt = get_longest_utt(self.utterances["utterance"])
@@ -163,8 +168,9 @@ class MustardPrep:
 
         for i, item in enumerate(self.train_acoustic):
             # normalize
-            item_transformed = transform_acoustic_item(item, self.all_acoustic_means,
-                                                       self.all_acoustic_deviations)
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
             # if self.train_genders[i] == 1:
             #     item_transformed = self.transform_acoustic_item(
             #         item, self.train_genders[i]
@@ -182,8 +188,9 @@ class MustardPrep:
             )
 
         for i, item in enumerate(self.dev_acoustic):
-            item_transformed = transform_acoustic_item(item, self.all_acoustic_means,
-                                                       self.all_acoustic_deviations)
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
             dev_data.append(
                 (
                     item_transformed,
@@ -197,8 +204,9 @@ class MustardPrep:
             )
 
         for i, item in enumerate(self.test_acoustic):
-            item_transformed = transform_acoustic_item(item, self.all_acoustic_means,
-                                                       self.all_acoustic_deviations)
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
             test_data.append(
                 (
                     item_transformed,

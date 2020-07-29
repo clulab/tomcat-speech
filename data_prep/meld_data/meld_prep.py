@@ -90,11 +90,17 @@ class MeldPrep:
         )
         self.train_dict = OrderedDict(self.train_dict)
         self.dev_dict, self.dev_acoustic_lengths = make_acoustic_dict_meld(
-            "{0}/{1}".format(self.dev_path, self.dev_dir), f_end, use_cols=use_cols, avgd=avgd
+            "{0}/{1}".format(self.dev_path, self.dev_dir),
+            f_end,
+            use_cols=use_cols,
+            avgd=avgd,
         )
         self.dev_dict = OrderedDict(self.dev_dict)
         self.test_dict, self.test_acoustic_lengths = make_acoustic_dict_meld(
-            "{0}/{1}".format(self.test_path, self.test_dir), f_end, use_cols=use_cols, avgd=avgd
+            "{0}/{1}".format(self.test_path, self.test_dir),
+            f_end,
+            use_cols=use_cols,
+            avgd=avgd,
         )
         self.test_dict = OrderedDict(self.test_dict)
 
@@ -146,7 +152,9 @@ class MeldPrep:
             self.train_y_emo,
             self.train_y_sent,
             self.train_utt_lengths,
-        ) = self.make_meld_data_tensors(self.train_data_file, self.train_usable_utts, glove)
+        ) = self.make_meld_data_tensors(
+            self.train_data_file, self.train_usable_utts, glove
+        )
 
         (
             self.dev_utts,
@@ -164,7 +172,9 @@ class MeldPrep:
             self.test_y_emo,
             self.test_y_sent,
             self.test_utt_lengths,
-        ) = self.make_meld_data_tensors(self.test_data_file, self.test_usable_utts, glove)
+        ) = self.make_meld_data_tensors(
+            self.test_data_file, self.test_usable_utts, glove
+        )
 
         # set emotion and sentiment weights
         self.emotion_weights = get_class_weights(self.train_y_emo)
@@ -448,7 +458,9 @@ class MeldPrep:
 
 
 # helper functions
-def make_acoustic_dict_meld(acoustic_path, f_end="_IS10.csv", files_to_get=None, use_cols=None, avgd=True):
+def make_acoustic_dict_meld(
+    acoustic_path, f_end="_IS10.csv", files_to_get=None, use_cols=None, avgd=True
+):
     """
     makes a dict of (dia, utt): data for use in MELD objects
     f_end: end of acoustic file names

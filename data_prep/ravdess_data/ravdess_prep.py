@@ -17,8 +17,19 @@ class RavdessPrep:
     """
     A class to prepare ravdess data
     """
-    def __init__(self, ravdess_path, acoustic_length, glove, train_prop=0.6, test_prop=0.2,
-                 f_end="IS10.csv", use_cols=None, add_avging=True, avgd=False):
+
+    def __init__(
+        self,
+        ravdess_path,
+        acoustic_length,
+        glove,
+        train_prop=0.6,
+        test_prop=0.2,
+        f_end="IS10.csv",
+        use_cols=None,
+        add_avging=True,
+        avgd=False,
+    ):
         # path to dataset--all within acoustic files for ravdess
         self.path = ravdess_path
 
@@ -26,9 +37,13 @@ class RavdessPrep:
         self.tokenizer = get_tokenizer("basic_english")
 
         # get data tensors
-        self.all_data = make_ravdess_data_tensors(self.path, glove, f_end, use_cols, add_avging=add_avging, avgd=avgd)
+        self.all_data = make_ravdess_data_tensors(
+            self.path, glove, f_end, use_cols, add_avging=add_avging, avgd=avgd
+        )
 
-        self.train_data, self.dev_data, self.test_data = create_data_folds_list(self.all_data, train_prop, test_prop)
+        self.train_data, self.dev_data, self.test_data = create_data_folds_list(
+            self.all_data, train_prop, test_prop
+        )
 
         # pull out ys from train to get class weights
         self.train_y_emotion = torch.tensor([item[4] for item in self.train_data])
@@ -39,7 +54,9 @@ class RavdessPrep:
         self.intensity_weights = get_class_weights(self.train_y_intensity)
 
         # pull out acoustic data and gender data from train for normalization
-        self.train_acoustic = torch.tensor([item[0].tolist() for item in self.train_data])
+        self.train_acoustic = torch.tensor(
+            [item[0].tolist() for item in self.train_data]
+        )
         self.train_genders = [item[3] for item in self.train_data]
 
         # acoustic feature normalization based on train
@@ -55,7 +72,9 @@ class RavdessPrep:
         )
 
 
-def make_ravdess_data_tensors(acoustic_path, glove, f_end="_IS10.csv", use_cols=None, add_avging=True, avgd=False):
+def make_ravdess_data_tensors(
+    acoustic_path, glove, f_end="_IS10.csv", use_cols=None, add_avging=True, avgd=False
+):
     """
     makes data tensors for use in RAVDESS objects
     f_end: end of acoustic file names
@@ -124,7 +143,9 @@ def make_ravdess_data_tensors(acoustic_path, glove, f_end="_IS10.csv", use_cols=
                 # order of items: acoustic, utt, spkr, gender, emotion
                 #   intensity, repetition #, utt_length, acoustic_length
                 if add_avging:
-                    acoustic_holder.append(torch.mean(torch.tensor(feats.values.tolist()), dim=0))
+                    acoustic_holder.append(
+                        torch.mean(torch.tensor(feats.values.tolist()), dim=0)
+                    )
                 else:
                     acoustic_holder.append(torch.tensor(feats.values.tolist()))
                 utterances.append(utt)
@@ -145,16 +166,31 @@ def make_ravdess_data_tensors(acoustic_path, glove, f_end="_IS10.csv", use_cols=
     acoustic_lengths = torch.tensor(acoustic_lengths)
 
     if not add_avging:
-        acoustic_holder = nn.utils.rnn.pad_sequence(acoustic_holder, batch_first=True, padding_value=0)
+        acoustic_holder = nn.utils.rnn.pad_sequence(
+            acoustic_holder, batch_first=True, padding_value=0
+        )
 
     for i in range(len(acoustic_holder)):
-        data.append((acoustic_holder[i], utterances[i], speakers[i], genders[i], emotions[i],
-                    intensities[i], repetitions[i], 6, acoustic_lengths[i]))
+        data.append(
+            (
+                acoustic_holder[i],
+                utterances[i],
+                speakers[i],
+                genders[i],
+                emotions[i],
+                intensities[i],
+                repetitions[i],
+                6,
+                acoustic_lengths[i],
+            )
+        )
 
     return data
 
 
-def preprocess_ravdess_data(base_path, acoustic_save_dir, smile_path, acoustic_feature_set="IS10"):
+def preprocess_ravdess_data(
+    base_path, acoustic_save_dir, smile_path, acoustic_feature_set="IS10"
+):
     """
     Preprocess the ravdess data by extracting acoustic features from wav files
     base_path : the path to the base RAVDESS directory
