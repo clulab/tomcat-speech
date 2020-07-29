@@ -20,9 +20,6 @@ from data_prep.data_prep_helpers import (
     make_acoustic_set,
     transform_acoustic_item,
 )
-from data_prep.data_prep_helpers import create_data_folds_list
-from data_prep.meld_data.meld_prep import make_acoustic_dict_meld
-from data_prep.ravdess_data.ravdess_prep import preprocess_ravdess_data
 
 
 class ChalearnPrep:
@@ -44,14 +41,14 @@ class ChalearnPrep:
         self.train_path = chalearn_path + "/train"
         self.dev_path = chalearn_path + "/val"
         self.test_path = chalearn_path + "/test"
-        self.train = "{0}/train_sent_emo.csv".format(self.train_path)
-        self.dev = "{0}/dev_sent_emo.csv".format(self.dev_path)
-        self.test = "{0}/test_sent_emo.csv".format(self.test_path)
+        self.train = "{0}/gold_and_utts.tsv".format(self.train_path)
+        self.dev = "{0}/gold_and_utts.tsv".format(self.dev_path)
+        # self.test = "{0}/gold_and_utts.tsv".format(self.test_path)
 
         # get files containing gold labels/data
-        self.train_data_file = pd.read_csv(self.train)
-        self.dev_data_file = pd.read_csv(self.dev)
-        self.test_data_file = pd.read_csv(self.test)
+        self.train_data_file = pd.read_csv(self.train, sep="\t")
+        self.dev_data_file = pd.read_csv(self.dev, sep="\t")
+        # self.test_data_file = pd.read_csv(self.test)
 
         # get tokenizer
         self.tokenizer = get_tokenizer("basic_english")
@@ -62,52 +59,46 @@ class ChalearnPrep:
         # to determine whether incoming acoustic features are averaged
         self.avgd = avgd
 
-        if avgd:
-            self.avgd = True
-            self.train_dir = "audios"
-            self.dev_dir = "audios"
-            self.test_dir = "audios"
-        else:
-            self.avgd = False
-            self.train_dir = "IS10_train"
-            self.dev_dir = "IS10_dev"
-            self.test_dir = "IS10_test"
+        self.avgd = False
+        self.train_dir = "IS10"
+        self.dev_dir = "IS10"
+        self.test_dir = "IS10"
 
         print("Collecting acoustic features")
 
         # ordered dicts of acoustic data
         # todo: is this screwed up?
         #   ordered dict--is it same order as acoustic_lengths
-        self.train_dict, self.train_acoustic_lengths = make_acoustic_dict_meld(
+        self.train_dict, self.train_acoustic_lengths = make_acoustic_dict_chalearn(
             "{0}/{1}".format(self.train_path, self.train_dir),
             f_end,
             use_cols=use_cols,
             avgd=avgd,
         )
         self.train_dict = OrderedDict(self.train_dict)
-        self.dev_dict, self.dev_acoustic_lengths = make_acoustic_dict_meld(
+        self.dev_dict, self.dev_acoustic_lengths = make_acoustic_dict_chalearn(
             "{0}/{1}".format(self.dev_path, self.dev_dir),
             f_end,
             use_cols=use_cols,
             avgd=avgd,
         )
         self.dev_dict = OrderedDict(self.dev_dict)
-        self.test_dict, self.test_acoustic_lengths = make_acoustic_dict_meld(
-            "{0}/{1}".format(self.test_path, self.test_dir),
-            f_end,
-            use_cols=use_cols,
-            avgd=avgd,
-        )
-        self.test_dict = OrderedDict(self.test_dict)
+        # self.test_dict, self.test_acoustic_lengths = make_acoustic_dict_chalearn(
+        #     "{0}/{1}".format(self.test_path, self.test_dir),
+        #     f_end,
+        #     use_cols=use_cols,
+        #     avgd=avgd,
+        # )
+        # self.test_dict = OrderedDict(self.test_dict)
 
         # utterance-level dict
-        self.longest_utt, self.longest_dia = self.get_longest_utt_meld()
+        self.longest_utt, self.longest_dia = self.get_longest_utt_chalearn()
 
         # get length of longest acoustic dataframe
         self.longest_acoustic = get_max_num_acoustic_frames(
             list(self.train_dict.values())
             + list(self.dev_dict.values())
-            + list(self.test_dict.values())
+            # + list(self.test_dict.values())
         )
 
         print("Finalizing acoustic organization")
@@ -130,65 +121,78 @@ class ChalearnPrep:
             add_avging=add_avging,
             avgd=avgd,
         )
-        self.test_acoustic, self.test_usable_utts = make_acoustic_set(
-            self.test,
-            self.test_dict,
-            data_type="meld",
-            acoustic_length=acoustic_length,
-            longest_acoustic=self.longest_acoustic,
-            add_avging=add_avging,
-            avgd=avgd,
-        )
+        # self.test_acoustic, self.test_usable_utts = make_acoustic_set(
+        #     self.test,
+        #     self.test_dict,
+        #     data_type="meld",
+        #     acoustic_length=acoustic_length,
+        #     longest_acoustic=self.longest_acoustic,
+        #     add_avging=add_avging,
+        #     avgd=avgd,
+        # )
 
         # get utterance, speaker, y matrices for train, dev, and test sets
         (
             self.train_utts,
-            self.train_spkrs,
             self.train_genders,
-            self.train_y_emo,
-            self.train_y_sent,
+            self.train_ethnicities,
+            self.train_y_extr,
+            self.train_y_neur,
+            self.train_y_agree,
+            self.train_y_openn,
+            self.train_y_consc,
+            self.train_y_inter,
             self.train_utt_lengths,
-        ) = self.make_meld_data_tensors(
+        ) = self.make_data_tensors(
             self.train_data_file, self.train_usable_utts, glove
         )
 
         (
             self.dev_utts,
-            self.dev_spkrs,
             self.dev_genders,
-            self.dev_y_emo,
-            self.dev_y_sent,
+            self.dev_ethnicities,
+            self.dev_y_extr,
+            self.dev_y_neur,
+            self.dev_y_agree,
+            self.dev_y_openn,
+            self.dev_y_consc,
+            self.dev_y_inter,
             self.dev_utt_lengths,
-        ) = self.make_meld_data_tensors(self.dev_data_file, self.dev_usable_utts, glove)
+        ) = self.make_data_tensors(self.dev_data_file, self.dev_usable_utts, glove)
 
-        (
-            self.test_utts,
-            self.test_spkrs,
-            self.test_genders,
-            self.test_y_emo,
-            self.test_y_sent,
-            self.test_utt_lengths,
-        ) = self.make_meld_data_tensors(
-            self.test_data_file, self.test_usable_utts, glove
-        )
+        # (
+        #     self.test_utts,
+        #     self.test_genders,
+        #     self.test_ethnicities,
+        #     self.test_y_extr,
+        #     self.test_y_neur,
+        #     self.test_y_agree,
+        #     self.test_y_openn,
+        #     self.test_y_consc,
+        #     self.test_y_inter,
+        #     self.test_utt_lengths,
+        # ) = self.make_data_tensors(
+        #     self.test_data_file, self.test_usable_utts, glove
+        # )
 
         # set emotion and sentiment weights
-        self.emotion_weights = get_class_weights(self.train_y_emo)
-        self.sentiment_weights = get_class_weights(self.train_y_sent)
+        # todo: determine how we're binning and get class weights
 
         # acoustic feature normalization based on train
         self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
         self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
 
         self.male_acoustic_means, self.male_deviations = get_gender_avgs(
-            self.train_acoustic, self.train_genders, gender=2
+            self.train_acoustic, self.train_genders, gender=1
         )
         self.female_acoustic_means, self.female_deviations = get_gender_avgs(
-            self.train_acoustic, self.train_genders, gender=1
+            self.train_acoustic, self.train_genders, gender=2
         )
 
         # get the data organized for input into the NNs
-        self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
+        # self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
+        self.train_data, self.dev_data = self.combine_xs_and_ys()
+
 
     def combine_xs_and_ys(self):
         """
@@ -200,11 +204,7 @@ class ChalearnPrep:
 
         for i, item in enumerate(self.train_acoustic):
             # normalize
-            if self.train_genders[i] == 0:
-                item_transformed = transform_acoustic_item(
-                    item, self.all_acoustic_means, self.all_acoustic_deviations
-                )
-            elif self.train_genders[i] == 1:
+            if self.train_genders[i] == 2:
                 item_transformed = transform_acoustic_item(
                     item, self.female_acoustic_means, self.female_deviations
                 )
@@ -216,21 +216,21 @@ class ChalearnPrep:
                 (
                     item_transformed,
                     self.train_utts[i],
-                    self.train_spkrs[i],
                     self.train_genders[i],
-                    self.train_y_emo[i],
-                    self.train_y_sent[i],
+                    self.train_ethnicities[i],
+                    self.train_y_extr[i],
+                    self.train_y_neur[i],
+                    self.train_y_agree[i],
+                    self.train_y_openn[i],
+                    self.train_y_consc[i],
+                    self.train_y_inter[i],
                     self.train_utt_lengths[i],
                     self.train_acoustic_lengths[i],
                 )
             )
 
         for i, item in enumerate(self.dev_acoustic):
-            if self.train_genders[i] == 0:
-                item_transformed = transform_acoustic_item(
-                    item, self.all_acoustic_means, self.all_acoustic_deviations
-                )
-            elif self.train_genders[i] == 1:
+            if self.train_genders[i] == 2:
                 item_transformed = transform_acoustic_item(
                     item, self.female_acoustic_means, self.female_deviations
                 )
@@ -242,44 +242,48 @@ class ChalearnPrep:
                 (
                     item_transformed,
                     self.dev_utts[i],
-                    self.dev_spkrs[i],
                     self.dev_genders[i],
-                    self.dev_y_emo[i],
-                    self.dev_y_sent[i],
+                    self.dev_ethnicities[i],
+                    self.dev_y_extr[i],
+                    self.dev_y_neur[i],
+                    self.dev_y_agree[i],
+                    self.dev_y_openn[i],
+                    self.dev_y_consc[i],
+                    self.dev_y_inter[i],
                     self.dev_utt_lengths[i],
                     self.dev_acoustic_lengths[i],
                 )
             )
 
-        for i, item in enumerate(self.test_acoustic):
-            if self.train_genders[i] == 0:
-                item_transformed = transform_acoustic_item(
-                    item, self.all_acoustic_means, self.all_acoustic_deviations
-                )
-            elif self.train_genders[i] == 1:
-                item_transformed = transform_acoustic_item(
-                    item, self.female_acoustic_means, self.female_deviations
-                )
-            else:
-                item_transformed = transform_acoustic_item(
-                    item, self.male_acoustic_means, self.male_deviations
-                )
-            test_data.append(
-                (
-                    item_transformed,
-                    self.test_utts[i],
-                    self.test_spkrs[i],
-                    self.test_genders[i],
-                    self.test_y_emo[i],
-                    self.test_y_sent[i],
-                    self.test_utt_lengths[i],
-                    self.test_acoustic_lengths[i],
-                )
-            )
+        # for i, item in enumerate(self.test_acoustic):
+        #     if self.train_genders[i] == 2:
+        #         item_transformed = transform_acoustic_item(
+        #             item, self.female_acoustic_means, self.female_deviations
+        #         )
+        #     else:
+        #         item_transformed = transform_acoustic_item(
+        #             item, self.male_acoustic_means, self.male_deviations
+        #         )
+        #     test_data.append(
+        #         (
+        #             item_transformed,
+        #             self.test_utts[i],
+        #             self.test_genders[i],
+        #             self.test_ethnicities[i],
+        #             self.test_y_extr[i],
+        #             self.test_y_neur[i],
+        #             self.test_y_agree[i],
+        #             self.test_y_openn[i],
+        #             self.test_y_consc[i],
+        #             self.test_y_inter[i],
+        #             self.test_utt_lengths[i],
+        #             self.test_acoustic_lengths[i],
+        #         )
+        #     )
 
-        return train_data, dev_data, test_data
+        return train_data, dev_data  # , test_data
 
-    def get_longest_utt_meld(self):
+    def get_longest_utt_chalearn(self):
         """
         Get the length of the longest utterance and dialogue in the meld
         :return: length of longest utt, length of longest dialogue
@@ -289,10 +293,12 @@ class ChalearnPrep:
         # get all data splits
         train_utts_df = self.train_data_file
         dev_utts_df = self.dev_data_file
-        test_utts_df = self.test_data_file
+        # test_utts_df = self.test_data_file
 
         # concatenate them and put utterances in array
-        all_utts_df = pd.concat([train_utts_df, dev_utts_df, test_utts_df], axis=0)
+        # all_utts_df = pd.concat([train_utts_df, dev_utts_df, test_utts_df], axis=0)
+        all_utts_df = pd.concat([train_utts_df, dev_utts_df], axis=0)
+
         all_utts = all_utts_df["Utterance"].tolist()
 
         for i, item in enumerate(all_utts):
@@ -306,9 +312,9 @@ class ChalearnPrep:
 
         return longest, longest_dia
 
-    def make_meld_data_tensors(self, all_utts_df, all_utts_list, glove):
+    def make_data_tensors(self, all_utts_df, all_utts_list, glove):
         """
-        Prepare the tensors of utterances + speakers, emotion and sentiment scores
+        Prepare the tensors of utterances + genders, gold labels
         :param all_utts_df: the df containing the text (in column 0)
         :param all_utts_list: a list of all usable utterances
         :param glove: an instance of class Glove
@@ -316,10 +322,14 @@ class ChalearnPrep:
         """
         # create holders for the data
         all_utts = []
-        all_speakers = []
         all_genders = []
-        all_emotions = []
-        all_sentiments = []
+        all_ethnicities = []
+        all_extraversion = []
+        all_neuroticism = []
+        all_agreeableness = []
+        all_openness = []
+        all_conscientiousness = []
+        all_interview = []
 
         # create holder for sequence lengths information
         utt_lengths = []
@@ -327,21 +337,26 @@ class ChalearnPrep:
         for idx, row in all_utts_df.iterrows():
 
             # check to make sure this utterance is used
-            dia_num, utt_num = row["DiaID_UttID"].split("_")[:2]
-            if (dia_num, utt_num) in all_utts_list:
+            audio_name = row['file']
+            if audio_name in all_utts_list:
 
                 # create utterance-level holders
                 utts = [0] * self.longest_utt
 
                 # get values from row
-                utt = clean_up_word(row["Utterance"])
+                utt = clean_up_word(row["utterance"])
                 utt = self.tokenizer(utt)
                 utt_lengths.append(len(utt))
 
-                spk_id = row["Speaker"]
-                gen = self.speaker2gender[spk_id]
-                emo = row["Emotion"]
-                sent = row["Sentiment"]
+                gen = row['gender']
+                eth = row['ethnicity']
+                extra = row['extraversion']
+                neur = row['neuroticism']
+                agree = row['agreeableness']
+                openn = row['openness']
+                consc = row['conscientiousness']
+                inter = row['invite_to_interview']
+
 
                 # convert words to indices for glove
                 utt_indexed = glove.index(utt)
@@ -349,24 +364,36 @@ class ChalearnPrep:
                     utts[i] = item
 
                 all_utts.append(torch.tensor(utts))
-                all_speakers.append([spk_id])
                 all_genders.append(gen)
-                all_emotions.append(emo)
-                all_sentiments.append(sent)
+                all_ethnicities.append(eth)
+                all_extraversion.append(extra)
+                all_neuroticism.append(neur)
+                all_agreeableness.append(agree)
+                all_openness.append(openn)
+                all_conscientiousness.append(consc)
+                all_interview.append(inter)
 
         # create pytorch tensors for each
-        all_speakers = torch.tensor(all_speakers)
         all_genders = torch.tensor(all_genders)
-        all_emotions = torch.tensor(all_emotions)
-        all_sentiments = torch.tensor(all_sentiments)
+        all_ethnicities = torch.tensor(all_ethnicities)
+        all_extraversion = torch.tensor(all_extraversion)
+        all_neuroticism = torch.tensor(all_neuroticism)
+        all_agreeableness = torch.tensor(all_agreeableness)
+        all_openness = torch.tensor(all_openness)
+        all_conscientiousness = torch.tensor(all_conscientiousness)
+        all_interview = torch.tensor(all_interview)
 
         # return data
         return (
             all_utts,
-            all_speakers,
             all_genders,
-            all_emotions,
-            all_sentiments,
+            all_ethnicities,
+            all_extraversion,
+            all_neuroticism,
+            all_agreeableness,
+            all_openness,
+            all_conscientiousness,
+            all_interview,
             utt_lengths,
         )
 
@@ -447,8 +474,6 @@ def create_gold_tsv_chalearn(gold_file, utts_file, gender_file, save_name):
     if all_files != sorted(genders_dict.keys()):
         print("gold labels and gender labels don't contain the same set of files")
 
-    all_participants = [item.split(".")[0] for item in set(all_files)]
-
     with open(save_name, "w") as tsvfile:
         tsvfile.write(
             "file\tgender\tethnicity\textraversion\tneuroticism\t"
@@ -471,6 +496,48 @@ def create_gold_tsv_chalearn(gold_file, utts_file, gender_file, save_name):
                 f"{item}\t{gender}\t{ethnicity}\t{extraversion}\t{neuroticism}\t{agreeableness}\t"
                 f"{openness}\t{conscientiousness}\t{interview}\t{utterance}\n"
             )
+
+
+def make_acoustic_dict_chalearn(
+    acoustic_path, f_end="_IS10.csv", use_cols=None, avgd=True
+):
+    """
+    makes a dict of clip_id: data for use in MELD objects
+    f_end: end of acoustic file names
+    use_cols: if set, should be a list [] of column names to include
+    n_to_skip : the number of columns at the start to ignore (e.g. name, time)
+    """
+    acoustic_dict = {}
+    # acoustic_lengths = []
+    acoustic_lengths = {}
+    # find acoustic features files
+    for f in os.listdir(acoustic_path):
+        if f.endswith(f_end):
+            # set the separator--non-averaged files are ;SV
+            separator = ";"
+
+            # read in the file as a dataframe
+            if use_cols is not None:
+                feats = pd.read_csv(
+                    acoustic_path + "/" + f, usecols=use_cols, sep=separator
+                )
+            else:
+                feats = pd.read_csv(acoustic_path + "/" + f, sep=separator)
+                if not avgd:
+                    feats.drop(["name", "frameTime"], axis=1, inplace=True)
+
+            # get the dialogue and utterance IDs
+            id = f.split("_IS10")[0]
+
+            # save the dataframe to a dict with (dialogue, utt) as key
+            if feats.shape[0] > 0:
+                acoustic_dict[id] = feats.values.tolist()
+                acoustic_lengths[id] = feats.shape[0]
+
+    # sort acoustic lengths so they are in the same order as other data
+    acoustic_lengths = [value for key, value in sorted(acoustic_lengths.items())]
+
+    return acoustic_dict, acoustic_lengths
 
 
 def reorganize_gender_annotations_chalearn(path, genderfile, transcriptfile):
