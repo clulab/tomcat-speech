@@ -137,11 +137,11 @@ def train_and_predict(
 
         # for each batch in the list of batches created by the dataloader
         for batch_index, batch in enumerate(batches):
-            print(batch)
-            sys.exit()
+            # print(batch)
+            # sys.exit()
             # get the gold labels
-            # y_gold = batch[4].to(device)  # 4 is emotion, 5 is sentiment
-            y_gold = batch.targets()
+            y_gold = batch[4].to(device)  # 4 is emotion, 5 is sentiment
+            # y_gold = batch.targets()
 
             # step 1. zero the gradients
             optimizer.zero_grad()
@@ -200,6 +200,8 @@ def train_and_predict(
             ys_holder.extend(y_gold.tolist())
 
             # step 3. compute the loss
+            # print(y_pred)
+            # print(y_gold)
             loss = loss_func(y_pred, y_gold)
             loss_t = loss.item()  # loss for the item
 
@@ -292,8 +294,8 @@ def train_and_predict(
                 )
 
             # get the gold labels
-            # y_gold = batch[4].to(device)
-            y_gold = batch.targets()
+            y_gold = batch[4].to(device)
+            # y_gold = batch.targets()
 
             if binary:
                 y_pred = y_pred.float()

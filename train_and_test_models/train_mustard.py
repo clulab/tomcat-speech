@@ -13,7 +13,7 @@ from data_prep.meld_data.meld_prep import *
 from data_prep.mustard_data.mustard_prep import *
 
 # import parameters for model
-from models.parameters.multitask_params import params
+from models.parameters.latefusion_params import params
 
 sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 
@@ -44,6 +44,7 @@ glove_file = "../../glove.short.300d.punct.txt"
 mustard_path = "../../datasets/multimodal_datasets/MUStARD"
 
 data_type = "mustard"
+fusion_type = "late"
 
 # set model name and model type
 model = params.model
@@ -104,7 +105,7 @@ if __name__ == "__main__":
             # model_type = f"Multitask_1.6vs1lossWeighting_Adagrad_TextOnly_100batch_wd{str(wd)}_.2split"
             # model_type = f"TextOnly_smallerPool_100batch_wd{str(wd)}_.2split_500hidden"
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
-            model_type = "MUStARD_BCELoss"
+            model_type = "MUStARD_lateFusionTest_avgdAcoustic_BothGendEmbs"
 
             # this uses train-dev-test folds
             # create instance of model
@@ -122,6 +123,14 @@ if __name__ == "__main__":
                 )
                 # optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
                 #                              weight_decay=wd)
+            elif fusion_type == "late":
+                bimodal_trial = LateFusionMultimodalModel(
+                    params=params,
+                    num_embeddings=num_embeddings,
+                    pretrained_embeddings=pretrained_embeddings,
+                )
+                optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
+                                             weight_decay=wd)
             elif params.text_only:
                 bimodal_trial = TextOnlyCNN(
                     params=params,
@@ -136,7 +145,7 @@ if __name__ == "__main__":
                 # optimizer = torch.optim.Adadelta(lr=lr, params=bimodal_trial.parameters(),
                 # weight_decay=wd)
             else:
-                bimodal_trial = BasicEncoder(
+                bimodal_trial = EarlyFusionMultimodalModel(
                     params=params,
                     num_embeddings=num_embeddings,
                     pretrained_embeddings=pretrained_embeddings,
