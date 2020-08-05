@@ -8,7 +8,7 @@ params = Namespace(
     # overall model parameters
     model="Multitask-meld",
     num_epochs=100,
-    batch_size=10,  # 128,  # 32
+    batch_size=100,  # 128,  # 32
     early_stopping_criteria=20,
     num_gru_layers=2,  # 1,   # 3,  # 1,  # 4, 2,
     bidirectional=False,
@@ -28,7 +28,7 @@ params = Namespace(
     text_cnn_hidden_dim=500,
     # acoustic NN
     avgd_acoustic=False,  # set true to use avgd acoustic feat vectors without RNN
-    add_avging=False,  # set to true if you want to avg acoustic feature vecs upon input
+    add_avging=True,  # set to true if you want to avg acoustic feature vecs upon input
     acoustic_gru_hidden_dim=100,
     # speaker embeddings
     use_speaker=False,
@@ -38,14 +38,14 @@ params = Namespace(
     use_gender=True,
     gender_emb_dim=4,
     # outputs
-    output_dim=2,  # 7,  # length of output vector
+    output_dim=1,  # 7,  # length of output vector
     output_2_dim=None,  # 3,    # length of second task output vec
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,
     fc_hidden_dim=100,  # 20,
     dropout=0.4,  # 0.2
     # optimizer parameters
-    lrs=[1e-4],
+    lrs=[1e-3],
     beta_1=0.9,
     beta_2=0.999,
     weight_decay=[0.0001],

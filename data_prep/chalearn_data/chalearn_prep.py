@@ -3,6 +3,7 @@
 import os
 import pickle
 import json
+import sys
 from collections import OrderedDict
 
 import torch
@@ -17,7 +18,6 @@ from data_prep.data_prep_helpers import (
     get_gender_avgs,
     clean_up_word,
     get_max_num_acoustic_frames,
-    make_acoustic_set,
     transform_acoustic_item,
 )
 
@@ -92,7 +92,7 @@ class ChalearnPrep:
         # self.test_dict = OrderedDict(self.test_dict)
 
         # utterance-level dict
-        self.longest_utt, self.longest_dia = self.get_longest_utt_chalearn()
+        self.longest_utt = self.get_longest_utt_chalearn()
 
         # get length of longest acoustic dataframe
         self.longest_acoustic = get_max_num_acoustic_frames(
@@ -103,28 +103,25 @@ class ChalearnPrep:
 
         print("Finalizing acoustic organization")
 
-        self.train_acoustic, self.train_usable_utts = make_acoustic_set(
+        self.train_acoustic, self.train_usable_utts = make_acoustic_set_chalearn(
             self.train,
             self.train_dict,
-            data_type="meld",
             acoustic_length=acoustic_length,
             longest_acoustic=self.longest_acoustic,
             add_avging=add_avging,
             avgd=avgd,
         )
-        self.dev_acoustic, self.dev_usable_utts = make_acoustic_set(
+        self.dev_acoustic, self.dev_usable_utts = make_acoustic_set_chalearn(
             self.dev,
             self.dev_dict,
-            data_type="meld",
             acoustic_length=acoustic_length,
             longest_acoustic=self.longest_acoustic,
             add_avging=add_avging,
             avgd=avgd,
         )
-        # self.test_acoustic, self.test_usable_utts = make_acoustic_set(
+        # self.test_acoustic, self.test_usable_utts = make_acoustic_set_chalearn(
         #     self.test,
         #     self.test_dict,
-        #     data_type="meld",
         #     acoustic_length=acoustic_length,
         #     longest_acoustic=self.longest_acoustic,
         #     add_avging=add_avging,
@@ -175,8 +172,13 @@ class ChalearnPrep:
         #     self.test_data_file, self.test_usable_utts, glove
         # )
 
-        # set emotion and sentiment weights
+        # set trait weights
         # todo: determine how we're binning and get class weights
+        # self.median_openness = torch.median(self.train_y_openn)
+        self.mean_openness = torch.mean(self.train_y_openn)
+        # print(self.mean_openness)
+        # sys.exit()
+        # self.openness_weights = get_class_weights()
 
         # acoustic feature normalization based on train
         self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
@@ -192,7 +194,6 @@ class ChalearnPrep:
         # get the data organized for input into the NNs
         # self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
         self.train_data, self.dev_data = self.combine_xs_and_ys()
-
 
     def combine_xs_and_ys(self):
         """
@@ -216,6 +217,7 @@ class ChalearnPrep:
                 (
                     item_transformed,
                     self.train_utts[i],
+                    0,  # todo: eventually add speaker ?
                     self.train_genders[i],
                     self.train_ethnicities[i],
                     self.train_y_extr[i],
@@ -242,6 +244,7 @@ class ChalearnPrep:
                 (
                     item_transformed,
                     self.dev_utts[i],
+                    0,      # todo: eventually add speaker ?
                     self.dev_genders[i],
                     self.dev_ethnicities[i],
                     self.dev_y_extr[i],
@@ -268,6 +271,7 @@ class ChalearnPrep:
         #         (
         #             item_transformed,
         #             self.test_utts[i],
+        #             0,  # todo: eventually add speaker ?
         #             self.test_genders[i],
         #             self.test_ethnicities[i],
         #             self.test_y_extr[i],
@@ -299,18 +303,18 @@ class ChalearnPrep:
         # all_utts_df = pd.concat([train_utts_df, dev_utts_df, test_utts_df], axis=0)
         all_utts_df = pd.concat([train_utts_df, dev_utts_df], axis=0)
 
-        all_utts = all_utts_df["Utterance"].tolist()
+        all_utts = all_utts_df["utterance"].tolist()
 
         for i, item in enumerate(all_utts):
-            item = clean_up_word(item)
+            try:
+                item = clean_up_word(item)
+            except AttributeError:  # at least one item is blank and reads in as a float
+                item = "<UNK>"
             item = self.tokenizer(item)
             if len(item) > longest:
                 longest = len(item)
 
-        # get longest dialogue length
-        longest_dia = max(all_utts_df["Utterance_ID"].tolist()) + 1  # because 0-indexed
-
-        return longest, longest_dia
+        return longest
 
     def make_data_tensors(self, all_utts_df, all_utts_list, glove):
         """
@@ -338,13 +342,17 @@ class ChalearnPrep:
 
             # check to make sure this utterance is used
             audio_name = row['file']
-            if audio_name in all_utts_list:
+            audio_id = audio_name.split(".mp4")[0]
+            if audio_id in all_utts_list:
 
                 # create utterance-level holders
                 utts = [0] * self.longest_utt
 
                 # get values from row
-                utt = clean_up_word(row["utterance"])
+                try:
+                    utt = clean_up_word(row["utterance"])
+                except AttributeError:  # at least one item is blank and reads in as a float
+                    utt = "<UNK>"
                 utt = self.tokenizer(utt)
                 utt_lengths.append(len(utt))
 
@@ -538,6 +546,77 @@ def make_acoustic_dict_chalearn(
     acoustic_lengths = [value for key, value in sorted(acoustic_lengths.items())]
 
     return acoustic_dict, acoustic_lengths
+
+
+def make_acoustic_set_chalearn(
+    text_path,
+    acoustic_dict,
+    acoustic_length,
+    longest_acoustic,
+    add_avging=True,
+    avgd=False,
+):
+    """
+    Prep the acoustic data using the acoustic dict
+    :param text_path: FULL path to file containing utterances + labels
+    :param acoustic_dict:
+    :param add_avging: whether to average the feature sets
+    :return:
+    """
+    # read in the acoustic csv
+    if type(text_path) == str:
+        all_utts_df = pd.read_csv(text_path, sep="\t")
+    elif type(text_path) == pd.core.frame.DataFrame:
+        all_utts_df = text_path
+    else:
+        sys.exit("text_path is of unaccepted type.")
+
+    # get lists of valid dialogues and utterances
+    valid_utts = all_utts_df["file"].tolist()
+
+    # set holders for acoustic data
+    all_acoustic = []
+    usable_utts = []
+
+    # for all items with audio + gold label
+    for idx, item in enumerate(valid_utts):
+        item_id = item.split(".mp4")[0]
+        # if that dialogue and utterance appears has an acoustic feats file
+        if item_id in acoustic_dict.keys():
+
+            # pull out the acoustic feats dataframe
+            acoustic_data = acoustic_dict[item_id]
+
+            # add this dialogue + utt combo to the list of possible ones
+            usable_utts.append(item_id)
+
+            if not avgd and not add_avging:
+                # set intermediate acoustic holder
+                acoustic_holder = [[0] * acoustic_length] * longest_acoustic
+
+                # add the acoustic features to the holder of features
+                for i, feats in enumerate(acoustic_data):
+                    # for now, using longest acoustic file in TRAIN only
+                    if i >= longest_acoustic:
+                        break
+                    # needed because some files allegedly had length 0
+                    for j, feat in enumerate(feats):
+                        acoustic_holder[i][j] = feat
+            else:
+                if avgd:
+                    acoustic_holder = acoustic_data
+                elif add_avging:
+                    acoustic_holder = torch.mean(torch.tensor(acoustic_data), dim=0)
+
+            # add features as tensor to acoustic data
+            all_acoustic.append(torch.tensor(acoustic_holder))
+
+    # pad the sequence and reshape it to proper format
+    # this is here to keep the formatting for acoustic RNN
+    all_acoustic = nn.utils.rnn.pad_sequence(all_acoustic)
+    all_acoustic = all_acoustic.transpose(0, 1)
+
+    return all_acoustic, usable_utts
 
 
 def reorganize_gender_annotations_chalearn(path, genderfile, transcriptfile):

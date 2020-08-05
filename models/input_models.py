@@ -272,7 +272,7 @@ class EarlyFusionMultimodalModel(nn.Module):
         # output = torch.tanh(self.fc1(inputs))
 
         if self.out_dims == 1:
-            output = F.sigmoid(output)
+            output = torch.sigmoid(output)
         # return the output
         return output
 
