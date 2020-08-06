@@ -49,6 +49,11 @@ class MeldPrep:
         self.dev = "{0}/dev_sent_emo.csv".format(self.dev_path)
         self.test = "{0}/test_sent_emo.csv".format(self.test_path)
 
+        # get files containing gold labels/data
+        self.train_data_file = pd.read_csv(self.train)
+        self.dev_data_file = pd.read_csv(self.dev)
+        self.test_data_file = pd.read_csv(self.test)
+
         # get tokenizer
         self.tokenizer = get_tokenizer("basic_english")
 
@@ -75,19 +80,27 @@ class MeldPrep:
         print("Collecting acoustic features")
 
         # ordered dicts of acoustic data
+        # todo: is this screwed up?
+        #   ordered dict--is it same order as acoustic_lengths
         self.train_dict, self.train_acoustic_lengths = make_acoustic_dict_meld(
             "{0}/{1}".format(self.train_path, self.train_dir),
             f_end,
-            use_cols,
+            use_cols=use_cols,
             avgd=avgd,
         )
         self.train_dict = OrderedDict(self.train_dict)
         self.dev_dict, self.dev_acoustic_lengths = make_acoustic_dict_meld(
-            "{0}/{1}".format(self.dev_path, self.dev_dir), f_end, use_cols, avgd=avgd
+            "{0}/{1}".format(self.dev_path, self.dev_dir),
+            f_end,
+            use_cols=use_cols,
+            avgd=avgd,
         )
         self.dev_dict = OrderedDict(self.dev_dict)
         self.test_dict, self.test_acoustic_lengths = make_acoustic_dict_meld(
-            "{0}/{1}".format(self.test_path, self.test_dir), f_end, use_cols, avgd=avgd
+            "{0}/{1}".format(self.test_path, self.test_dir),
+            f_end,
+            use_cols=use_cols,
+            avgd=avgd,
         )
         self.test_dict = OrderedDict(self.test_dict)
 
@@ -139,7 +152,9 @@ class MeldPrep:
             self.train_y_emo,
             self.train_y_sent,
             self.train_utt_lengths,
-        ) = self.make_meld_data_tensors(self.train, self.train_usable_utts, glove)
+        ) = self.make_meld_data_tensors(
+            self.train_data_file, self.train_usable_utts, glove
+        )
 
         (
             self.dev_utts,
@@ -148,7 +163,7 @@ class MeldPrep:
             self.dev_y_emo,
             self.dev_y_sent,
             self.dev_utt_lengths,
-        ) = self.make_meld_data_tensors(self.dev, self.dev_usable_utts, glove)
+        ) = self.make_meld_data_tensors(self.dev_data_file, self.dev_usable_utts, glove)
 
         (
             self.test_utts,
@@ -157,7 +172,9 @@ class MeldPrep:
             self.test_y_emo,
             self.test_y_sent,
             self.test_utt_lengths,
-        ) = self.make_meld_data_tensors(self.test, self.test_usable_utts, glove)
+        ) = self.make_meld_data_tensors(
+            self.test_data_file, self.test_usable_utts, glove
+        )
 
         # set emotion and sentiment weights
         self.emotion_weights = get_class_weights(self.train_y_emo)
@@ -274,9 +291,9 @@ class MeldPrep:
         longest = 0
 
         # get all data splits
-        train_utts_df = pd.read_csv(self.train)
-        dev_utts_df = pd.read_csv(self.dev)
-        test_utts_df = pd.read_csv(self.test)
+        train_utts_df = self.train_data_file
+        dev_utts_df = self.dev_data_file
+        test_utts_df = self.test_data_file
 
         # concatenate them and put utterances in array
         all_utts_df = pd.concat([train_utts_df, dev_utts_df, test_utts_df], axis=0)
@@ -293,10 +310,10 @@ class MeldPrep:
 
         return longest, longest_dia
 
-    def make_meld_data_tensors(self, text_path, all_utts_list, glove):
+    def make_meld_data_tensors(self, all_utts_df, all_utts_list, glove):
         """
         Prepare the tensors of utterances + speakers, emotion and sentiment scores
-        :param text_path: the FULL path to a csv containing the text (in column 0)
+        :param all_utts_df: the df containing the text (in column 0)
         :param all_utts_list: a list of all usable utterances
         :param glove: an instance of class Glove
         :return:
@@ -310,8 +327,6 @@ class MeldPrep:
 
         # create holder for sequence lengths information
         utt_lengths = []
-
-        all_utts_df = pd.read_csv(text_path)
 
         for idx, row in all_utts_df.iterrows():
 
@@ -335,8 +350,6 @@ class MeldPrep:
                 # convert words to indices for glove
                 utt_indexed = glove.index(utt)
                 for i, item in enumerate(utt_indexed):
-                    if i >= self.longest_utt:
-                        print(i)
                     utts[i] = item
 
                 all_utts.append(torch.tensor(utts))
@@ -350,12 +363,6 @@ class MeldPrep:
         all_genders = torch.tensor(all_genders)
         all_emotions = torch.tensor(all_emotions)
         all_sentiments = torch.tensor(all_sentiments)
-
-        all_utts = pad_sequence(all_utts, batch_first=True, padding_value=0)
-
-        # pad and transpose utterance sequences
-        all_utts = nn.utils.rnn.pad_sequence(all_utts)
-        all_utts = all_utts.transpose(0, 1)
 
         # return data
         return (
@@ -446,23 +453,23 @@ class MeldPrep:
         all_emotions = torch.tensor(all_emotions)
         all_sentiments = torch.tensor(all_sentiments)
 
-        all_utts = nn.utils.rnn.pad_sequence(all_utts)
-        all_utts = all_utts.transpose(0, 1)
-
         # return data
         return all_utts, all_speakers, all_emotions, all_sentiments
 
 
 # helper functions
-def make_acoustic_dict_meld(acoustic_path, f_end="_IS10.csv", use_cols=None, avgd=True):
+def make_acoustic_dict_meld(
+    acoustic_path, f_end="_IS10.csv", files_to_get=None, use_cols=None, avgd=True
+):
     """
-    makes a dict of (sid, call): data for use in ClinicalDataset objects
+    makes a dict of (dia, utt): data for use in MELD objects
     f_end: end of acoustic file names
     use_cols: if set, should be a list [] of column names to include
     n_to_skip : the number of columns at the start to ignore (e.g. name, time)
     """
     acoustic_dict = {}
-    acoustic_lengths = []
+    # acoustic_lengths = []
+    acoustic_lengths = {}
     # find acoustic features files
     for f in os.listdir(acoustic_path):
         if f.endswith(f_end):
@@ -473,23 +480,27 @@ def make_acoustic_dict_meld(acoustic_path, f_end="_IS10.csv", use_cols=None, avg
                 separator = ";"
 
             # read in the file as a dataframe
-            if use_cols is not None:
-                feats = pd.read_csv(
-                    acoustic_path + "/" + f, usecols=use_cols, sep=separator
-                )
-            else:
-                feats = pd.read_csv(acoustic_path + "/" + f, sep=separator)
-                if not avgd:
-                    feats.drop(["name", "frameTime"], axis=1, inplace=True)
+            if files_to_get is None or "_".join(f.split("_")[:2]) in files_to_get:
+                if use_cols is not None:
+                    feats = pd.read_csv(
+                        acoustic_path + "/" + f, usecols=use_cols, sep=separator
+                    )
+                else:
+                    feats = pd.read_csv(acoustic_path + "/" + f, sep=separator)
+                    if not avgd:
+                        feats.drop(["name", "frameTime"], axis=1, inplace=True)
 
                 # get the dialogue and utterance IDs
                 dia_id = f.split("_")[0]
                 utt_id = f.split("_")[1]
 
-            # save the dataframe to a dict with (dialogue, utt) as key
-            if feats.shape[0] > 0:
-                acoustic_dict[(dia_id, utt_id)] = feats.values.tolist()
-                acoustic_lengths.append(feats.shape[0])
+                # save the dataframe to a dict with (dialogue, utt) as key
+                if feats.shape[0] > 0:
+                    acoustic_dict[(dia_id, utt_id)] = feats.values.tolist()
+                    acoustic_lengths[(dia_id, utt_id)] = feats.shape[0]
+
+    # sort acoustic lengths so they are in the same order as other data
+    acoustic_lengths = [value for key, value in sorted(acoustic_lengths.items())]
 
     return acoustic_dict, acoustic_lengths
 

@@ -142,7 +142,7 @@ if __name__ == "__main__":
                     pretrained_embeddings=pretrained_embeddings,
                 )
             elif params.model == "Multitask":
-                bimodal_trial = BasicEncoder(
+                bimodal_trial = EarlyFusionMultimodalModel(
                     params=params,
                     num_embeddings=num_embeddings,
                     pretrained_embeddings=pretrained_embeddings,

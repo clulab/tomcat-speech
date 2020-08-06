@@ -1,5 +1,7 @@
 # prepare text and audio for use in neural network models
+import math
 import os
+import random
 import sys
 from collections import OrderedDict
 
@@ -20,8 +22,9 @@ class DatumListDataset(Dataset):
     A dataset to hold a list of datums
     """
 
-    def __init__(self, data_list, class_weights=None):
+    def __init__(self, data_list, data_type="meld_emotion", class_weights=None):
         self.data_list = data_list
+        self.data_type = data_type
 
         self.class_weights = class_weights
 
@@ -35,8 +38,18 @@ class DatumListDataset(Dataset):
         return self.data_list[item]
 
     def targets(self):
-        for datum in self.data_list:
-            yield datum[4]
+        if (
+            self.data_type == "meld_emotion"
+            or self.data_type == "mustard"
+            or self.data_type == "ravdess_emotion"
+        ):
+            for datum in self.data_list:
+                yield datum[4]
+        elif (
+            self.data_type == "meld_sentiment" or self.data_type == "ravdess_intensity"
+        ):
+            for datum in self.data_list:
+                yield datum[5]
 
 
 class Glove(object):
@@ -58,7 +71,7 @@ class Glove(object):
 
     def id_or_unk(self, t):
         if t.strip() in self.wd2idx:
-            return self.wd2idx[t]
+            return self.wd2idx[t.strip()]
         else:
             # print(f"OOV: [[{t}]]")
             return self.wd2idx["<UNK>"]
@@ -181,6 +194,60 @@ def clean_up_word(word):
     if word.strip() == "":
         word = "<UNK>"
     return word
+
+
+def create_data_folds(data, perc_train, perc_test):
+    """
+    Create train, dev, and test folds for a dataset without them
+    Specify the percentage of the data that goes into each fold
+    data : a Pandas dataframe with (at a minimum) gold labels for all data
+    perc_* : the percentage for each fold
+    Percentage not included in train or test fold allocated to dev
+    """
+    # shuffle the rows of the dataframe
+    shuffled = data.sample(frac=1).reset_index(drop=True)
+
+    # get length of df
+    length = shuffled.shape[0]
+
+    # calculate length of each split
+    train_len = perc_train * length
+    test_len = perc_test * length
+
+    # get slices of dataset
+    train_data = shuffled.iloc[: int(train_len)]
+    test_data = shuffled.iloc[int(train_len) : int(train_len) + int(test_len)]
+    dev_data = shuffled.iloc[int(train_len) + int(test_len) :]
+
+    # return data
+    return train_data, dev_data, test_data
+
+
+def create_data_folds_list(data, perc_train, perc_test):
+    """
+    Create train, dev, and test data folds
+    Specify the percentage that goes into each
+    data: A LIST of the data that goes into all folds
+    perc_* : the percentage for each fold
+    Percentage not included in train or test fold allocated to dev
+    """
+    # shuffle the data
+    random.shuffle(data)
+
+    # get length
+    length = len(data)
+
+    # calculate proportion alotted to train and test
+    train_len = math.floor(perc_train * length)
+    test_len = math.floor(perc_test * length)
+
+    # get datasets
+    train_data = data[:train_len]
+    test_data = data[train_len : train_len + test_len]
+    dev_data = data[train_len + test_len :]
+
+    # return data
+    return train_data, dev_data, test_data
 
 
 def get_avg_vec(nested_list):
@@ -399,14 +466,31 @@ def make_acoustic_set(
                 elif add_avging:
                     acoustic_holder = torch.mean(torch.tensor(acoustic_data), dim=0)
 
+                    # get average of all non-padding vectors
+                    # nonzero_avg = get_nonzero_avg(torch.tensor(acoustic_data))
+                    # acoustic_holder = nonzero_avg
+
             # add features as tensor to acoustic data
             all_acoustic.append(torch.tensor(acoustic_holder))
 
     # pad the sequence and reshape it to proper format
+    # this is here to keep the formatting for acoustic RNN
     all_acoustic = nn.utils.rnn.pad_sequence(all_acoustic)
     all_acoustic = all_acoustic.transpose(0, 1)
 
     return all_acoustic, usable_utts
+
+
+def get_nonzero_avg(tensor):
+    """
+    Get the average of all non-padding vectors in a tensor
+    """
+    nonzeros = tensor.sum(axis=1) != 0
+    num_nonzeros = sum(i == True for i in nonzeros)
+
+    nonzero_avg = tensor.sum(axis=0) / num_nonzeros
+
+    return nonzero_avg
 
 
 def make_glove_dict(glove_path):

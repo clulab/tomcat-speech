@@ -2,6 +2,7 @@
 # currently the main entry point into the system
 
 import sys
+import numpy as np
 
 from sklearn.model_selection import train_test_split
 
@@ -73,26 +74,37 @@ if __name__ == "__main__":
 
     # 2. MAKE DATASET
     # meld_data = MustardPrep(mustard_path=meld_path)
+    # data = MeldPrep(
+    #     meld_path=meld_path,
+    #     acoustic_length=params.audio_dim,
+    #     glove=glove,
+    #     add_avging=params.add_avging,
+    #     avgd=avgd_acoustic,
+    # )
+
     data = MeldPrep(
         meld_path=meld_path,
         acoustic_length=params.audio_dim,
         glove=glove,
         add_avging=params.add_avging,
+        use_cols=[
+            "pcm_loudness_sma",
+            "F0finEnv_sma",
+            "voicingFinalUnclipped_sma",
+            "jitterLocal_sma",
+            "shimmerLocal_sma",
+            "pcm_loudness_sma_de",
+            "F0finEnv_sma_de",
+            "voicingFinalUnclipped_sma_de",
+            "jitterLocal_sma_de",
+            "shimmerLocal_sma_de",
+        ],
         avgd=avgd_acoustic,
     )
 
-    # data = MeldPrep(meld_path=meld_path, acoustic_length=params.audio_dim, add_avging=params.add_avging,
-    #                 use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
-    #                           'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
-    #                           'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
-    #                 avgd=avgd_acoustic)
-
     # add class weights to device
-    if data_type == "meld":
-        data.emotion_weights = data.emotion_weights.to(device)
-        data.sentiment_weights = data.sentiment_weights.to(device)
-    elif data_type == "mustard":
-        data.sarcasm_weights = data.sarcasm_weights.to(device)
+    data.emotion_weights = data.emotion_weights.to(device)
+    data.sentiment_weights = data.sentiment_weights.to(device)
 
     print("Dataset created")
 
@@ -104,7 +116,6 @@ if __name__ == "__main__":
 
     # prepare holders for loss and accuracy of best model versions
     all_test_losses = []
-    all_test_accs = []
 
     # mini search through different learning_rate values
     for lr in params.lrs:
@@ -112,7 +123,10 @@ if __name__ == "__main__":
             # model_type = f"Multitask_1.6vs1lossWeighting_Adagrad_TextOnly_100batch_wd{str(wd)}_.2split"
             # model_type = f"TextOnly_smallerPool_100batch_wd{str(wd)}_.2split_500hidden"
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
-            model_type = "DELETE_ME"
+            # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
+            model_type = (
+                "MELD_IS10sm_500txthid_.1InDrpt_.3textdrpt_.4acdrpt_.5finalFCdrpt"
+            )
 
             # this uses train-dev-test folds
             # create instance of model
@@ -144,7 +158,7 @@ if __name__ == "__main__":
                 # optimizer = torch.optim.Adadelta(lr=lr, params=bimodal_trial.parameters(),
                 # weight_decay=wd)
             else:
-                bimodal_trial = BasicEncoder(
+                bimodal_trial = EarlyFusionMultimodalModel(
                     params=params,
                     num_embeddings=num_embeddings,
                     pretrained_embeddings=pretrained_embeddings,
@@ -175,13 +189,15 @@ if __name__ == "__main__":
 
             train_data, dev_data = train_test_split(train_and_dev, test_size=0.2)  # .3
 
-            train_ds = DatumListDataset(train_data, data.emotion_weights)
-            train_targets = torch.stack(list(train_ds.targets()))
-            sampler_weights = data.emotion_weights
-            train_samples_weights = sampler_weights[train_targets]
-            sampler = torch.utils.data.sampler.WeightedRandomSampler(
-                train_samples_weights, len(train_samples_weights)
+            train_ds = DatumListDataset(
+                train_data, data_type="meld_emotion", class_weights=data.emotion_weights
             )
+            # train_targets = torch.stack(list(train_ds.targets()))
+            # sampler_weights = data.emotion_weights
+            # train_samples_weights = sampler_weights[train_targets]
+            # sampler = torch.utils.data.sampler.WeightedRandomSampler(
+            #     train_samples_weights, len(train_samples_weights)
+            # )
 
             dev_ds = DatumListDataset(dev_data, data.emotion_weights)
             # dev_ds = DatumListDataset(data.dev_data, data.emotion_weights)
@@ -199,9 +215,6 @@ if __name__ == "__main__":
 
             # make the train state to keep track of model training/development
             train_state = make_train_state(lr, model_save_path, model_save_file)
-
-            # set the load path for testing
-            load_path = model_save_path + model_save_file
 
             # train the model and evaluate on development set
             if multitask:
