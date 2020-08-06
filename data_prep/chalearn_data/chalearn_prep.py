@@ -140,9 +140,7 @@ class ChalearnPrep:
             self.train_y_consc,
             self.train_y_inter,
             self.train_utt_lengths,
-        ) = self.make_data_tensors(
-            self.train_data_file, self.train_usable_utts, glove
-        )
+        ) = self.make_data_tensors(self.train_data_file, self.train_usable_utts, glove)
 
         (
             self.dev_utts,
@@ -244,7 +242,7 @@ class ChalearnPrep:
                 (
                     item_transformed,
                     self.dev_utts[i],
-                    0,      # todo: eventually add speaker ?
+                    0,  # todo: eventually add speaker ?
                     self.dev_genders[i],
                     self.dev_ethnicities[i],
                     self.dev_y_extr[i],
@@ -341,7 +339,7 @@ class ChalearnPrep:
         for idx, row in all_utts_df.iterrows():
 
             # check to make sure this utterance is used
-            audio_name = row['file']
+            audio_name = row["file"]
             audio_id = audio_name.split(".mp4")[0]
             if audio_id in all_utts_list:
 
@@ -356,15 +354,14 @@ class ChalearnPrep:
                 utt = self.tokenizer(utt)
                 utt_lengths.append(len(utt))
 
-                gen = row['gender']
-                eth = row['ethnicity']
-                extra = row['extraversion']
-                neur = row['neuroticism']
-                agree = row['agreeableness']
-                openn = row['openness']
-                consc = row['conscientiousness']
-                inter = row['invite_to_interview']
-
+                gen = row["gender"]
+                eth = row["ethnicity"]
+                extra = row["extraversion"]
+                neur = row["neuroticism"]
+                agree = row["agreeableness"]
+                openn = row["openness"]
+                consc = row["conscientiousness"]
+                inter = row["invite_to_interview"]
 
                 # convert words to indices for glove
                 utt_indexed = glove.index(utt)

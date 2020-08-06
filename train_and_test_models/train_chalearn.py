@@ -175,7 +175,6 @@ if __name__ == "__main__":
             dev_ds = DatumListDataset(data.dev_data, data.emotion_weights)
             # test_ds = DatumListDataset(data.test_data, data.emotion_weights)
 
-
             # create a a save path and file for the model
             model_save_file = "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
                 model_type, params.batch_size, params.fc_hidden_dim, lr
@@ -218,7 +217,7 @@ if __name__ == "__main__":
                     avgd_acoustic=avgd_acoustic_in_network,
                     use_speaker=params.use_speaker,
                     use_gender=params.use_gender,
-                    split_point=data.mean_openness
+                    split_point=data.mean_openness,
                 )
 
             # plot the loss and accuracy curves

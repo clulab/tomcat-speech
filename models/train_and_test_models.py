@@ -112,7 +112,7 @@ def train_and_predict(
     use_speaker=True,
     use_gender=False,
     binary=False,
-    split_point=0.,
+    split_point=0.0,
 ):
 
     for epoch_index in range(num_epochs):
@@ -143,7 +143,12 @@ def train_and_predict(
             # get the gold labels
             y_gold = batch[7].to(device)  # 4 is emotion, 5 is sentiment
             if split_point > 0:
-                y_gold = torch.tensor([1. if y_gold[i] > split_point else 0. for i in range(len(y_gold))])
+                y_gold = torch.tensor(
+                    [
+                        1.0 if y_gold[i] > split_point else 0.0
+                        for i in range(len(y_gold))
+                    ]
+                )
             # y_gold = batch.targets()
 
             # step 1. zero the gradients
@@ -163,8 +168,6 @@ def train_and_predict(
                 batch_genders = batch[3].to(device)
             else:
                 batch_genders = None
-
-            print(batch_genders)
 
             if avgd_acoustic:
                 y_pred = classifier(
@@ -301,7 +304,12 @@ def train_and_predict(
             # get the gold labels
             y_gold = batch[7].to(device)
             if split_point > 0:
-                y_gold = torch.tensor([1. if y_gold[i] > split_point else 0. for i in range(len(y_gold))])
+                y_gold = torch.tensor(
+                    [
+                        1.0 if y_gold[i] > split_point else 0.0
+                        for i in range(len(y_gold))
+                    ]
+                )
             # y_gold = batch.targets()
 
             if binary:

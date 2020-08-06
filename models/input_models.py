@@ -281,6 +281,7 @@ class LateFusionMultimodalModel(nn.Module):
     """
     A late fusion model that combines modalities only at decision time
     """
+
     def __init__(self, params, num_embeddings=None, pretrained_embeddings=None):
         super(LateFusionMultimodalModel, self).__init__()
         self.text_dim = params.text_dim
@@ -317,7 +318,9 @@ class LateFusionMultimodalModel(nn.Module):
         )
 
         if params.avgd_acoustic or params.add_avging:
-            self.acoustic_fc_1 = nn.Linear(params.audio_dim + params.gender_emb_dim, 100)
+            self.acoustic_fc_1 = nn.Linear(
+                params.audio_dim + params.gender_emb_dim, 100
+            )
         else:
             self.acoustic_fc_1 = nn.Linear(params.acoustic_gru_hidden_dim, 100)
         self.acoustic_fc_2 = nn.Linear(100, params.output_dim)
@@ -375,7 +378,9 @@ class LateFusionMultimodalModel(nn.Module):
         if gender_input is not None:
             encoded_text = torch.cat((encoded_text, gend_embs), dim=1)
 
-        text_intermediate = torch.tanh(F.dropout(self.text_fc1(encoded_text), self.dropout))
+        text_intermediate = torch.tanh(
+            F.dropout(self.text_fc1(encoded_text), self.dropout)
+        )
         text_predictions = torch.relu(self.text_fc2(text_intermediate))
 
         if acoustic_len_input is not None:
@@ -408,14 +413,12 @@ class LateFusionMultimodalModel(nn.Module):
             F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout)
         )
 
-
         # combine predictions to get results
         # text_predictions = torch.mul(text_predictions, 4)
         # acoustic_predictions = torch.mul(acoustic_predictions, 2)
 
         predictions = torch.add(text_predictions, acoustic_predictions)
         # predictions = torch.mul(text_predictions, acoustic_predictions)
-
 
         # # combine modalities as required by architecture
         # if speaker_input is not None:
@@ -430,7 +433,6 @@ class LateFusionMultimodalModel(nn.Module):
 
         # return the output
         return predictions
-
 
 
 class AudioOnlyRNN(nn.Module):
@@ -683,7 +685,9 @@ class MultitaskModel(nn.Module):
     ):
         super(MultitaskModel, self).__init__()
         # set base of model
-        self.base = EarlyFusionMultimodalModel(params, num_embeddings, pretrained_embeddings)
+        self.base = EarlyFusionMultimodalModel(
+            params, num_embeddings, pretrained_embeddings
+        )
 
         # set output layers
         self.class_1_predictor = PredictionLayer(params, params.output_dim)

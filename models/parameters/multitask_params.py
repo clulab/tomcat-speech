@@ -45,7 +45,7 @@ params = Namespace(
     fc_hidden_dim=100,  # 20,
     dropout=0.4,  # 0.2
     # optimizer parameters
-    lrs=[1e-3],
+    lrs=[1e-2],
     beta_1=0.9,
     beta_2=0.999,
     weight_decay=[0.0001],

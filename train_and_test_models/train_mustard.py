@@ -129,8 +129,9 @@ if __name__ == "__main__":
                     num_embeddings=num_embeddings,
                     pretrained_embeddings=pretrained_embeddings,
                 )
-                optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
-                                             weight_decay=wd)
+                optimizer = torch.optim.Adam(
+                    lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
+                )
             elif params.text_only:
                 bimodal_trial = TextOnlyCNN(
                     params=params,
