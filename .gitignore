@@ -31,3 +31,5 @@ data/*
 
 # R code
 classifier_R
+classifier_R/.Rhistory
+classifier_R/.RData
