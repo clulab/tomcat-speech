@@ -20,6 +20,9 @@ smile.log
 *.mp3
 *.mp4
 ./output
+./classifier_R/extra/ 
 glove.short.300d.txt
 python_readme.md
 
+classifier_R/.Rhistory
+classifier_R/.RData
