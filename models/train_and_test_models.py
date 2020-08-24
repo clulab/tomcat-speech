@@ -141,7 +141,8 @@ def train_and_predict(
             # print(batch)
             # sys.exit()
             # get the gold labels
-            y_gold = batch[7].to(device)  # 4 is emotion, 5 is sentiment
+            y_gold = batch[4].to(device)
+            # y_gold = batch[7].to(device)  # 4 is emotion, 5 is sentiment
             if split_point > 0:
                 y_gold = torch.tensor(
                     [
@@ -303,6 +304,7 @@ def train_and_predict(
 
             # get the gold labels
             y_gold = batch[7].to(device)
+            # y_gold = batch[4].to(device)
             if split_point > 0:
                 y_gold = torch.tensor(
                     [
@@ -377,8 +379,8 @@ def train_and_predict(
 def multitask_train_and_predict(
     classifier,
     train_state,
-    train_ds,
-    val_ds,
+    train_ds_list,
+    val_ds_list,
     batch_size,
     num_epochs,
     loss_func,
@@ -390,6 +392,19 @@ def multitask_train_and_predict(
     use_speaker=True,
     use_gender=False,
 ):
+    """
+    Train_ds_list and val_ds_list are lists of datasets!
+    Each item in the list represents a dataset
+    Length of the list is the number of datasets used
+    todo: this is going to be tested with 2 tasks first, then more
+        it will be brittle at first, so make it more flexible
+    """
+    multi_dataset = (True if len(train_ds_list) > 1 else False)
+    # if len(train_ds_list) > 1:
+    #     multi_dataset = True
+    # else:
+    #     multi_dataset = False
+    num_tasks = len(train_ds_list)
 
     for epoch_index in range(num_epochs):
 
@@ -403,8 +418,11 @@ def multitask_train_and_predict(
         # set classifier(s) to training mode
         classifier.train()
 
-        batches = DataLoader(
-            train_ds, batch_size=batch_size, shuffle=True, sampler=sampler
+        task_1_batches = DataLoader(
+            train_ds_list[0], batch_size=batch_size, shuffle=True, sampler=sampler
+        )
+        task_2_batches = DataLoader(
+            train_ds_list[1], batch_size=batch_size, shuffle=True, sampler=sampler
         )
 
         # set holders to use for error analysis
@@ -414,53 +432,13 @@ def multitask_train_and_predict(
         preds_2_holder = []
 
         # for each batch in the list of batches created by the dataloader
-        for batch_index, batch in enumerate(batches):
-            # get the gold labels
-            y_gold = batch[4].to(device)  # 4 is emotion, 5 is sentiment
-            y_2_gold = batch[5].to(device)
-
+        for batch_index, batch in enumerate(task_1_batches):
             # step 1. zero the gradients
             optimizer.zero_grad()
 
             # step 2. compute the output
-            batch_acoustic = batch[0].to(device)
-            batch_text = batch[1].to(device)
-            batch_lengths = batch[6].to(device)
-            batch_acoustic_lengths = batch[7].to(device)
-            if use_speaker:
-                batch_speakers = batch[2].to(device)
-            else:
-                batch_speakers = None
-
-            if use_gender:
-                batch_genders = batch[3].to(device)
-            else:
-                batch_genders = None
-
-            if avgd_acoustic:
-                y_pred, y_2_pred = classifier(
-                    acoustic_input=batch_acoustic,
-                    text_input=batch_text,
-                    speaker_input=batch_speakers,
-                    length_input=batch_lengths,
-                    gender_input=batch_genders,
-                )
-            else:
-                y_pred, y_2_pred = classifier(
-                    acoustic_input=batch_acoustic,
-                    text_input=batch_text,
-                    speaker_input=batch_speakers,
-                    length_input=batch_lengths,
-                    acoustic_len_input=batch_acoustic_lengths,
-                    gender_input=batch_genders,
-                )
-
-            # uncomment for prediction spot-checking during training
-            # if epoch_index % 10 == 0:
-            #     print(y_pred)
-            #     print(y_gold)
-            # if epoch_index == 35:
-            #     sys.exit(1)
+            y_pred, _, _, y_gold = get_batch_predictions(batch, classifier, 4, use_speaker, use_gender, avgd_acoustic, device)
+            _, y_2_pred, _, y_2_gold = get_batch_predictions(task_2_batches[batch_index], classifier, 4, use_speaker, use_gender, avgd_acoustic, device)
 
             # add ys to holder for error analysis
             preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
@@ -468,16 +446,12 @@ def multitask_train_and_predict(
             ys_holder.extend(y_gold.tolist())
             ys_2_holder.extend(y_2_gold.tolist())
 
-            # ys_gold = torch.tensor(list(zip(y_gold, y_2_gold)))
-            # ys_pred = torch.tensor(list(zip(y_pred, y_2_pred)))
-
+            # step 3. compute the loss
             class_1_loss = loss_func(y_pred, y_gold)
             class_2_loss = loss_func(y_2_pred, y_2_gold)
 
             loss = (class_1_loss / 1.6) + class_2_loss
 
-            # step 3. compute the loss
-            # loss = loss_func(ys_pred, ys_gold)
             loss_t = loss.item()  # loss for the item
 
             # calculate running loss
@@ -488,10 +462,6 @@ def multitask_train_and_predict(
 
             # step 5. use optimizer to take gradient step
             optimizer.step()
-
-            # uncomment to see loss and accuracy measures for every minibatch
-            # print("loss: {0}, running_loss: {1}, acc: {0}, running_acc: {1}".format(loss_t, running_loss,
-            #                                                                       acc_t, running_acc))
 
         # add loss and accuracy information to the train state
         train_state["train_loss"].append(running_loss)
@@ -504,7 +474,8 @@ def multitask_train_and_predict(
         print("Training weighted F=score for EMOTION: " + str(avg_f1))
 
         # Iterate over validation set--put it in a dataloader
-        val_batches = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
+        val_1_batches = DataLoader(val_ds_list[0], batch_size=batch_size, shuffle=False)
+        val_2_batches = DataLoader(val_ds_list[1], batch_size=batch_size, shuffle=False)
 
         # reset loss and accuracy to zero
         running_loss = 0.0
@@ -519,52 +490,17 @@ def multitask_train_and_predict(
         preds_2_holder = []
 
         # for each batch in the dataloader
-        for batch_index, batch in enumerate(val_batches):
+        # todo: what if there are different numbers of batches? (diff dataset sizes)
+        for batch_index, batch in enumerate(val_1_batches):
             # compute the output
-            batch_acoustic = batch[0].to(device)
-            batch_text = batch[1].to(device)
-            batch_lengths = batch[6].to(device)
-            batch_acoustic_lengths = batch[7].to(device)
-            if use_speaker:
-                batch_speakers = batch[2].to(device)
-            else:
-                batch_speakers = None
-
-            if use_gender:
-                batch_genders = batch[3].to(device)
-            else:
-                batch_genders = None
-
-            if avgd_acoustic:
-                y_pred, y_2_pred = classifier(
-                    acoustic_input=batch_acoustic,
-                    text_input=batch_text,
-                    speaker_input=batch_speakers,
-                    length_input=batch_lengths,
-                    gender_input=batch_genders,
-                )
-            else:
-                y_pred, y_2_pred = classifier(
-                    acoustic_input=batch_acoustic,
-                    text_input=batch_text,
-                    speaker_input=batch_speakers,
-                    length_input=batch_lengths,
-                    acoustic_len_input=batch_acoustic_lengths,
-                    gender_input=batch_genders,
-                )
-
-            # get the gold labels
-            y_gold = batch[4].to(device)
-            y_2_gold = batch[5].to(device)
+            y_pred, _, _, y_gold = get_batch_predictions(batch, classifier, 4, use_speaker, use_gender, avgd_acoustic, device)
+            _, y_2_pred, _, y_2_gold = get_batch_predictions(val_2_batches[batch_index], classifier, 4, use_speaker, use_gender, avgd_acoustic, device)
 
             # add ys to holder for error analysis
             preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
             preds_2_holder.extend([item.index(max(item)) for item in y_2_pred.tolist()])
             ys_holder.extend(y_gold.tolist())
             ys_2_holder.extend(y_2_gold.tolist())
-
-            # ys_gold = torch.tensor(list(zip(y_gold, y_2_gold)))
-            # ys_pred = torch.tensor(list(zip(y_pred, y_2_pred)))
 
             class_1_loss = loss_func(y_pred, y_gold)
             class_2_loss = loss_func(y_2_pred, y_2_gold)
@@ -610,6 +546,51 @@ def multitask_train_and_predict(
             break
 
 
+def get_batch_predictions(batch, classifier, gold_idx, use_speaker=False,
+                          use_gender=True, avgd_acoustic=True, device="cpu"):
+    """
+    Get the predictions for a batch
+    batch: the batch of data from dataloader
+    model: the model
+    gold_idx: the index of gold labels used within the data batch
+    returns predictions and gold labels for the batch
+    """
+    # get gold labels for the batch
+    gold = batch[gold_idx].to(device)
+
+    batch_acoustic = batch[0].to(device)
+    batch_text = batch[1].to(device)
+    batch_lengths = batch[6].to(device)
+    # get acoustic lengths if necessary
+    if not avgd_acoustic:
+        batch_acoustic_lengths = batch[7].to(device)
+    else:
+        batch_acoustic_lengths = None
+    # get speakers if necessary
+    if use_speaker:
+        batch_speakers = batch[2].to(device)
+    else:
+        batch_speakers = None
+    # get gender if necessary
+    if use_gender:
+        batch_genders = batch[3].to(device)
+    else:
+        batch_genders = None
+
+    y_pred, y_2_pred, y_3_pred = classifier(
+        acoustic_input=batch_acoustic,
+        text_input=batch_text,
+        speaker_input=batch_speakers,
+        length_input=batch_lengths,
+        acoustic_len_input=batch_acoustic_lengths,
+        gender_input=batch_genders,
+    )
+
+    return y_pred, y_2_pred, y_3_pred, gold
+
+
+
+
 def test_model(
     classifier,
     test_ds,
@@ -642,8 +623,8 @@ def test_model(
         # compute the output
         batch_acoustic = batch[0].to(device)
         batch_text = batch[1].to(device)
-        batch_lengths = batch[6].to(device)
-        batch_acoustic_lengths = batch[7].to(device)
+        batch_lengths = batch[-2].to(device)
+        batch_acoustic_lengths = batch[-1].to(device)
         if use_speaker:
             batch_speakers = batch[2].to(device)
         else:
@@ -678,6 +659,9 @@ def test_model(
         # add ys to holder for error analysis
         preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
         ys_holder.extend(y_gold.tolist())
+
+        y_pred = y_pred.float()
+        y_gold = y_gold.float()
 
         loss = loss_func(y_pred, y_gold)
         running_loss += (loss.item() - running_loss) / (batch_index + 1)

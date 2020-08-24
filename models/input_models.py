@@ -1,4 +1,5 @@
 # the models used for multimodal, multitask classification
+import sys
 
 import torch
 import torch.nn as nn
@@ -678,20 +679,26 @@ class PredictionLayer(nn.Module):
 class MultitaskModel(nn.Module):
     """
     A model combining base + output layers for multitask learning
+    fixme: This class is written for multiple label spaces in the same dataset
     """
 
     def __init__(
-        self, params, num_embeddings=None, pretrained_embeddings=None,
+        self, params, num_embeddings=None, pretrained_embeddings=None, multi_dataset=True
     ):
         super(MultitaskModel, self).__init__()
+        # save whether there are multiple datasets
+        # if so, assumes each dataset has its own task
+        self.multi_dataset = multi_dataset
+
         # set base of model
         self.base = EarlyFusionMultimodalModel(
             params, num_embeddings, pretrained_embeddings
         )
 
         # set output layers
-        self.class_1_predictor = PredictionLayer(params, params.output_dim)
-        self.class_2_predictor = PredictionLayer(params, params.output_2_dim)
+        self.task_1_predictor = PredictionLayer(params, params.output_dim)
+        self.task_2_predictor = PredictionLayer(params, params.output_2_dim)
+        self.task_3_predictor = PredictionLayer(params, params.output_3_dim)
 
     def forward(
         self,
@@ -701,6 +708,7 @@ class MultitaskModel(nn.Module):
         length_input=None,
         acoustic_len_input=None,
         gender_input=None,
+        task_num=0
     ):
         # call forward on base model
         final_base_layer = self.base(
@@ -712,10 +720,23 @@ class MultitaskModel(nn.Module):
             gender_input=gender_input,
         )
 
-        # get first output prediction
-        class_1_out = self.class_1_predictor(final_base_layer)
+        task_1_out = None
+        task_2_out = None
+        task_3_out = None
 
-        # get second output prediction
-        class_2_out = self.class_2_predictor(final_base_layer)
+        if not self.multi_dataset:
+            # get first output prediction
+            task_1_out = self.task_1_predictor(final_base_layer)
+            # get second output prediction
+            task_2_out = self.task_2_predictor(final_base_layer)
+        else:
+            if task_num == 1:
+                task_1_out = self.task_1_predictor(final_base_layer)
+            elif task_num == 2:
+                task_2_out = self.task_2_predictor(final_base_layer)
+            elif task_num == 3:
+                task_3_out = self.task_3_predictor(final_base_layer)
+            else:
+                sys.exit(f"Task {task_num} not defined")
 
-        return class_1_out, class_2_out
+        return task_1_out, task_2_out, task_3_out
