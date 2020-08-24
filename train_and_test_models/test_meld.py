@@ -2,6 +2,7 @@
 # currently the main entry point into the system
 
 import pickle
+import numpy as np
 
 from data_prep.data_prep_helpers import DatumListDataset
 from models.train_and_test_models import *

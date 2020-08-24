@@ -13,7 +13,8 @@ from data_prep.meld_data.meld_prep import *
 from data_prep.mustard_data.mustard_prep import *
 
 # import parameters for model
-from models.parameters.latefusion_params import params
+# from models.parameters.latefusion_params import params
+from models.parameters.multitask_params import params
 
 sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 
@@ -44,7 +45,7 @@ glove_file = "../../glove.short.300d.punct.txt"
 mustard_path = "../../datasets/multimodal_datasets/MUStARD"
 
 data_type = "mustard"
-fusion_type = "late"
+fusion_type = "early"
 
 # set model name and model type
 model = params.model
@@ -105,7 +106,8 @@ if __name__ == "__main__":
             # model_type = f"Multitask_1.6vs1lossWeighting_Adagrad_TextOnly_100batch_wd{str(wd)}_.2split"
             # model_type = f"TextOnly_smallerPool_100batch_wd{str(wd)}_.2split_500hidden"
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
-            model_type = "MUStARD_lateFusionTest_avgdAcoustic_BothGendEmbs"
+            # model_type = "MUStARD_lateFusionTest_avgdAcoustic_BothGendEmbs"
+            model_type = "MUStARD_FORTRACY_8.24"
 
             # this uses train-dev-test folds
             # create instance of model
