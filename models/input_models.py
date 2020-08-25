@@ -1,5 +1,4 @@
 # the models used for multimodal, multitask classification
-import sys
 
 import torch
 import torch.nn as nn
