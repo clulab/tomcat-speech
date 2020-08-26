@@ -12,7 +12,7 @@ from data_prep.data_prep_helpers import *
 # import parameters for model
 # comment or uncomment as needed
 # from models.parameters.bimodal_params import params
-from models.parameters.multitask_params import params
+from models.parameters.earlyfusion_params import params
 
 # from models.parameters.lr_baseline_1_params import params
 # from models.parameters.multichannel_cnn_params import params

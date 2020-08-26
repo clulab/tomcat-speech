@@ -38,17 +38,14 @@ params = Namespace(
     use_gender=True,
     gender_emb_dim=4,
     # outputs
-    output_dim=20,  # output dimensions from last layer of base model
-    output_0_dim=1,
-    output_1_dim=7,  # 7,  # length of output vector
-    output_2_dim=0,  # 3,    # length of second task output vec
-    output_3_dim=0,
+    output_dim=1,  # 7,  # length of output vector
+    output_2_dim=7,  # 3,    # length of second task output vec
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,
     fc_hidden_dim=100,  # 20,
     dropout=0.4,  # 0.2
     # optimizer parameters
-    lrs=[1e-2],
+    lrs=[1e-3],
     beta_1=0.9,
     beta_2=0.999,
     weight_decay=[0.0001],

@@ -13,7 +13,7 @@ from data_prep.meld_data.meld_prep import *
 from data_prep.mustard_data.mustard_prep import *
 
 # import parameters for model
-from models.parameters.multitask_params import params
+from models.parameters.earlyfusion_params import params
 
 sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 

@@ -1,4 +1,5 @@
 # the models used for multimodal, multitask classification
+import sys
 
 import torch
 import torch.nn as nn
@@ -261,7 +262,6 @@ class EarlyFusionMultimodalModel(nn.Module):
         else:
             inputs = torch.cat((encoded_acoustic, encoded_text), 1)
 
-        # print(inputs.shape)
         # use pooled, squeezed feats as input into fc layers
         output = torch.tanh(F.dropout(self.fc1(inputs), 0.5))
         # output = torch.tanh(self.fc1(inputs))
@@ -429,7 +429,7 @@ class LateFusionMultimodalModel(nn.Module):
         #     inputs = torch.cat((encoded_acoustic, encoded_text), 1)
 
         if self.out_dims == 1:
-            predictions = F.sigmoid(predictions)
+            predictions = torch.sigmoid(predictions)
 
         # return the output
         return predictions
@@ -528,7 +528,7 @@ class AudioOnlyRNN(nn.Module):
         output = torch.relu(self.fc2(output))
 
         if self.output_dim == 1:
-            output = F.sigmoid(output)
+            output = torch.sigmoid(output)
 
         # return the output
         return output
@@ -661,7 +661,7 @@ class PredictionLayer(nn.Module):
 
     def __init__(self, params, out_dim):
         super(PredictionLayer, self).__init__()
-        self.input_dim = params.fc_hidden_dim
+        self.input_dim = params.output_dim
         self.dropout = params.dropout
 
         # specify out_dim explicity so we can do multiple tasks at once
@@ -671,6 +671,9 @@ class PredictionLayer(nn.Module):
 
     def forward(self, combined_inputs):
         out = torch.relu(self.fc1(F.dropout(combined_inputs, self.dropout)))
+
+        if self.output_dim == 1:
+            out = torch.sigmoid(out)
 
         return out
 
@@ -695,7 +698,8 @@ class MultitaskModel(nn.Module):
         )
 
         # set output layers
-        self.task_1_predictor = PredictionLayer(params, params.output_dim)
+        self.task_0_predictor = PredictionLayer(params, params.output_0_dim)
+        self.task_1_predictor = PredictionLayer(params, params.output_1_dim)
         self.task_2_predictor = PredictionLayer(params, params.output_2_dim)
         self.task_3_predictor = PredictionLayer(params, params.output_3_dim)
 
@@ -719,17 +723,20 @@ class MultitaskModel(nn.Module):
             gender_input=gender_input,
         )
 
+        task_0_out = None
         task_1_out = None
         task_2_out = None
         task_3_out = None
 
         if not self.multi_dataset:
-            # get first output prediction
+            task_0_out = self.task_0_predictor(final_base_layer)
             task_1_out = self.task_1_predictor(final_base_layer)
-            # get second output prediction
             task_2_out = self.task_2_predictor(final_base_layer)
+            task_3_out = self.task_3_predictor(final_base_layer)
         else:
-            if task_num == 1:
+            if task_num == 0:
+                task_0_out = self.task_0_predictor(final_base_layer)
+            elif task_num == 1:
                 task_1_out = self.task_1_predictor(final_base_layer)
             elif task_num == 2:
                 task_2_out = self.task_2_predictor(final_base_layer)
@@ -738,4 +745,9 @@ class MultitaskModel(nn.Module):
             else:
                 sys.exit(f"Task {task_num} not defined")
 
-        return task_1_out, task_2_out, task_3_out
+        # print(task_0_out)
+        # print(task_1_out)
+        # print(task_2_out)
+        # print(task_3_out)
+        # sys.exit()
+        return task_0_out, task_1_out, task_2_out, task_3_out

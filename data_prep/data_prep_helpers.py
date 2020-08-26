@@ -57,7 +57,7 @@ class MultitaskObject(object):
     """
     An object to hold the data and meta-information for each of the datasets/tasks
     """
-    def __init__(self, train_data, dev_data, test_data, class_loss_func, task_num):
+    def __init__(self, train_data, dev_data, test_data, class_loss_func, task_num, binary=False):
         """
         train_data, dev_data, and test_data are DatumListDataset datasets
         """
@@ -66,6 +66,7 @@ class MultitaskObject(object):
         self.test = test_data
         self.loss_fx = class_loss_func
         self.task_num = task_num
+        self.binary = binary
 
 
 # todo: will we need this?

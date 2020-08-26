@@ -43,6 +43,7 @@ glove_file = "../../glove.short.300d.punct.txt"
 
 mustard_path = "../../datasets/multimodal_datasets/MUStARD"
 meld_path = "../../datasets/multimodal_datasets/MELD_formatted"
+# meld_path = "../../datasets/multimodal_datasets/MELD_five_dialogues"
 
 data_type = "multitask"
 fusion_type = "early"
@@ -107,7 +108,7 @@ if __name__ == "__main__":
 
             # this uses train-dev-test folds
             # create instance of model
-            bimodal_trial = EarlyFusionMultimodalModel(
+            bimodal_trial = MultitaskModel(
                 params=params,
                 num_embeddings=num_embeddings,
                 pretrained_embeddings=pretrained_embeddings,
@@ -131,7 +132,7 @@ if __name__ == "__main__":
 
             # create multitask object
             mustard_obj = MultitaskObject(mustard_train_ds, mustard_dev_ds, mustard_test_ds, mustard_loss_func,
-                                          task_num=0)
+                                          task_num=0, binary=True)
 
             meld_train_ds = DatumListDataset(meld_data.train_data, "meld_emotion", meld_data.emotion_weights)
             meld_dev_ds = DatumListDataset(meld_data.dev_data, "meld_emotion", meld_data.emotion_weights)
