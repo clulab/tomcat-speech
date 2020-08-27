@@ -733,6 +733,9 @@ def multitask_train_and_predict(
 
         # for each batch in the list of batches created by the dataloader
         for batch_index, batch in enumerate(batches):
+            # find the task for this batch
+            batch_task = tasks[batch_index]
+
             # step 1. zero the gradients
             optimizer.zero_grad()
 
@@ -773,35 +776,26 @@ def multitask_train_and_predict(
                 )
             # print(y_pred)
 
-            for i, item in enumerate(y_pred):
-                if item is not None:
-            # for num in range(num_tasks):
-            #     if tasks[batch_index] == num:
-                    y_pred = item
-                    # todo: this may need to be fixed to allow for
-                    #   more sophisticated calculations of loss
-                    #   e.g. do we want different weights for each fx?
-                    # print(datasets_list[i].loss_fx)
-                    # print(datasets_list[i].task_num)
-                    # print(i)
-                    if datasets_list[i].binary:
-                        y_pred = y_pred.float()
-                        y_gold = y_gold.float()
+            batch_pred = y_pred[batch_task]
 
-                    loss = datasets_list[i].loss_fx(y_pred, y_gold)
+            if datasets_list[batch_task].binary:
+                batch_pred = batch_pred.float()
+                y_gold = y_gold.float()
 
-                    loss_t = loss.item()
+            # calculate loss
+            loss = datasets_list[batch_task].loss_fx(batch_pred, y_gold) * datasets_list[batch_task].loss_multiplier
 
-                    # get separate running losses for each task
-                    # calculate running loss
-                    running_loss += (loss_t - running_loss) / (batch_index + 1)
+            loss_t = loss.item()
 
-                    # step 4. use loss to produce gradients
-                    loss.backward()
+            # calculate running loss
+            running_loss = (loss_t - running_loss) / (batch_index + 1)
 
-                    # add ys to holder for error analysis
-                    preds_holder[i].extend([item.index(max(item)) for item in y_pred.tolist()])
-                    ys_holder[i].extend(y_gold.tolist())
+            # use loss to produce gradients
+            loss.backward()
+
+            # add ys to holder for error analysis
+            preds_holder[batch_task].extend([item.index(max(item)) for item in batch_pred.tolist()])
+            ys_holder[batch_task].extend(y_gold.tolist())
 
             optimizer.step()
 
@@ -834,6 +828,9 @@ def multitask_train_and_predict(
 
         # for each batch in the list of batches created by the dataloader
         for batch_index, batch in enumerate(batches):
+            # get the task for this batch
+            batch_task = tasks[batch_index]
+
             y_gold = batch[4].to(device)
 
             batch_acoustic = batch[0].to(device)
@@ -871,29 +868,23 @@ def multitask_train_and_predict(
                     task_num=tasks[batch_index]
                 )
 
-            for i, item in enumerate(y_pred):
-                if item is not None:
-                    y_pred = item
+            batch_pred = y_pred[batch_task]
 
-                    if datasets_list[i].binary:
-                        y_pred = y_pred.float()
-                        y_gold = y_gold.float()
+            if datasets_list[batch_task].binary:
+                batch_pred = batch_pred.float()
+                y_gold = y_gold.float()
 
-                    loss = datasets_list[i].loss_fx(y_pred, y_gold)
+            # calculate loss
+            loss = datasets_list[batch_task].loss_fx(batch_pred, y_gold) * datasets_list[batch_task].loss_multiplier
 
-                    loss_t = loss.item()
+            loss_t = loss.item()
 
-                    # get separate running losses for each task
-                    # calculate running loss
-                    running_loss += (loss_t - running_loss) / (batch_index + 1)
+            # calculate running loss
+            running_loss = (loss_t - running_loss) / (batch_index + 1)
 
-                    # add ys to holder for error analysis
-                    preds_holder[i].extend([item.index(max(item)) for item in y_pred.tolist()])
-                    ys_holder[i].extend(y_gold.tolist())
-
-            # uncomment to see loss and accuracy for each minibatch
-            # print("val_loss: {0}, running_val_loss: {1}, val_acc: {0}, running_val_acc: {1}".format(loss_t, running_loss,
-            #                                                                       acc_t, running_acc))
+            # add ys to holder for error analysis
+            preds_holder[batch_task].extend([item.index(max(item)) for item in batch_pred.tolist()])
+            ys_holder[batch_task].extend(y_gold.tolist())
 
         # print("Overall val loss: {0}, overall val acc: {1}".format(running_loss, running_acc))
         for task in preds_holder.keys():

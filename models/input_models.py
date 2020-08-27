@@ -681,7 +681,6 @@ class PredictionLayer(nn.Module):
 class MultitaskModel(nn.Module):
     """
     A model combining base + output layers for multitask learning
-    fixme: This class is written for multiple label spaces in the same dataset
     """
 
     def __init__(

@@ -142,6 +142,19 @@ if __name__ == "__main__":
 
             meld_obj = MultitaskObject(meld_train_ds, meld_dev_ds, meld_test_ds, meld_loss_func, task_num=1)
 
+            # calculate lengths of train sets and use this to determine multipliers for the loss functions
+            mustard_len = len(mustard_train_ds)
+            meld_len = len(meld_train_ds)
+
+            total_len = mustard_len + meld_len
+            meld_multiplier = 1 - (meld_len / total_len)
+            mustard_multiplier = 1 - (mustard_len / total_len)
+
+            # add multipliers to their relevant objects
+            mustard_obj.change_loss_multiplier(mustard_multiplier)
+            meld_obj.change_loss_multiplier(meld_multiplier)
+
+
             # set all data list
             all_data_list = [mustard_obj, meld_obj]
 

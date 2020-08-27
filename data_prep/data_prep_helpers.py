@@ -26,6 +26,7 @@ class DatumListDataset(Dataset):
     def __init__(self, data_list, data_type="meld_emotion", class_weights=None):
         self.data_list = data_list
         self.data_type = data_type
+        # todo: add task number
 
         self.class_weights = class_weights
 
@@ -67,6 +68,15 @@ class MultitaskObject(object):
         self.loss_fx = class_loss_func
         self.task_num = task_num
         self.binary = binary
+        self.loss_multiplier = 1
+
+    def change_loss_multiplier(self, multiplier):
+        """
+        Add a different loss multiplier to task
+        This will be used as a multiplier for loss in multitask network
+        e.g. if weight == 1.5, loss = loss * 1.5
+        """
+        self.loss_multiplier = multiplier
 
 
 # todo: will we need this?
