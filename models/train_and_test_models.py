@@ -139,9 +139,15 @@ def train_and_predict(
         # for each batch in the list of batches created by the dataloader
         for batch_index, batch in enumerate(batches):
             # print(batch)
+            # print(batch[0])
+            # print(batch[1])
+            # print(batch[2])
+            # print(batch[3])
+            # print(batch[4])
+            # print(len(batch))
             # sys.exit()
             # get the gold labels
-            y_gold = batch[7].to(device)  # 4 is emotion, 5 is sentiment
+            y_gold = batch[4].to(device)  # 4 is emotion, 5 is sentiment
             if split_point > 0:
                 y_gold = torch.tensor(
                     [
@@ -302,7 +308,7 @@ def train_and_predict(
                 )
 
             # get the gold labels
-            y_gold = batch[7].to(device)
+            y_gold = batch[4].to(device)
             if split_point > 0:
                 y_gold = torch.tensor(
                     [

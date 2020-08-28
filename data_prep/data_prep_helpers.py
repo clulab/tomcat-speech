@@ -392,14 +392,22 @@ def make_acoustic_dict(
                     feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
                 else:
                     feats = pd.read_csv(acoustic_path + "/" + f)
-                sid = f.split("_")[0]
                 if data_type == "asist":
-                    callid = f.split("_")[2]  # asist data has format sid_mission_num
+                    label = f.split("_")
+                    if label[1] == "mission":
+                        sid = label[0]
+                        mission_id = label[2]
+                    else:
+                        sid = int(label[1])
+                        mission_id = 0  # later iterations of this should have mission IDs
+                    acoustic_dict[(sid, mission_id)] = feats
+                    # callid = f.split("_")[2]  # asist data has format sid_mission_num
                 else:
+                    sid = f.split("_")[0]
                     # clinical data has format sid_callid
                     # meld has format dia_utt
                     callid = f.split("_")[1]
-                acoustic_dict[(sid, callid)] = feats
+                    acoustic_dict[(sid, callid)] = feats
     return acoustic_dict
 
 

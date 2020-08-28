@@ -15,27 +15,27 @@ params = Namespace(
     # input dimension parameters
     text_dim=300,  # text vector length
     short_emb_dim=30,  # length of trainable embeddings vec
-    audio_dim=76,  # 76,  # 79,  # 10 # audio vector length
+    audio_dim=78,  # 76,  # 79,  # 10 # audio vector length
     # audio_dim=10,
     # text NN
     # text_output_dim=30,   # 100,   # 50, 300,
-    text_gru_hidden_dim=500,  # 30,  # 50,  # 20
+    text_gru_hidden_dim=100,  # 30,  # 50,  # 20
     # text-only CNN
     kernel_1_size=3,
     kernel_2_size=4,
     kernel_3_size=5,
     out_channels=512,
-    text_cnn_hidden_dim=500,
+    text_cnn_hidden_dim=100,
     # acoustic NN
     avgd_acoustic=False,  # set true to use avgd acoustic feat vectors without RNN
     add_avging=True,  # set to true if you want to avg acoustic feature vecs upon input
     acoustic_gru_hidden_dim=100,
     # speaker embeddings
-    use_speaker=False,
-    num_speakers=261,  # check this number
+    use_speaker=True,
+    num_speakers=13,  # check this number
     speaker_emb_dim=3,
     # gender embeddings
-    use_gender=True,
+    use_gender=False,
     gender_emb_dim=4,
     # outputs
     output_dim=1,  # 7,  # length of output vector

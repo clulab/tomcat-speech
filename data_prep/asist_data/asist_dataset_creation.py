@@ -10,6 +10,7 @@ import numpy as np
 import functools
 import operator
 import os
+import random
 
 from data_prep.data_prep_helpers import (
     MinMaxScaleRange,
@@ -20,18 +21,17 @@ from data_prep.data_prep_helpers import (
 )
 
 
-class ClinicalDataset(Dataset):
+class AsistDataset(Dataset):
     def __init__(
         self,
         acoustic_dict,
         glove,
         ys_path,
-        splits=5,
-        cols_to_skip=3,
+        splits=3,
+        cols_to_skip=5,
         norm="minmax",
         sequence_prep=None,
         truncate_from="start",
-        alignment=None,
     ):
         """
         :param acoustic_dict: dict of {(sid, call) : data}
@@ -49,7 +49,6 @@ class ClinicalDataset(Dataset):
         self.norm = norm
         self.sequence_prep = sequence_prep
         self.truncate_from = truncate_from
-        self.alignment = alignment
 
         if norm == "minmax":
             # currently uses index-keyed min-max for features
@@ -60,22 +59,17 @@ class ClinicalDataset(Dataset):
         self.valid_files = self.ys_df["sid"].tolist()
         self.skipped_files = []
 
-        if self.alignment == "utt":
-            (
-                self.x_acoustic,
-                self.x_glove,
-                self.x_speaker,
-            ) = self.combine_data_utt_level()
-        else:
-            (
-                self.x_acoustic,
-                self.x_glove,
-                self.x_speaker,
-            ) = self.combine_acoustic_and_glove()
+        # self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove()
+        self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove_utt_level()
+        # todo: we should get gender info on participants OR predict it
+        self.speaker_gender_data = 0
         self.y_data = self.create_ordered_ys()
+        self.y_data = self.create_ordered_ys_utt_level(num_utts=len(self.x_utt_lengths))
         self.data = self.combine_xs_and_ys()
         self.splits = splits
         self.data_for_model_input = self.get_data_splits()
+
+
 
         # for working with an individual split
         self.current_split = []
@@ -142,19 +136,24 @@ class ClinicalDataset(Dataset):
         data_dict[c] = split_data
         return data_dict
 
-    def combine_data_utt_level(self):
+    def combine_acoustic_and_glove_utt_level(self):
         """
-        Combine acoustic feats, glove indices, and speaker info
-        Used when data needs to be aligned at the utt level
-        Separate from the below because fixme
-        :return:
+        Combine acoustic feats + glove indices (speaker info, too)
+        :return: list of double of ([acoustic], [glove_index], [speaker])
+        This makes each utterance its own data point; does NOT use conversational structure
+        Doing this so that the data may be put into existing networks 8.27
         """
-        print("Utt level alignment and normalization starting")
+        print("Data prep and normalization starting")
+        # print(self.acoustic_dict.keys())
+        # print(self.valid_files)
+        # sys.exit()
 
         # set holders for acoustic, words, and speakers
         acoustic_data = []
         ordered_words = []
         ordered_speakers = []
+
+        utt_lengths = []
 
         # skip the the first cols_to_skip columns
         start_idx = self.cols_to_skip
@@ -165,109 +164,97 @@ class ClinicalDataset(Dataset):
         if self.sequence_prep == "truncate":
             smallest = self.truncate_seq()
 
-        # get longest utterance
-        longest_utt = get_longest_utterance(self.acoustic_dict.values())
+        # get the longest utterance
+        longest_utt = get_longest_utterance_asist([item for key, item in self.acoustic_dict.items()
+                                                   if key[0] in self.valid_files])
+
+        speaker_list = []
+        for key, item in self.acoustic_dict.items():
+            if key[0] in self.valid_files:
+                speakers = set(item['speaker'])
+                speaker_list.extend([str(item) for item in speakers])
+
+        all_speakers = sorted(list(set(speaker_list)))
 
         # iterate through items in the acoustic dict
         for key, item in self.acoustic_dict.items():
-
             # if the item has gold data
-            if key[0] in self.valid_files and key[0] not in self.skipped_files:
+            if key[0] in self.valid_files:
+                # speaker_set = set(item['speaker'])
+                # all_speakers = sorted([str(item) for item in speaker_set])
+                # print(all_speakers)
+                # sys.exit()
 
-                # prepare intermediate holders
-                intermediate_wds = []
-                intermediate_speakers = []
-                intermediate_acoustic = []
+                # for each row in that item's dataframe
+                for idx, row in item.iterrows():
+                    # get the speaker
+                    spkr = str(row["speaker"])
+                    # print(row)
+                    # sys.exit()
 
-                for i in range(item["utt_num"].max()):
+                    # todo: this also includes all researchers
+                    #   should we remove them later?
+                    ordered_speakers.append(all_speakers.index(spkr))
+                    # print(spkr)
+                    # print(all_speakers.index(spkr))
+                    # sys.exit()
 
-                    utterance = item.loc[item["utt_num"] == i + 1]
-
+                    # get the word
+                    utt = clean_up_word(row['utt']).lower()
                     utt_wds = [0] * longest_utt
-                    # utt_speakers = []
-                    utt_acoustic = []
-
-                    utt_speaker = utterance[
-                        "speaker"
-                    ].max()  # they should all be the same number
-
-                    wd_idx = 0
-
-                    # for each row in that item's dataframe
-                    # note: this idx is a row index out of the total in a df
-                    #   it does NOT restart for each item
-                    for idx, row in utterance.iterrows():
-
-                        # get the word
-                        wd = row["word"]
-                        wd = clean_up_word(wd)
+                    wds = [wd for wd in utt.strip().split(" ")]
+                    utt_lengths.append(len(wds))
+                    for i, wd in enumerate(wds):
                         # save that word's index
                         if wd in self.glove.wd2idx.keys():
-                            utt_wds[wd_idx] = self.glove.wd2idx[wd]
-                            # utt_wds.append(self.glove.wd2idx[wd])
+                            utt_wds[i] = self.glove.wd2idx[wd]
                         else:
-                            utt_wds[wd_idx] = self.glove.wd2idx["<UNK>"]
-                            # utt_wds.append(self.glove.wd2idx["<UNK>"])
+                            utt_wds[i] = self.glove.wd2idx["<UNK>"]
 
-                        # save the acoustic information in remaining columns
-                        row_vals = row.values[start_idx:].tolist()
+                    # save the acoustic information in remaining columns
+                    row_vals = row.values[start_idx:].tolist()
 
-                        # if using min-max scaling, scale the data
-                        if self.norm == "minmax":
-                            self.minmax_scale(row_vals, lower=0, upper=1)
+                    if self.sequence_prep == "truncate":
+                        ordered_words.append(utt_wds)
+                        acoustic_data.append(row_vals)
+                    else:
+                        ordered_words.append(torch.tensor(utt_wds))
+                        acoustic_data.append(torch.tensor(row_vals))
 
-                        # add acoustic information to intermediate holder
-                        utt_acoustic.append(row_vals)
-
-                        wd_idx += 1
-
-                    utt_avg_acoustic = get_avg_vec(utt_acoustic)
-                    intermediate_acoustic.append(utt_avg_acoustic)
-                    intermediate_speakers.append([utt_speaker])
-                    intermediate_wds.append(utt_wds)
-
-                # add information from intermediate holder to lists of all data
-                if self.sequence_prep == "truncate":
-                    acoustic_data.append(intermediate_acoustic)
-                    ordered_words.append(intermediate_wds)
-                    ordered_speakers.append(intermediate_speakers)
-                else:
-                    acoustic_data.append(torch.tensor(intermediate_acoustic))
-                    ordered_words.append(torch.tensor(intermediate_wds))
-                    ordered_speakers.append(torch.tensor(intermediate_speakers))
+                    # if using min-max scaling, scale the data
+                    if self.norm == "minmax":
+                        self.minmax_scale(row_vals, lower=0, upper=1)
 
         # use zero-padding to make all sequences the same length
         # if we need to pad, we MUST pack
         if self.sequence_prep == "pad":
             acoustic_data = nn.utils.rnn.pad_sequence(acoustic_data)
             ordered_words = nn.utils.rnn.pad_sequence(ordered_words)
-            ordered_speakers = nn.utils.rnn.pad_sequence(ordered_speakers)
 
             # swap axes to get (total_inputs, length_of_sequence, length_of_vector)
             acoustic_data = acoustic_data.transpose(0, 1)
             ordered_words = ordered_words.transpose(0, 1)
-            ordered_speakers = ordered_speakers.transpose(0, 1)
 
         elif self.sequence_prep == "truncate":
             if self.truncate_from == "start":
                 acoustic_data = [item[-smallest:] for item in acoustic_data]
                 ordered_words = [item[-smallest:] for item in ordered_words]
-                ordered_speakers = [item[-smallest:] for item in ordered_speakers]
             else:
                 acoustic_data = [item[:smallest] for item in acoustic_data]
                 ordered_words = [item[:smallest] for item in ordered_words]
-                ordered_speakers = [item[:smallest] for item in ordered_speakers]
 
             acoustic_data = torch.tensor(acoustic_data)
             ordered_words = torch.tensor(ordered_words)
-            ordered_speakers = torch.tensor(ordered_speakers)
 
-        print("Size of acoustic data is now: " + str(acoustic_data.shape))
+        print("Acoustic data size is: " + str(acoustic_data.shape))
+        print("Ordered words is: " + str(ordered_words.shape))
+        print("Ordered speakers size is: " + str(len(ordered_speakers)))
+        print("Utterance lengths size is: " + str(len(utt_lengths)))
 
         print("Data prep and normalization complete")
 
         # return acoustic info, words indices, speaker
-        return acoustic_data, ordered_words, ordered_speakers
+        return acoustic_data, ordered_words, ordered_speakers, utt_lengths
 
     def combine_acoustic_and_glove(self):
         """
@@ -284,6 +271,8 @@ class ClinicalDataset(Dataset):
         ordered_words = []
         ordered_speakers = []
 
+        utt_lengths = []
+
         # skip the the first cols_to_skip columns
         start_idx = self.cols_to_skip
 
@@ -293,33 +282,56 @@ class ClinicalDataset(Dataset):
         if self.sequence_prep == "truncate":
             smallest = self.truncate_seq()
 
+        # get the longest utterance
+        longest_utt = get_longest_utterance_asist([item for key, item in self.acoustic_dict.items()
+                                                   if key[0] in self.valid_files])
+
         # iterate through items in the acoustic dict
         for key, item in self.acoustic_dict.items():
             # if the item has gold data
             if key[0] in self.valid_files:
+                speaker_set = set(item['speaker'])
+                all_speakers = sorted([str(item) for item in speaker_set])
+                # print(all_speakers)
+                # sys.exit()
+
                 # prepare intermediate holders
                 intermediate_wds = []
                 intermediate_speakers = []
                 intermediate_acoustic = []
 
+                intermediate_utt_lengths = []
+
                 # for each row in that item's dataframe
                 for idx, row in item.iterrows():
                     # get the speaker
-                    spkr = row["speaker"]
-                    print(spkr)
-                    intermediate_speakers.append(
-                        spkr - 1
-                    )  # speakers are currently 1 and 2, we want 0 and 1
+                    spkr = str(row["speaker"])
+                    # print(row)
+                    # sys.exit()
+
+                    # todo: this also includes all researchers
+                    #   should we remove them later?
+                    intermediate_speakers.append(all_speakers.index(spkr))
+                    # print(spkr)
+                    # print(all_speakers.index(spkr))
+                    # sys.exit()
 
                     # get the word
-                    wd = row["word"]
-                    wd = clean_up_word(wd)
-                    # save that word's index
-                    if wd in self.glove.wd2idx.keys():
-                        intermediate_wds.append(self.glove.wd2idx[wd])
-                    else:
-                        intermediate_wds.append(self.glove.wd2idx["<UNK>"])
+                    utt = clean_up_word(row['utt']).lower()
+                    utt_wds = [0] * longest_utt
+                    wds = [wd for wd in utt.strip().split(" ")]
+                    intermediate_utt_lengths.append(len(wds))
+                    # wds = [clean_up_word(wd) for wd in utt.strip().split(" ")]
+                    for i, wd in enumerate(wds):
+                        # save that word's index
+                        if wd in self.glove.wd2idx.keys():
+                            utt_wds[i] = self.glove.wd2idx[wd]
+                            # utt_wds.append(self.glove.wd2idx[wd])
+                        else:
+                            utt_wds[i] = self.glove.wd2idx["<UNK>"]
+                            # utt_wds.append(self.glove.wd2idx["<UNK>"])
 
+                    intermediate_wds.append(utt_wds)
                     # save the acoustic information in remaining columns
                     row_vals = row.values[start_idx:].tolist()
 
@@ -328,16 +340,20 @@ class ClinicalDataset(Dataset):
                         self.minmax_scale(row_vals, lower=0, upper=1)
                     # add acoustic information to intermediate holder
                     intermediate_acoustic.append(row_vals)
+                    # print(row_vals)
+                    # sys.exit()
 
                 # add information from intermediate holder to lists of all data
                 if self.sequence_prep == "truncate":
                     acoustic_data.append(intermediate_acoustic)
                     ordered_words.append(intermediate_wds)
                     ordered_speakers.append(intermediate_speakers)
+                    utt_lengths.append(intermediate_utt_lengths)
                 else:
                     acoustic_data.append(torch.tensor(intermediate_acoustic))
                     ordered_words.append(torch.tensor(intermediate_wds))
                     ordered_speakers.append(torch.tensor(intermediate_speakers))
+                    utt_lengths.append(torch.tensor(intermediate_utt_lengths))
 
         # use zero-padding to make all sequences the same length
         # if we need to pad, we MUST pack
@@ -345,11 +361,13 @@ class ClinicalDataset(Dataset):
             acoustic_data = nn.utils.rnn.pad_sequence(acoustic_data)
             ordered_words = nn.utils.rnn.pad_sequence(ordered_words)
             ordered_speakers = nn.utils.rnn.pad_sequence(ordered_speakers)
+            utt_lengths = nn.utils.rnn.pad_sequence(utt_lengths)
 
             # swap axes to get (total_inputs, length_of_sequence, length_of_vector)
             acoustic_data = acoustic_data.transpose(0, 1)
             ordered_words = ordered_words.transpose(0, 1)
             ordered_speakers = ordered_speakers.transpose(0, 1)
+            utt_lengths = utt_lengths.transpose(0, 1)
 
         elif self.sequence_prep == "truncate":
             if self.truncate_from == "start":
@@ -364,13 +382,17 @@ class ClinicalDataset(Dataset):
             acoustic_data = torch.tensor(acoustic_data)
             ordered_words = torch.tensor(ordered_words)
             ordered_speakers = torch.tensor(ordered_speakers)
+            utt_lengths = torch.tensor(utt_lengths)
+
         print("Acoustic data size is: " + str(acoustic_data.shape))
         print("Ordered words is: " + str(ordered_words.shape))
+        print("Ordered speakers size is: " + str(ordered_speakers.shape))
+        print("Utterance lengths size is: " + str(utt_lengths.shape))
 
         print("Data prep and normalization complete")
 
         # return acoustic info, words indices, speaker
-        return acoustic_data, ordered_words, ordered_speakers
+        return acoustic_data, ordered_words, ordered_speakers, utt_lengths
 
     def create_ordered_ys(self):
         """
@@ -394,13 +416,26 @@ class ClinicalDataset(Dataset):
         # return ordered list
         return ordered_ys
 
+    def create_ordered_ys_utt_level(self, num_utts):
+        """
+        create a list of all outcomes in the same order as the data
+        """
+        # create holder
+        # ordered_ys = random.sample(range(1), num_utts)
+        ordered_ys = [random.randint(0, 1) for _ in range(num_utts)]
+        return ordered_ys
+
     def combine_xs_and_ys(self):
         # combine all x and y data into list of tuples for easier access with DataLoader
         all_data = []
 
         for i, item in enumerate(self.x_acoustic):
             # print(i)
-            all_data.append((item, self.x_glove[i], self.x_speaker[i], self.y_data[i]))
+            # todo: this should be fixed earlier in code
+            acoustic_length = len(item)
+            # add in
+            all_data.append((item, self.x_glove[i], self.x_speaker[i], self.speaker_gender_data, self.y_data[i],
+                             self.x_utt_lengths[i], acoustic_length))
 
         return all_data
 
@@ -434,3 +469,21 @@ class ClinicalDataset(Dataset):
         self.skipped_files = skipped_files
 
         return smallest_item
+
+
+def get_longest_utterance_asist(pd_dataframes):
+    """
+    Get the longest utterance in the dataset
+    :param pd_dataframes: the dataframes for the dataset
+    :return:
+    """
+    max_length = 0
+    for item in pd_dataframes:
+        utts = item['utt']
+        for item in utts:
+            item = clean_up_word(item.lower())
+            item = [wd for wd in item.strip().split(" ")]
+            item_length = len(item)
+            if item_length > max_length:
+                max_length = item_length
+    return max_length
