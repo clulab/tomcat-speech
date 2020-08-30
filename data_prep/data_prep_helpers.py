@@ -389,7 +389,10 @@ def make_acoustic_dict(
         if f.endswith(f_end):
             if files_to_get is None or "_".join(f.split("_")[:2]) in files_to_get:
                 if use_cols is not None:
-                    feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
+                    try:
+                        feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
+                    except ValueError:
+                        feats = []
                 else:
                     feats = pd.read_csv(acoustic_path + "/" + f)
                 if data_type == "asist":

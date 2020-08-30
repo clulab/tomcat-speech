@@ -15,7 +15,7 @@ params = Namespace(
     # input dimension parameters
     text_dim=300,  # text vector length
     short_emb_dim=30,  # length of trainable embeddings vec
-    audio_dim=78,  # 76,  # 79,  # 10 # audio vector length
+    audio_dim=10,  # 78,  # 76,  # 79,  # 10 # audio vector length
     # audio_dim=10,
     # text NN
     # text_output_dim=30,   # 100,   # 50, 300,
@@ -31,14 +31,14 @@ params = Namespace(
     add_avging=True,  # set to true if you want to avg acoustic feature vecs upon input
     acoustic_gru_hidden_dim=100,
     # speaker embeddings
-    use_speaker=True,
+    use_speaker=False,
     num_speakers=13,  # check this number
     speaker_emb_dim=3,
     # gender embeddings
-    use_gender=False,
+    use_gender=True,
     gender_emb_dim=4,
     # outputs
-    output_dim=1,  # 7,  # length of output vector
+    output_dim=7,  # 7,  # length of output vector
     output_2_dim=None,  # 3,    # length of second task output vec
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,
