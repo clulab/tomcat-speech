@@ -55,7 +55,7 @@ num_splits = 1
 model = params.model
 model_type = "BimodalCNN_k=4"
 # set number of columns to skip in data input files
-cols_to_skip = 2
+cols_to_skip = 4 # 2 for Zoom, 4 for AWS
 # path to directory where best models are saved
 model_save_path = "output/models/"
 # make sure the full save path exists; if not, create it
@@ -81,9 +81,29 @@ if __name__ == "__main__":
 
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
+    # comment out if using aws data
+    # acoustic_dict = make_acoustic_dict(input_dir, "_avgd.csv", use_cols=[
+    #         "speaker",
+    #         "utt",
+    #         "pcm_loudness_sma",
+    #         "F0finEnv_sma",
+    #         "voicingFinalUnclipped_sma",
+    #         "jitterLocal_sma",
+    #         "shimmerLocal_sma",
+    #         "pcm_loudness_sma_de",
+    #         "F0finEnv_sma_de",
+    #         "voicingFinalUnclipped_sma_de",
+    #         "jitterLocal_sma_de",
+    #         "shimmerLocal_sma_de",
+    #          ],
+    #         data_type="asist")
+
+    # uncomment if using aws data
     acoustic_dict = make_acoustic_dict(input_dir, "_avgd.csv", use_cols=[
+            "word",
             "speaker",
-            "utt",
+            "utt_num",
+            "word_num",
             "pcm_loudness_sma",
             "F0finEnv_sma",
             "voicingFinalUnclipped_sma",
@@ -113,7 +133,8 @@ if __name__ == "__main__":
         splits=1,
         sequence_prep="pad",
         truncate_from="start",
-        norm=None
+        norm=None,
+        add_avging=True
     )
 
     # get data for testing

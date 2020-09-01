@@ -32,6 +32,7 @@ class AsistDataset(Dataset):
         norm="minmax",
         sequence_prep=None,
         truncate_from="start",
+        add_avging=False,
     ):
         """
         :param acoustic_dict: dict of {(sid, call) : data}
@@ -49,6 +50,7 @@ class AsistDataset(Dataset):
         self.norm = norm
         self.sequence_prep = sequence_prep
         self.truncate_from = truncate_from
+        self.add_avging = add_avging
 
         if norm == "minmax":
             # currently uses index-keyed min-max for features
@@ -60,7 +62,8 @@ class AsistDataset(Dataset):
         self.skipped_files = []
 
         # self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove()
-        self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove_utt_level()
+        self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove_wd_level()
+        # self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove_utt_level()
         # todo: we should get gender info on participants OR predict it
         self.speaker_gender_data = 0
         self.y_data = self.create_ordered_ys()
@@ -224,6 +227,148 @@ class AsistDataset(Dataset):
                     # if using min-max scaling, scale the data
                     if self.norm == "minmax":
                         self.minmax_scale(row_vals, lower=0, upper=1)
+
+        # use zero-padding to make all sequences the same length
+        # if we need to pad, we MUST pack
+        if self.sequence_prep == "pad":
+            acoustic_data = nn.utils.rnn.pad_sequence(acoustic_data)
+            ordered_words = nn.utils.rnn.pad_sequence(ordered_words)
+
+            # swap axes to get (total_inputs, length_of_sequence, length_of_vector)
+            acoustic_data = acoustic_data.transpose(0, 1)
+            ordered_words = ordered_words.transpose(0, 1)
+
+        elif self.sequence_prep == "truncate":
+            if self.truncate_from == "start":
+                acoustic_data = [item[-smallest:] for item in acoustic_data]
+                ordered_words = [item[-smallest:] for item in ordered_words]
+            else:
+                acoustic_data = [item[:smallest] for item in acoustic_data]
+                ordered_words = [item[:smallest] for item in ordered_words]
+
+            acoustic_data = torch.tensor(acoustic_data)
+            ordered_words = torch.tensor(ordered_words)
+
+        print("Acoustic data size is: " + str(acoustic_data.shape))
+        print("Ordered words is: " + str(ordered_words.shape))
+        print("Ordered speakers size is: " + str(len(ordered_speakers)))
+        print("Utterance lengths size is: " + str(len(utt_lengths)))
+
+        print("Data prep and normalization complete")
+
+        # return acoustic info, words indices, speaker
+        return acoustic_data, ordered_words, ordered_speakers, utt_lengths
+
+    def combine_acoustic_and_glove_wd_level(self):
+        """
+        Prepare the data when it is word-level aligned
+        """
+        print("Data prep and normalization starting")
+        # print(self.acoustic_dict.keys())
+        # print(self.valid_files)
+        # sys.exit()
+
+        # set holders for acoustic, words, and speakers
+        acoustic_data = []
+        ordered_words = []
+        ordered_speakers = []
+
+        utt_lengths = []
+
+        # skip the the first cols_to_skip columns
+        start_idx = self.cols_to_skip
+
+        # counter for smallest dataframe for truncation
+        # get skipped files based on number of items
+        #   e.g. too few utts
+        if self.sequence_prep == "truncate":
+            smallest = self.truncate_seq()
+
+        # get the longest utterance
+        longest_utt = get_longest_aws_utterance_asist([item for key, item in self.acoustic_dict.items()
+                                                   if key[0] in self.valid_files])
+
+        speaker_list = []
+        for key, item in self.acoustic_dict.items():
+            if key[0] in self.valid_files:
+                speakers = set(item['speaker'])
+                speaker_list.extend([str(item) for item in speakers])
+
+        all_speakers = sorted(list(set(speaker_list)))
+
+        print(self.valid_files)
+        # iterate through items in the acoustic dict
+        for key, item in self.acoustic_dict.items():
+            print(f"key is: {key}")
+            # if the item has gold data
+            if key[0] in self.valid_files:
+                print(key[0])
+                # speaker_set = set(item['speaker'])
+                # all_speakers = sorted([str(item) for item in speaker_set])
+                # print(all_speakers)
+                # sys.exit()
+                utt_wds = [0] * longest_utt
+                utt_acoustic = []
+
+                utt_num = 0
+                wd_in_utt = 0
+                spkr = None
+
+                # for each row in that item's dataframe
+                for idx, row in item.iterrows():
+                    # print(row)
+                    # sys.exit()
+                    # get acoustic data
+                    row_vals = row.values[start_idx:].tolist()
+
+                    # get the word
+                    wd = clean_up_word(row['word']).lower()
+                    if wd in self.glove.wd2idx.keys():
+                        wd_idx = self.glove.wd2idx[wd]
+                    else:
+                        wd_idx = self.glove.wd2idx["<UNK>"]
+                    # if we are still in the same utterance
+                    if utt_num == row['utt_num']:
+                        # add the word
+                        utt_wds[wd_in_utt] = wd_idx
+                        wd_in_utt += 1
+                        # get the speaker
+                        spkr = str(row["speaker"])
+                        # add acoustic features to holder
+                        utt_acoustic.append(row_vals)
+                    else:
+                        # reset the holder
+                        if self.sequence_prep == "truncate":
+                            ordered_words.append(utt_wds)
+                        else:
+                            ordered_words.append(torch.tensor(utt_wds))
+                        # average acoustic data, if needed
+                        if self.add_avging:
+                            try:
+                                utt_acoustic = get_avg_vec(utt_acoustic)
+                            except TypeError:
+                                # just keep it the same if it's a flat list
+                                utt_acoustic = utt_acoustic
+                        # add aoustic data to list
+                        if self.sequence_prep == "truncate":
+                            acoustic_data.append(utt_acoustic)
+                        else:
+                            acoustic_data.append(torch.tensor(utt_acoustic))
+                        utt_wds = [0] * longest_utt
+                        # get the length of the utterance
+                        utt_lengths.append(wd_in_utt + 1)
+                        wd_in_utt = 0
+                        # add the new word
+                        utt_wds[0] = wd_idx
+                        # append the speaker
+                        ordered_speakers.append(all_speakers.index(spkr))
+                        # update speaker
+                        spkr = str(row["speaker"])
+
+                    # # if using min-max scaling, scale the data
+                    # todo: reimplement me
+                    # if self.norm == "minmax":
+                    #     self.minmax_scale(row_vals, lower=0, upper=1)
 
         # use zero-padding to make all sequences the same length
         # if we need to pad, we MUST pack
@@ -487,3 +632,20 @@ def get_longest_utterance_asist(pd_dataframes):
             if item_length > max_length:
                 max_length = item_length
     return max_length
+
+
+def get_longest_aws_utterance_asist(pd_dataframes):
+    """
+    Get the longest utterance in the dataset
+    expects a dataframe coming from AWS, which contains
+    utt_num and wd_num but not full utterances together
+    """
+    utt_len_counter = {}
+    for item in pd_dataframes:
+        utt_nums = item['utt_num']
+        for item in utt_nums:
+            if item not in utt_len_counter:
+                utt_len_counter[item] = 1
+            else:
+                utt_len_counter[item] += 1
+    return max(utt_len_counter.values())

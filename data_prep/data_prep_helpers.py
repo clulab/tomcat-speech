@@ -392,6 +392,7 @@ def make_acoustic_dict(
                     try:
                         feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
                     except ValueError:
+                        # todo: add warning
                         feats = []
                 else:
                     feats = pd.read_csv(acoustic_path + "/" + f)
@@ -401,7 +402,10 @@ def make_acoustic_dict(
                         sid = label[0]
                         mission_id = label[2]
                     else:
-                        sid = int(label[1])
+                        try:
+                            sid = int(label[1])
+                        except ValueError:
+                            sid = int(label[1].split("-")[1])
                         mission_id = 0  # later iterations of this should have mission IDs
                     acoustic_dict[(sid, mission_id)] = feats
                     # callid = f.split("_")[2]  # asist data has format sid_mission_num
