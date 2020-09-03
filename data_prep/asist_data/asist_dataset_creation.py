@@ -147,9 +147,6 @@ class AsistDataset(Dataset):
         Doing this so that the data may be put into existing networks 8.27
         """
         print("Data prep and normalization starting")
-        # print(self.acoustic_dict.keys())
-        # print(self.valid_files)
-        # sys.exit()
 
         # set holders for acoustic, words, and speakers
         acoustic_data = []
@@ -183,24 +180,15 @@ class AsistDataset(Dataset):
         for key, item in self.acoustic_dict.items():
             # if the item has gold data
             if key[0] in self.valid_files:
-                # speaker_set = set(item['speaker'])
-                # all_speakers = sorted([str(item) for item in speaker_set])
-                # print(all_speakers)
-                # sys.exit()
 
                 # for each row in that item's dataframe
                 for idx, row in item.iterrows():
                     # get the speaker
                     spkr = str(row["speaker"])
-                    # print(row)
-                    # sys.exit()
 
                     # todo: this also includes all researchers
                     #   should we remove them later?
                     ordered_speakers.append(all_speakers.index(spkr))
-                    # print(spkr)
-                    # print(all_speakers.index(spkr))
-                    # sys.exit()
 
                     # get the word
                     utt = clean_up_word(row['utt']).lower()
@@ -264,9 +252,6 @@ class AsistDataset(Dataset):
         Prepare the data when it is word-level aligned
         """
         print("Data prep and normalization starting")
-        # print(self.acoustic_dict.keys())
-        # print(self.valid_files)
-        # sys.exit()
 
         # set holders for acoustic, words, and speakers
         acoustic_data = []
@@ -302,11 +287,7 @@ class AsistDataset(Dataset):
             print(f"key is: {key}")
             # if the item has gold data
             if key[0] in self.valid_files:
-                print(key[0])
-                # speaker_set = set(item['speaker'])
-                # all_speakers = sorted([str(item) for item in speaker_set])
-                # print(all_speakers)
-                # sys.exit()
+                # set holders
                 utt_wds = [0] * longest_utt
                 utt_acoustic = []
 
@@ -316,8 +297,6 @@ class AsistDataset(Dataset):
 
                 # for each row in that item's dataframe
                 for idx, row in item.iterrows():
-                    # print(row)
-                    # sys.exit()
                     # get acoustic data
                     row_vals = row.values[start_idx:].tolist()
 

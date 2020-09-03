@@ -78,6 +78,8 @@ if __name__ == "__main__":
         os.system("time python data_prep/asist_data/asist_prep.py")
     elif len(sys.argv) > 1 and sys.argv[1] == "mp4_data":
         os.system("time python data_prep/asist_data/asist_prep.py mp4_data")  # fixme
+    elif len(sys.argv) > 1 and sys.argv[1] == "m4a_data":
+        os.system("time python data_prep/asist_data/asist_prep.py m4a_data")
 
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
@@ -174,3 +176,5 @@ if __name__ == "__main__":
     )
 
     print(ordered_predictions)
+
+    # todo: add function to save predictions to json
