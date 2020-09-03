@@ -2,20 +2,19 @@
 # currently the main entry point into the system
 # add "prep_data" as an argument when running this from command line
 #       if your acoustic features have not been extracted from audio
-
-from models.bimodal_models import MultichannelCNN
-from models.baselines import LRBaseline
+from data_prep.asist_data.asist_dataset_creation import AsistDataset
 from models.train_and_test_models import *
 from models.input_models import *
 
 from data_prep.data_prep_helpers import *
-from data_prep.lives_data.lives_prep import make_acoustic_dict, ClinicalDataset
+from data_prep.data_prep_helpers import make_acoustic_dict
 import data_prep.asist_data.sentiment_score_prep as score_prep
 import data_prep.asist_data.asist_prep as asist_prep
 
 # import parameters for model
 # comment or uncomment as needed
 from models.parameters.bimodal_params import params
+from models.parameters.multitask_params import params
 
 # from models.parameters.multitask_params import params
 # from models.parameters.lr_baseline_1_params import params
@@ -27,7 +26,6 @@ import torch
 import sys
 import glob
 import os
-
 
 # set device
 cuda = True
@@ -52,12 +50,12 @@ input_dir = "output/asist_audio"
 # to test the data--this doesn't contain real outcomes
 y_path = "output/asist_audio/asist_ys/all_ys.csv"
 # set number of splits
-num_splits = params.num_splits
+num_splits = 3
 # set model name and model type
 model = params.model
 model_type = "BimodalCNN_k=4"
 # set number of columns to skip in data input files
-cols_to_skip = params.cols_to_skip
+cols_to_skip = 5
 # path to directory where best models are saved
 model_save_path = "output/models/"
 # make sure the full save path exists; if not, create it
@@ -128,21 +126,21 @@ if __name__ == "__main__":
     print("Glove object created")
 
     # 3. MAKE DATASET
-    data = ClinicalDataset(
+    data = AsistDataset(
         acoustic_dict,
         glove,
         cols_to_skip=cols_to_skip,
         ys_path=y_path,
-        splits=num_splits,
+        splits=3,
         sequence_prep="pad",
         truncate_from="start",
-        alignment=params.alignment,
+        norm=None
     )
     print("Dataset created")
 
     # 6. CREATE NN
     # get set of pretrained embeddings and their shape
-    pretrained_embeddings = data.glove.data
+    pretrained_embeddings = glove.data
     num_embeddings = pretrained_embeddings.size()[0]
     print("shape of pretrained embeddings is: {0}".format(data.glove.data.size()))
 
@@ -155,132 +153,53 @@ if __name__ == "__main__":
 
     # mini search through different learning_rate values
     for lr in params.lrs:
+        for wd in params.weight_decay:
 
-        # prep intermediate loss and acc holders
-        # feed these into all_test_losses/accs
-        all_y_acc = []
-        all_y_loss = []
+            # prep intermediate loss and acc holders
+            # feed these into all_test_losses/accs
+            all_y_acc = []
+            all_y_loss = []
 
-        # use each train-val=test split in a separate training routine
-        for split in range(data.splits):
-            print("Now starting training/tuning with split {0} held out".format(split))
+            # use each train-val=test split in a separate training routine
+            for split in range(data.splits):
+                print("Now starting training/tuning with split {0} held out".format(split))
 
-            # instantiate empty model holder
-            bimodal_predictor = None
-
-            # create instance of model
-            if params.model == "LRBaseline":
-                # cleanup needed for baselines
-                bimodal_trial = LRBaseline(
-                    params=params,
-                    num_embeddings=num_embeddings,
-                    pretrained_embeddings=pretrained_embeddings,
-                )
-            elif params.model == "MultichannelCNN":
-                bimodal_trial = MultichannelCNN(
-                    params=params,
-                    num_embeddings=num_embeddings,
-                    pretrained_embeddings=pretrained_embeddings,
-                )
-            elif params.model == "EmbeddingsOnly":
-                bimodal_trial = EmbeddingsOnly(
-                    params=params,
-                    num_embeddings=num_embeddings,
-                    pretrained_embeddings=pretrained_embeddings,
-                )
-            elif params.model == "Multitask":
+                # create instance of model
                 bimodal_trial = EarlyFusionMultimodalModel(
                     params=params,
                     num_embeddings=num_embeddings,
                     pretrained_embeddings=pretrained_embeddings,
                 )
-                bimodal_predictor = EmotionToSuccessFFNN(
-                    params=params,
-                    num_utts=num_utts,
-                    num_layers=2,
-                    hidden_dim=4,
-                    output_dim=1,
-                )
-            else:
-                # default to bimodal cnn
-                bimodal_trial = BimodalCNN(
-                    params=params,
-                    num_embeddings=num_embeddings,
-                    pretrained_embeddings=pretrained_embeddings,
+
+                # set loss function, optimization, and scheduler, if using
+                loss_func = nn.BCELoss()
+                # loss_func = nn.CrossEntropyLoss()
+                optimizer = torch.optim.Adam(
+                    lr=lr,
+                    params=bimodal_trial.parameters(),
+                    weight_decay=wd,
                 )
 
-            # set the classifier(s) to the right device
-            bimodal_trial = bimodal_trial.to(device)
-            if bimodal_predictor is not None:
-                bimodal_predictor.to(device)
+                print("Model, loss function, and optimization created")
 
-            # set loss function, optimization, and scheduler, if using
-            loss_func = nn.BCELoss()
-            # loss_func = nn.CrossEntropyLoss()
-            optimizer = torch.optim.Adam(
-                lr=lr,
-                params=bimodal_trial.parameters(),
-                weight_decay=params.weight_decay,
-            )
-            if params.use_scheduler:
-                scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                    optimizer=optimizer,
-                    mode="min",
-                    factor=params.scheduler_factor,
-                    patience=params.scheduler_patience,
+                # set train-val-test splits
+                # the number in 'split' becomes the test/holdout split
+                data.set_split(split)
+                holdout = data.current_split
+                val_split = data.val_split
+                training_data = data.remaining_splits
+
+                # create a a save path and file for the model
+                model_save_file = "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
+                    model_type, params.batch_size, params.fc_hidden_dim, lr
                 )
 
-            print("Model, loss function, and optimization created")
+                # make the train state to keep track of model training/development
+                train_state = make_train_state(lr, model_save_path, model_save_file)
 
-            # set train-val-test splits
-            # the number in 'split' becomes the test/holdout split
-            data.set_split(split)
-            holdout = data.current_split
-            val_split = data.val_split
-            training_data = data.remaining_splits
+                load_path = model_save_path + model_save_file
 
-            # create a a save path and file for the model
-            model_save_file = "{0}_{1}_batch{2}_{3}hidden_{4}lyrs_lr{5}_{6}batch.pth".format(
-                model_type,
-                split,
-                params.batch_size,
-                params.hidden_dim,
-                params.num_layers,
-                lr,
-                params.batch_size,
-            )
-
-            # create 2 save paths for models if using both encoder + decoder
-            if params.model == "Multitask":
-                model_save_file = "{0}_{1}_batch{2}_{3}hidden_{4}lyrs_lr{5}_{6}batch_encoder.pth".format(
-                    model_type,
-                    split,
-                    params.batch_size,
-                    params.hidden_dim,
-                    params.num_layers,
-                    lr,
-                    params.batch_size,
-                )
-                model2_save_file = "{0}_{1}_batch{2}_{3}hidden_{4}lyrs_lr{5}_{6}batch_decoder.pth".format(
-                    model_type,
-                    split,
-                    params.batch_size,
-                    params.hidden_dim,
-                    params.num_layers,
-                    lr,
-                    params.batch_size,
-                )
-
-                train_state_2 = make_train_state(lr, model_save_path, model2_save_file)
-                load_path2 = model_save_path + model2_save_file
-
-            # make the train state to keep track of model training/development
-            train_state = make_train_state(lr, model_save_path, model_save_file)
-
-            load_path = model_save_path + model_save_file
-
-            # train the model and evaluate on development split
-            if params.model == "Multitask":
+                # train the model and evaluate on development split
                 train_and_predict(
                     bimodal_trial,
                     train_state,
@@ -291,54 +210,14 @@ if __name__ == "__main__":
                     loss_func,
                     optimizer,
                     device,
+                    use_speaker=params.use_speaker,
+                    use_gender=params.use_gender,
                     scheduler=None,
-                    model2=bimodal_predictor,
-                    train_state2=train_state_2,
-                )
-            else:
-                train_and_predict(
-                    bimodal_trial,
-                    train_state,
-                    training_data,
-                    val_split,
-                    params.batch_size,
-                    params.num_epochs,
-                    loss_func,
-                    optimizer,
-                    device,
-                    scheduler=None,
+                    binary=True
                 )
 
-            # plot the loss and accuracy curves
-            if get_plot:
-                if params.model == "Multitask":
-                    plot_train_dev_curve(
-                        train_state_2["train_loss"],
-                        train_state_2["val_loss"],
-                        x_label="Epoch",
-                        y_label="Loss",
-                        title="Training and Dev loss for normed model {0} split {1} with lr {2}".format(
-                            model_type, split, lr
-                        ),
-                        save_name="output/plots/{0}_{1}_lr{2}_loss.png".format(
-                            model_type, split, lr
-                        ),
-                    )
-                    # plot the accuracy
-                    plot_train_dev_curve(
-                        train_state_2["train_acc"],
-                        train_state_2["val_acc"],
-                        x_label="Epoch",
-                        y_label="Accuracy",
-                        title="Training and Dev accuracy for normed model {0} split {1} with lr {2}".format(
-                            model_type, split, lr
-                        ),
-                        save_name="output/plots/{0}_{1}_lr{2}_acc.png".format(
-                            model_type, split, lr
-                        ),
-                        losses=False,
-                    )
-                else:
+                # plot the loss and accuracy curves
+                if get_plot:
                     # loss curve
                     plot_train_dev_curve(
                         train_state["train_loss"],
@@ -367,15 +246,15 @@ if __name__ == "__main__":
                         losses=False,
                     )
 
-            # add best evaluation losses and accuracy from training to set
-            all_y_loss.append(train_state["early_stopping_best_val"])
-            all_y_acc.append(train_state["best_val_acc"])
+                # add best evaluation losses and accuracy from training to set
+                all_y_loss.append(train_state["early_stopping_best_val"])
+                all_y_acc.append(train_state["best_val_acc"])
 
-        # print("Test loss on all folds: {0}".format(all_test_loss))
-        # print("Test accuracy on all folds: {0}".format(all_test_acc))
+            # print("Test loss on all folds: {0}".format(all_test_loss))
+            # print("Test accuracy on all folds: {0}".format(all_test_acc))
 
-        all_test_losses.append(all_y_loss)
-        all_test_accs.append(all_y_acc)
+            all_test_losses.append(all_y_loss)
+            all_test_accs.append(all_y_acc)
 
     # print the best model losses and accuracies for each development set in the cross-validation
     for i, item in enumerate(all_test_losses):
