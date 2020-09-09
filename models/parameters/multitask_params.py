@@ -15,7 +15,7 @@ params = Namespace(
     # input dimension parameters
     text_dim=300,  # text vector length
     short_emb_dim=30,  # length of trainable embeddings vec
-    audio_dim=10,  # 76,  # 79,  # 10 # audio vector length
+    audio_dim=10,  # 78,  # 76,  # 79,  # 10 # audio vector length
     # audio_dim=10,
     # text NN
     # text_output_dim=30,   # 100,   # 50, 300,
@@ -32,7 +32,7 @@ params = Namespace(
     acoustic_gru_hidden_dim=100,
     # speaker embeddings
     use_speaker=False,
-    num_speakers=261,  # check this number
+    num_speakers=13,  # check this number
     speaker_emb_dim=3,
     # gender embeddings
     use_gender=True,

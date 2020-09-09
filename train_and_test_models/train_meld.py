@@ -125,7 +125,8 @@ if __name__ == "__main__":
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
             # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
             model_type = (
-                "MELD_IS10sm_500txthid_.1InDrpt_.3textdrpt_.4acdrpt_.5finalFCdrpt"
+                "EMOTION_MODEL_FOR_ASIST"
+                # "MELD_IS10sm_500txthid_.1InDrpt_.3textdrpt_.4acdrpt_.5finalFCdrpt"
             )
 
             # this uses train-dev-test folds
