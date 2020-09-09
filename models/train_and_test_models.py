@@ -201,6 +201,7 @@ def train_and_predict(
             # print("THE PREDICTIONS ARE: ")
             # print(y_pred)
             # print(y_gold)
+
             # add ys to holder for error analysis
             if binary:
                 preds_holder.extend([round(item[0]) for item in y_pred.tolist()])
