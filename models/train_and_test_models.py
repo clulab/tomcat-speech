@@ -23,7 +23,7 @@ from sklearn.metrics import accuracy_score
 
 
 # adapted from https://github.com/joosthub/PyTorchNLPBook/blob/master/chapters/chapter_6/classifying-surnames/Chapter-6-Surname-Classification-with-RNNs.ipynb
-def make_train_state(learning_rate, model_save_path, model_save_file):
+def make_train_state(learning_rate, model_save_file):
     # makes a train state to save information on model during training/testing
     return {
         "stop_early": False,
@@ -42,7 +42,7 @@ def make_train_state(learning_rate, model_save_path, model_save_file):
         "best_loss": 100,
         "test_loss": -1,
         "test_acc": -1,
-        "model_filename": model_save_path + model_save_file,
+        "model_filename": model_save_file,
     }
 
 

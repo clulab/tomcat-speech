@@ -12,13 +12,8 @@ import data_prep.asist_data.sentiment_score_prep as score_prep
 import data_prep.asist_data.asist_prep as asist_prep
 
 # import parameters for model
-# comment or uncomment as needed
-from models.parameters.bimodal_params import params
-from models.parameters.multitask_params import params
-
-# from models.parameters.multitask_params import params
-# from models.parameters.lr_baseline_1_params import params
-# from models.parameters.multichannel_cnn_params import params
+from models.parameters.earlyfusion_params import params
+# from models.parameters.latefusion_params import params
 
 import numpy as np
 import random

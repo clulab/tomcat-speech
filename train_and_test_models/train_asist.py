@@ -14,7 +14,7 @@ import data_prep.asist_data.asist_prep as asist_prep
 # import parameters for model
 # comment or uncomment as needed
 from models.parameters.bimodal_params import params
-from models.parameters.multitask_params import params
+from models.parameters.multitask_config import model_params
 
 # from models.parameters.multitask_params import params
 # from models.parameters.lr_baseline_1_params import params
@@ -37,7 +37,7 @@ if not torch.cuda.is_available():
 device = torch.device("cuda" if cuda else "cpu")
 
 # set random seed
-seed = params.seed
+seed = model_params.seed
 torch.manual_seed(seed)
 np.random.seed(seed)
 random.seed(seed)
@@ -52,7 +52,7 @@ y_path = "output/asist_audio/asist_ys/all_ys.csv"
 # set number of splits
 num_splits = 3
 # set model name and model type
-model = params.model
+model = model_params.model
 model_type = "BimodalCNN_k=4"
 # set number of columns to skip in data input files
 cols_to_skip = 5
@@ -152,8 +152,8 @@ if __name__ == "__main__":
     all_test_accs = []
 
     # mini search through different learning_rate values
-    for lr in params.lrs:
-        for wd in params.weight_decay:
+    for lr in model_params.lrs:
+        for wd in model_params.weight_decay:
 
             # prep intermediate loss and acc holders
             # feed these into all_test_losses/accs
@@ -166,7 +166,7 @@ if __name__ == "__main__":
 
                 # create instance of model
                 bimodal_trial = EarlyFusionMultimodalModel(
-                    params=params,
+                    params=model_params,
                     num_embeddings=num_embeddings,
                     pretrained_embeddings=pretrained_embeddings,
                 )
@@ -191,7 +191,7 @@ if __name__ == "__main__":
 
                 # create a a save path and file for the model
                 model_save_file = "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
-                    model_type, params.batch_size, params.fc_hidden_dim, lr
+                    model_type, model_params.batch_size, model_params.fc_hidden_dim, lr
                 )
 
                 # make the train state to keep track of model training/development
@@ -205,13 +205,13 @@ if __name__ == "__main__":
                     train_state,
                     training_data,
                     val_split,
-                    params.batch_size,
-                    params.num_epochs,
+                    model_params.batch_size,
+                    model_params.num_epochs,
                     loss_func,
                     optimizer,
                     device,
-                    use_speaker=params.use_speaker,
-                    use_gender=params.use_gender,
+                    use_speaker=model_params.use_speaker,
+                    use_gender=model_params.use_gender,
                     scheduler=None,
                     binary=True
                 )
@@ -258,9 +258,9 @@ if __name__ == "__main__":
 
     # print the best model losses and accuracies for each development set in the cross-validation
     for i, item in enumerate(all_test_losses):
-        print("Losses for model with lr={0}: {1}".format(params.lrs[i], item))
+        print("Losses for model with lr={0}: {1}".format(model_params.lrs[i], item))
         print(
             "Accuracy for model with lr={0}: {1}".format(
-                params.lrs[i], all_test_accs[i]
+                model_params.lrs[i], all_test_accs[i]
             )
         )
