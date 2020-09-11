@@ -45,6 +45,7 @@ glove_file = "../../glove.short.300d.punct.txt"
 chalearn_path = "../../datasets/multimodal_datasets/Chalearn"
 
 data_type = "chalearn"
+pred_type = "max_class"
 
 # set model name and model type
 model = params.model
@@ -93,7 +94,6 @@ if __name__ == "__main__":
     # add class weights to device
     data.emotion_weights = torch.tensor([0.5, 0.5])
     # data.emotion_weights = data.emotion_weights.to(device)
-    # data.sentiment_weights = data.sentiment_weights.to(device)
 
     print("Dataset created")
 
@@ -114,7 +114,7 @@ if __name__ == "__main__":
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
             # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
             model_type = (
-                "MELD_IS10sm_500txthid_.1InDrpt_.3textdrpt_.4acdrpt_.5finalFCdrpt"
+                "CHALEARN_TEST_multiplier-mustard-div-2"
             )
 
             # this uses train-dev-test folds
@@ -163,7 +163,8 @@ if __name__ == "__main__":
             print(bimodal_trial)
 
             # set loss function, optimization, and scheduler, if using
-            loss_func = nn.BCELoss(reduction="mean")
+            # loss_func = nn.BCELoss(reduction="mean")
+            loss_func = nn.CrossEntropyLoss(reduction="mean")
             # loss_func = nn.CrossEntropyLoss(data.emotion_weights, reduction='mean')
 
             # optimizer = torch.optim.SGD(bimodal_trial.parameters(), lr=lr, momentum=0.9)
@@ -176,12 +177,10 @@ if __name__ == "__main__":
             # test_ds = DatumListDataset(data.test_data, data.emotion_weights)
 
             # create a a save path and file for the model
-            model_save_file = "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
-                model_type, params.batch_size, params.fc_hidden_dim, lr
-            )
+            model_save_file = f"{model_save_path}/{model_type}_batch{params.batch_size}_{params.fc_hidden_dim}hidden_2lyrs_lr{lr}.pth"
 
             # make the train state to keep track of model training/development
-            train_state = make_train_state(lr, model_save_path, model_save_file)
+            train_state = make_train_state(lr, model_save_file)
 
             # train the model and evaluate on development set
             if multitask:
@@ -217,7 +216,7 @@ if __name__ == "__main__":
                     avgd_acoustic=avgd_acoustic_in_network,
                     use_speaker=params.use_speaker,
                     use_gender=params.use_gender,
-                    split_point=data.mean_openness,
+                    split_point=0,
                 )
 
             # plot the loss and accuracy curves

@@ -58,6 +58,8 @@ if __name__ == "__main__":
 
     # add stdout to a log file
     with open(os.path.join(output_path, "log"), "w") as f:
+        # todo: make this flush more frequently so you can check the bottom of the log file
+        #   or make a new function e.g. print_both and have it both print and save to file
         sys.stdout = f
 
         # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
@@ -149,9 +151,9 @@ if __name__ == "__main__":
 
                 total_len = mustard_len + meld_len
                 meld_multiplier = 1 - (meld_len / total_len)
-                mustard_multiplier = (1 - (mustard_len / total_len)) * 2
+                mustard_multiplier = (1 - (mustard_len / total_len))
                 print(f"MELD multiplier is: 1 - (meld_len / total_len) = {meld_multiplier}")
-                print(f"MUStARD multiplier is: (1 - (mustard_len / total_len)) * 2 = {mustard_multiplier}")
+                print(f"MUStARD multiplier is: (1 - (mustard_len / total_len)) = {mustard_multiplier}")
 
                 # add multipliers to their relevant objects
                 mustard_obj.change_loss_multiplier(mustard_multiplier)
@@ -224,6 +226,6 @@ if __name__ == "__main__":
                 # all_test_accs.append(train_state['best_val_acc'])
 
         # print the best model losses and accuracies for each development set in the cross-validation
-        for i, item in enumerate(all_test_losses):
-            print("Losses for model with lr={0}: {1}".format(model_params.lrs[i], item))
+        # for i, item in enumerate(all_test_losses):
+        #     print("Losses for model with lr={0}: {1}".format(model_params.lrs[i], item))
             # print("Accuracy for model with lr={0}: {1}".format(params.lrs[i], all_test_accs[i]))

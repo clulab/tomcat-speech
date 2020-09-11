@@ -36,6 +36,7 @@ class ChalearnPrep:
         use_cols=None,
         add_avging=True,
         avgd=False,
+        pred_type="max_class"
     ):
         self.path = chalearn_path
         self.train_path = chalearn_path + "/train"
@@ -49,6 +50,8 @@ class ChalearnPrep:
         self.train_data_file = pd.read_csv(self.train, sep="\t")
         self.dev_data_file = pd.read_csv(self.dev, sep="\t")
         # self.test_data_file = pd.read_csv(self.test)
+        # get the type of prediction
+        self.pred_type = pred_type
 
         # get tokenizer
         self.tokenizer = get_tokenizer("basic_english")
@@ -211,23 +214,43 @@ class ChalearnPrep:
                 item_transformed = transform_acoustic_item(
                     item, self.male_acoustic_means, self.male_deviations
                 )
-            train_data.append(
-                (
+            if self.pred_type is not "max_class":
+                train_data.append(
+                    (
+                        item_transformed,
+                        self.train_utts[i],
+                        0,  # todo: eventually add speaker ?
+                        self.train_genders[i],
+                        self.train_ethnicities[i],
+                        self.train_y_extr[i],
+                        self.train_y_neur[i],
+                        self.train_y_agree[i],
+                        self.train_y_openn[i],
+                        self.train_y_consc[i],
+                        self.train_y_inter[i],
+                        self.train_utt_lengths[i],
+                        self.train_acoustic_lengths[i],
+                    )
+                )
+            else:
+                ys = [self.train_y_extr[i], self.train_y_neur[i],
+                      self.train_y_agree[i], self.train_y_openn[i],
+                      self.train_y_consc[i]]
+                # item_y = [0, 0, 0, 0, 0]
+                # item_y[ys.index(max(ys))] = 1
+                item_y = ys.index(max(ys))
+                train_data.append((
                     item_transformed,
                     self.train_utts[i],
-                    0,  # todo: eventually add speaker ?
+                    0,
                     self.train_genders[i],
+                    torch.tensor(item_y),
+                    # torch.tensor(item_y, dtype=torch.float64),
                     self.train_ethnicities[i],
-                    self.train_y_extr[i],
-                    self.train_y_neur[i],
-                    self.train_y_agree[i],
-                    self.train_y_openn[i],
-                    self.train_y_consc[i],
-                    self.train_y_inter[i],
                     self.train_utt_lengths[i],
-                    self.train_acoustic_lengths[i],
+                    self.train_acoustic_lengths[i]
+                    )
                 )
-            )
 
         for i, item in enumerate(self.dev_acoustic):
             if self.train_genders[i] == 2:
@@ -238,23 +261,45 @@ class ChalearnPrep:
                 item_transformed = transform_acoustic_item(
                     item, self.male_acoustic_means, self.male_deviations
                 )
-            dev_data.append(
-                (
-                    item_transformed,
-                    self.dev_utts[i],
-                    0,  # todo: eventually add speaker ?
-                    self.dev_genders[i],
-                    self.dev_ethnicities[i],
-                    self.dev_y_extr[i],
-                    self.dev_y_neur[i],
-                    self.dev_y_agree[i],
-                    self.dev_y_openn[i],
-                    self.dev_y_consc[i],
-                    self.dev_y_inter[i],
-                    self.dev_utt_lengths[i],
-                    self.dev_acoustic_lengths[i],
+            if self.pred_type is not "max_class":
+                dev_data.append(
+                    (
+                        item_transformed,
+                        self.dev_utts[i],
+                        0,  # todo: eventually add speaker ?
+                        self.dev_genders[i],
+                        self.dev_ethnicities[i],
+                        self.dev_y_extr[i],
+                        self.dev_y_neur[i],
+                        self.dev_y_agree[i],
+                        self.dev_y_openn[i],
+                        self.dev_y_consc[i],
+                        self.dev_y_inter[i],
+                        self.dev_utt_lengths[i],
+                        self.dev_acoustic_lengths[i],
+                    )
                 )
-            )
+            else:
+                ys = [self.dev_y_extr[i], self.dev_y_neur[i],
+                      self.dev_y_agree[i], self.dev_y_openn[i],
+                      self.dev_y_consc[i]]
+                # item_y = [0, 0, 0, 0, 0]
+                # item_y[ys.index(max(ys))] = 1
+                item_y = ys.index(max(ys))
+                dev_data.append(
+                    (
+                        item_transformed,
+                        self.dev_utts[i],
+                        0,  # todo: eventually add speaker ?
+                        self.dev_genders[i],
+                        torch.tensor(item_y),
+                        # torch.tensor(item_y, dtype=torch.float64),
+                        self.dev_ethnicities[i],
+                        self.dev_utt_lengths[i],
+                        self.dev_acoustic_lengths[i],
+                    )
+                )
+
 
         # for i, item in enumerate(self.test_acoustic):
         #     if self.train_genders[i] == 2:

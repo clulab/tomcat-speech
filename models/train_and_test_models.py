@@ -219,6 +219,9 @@ def train_and_predict(
             # step 3. compute the loss
             # print(y_pred)
             # print(y_gold)
+            # print(f"y-gold shape is: {y_gold.shape}")
+            # print(y_pred)
+            # print(f"y-pred shape is: {y_pred.shape}")
             loss = loss_func(y_pred, y_gold)
             loss_t = loss.item()  # loss for the item
 
@@ -226,9 +229,15 @@ def train_and_predict(
                 if binary:
                     y_pred = torch.tensor([round(item[0]) for item in y_pred.tolist()])
                 else:
+                    # if type(y_gold[0]) == list or torch.is_tensor(y_gold[0]):
+                    #     y_gold = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
                     y_pred = torch.tensor(
                         [item.index(max(item)) for item in y_pred.tolist()]
                     )
+                    # print(y_gold)
+                    # print(y_pred)
+                    # print(type(y_gold))
+                    # print(type(y_pred))
             else:
                 y_pred = torch.round(y_pred)
 
@@ -311,8 +320,8 @@ def train_and_predict(
                 )
 
             # get the gold labels
-            y_gold = batch[7].to(device)
-            # y_gold = batch[4].to(device)
+            # y_gold = batch[7].to(device)
+            y_gold = batch[4].to(device)
 
             if split_point > 0:
                 y_gold = torch.tensor(
