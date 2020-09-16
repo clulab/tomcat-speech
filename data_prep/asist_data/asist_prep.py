@@ -1,10 +1,11 @@
 # prepare the asist-produced audio and transcription data for neural classifiers
-
+import sys
+# in case of path error, use:
+#sys.path.append("path_to_asist-speech")
 import data_prep.audio_extraction as audio_extraction
 import data_prep.asist_data.sentiment_score_prep as sent_prep
 
 import os
-import sys
 import pandas as pd
 import ast
 import random
@@ -213,7 +214,7 @@ class ASISTInput:
         else:
             self.missions = ["mission_2"]
 
-    def extract_audio_data(self, audio_path, audio_file, mp4=True, use_missions=False):
+    def extract_audio_data(self, audio_path, audio_file, mp4=False, use_missions=False, m4a = True):
         """
         Extract acoustic features from a given file
         """
@@ -235,6 +236,16 @@ class ASISTInput:
             audio_path_and_file = audio_path + "/" + audio_file
             audio_path = audio_extraction.convert_mp4_to_wav(
                 audio_path_and_file + ".mp4"
+            )
+            audio_name = audio_path.split("/")[
+                -1
+            ]  # because we don't want the full path
+            audio_path = "/".join(audio_path.split("/")[:-1])
+        if m4a:
+            print("m4a files detected")
+            audio_path_and_file = audio_path + "/" + audio_file
+            audio_path = audio_extraction.convert_m4a_to_wav(
+                audio_path_and_file + ".m4a"
             )
             audio_name = audio_path.split("/")[
                 -1
@@ -321,16 +332,17 @@ class ASISTInput:
         """
         if not use_missions:
             # get participant and experiment ids
-            experiment_id = aws_transcription_file.split("_")[4]
-            participant_id = aws_transcription_file.split("_")[7]
+            experiment_id = aws_transcription_file.split("_")[1]
+            participant_id = aws_transcription_file.split("_")[8]
+            print(experiment_id, participant_id)
             # set the name for saving csv files
             text_savename = "{0}_{1}".format(experiment_id, participant_id)
             # create instance of JSON to TSV class
             transcript_convert = JSONtoTSV(
                 self.path,
-                aws_transcription_file.split(".")[0],
+                aws_transcription_file.split(".json")[0],
                 save_name=text_savename,
-                use_txt=True,
+                use_txt=False,
             )
         else:
             # set the name for saving csv files
@@ -344,7 +356,7 @@ class ASISTInput:
                 item_path,
                 "{0}_transcript_full".format(mission),
                 save_name=text_savename,
-                use_txt=True,
+                use_txt=False,
             )
 
         # reorganize the transcription into a csv
@@ -362,7 +374,7 @@ class ASISTInput:
         return transcript_save_name
 
     # use the previously-defined functions to extract audio and text for different conditions
-    def extract_audio_and_aws_text(self, file_path, mp4=True):
+    def extract_audio_and_aws_text(self, file_path, mp4=False, m4a = True):
         """
         A basic method to extract audio and text data
         Assumes that audio and transcriptions are in the same path
@@ -386,7 +398,26 @@ class ASISTInput:
                 self.align_text_and_audio_word_level(
                     self.save_path, transcript_save_name, acoustic_feats_name
                 )
+            elif item.startswith("transcript") and item.endswith(".json"):
+                # print(item)
+                # get the name of the file without transcript and .json
+                audio_name1 = "_".join(item.split("_")[1:])
+                audio_name = audio_name1.split(".json")[0]
+                # print(audio_name)
+                # create acoustic features for this file
+                acoustic_feats_name = self.extract_audio_data(
+                    file_path, audio_name, m4a
+                )
+                print(acoustic_feats_name)
+                # create preprocessed transcript of this file
+                transcript_save_name = self.extract_aws_text_data(
+                    item, expand_data=True
+                )
 
+                # combine and word-align acoustic and text
+                self.align_text_and_audio_word_level(
+                    self.save_path, transcript_save_name, acoustic_feats_name
+                )
     def extract_audio_and_aws_text_with_missions(self, mp4=False):
         """
         Extract audio and aws transcripts from internal data
@@ -431,13 +462,19 @@ class ASISTInput:
         """
         # extract audio
         for item in os.listdir(file_path):
-            if item.endswith("_video.mp4"):
+            # if item.endswith("_video.mp4"):
+            if item.endswith(".mp4"):
                 # get the name of the audio file without .mp4
                 audio_name = item.split(".mp4")[0]
 
                 # create acoustic features for this file
                 _ = self.extract_audio_data(file_path, audio_name, mp4)
+            elif item.endswith(".m4a"):
+                # get the name of the audio file without .m4a
+                audio_name = item.split(".m4a")[0]
 
+                # create acoustic features for this file
+                _ = self.extract_audio_data(file_path, audio_name, m4a)
         # extract transcripts
         self.extract_zoom_text_data()
 
@@ -657,22 +694,9 @@ if __name__ == "__main__":
         elif len(sys.argv) == 2 and sys.argv[1] == "mp4_data":
             # extract audio + zoom text, use utterance averaging of features for alignment
             asist.extract_audio_and_zoom_text(asist.path)
+        elif len(sys.argv) == 2 and sys.argv[1] == "m4a_data":
+            # print("extracting m4a...")
+            # extract audio + zoom text, use utterance averaging of features for alignment
+            asist.extract_audio_and_aws_text(asist.path)
         elif len(sys.argv) == 2 and sys.argv[1] == "prep_for_sentiment_analyzer":
             run_sentiment_analysis_pipeline(asist, sentiment_text_path)
-    elif len(sys.argv) == 8:
-        data_path = sys.argv[1]
-        save_path = sys.argv[2]
-        sentiment_text_path = sys.argv[3]
-        missions = sys.argv[4]
-        acoustic_feature_set = sys.argv[5]
-        smile_path = sys.argv[6]
-        analysis_type = sys.argv[7]
-
-        # create instance of input class
-        asist = ASISTInput(
-            data_path,
-            save_path,
-            smile_path,
-            missions=missions,
-            acoustic_feature_set=acoustic_feature_set,
-        )
