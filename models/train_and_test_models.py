@@ -7,7 +7,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import numpy as np
 
 # import parameters for model
 from torch.utils.data import DataLoader
@@ -112,6 +111,8 @@ def train_and_predict(
     avgd_acoustic=True,
     use_speaker=True,
     use_gender=False,
+    binary=False,
+    split_point=0.0,
 ):
 
     for epoch_index in range(num_epochs):
@@ -131,31 +132,39 @@ def train_and_predict(
             train_ds, batch_size=batch_size, shuffle=True, sampler=sampler
         )
 
-        # acoustic_batches, embedding_batches, _, y_batches, length_batches = \
-        #     generate_batches(train_splits, batch_size, shuffle=True, device=device)
-
         # set holders to use for error analysis
         ys_holder = []
         preds_holder = []
 
         # for each batch in the list of batches created by the dataloader
         for batch_index, batch in enumerate(batches):
+            # print(batch)
+            # print(batch[0])
+            # print(batch[1])
+            # print(batch[2])
+            # print(batch[3])
+            # print(batch[4])
+            # print(len(batch))
+            # sys.exit()
             # get the gold labels
             y_gold = batch[4].to(device)  # 4 is emotion, 5 is sentiment
+            if split_point > 0:
+                y_gold = torch.tensor(
+                    [
+                        1.0 if y_gold[i] > split_point else 0.0
+                        for i in range(len(y_gold))
+                    ]
+                )
+            # y_gold = batch.targets()
 
             # step 1. zero the gradients
             optimizer.zero_grad()
 
             # step 2. compute the output
-            # acoustic_batches = [item[0] for item in batched_split]
-            # embedding_batches = [item[1] for item in batched_split]
-            # speaker_batches = [item[2] for item in batched_split]
-            # y_batches = [item[3] for item in batched_split]
-            # length_batches = [item[5] for item in batched_split]
             batch_acoustic = batch[0].to(device)
             batch_text = batch[1].to(device)
-            batch_lengths = batch[6].to(device)
-            batch_acoustic_lengths = batch[7].to(device)
+            batch_lengths = batch[-2].to(device)
+            batch_acoustic_lengths = batch[-1].to(device)
             if use_speaker:
                 batch_speakers = batch[2].to(device)
             else:
@@ -184,25 +193,39 @@ def train_and_predict(
                     gender_input=batch_genders,
                 )
 
+            if binary:
+                y_pred = y_pred.float()
+                y_gold = y_gold.float()
+
             # uncomment for prediction spot-checking during training
             # if epoch_index % 10 == 0:
             #     print(y_pred)
             #     print(y_gold)
             # if epoch_index == 35:
             #     sys.exit(1)
-
+            # print("THE PREDICTIONS ARE: ")
+            # print(y_pred)
+            # print(y_gold)
             # add ys to holder for error analysis
-            preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+            if binary:
+                preds_holder.extend([round(item[0]) for item in y_pred.tolist()])
+            else:
+                preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
             ys_holder.extend(y_gold.tolist())
 
             # step 3. compute the loss
+            # print(y_pred)
+            # print(y_gold)
             loss = loss_func(y_pred, y_gold)
             loss_t = loss.item()  # loss for the item
 
             if len(list(y_pred.size())) > 1:
-                y_pred = torch.tensor(
-                    [item.index(max(item)) for item in y_pred.tolist()]
-                )
+                if binary:
+                    y_pred = torch.tensor([round(item[0]) for item in y_pred.tolist()])
+                else:
+                    y_pred = torch.tensor(
+                        [item.index(max(item)) for item in y_pred.tolist()]
+                    )
             else:
                 y_pred = torch.round(y_pred)
 
@@ -237,8 +260,6 @@ def train_and_predict(
 
         # Iterate over validation set--put it in a dataloader
         val_batches = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
-        # acoustic_batches, embedding_batches, _, y_batches, length_batches = \
-        #     generate_batches(val_data, batch_size, shuffle=False, device=device)
 
         # reset loss and accuracy to zero
         running_loss = 0.0
@@ -256,8 +277,8 @@ def train_and_predict(
             # compute the output
             batch_acoustic = batch[0].to(device)
             batch_text = batch[1].to(device)
-            batch_lengths = batch[6].to(device)
-            batch_acoustic_lengths = batch[7].to(device)
+            batch_lengths = batch[-2].to(device)
+            batch_acoustic_lengths = batch[-1].to(device)
             if use_speaker:
                 batch_speakers = batch[2].to(device)
             else:
@@ -288,9 +309,24 @@ def train_and_predict(
 
             # get the gold labels
             y_gold = batch[4].to(device)
+            if split_point > 0:
+                y_gold = torch.tensor(
+                    [
+                        1.0 if y_gold[i] > split_point else 0.0
+                        for i in range(len(y_gold))
+                    ]
+                )
+            # y_gold = batch.targets()
+
+            if binary:
+                y_pred = y_pred.float()
+                y_gold = y_gold.float()
 
             # add ys to holder for error analysis
-            preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+            if binary:
+                preds_holder.extend([round(item[0]) for item in y_pred.tolist()])
+            else:
+                preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
             ys_holder.extend(y_gold.tolist())
 
             loss = loss_func(y_pred, y_gold)
@@ -298,9 +334,12 @@ def train_and_predict(
 
             # compute the loss
             if len(list(y_pred.size())) > 1:
-                y_pred = torch.tensor(
-                    [item.index(max(item)) for item in y_pred.tolist()]
-                )
+                if binary:
+                    y_pred = torch.tensor([round(item[0]) for item in y_pred.tolist()])
+                else:
+                    y_pred = torch.tensor(
+                        [item.index(max(item)) for item in y_pred.tolist()]
+                    )
             else:
                 y_pred = torch.round(y_pred)
 
@@ -670,3 +709,63 @@ def test_model(
     print(confusion_matrix(ys_holder, preds_holder))
     print("Classification report: ")
     print(classification_report(ys_holder, preds_holder, digits=4))
+
+
+def predict_without_gold_labels(classifier,
+    test_ds,
+    batch_size,
+    device="cpu",
+    avgd_acoustic=True,
+    use_speaker=True,
+    use_gender=False,):
+    """
+    Test a pretrained model
+    """
+    # Iterate over validation set--put it in a dataloader
+    test_batches = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
+
+    # set classifier to evaluation mode
+    classifier.eval()
+
+    # set holders to use for error analysis
+    preds_holder = []
+
+    # for each batch in the dataloader
+    for batch_index, batch in enumerate(test_batches):
+        # compute the output
+        batch_acoustic = batch[0].to(device)
+        batch_text = batch[1].to(device)
+        batch_lengths = batch[-2].to(device)
+        batch_acoustic_lengths = batch[-1].to(device)
+        if use_speaker:
+            batch_speakers = batch[2].to(device)
+        else:
+            batch_speakers = None
+
+        if use_gender:
+            batch_genders = batch[3].to(device)
+        else:
+            batch_genders = None
+
+        if avgd_acoustic:
+            y_pred = classifier(
+                acoustic_input=batch_acoustic,
+                text_input=batch_text,
+                speaker_input=batch_speakers,
+                length_input=batch_lengths,
+                gender_input=batch_genders,
+            )
+        else:
+            y_pred = classifier(
+                acoustic_input=batch_acoustic,
+                text_input=batch_text,
+                speaker_input=batch_speakers,
+                length_input=batch_lengths,
+                acoustic_len_input=batch_acoustic_lengths,
+                gender_input=batch_genders,
+            )
+
+        # add ys to holder for error analysis
+        preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+
+    return preds_holder

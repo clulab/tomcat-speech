@@ -1,19 +1,20 @@
-# train the models created in models directory with MUStARD data
+# train the models created in models directory with MELD data
 # currently the main entry point into the system
 
 import sys
 import numpy as np
 
-from sklearn.model_selection import train_test_split
-
+from data_prep.chalearn_data.chalearn_prep import ChalearnPrep
 from models.train_and_test_models import *
+
 from models.input_models import *
 from data_prep.data_prep_helpers import *
 from data_prep.meld_data.meld_prep import *
 from data_prep.mustard_data.mustard_prep import *
 
 # import parameters for model
-from models.parameters.latefusion_params import params
+from models.parameters.multitask_params import params
+
 
 sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 
@@ -41,10 +42,9 @@ random.seed(seed)
 glove_file = "../../glove.short.300d.punct.txt"
 # glove_file = "../../glove.42B.300d.txt"
 
-mustard_path = "../../datasets/multimodal_datasets/MUStARD"
+chalearn_path = "../../datasets/multimodal_datasets/Chalearn"
 
-data_type = "mustard"
-fusion_type = "late"
+data_type = "chalearn"
 
 # set model name and model type
 model = params.model
@@ -69,23 +69,31 @@ if __name__ == "__main__":
     print("Glove object created")
 
     # 2. MAKE DATASET
-    # meld_data = MustardPrep(mustard_path=meld_path)
-    data = MustardPrep(
-        mustard_path=mustard_path,
+    data = ChalearnPrep(
+        chalearn_path=chalearn_path,
         acoustic_length=params.audio_dim,
         glove=glove,
+        f_end="_IS10.csv",
         add_avging=params.add_avging,
+        # use_cols=[
+        #     "pcm_loudness_sma",
+        #     "F0finEnv_sma",
+        #     "voicingFinalUnclipped_sma",
+        #     "jitterLocal_sma",
+        #     "shimmerLocal_sma",
+        #     "pcm_loudness_sma_de",
+        #     "F0finEnv_sma_de",
+        #     "voicingFinalUnclipped_sma_de",
+        #     "jitterLocal_sma_de",
+        #     "shimmerLocal_sma_de",
+        # ],
         avgd=avgd_acoustic,
     )
 
-    # data = MustardPrep(mustard_path=mustard_path, acoustic_length=params.audio_dim, add_avging=params.add_avging,
-    #                 use_cols=['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
-    #                           'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
-    #                           'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de'],
-    #                 avgd=avgd_acoustic)
-
     # add class weights to device
-    data.sarcasm_weights = data.sarcasm_weights.to(device)
+    data.emotion_weights = torch.tensor([0.5, 0.5])
+    # data.emotion_weights = data.emotion_weights.to(device)
+    # data.sentiment_weights = data.sentiment_weights.to(device)
 
     print("Dataset created")
 
@@ -97,7 +105,6 @@ if __name__ == "__main__":
 
     # prepare holders for loss and accuracy of best model versions
     all_test_losses = []
-    all_test_accs = []
 
     # mini search through different learning_rate values
     for lr in params.lrs:
@@ -105,7 +112,10 @@ if __name__ == "__main__":
             # model_type = f"Multitask_1.6vs1lossWeighting_Adagrad_TextOnly_100batch_wd{str(wd)}_.2split"
             # model_type = f"TextOnly_smallerPool_100batch_wd{str(wd)}_.2split_500hidden"
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
-            model_type = "MUStARD_lateFusionTest_avgdAcoustic_BothGendEmbs"
+            # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
+            model_type = (
+                "MELD_IS10sm_500txthid_.1InDrpt_.3textdrpt_.4acdrpt_.5finalFCdrpt"
+            )
 
             # this uses train-dev-test folds
             # create instance of model
@@ -123,15 +133,6 @@ if __name__ == "__main__":
                 )
                 # optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
                 #                              weight_decay=wd)
-            elif fusion_type == "late":
-                bimodal_trial = LateFusionMultimodalModel(
-                    params=params,
-                    num_embeddings=num_embeddings,
-                    pretrained_embeddings=pretrained_embeddings,
-                )
-                optimizer = torch.optim.Adam(
-                    lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
-                )
             elif params.text_only:
                 bimodal_trial = TextOnlyCNN(
                     params=params,
@@ -162,28 +163,17 @@ if __name__ == "__main__":
             print(bimodal_trial)
 
             # set loss function, optimization, and scheduler, if using
-            # loss_func = nn.CrossEntropyLoss(reduction="mean")
             loss_func = nn.BCELoss(reduction="mean")
-            # loss_func = nn.CrossEntropyLoss(data.sarcasm_weights, reduction='mean')
+            # loss_func = nn.CrossEntropyLoss(data.emotion_weights, reduction='mean')
+
+            # optimizer = torch.optim.SGD(bimodal_trial.parameters(), lr=lr, momentum=0.9)
 
             print("Model, loss function, and optimization created")
 
             # set the train, dev, and set data
-            # train_data = data.train_data
-
-            # combine train and dev data
-            train_ds = DatumListDataset(
-                data.train_data, data_type, data.sarcasm_weights
-            )
-            dev_ds = DatumListDataset(data.dev_data, data_type, data.sarcasm_weights)
-            test_ds = DatumListDataset(data.test_data, data_type, data.sarcasm_weights)
-
-            train_targets = torch.stack(list(train_ds.targets()))
-            sampler_weights = data.sarcasm_weights
-            train_samples_weights = sampler_weights[train_targets]
-            sampler = torch.utils.data.sampler.WeightedRandomSampler(
-                train_samples_weights, len(train_samples_weights)
-            )
+            train_ds = DatumListDataset(data.train_data, data.emotion_weights)
+            dev_ds = DatumListDataset(data.dev_data, data.emotion_weights)
+            # test_ds = DatumListDataset(data.test_data, data.emotion_weights)
 
             # create a a save path and file for the model
             model_save_file = "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
@@ -192,9 +182,6 @@ if __name__ == "__main__":
 
             # make the train state to keep track of model training/development
             train_state = make_train_state(lr, model_save_path, model_save_file)
-
-            # set the load path for testing
-            load_path = model_save_path + model_save_file
 
             # train the model and evaluate on development set
             if multitask:
@@ -230,7 +217,7 @@ if __name__ == "__main__":
                     avgd_acoustic=avgd_acoustic_in_network,
                     use_speaker=params.use_speaker,
                     use_gender=params.use_gender,
-                    binary=True,
+                    split_point=data.mean_openness,
                 )
 
             # plot the loss and accuracy curves
@@ -266,15 +253,9 @@ if __name__ == "__main__":
                 set_axis_boundaries=False,
             )
 
-            # plot_train_dev_curve(train_state['train_acc'], train_state['val_acc'], x_label="Epoch",
-            #                         y_label="Accuracy", title=acc_title, save_name=acc_save, losses=False,
-            #                         set_axis_boundaries=False)
-
             # add best evaluation losses and accuracy from training to set
             all_test_losses.append(train_state["early_stopping_best_val"])
-            # all_test_accs.append(train_state['best_val_acc'])
 
     # print the best model losses and accuracies for each development set in the cross-validation
     for i, item in enumerate(all_test_losses):
         print("Losses for model with lr={0}: {1}".format(params.lrs[i], item))
-        # print("Accuracy for model with lr={0}: {1}".format(params.lrs[i], all_test_accs[i]))

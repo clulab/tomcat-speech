@@ -1,11 +1,13 @@
 # prepare the data from MUStARD dataset
-
+import math
 import os
 import json
 from collections import OrderedDict
+import random
 
 import torch
 from torch import nn
+from torchtext.data import get_tokenizer
 
 from data_prep.audio_extraction import convert_mp4_to_wav, ExtractAudio
 from data_prep.data_prep_helpers import (
@@ -15,8 +17,13 @@ from data_prep.data_prep_helpers import (
     get_longest_utt,
     get_class_weights,
     make_acoustic_set,
+    transform_acoustic_item,
+    create_data_folds,
 )
-from data_prep.meld_data.meld_prep import get_max_num_acoustic_frames
+from data_prep.meld_data.meld_prep import (
+    get_max_num_acoustic_frames,
+    make_acoustic_dict_meld,
+)
 import pandas as pd
 
 
@@ -29,6 +36,7 @@ class MustardPrep:
         self,
         mustard_path,
         acoustic_length,
+        glove,
         train_prop=0.6,
         test_prop=0.2,
         utts_file_name="mustard_utts.tsv",
@@ -50,34 +58,37 @@ class MustardPrep:
             self.utterances, train_prop, test_prop
         )
 
+        # get tokenizer
+        self.tokenizer = get_tokenizer("basic_english")
+
         # train, dev, and test acoustic data
-        self.train_dict = OrderedDict(
-            make_acoustic_dict(
-                self.acoustic_path,
-                files_to_get=set(self.train["clip_id"].tolist()),
-                f_end=f_end,
-                use_cols=use_cols,
-                data_type="mustard",
-            )
+        self.train_dict, self.train_acoustic_lengths = make_acoustic_dict_meld(
+            self.acoustic_path,
+            files_to_get=set(self.train["clip_id"].tolist()),
+            f_end=f_end,
+            use_cols=use_cols,
+            avgd=avgd
+            # data_type="mustard",
         )
-        self.dev_dict = OrderedDict(
-            make_acoustic_dict(
-                self.acoustic_path,
-                files_to_get=set(self.dev["clip_id"].tolist()),
-                f_end=f_end,
-                use_cols=use_cols,
-                data_type="mustard",
-            )
+        self.train_dict = OrderedDict(self.train_dict)
+        self.dev_dict, self.dev_acoustic_lengths = make_acoustic_dict_meld(
+            self.acoustic_path,
+            files_to_get=set(self.dev["clip_id"].tolist()),
+            f_end=f_end,
+            use_cols=use_cols,
+            avgd=avgd
+            # data_type="mustard",
         )
-        self.test_dict = OrderedDict(
-            make_acoustic_dict(
-                self.acoustic_path,
-                files_to_get=set(self.test["clip_id"].tolist()),
-                f_end=f_end,
-                use_cols=use_cols,
-                data_type="mustard",
-            )
+        self.dev_dict = OrderedDict(self.dev_dict)
+        self.test_dict, self.test_acoustic_lengths = make_acoustic_dict_meld(
+            self.acoustic_path,
+            files_to_get=set(self.test["clip_id"].tolist()),
+            f_end=f_end,
+            use_cols=use_cols,
+            avgd=avgd
+            # data_type="mustard",
         )
+        self.test_dict = OrderedDict(self.test_dict)
 
         self.longest_utt = get_longest_utt(self.utterances["utterance"])
         self.longest_dia = None  # mustard is not organized as dialogues
@@ -123,28 +134,31 @@ class MustardPrep:
             self.train_spkrs,
             self.train_y_sarcasm,
             self.train_utt_lengths,
-        ) = self.make_mustard_data_tensors(self.train)
+        ) = self.make_mustard_data_tensors(self.train, glove)
         (
             self.dev_utts,
             self.dev_spkrs,
             self.dev_y_sarcasm,
             self.dev_utt_lengths,
-        ) = self.make_mustard_data_tensors(self.dev)
+        ) = self.make_mustard_data_tensors(self.dev, glove)
         (
             self.test_utts,
             self.test_spkrs,
             self.test_y_sarcasm,
             self.test_utt_lengths,
-        ) = self.make_mustard_data_tensors(self.test)
+        ) = self.make_mustard_data_tensors(self.test, glove)
 
         # set the sarcasm weights
         self.sarcasm_weights = get_class_weights(self.train_y_sarcasm)
+
+        # acoustic feature normalization based on train
+        self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
+        self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
 
         # get the data organized for input into the NNs
         self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
 
     def combine_xs_and_ys(self):
-        # todo: get this into the individual dataset classes
         """
         Combine all x and y data into list of tuples for easier access with DataLoader
         """
@@ -154,16 +168,19 @@ class MustardPrep:
 
         for i, item in enumerate(self.train_acoustic):
             # normalize
-            item_transformed = item
-            if self.train_genders[i] == 1:
-                item_transformed = self.transform_acoustic_item(
-                    item, self.train_genders[i]
-                )
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
+            # if self.train_genders[i] == 1:
+            #     item_transformed = self.transform_acoustic_item(
+            #         item, self.train_genders[i]
+            #     )
             train_data.append(
                 (
                     item_transformed,
                     self.train_utts[i],
                     self.train_spkrs[i],
+                    0,  # todo: add speaker gender
                     self.train_y_sarcasm[i],
                     self.train_utt_lengths[i],
                     self.train_acoustic_lengths[i],
@@ -171,12 +188,15 @@ class MustardPrep:
             )
 
         for i, item in enumerate(self.dev_acoustic):
-            item_transformed = self.transform_acoustic_item(item, self.dev_genders[i])
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
             dev_data.append(
                 (
                     item_transformed,
                     self.dev_utts[i],
                     self.dev_spkrs[i],
+                    0,  # todo: add speaker gender
                     self.dev_y_sarcasm[i],
                     self.dev_utt_lengths[i],
                     self.dev_acoustic_lengths[i],
@@ -184,12 +204,15 @@ class MustardPrep:
             )
 
         for i, item in enumerate(self.test_acoustic):
-            item_transformed = self.transform_acoustic_item(item, self.test_genders[i])
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
             test_data.append(
                 (
                     item_transformed,
                     self.test_utts[i],
                     self.test_spkrs[i],
+                    0,  # todo: add speaker gender
                     self.test_y_sarcasm[i],
                     self.test_utt_lengths[i],
                     self.test_acoustic_lengths[i],
@@ -198,10 +221,11 @@ class MustardPrep:
 
         return train_data, dev_data, test_data
 
-    def make_mustard_data_tensors(self, all_utts_df):
+    def make_mustard_data_tensors(self, all_utts_df, glove):
         """
         Prepare the tensors of utterances + speakers, emotion and sentiment scores
         :param all_utts_df: the dataframe of all utterances
+        :param glove: an instance of class Glove
         :return:
         """
         # create holders for the data
@@ -218,6 +242,9 @@ class MustardPrep:
             utts = [0] * self.longest_utt
 
             # get values from row
+            # performacne was better without the tokenizer
+            # utt = clean_up_word(row["utterance"])
+            # utt = self.tokenizer(utt)
             utt = row["utterance"]
             utt = [clean_up_word(wd) for wd in utt.strip().split(" ")]
             utt_lengths.append(len(utt))
@@ -226,15 +253,18 @@ class MustardPrep:
             sarc = row["sarcasm"]
 
             # convert words to indices for glove
-            for ix, wd in enumerate(utt):
-                if wd in self.glove.wd2idx.keys():
-                    utts[ix] = self.glove.wd2idx[wd]
-                else:
-                    utts[ix] = self.glove.wd2idx["<UNK>"]
+            utt_indexed = glove.index(utt)
+            for i, item in enumerate(utt_indexed):
+                utts[i] = item
+            # for ix, wd in enumerate(utt):
+            #     if wd in glove.wd2idx.keys():
+            #         utts[ix] = glove.wd2idx[wd]
+            #     else:
+            #         utts[ix] = glove.wd2idx["<UNK>"]
 
             all_utts.append(torch.tensor(utts))
             all_speakers.append(spk_id)
-            all_sarcasm.append([sarc])
+            all_sarcasm.append(sarc)
 
         # get set of all speakers, create lookup dict, and get list of all speaker IDs
         speaker_set = set([speaker for speaker in all_speakers])
@@ -245,7 +275,7 @@ class MustardPrep:
         speaker_ids = torch.tensor(speaker_ids)
         all_sarcasm = torch.tensor(all_sarcasm)
 
-        # padd and transpose utterance sequences
+        # pad and transpose utterance sequences
         all_utts = nn.utils.rnn.pad_sequence(all_utts)
         all_utts = all_utts.transpose(0, 1)
 
@@ -280,33 +310,6 @@ def organize_labels_from_json(jsonfile, savepath, save_name):
             savefile.write("\n")
 
 
-def create_data_folds(data, perc_train, perc_test):
-    """
-    Create train, dev, and test folds for a dataset without them
-    Specify the percentage of the data that goes into each fold
-    data : a Pandas dataframe with (at a minimum) gold labels for all data
-    perc_* : the percentage for each fold
-    Percentage not included in train or test fold allocated to dev
-    """
-    # shuffle the rows of the dataframe
-    shuffled = data.sample(frac=1).reset_index(drop=True)
-
-    # get length of df
-    length = shuffled.shape[0]
-
-    # calculate length of each split
-    train_len = perc_train * length
-    test_len = perc_test * length
-
-    # get slices of dataset
-    train_data = shuffled.iloc[: int(train_len)]
-    test_data = shuffled.iloc[int(train_len) : int(train_len) + int(test_len)]
-    dev_data = shuffled.iloc[int(train_len) + int(test_len) :]
-
-    # return data
-    return train_data, dev_data, test_data
-
-
 def preprocess_mustard_data(
     base_path,
     gold_save_name,
@@ -337,19 +340,27 @@ def preprocess_mustard_data(
         convert_mp4_to_wav(os.path.join(path_to_files, clip))
 
     # set path to acoustic feats
-    acoustic_save_path = os.path.join(json_path, acoustic_save_dir)
+    acoustic_save_path = os.path.join(base_path, acoustic_save_dir)
     # create the save directory if it doesn't exist
     if not os.path.exists(acoustic_save_path):
         os.makedirs(acoustic_save_path)
 
     # extract features using opensmile
     for audio_file in os.listdir(path_to_files):
-        if audio_file.endswith(".wav"):
-            audio_name = audio_file.split(".wav")[0]
-            audio_save_name = str(audio_name) + "_" + acoustic_feature_set + ".csv"
-            extractor = ExtractAudio(
-                path_to_files, audio_file, acoustic_save_path, smile_path
-            )
-            extractor.save_acoustic_csv(
-                feature_set=acoustic_feature_set, savename=audio_save_name
-            )
+        audio_name = audio_file.split(".wav")[0]
+        audio_save_name = str(audio_name) + "_" + acoustic_feature_set + ".csv"
+        extractor = ExtractAudio(
+            path_to_files, audio_file, acoustic_save_path, smile_path
+        )
+        extractor.save_acoustic_csv(
+            feature_set=acoustic_feature_set, savename=audio_save_name
+        )
+
+
+if __name__ == "__main__":
+    base = "../../datasets/multimodal_datasets/MUStARD/"
+    gold_save = "mustard_utts_attempt_2.tsv"
+    savedir = "acoustic_feats_attempt_2"
+    smilepath = "~/opensmile-2.3.0"
+
+    preprocess_mustard_data(base, gold_save, savedir, smilepath)

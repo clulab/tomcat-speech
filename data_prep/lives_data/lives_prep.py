@@ -275,6 +275,9 @@ class ClinicalDataset(Dataset):
         :return: list of double of ([acoustic], [glove_index], [speaker])
         """
         print("Data prep and normalization starting")
+        # print(self.acoustic_dict.keys())
+        # print(self.valid_files)
+        # sys.exit()
 
         # set holders for acoustic, words, and speakers
         acoustic_data = []
@@ -303,6 +306,7 @@ class ClinicalDataset(Dataset):
                 for idx, row in item.iterrows():
                     # get the speaker
                     spkr = row["speaker"]
+                    print(spkr)
                     intermediate_speakers.append(
                         spkr - 1
                     )  # speakers are currently 1 and 2, we want 0 and 1
