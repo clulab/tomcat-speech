@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -u
 
@@ -11,8 +11,10 @@ export ROOTDIR
 
 ZIPFILE=opensmile-2.3.0.zip
 URL="https://www.audeering.com/download/opensmile-2-3-0-zip/?wpdmdl=4781&refresh=5f06534ad91f31594250058"
+mkdir -p "$ROOTDIR"/external
+
 pushd "$ROOTDIR"/external > /dev/null
-    echo "Downloading OpenSmile to ${pwd}/${ZIPFILE}"
+    echo "Downloading OpenSmile to $(pwd)/${ZIPFILE}"
     if ! curl "$URL" -o "$ZIPFILE"; then
         echo "Could not download OpenSmile."
         exit 1
