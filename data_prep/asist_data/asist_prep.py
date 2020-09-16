@@ -700,12 +700,3 @@ if __name__ == "__main__":
             asist.extract_audio_and_aws_text(asist.path)
         elif len(sys.argv) == 2 and sys.argv[1] == "prep_for_sentiment_analyzer":
             run_sentiment_analysis_pipeline(asist, sentiment_text_path)
-    elif len(sys.argv) == 8:
-        data_path = sys.argv[1]
-        save_path = sys.argv[2]
-        sentiment_text_path = sys.argv[3]
-        missions = sys.argv[4]
-        acoustic_feature_set = sys.argv[5]
-        smile_path = sys.argv[6]
-        analysis_type = sys.argv[7]
- 
