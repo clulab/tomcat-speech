@@ -25,5 +25,8 @@ smile.log
 glove.short.300d.txt
 python_readme.md
 
+external/opensmile*
+data/*
+
 # R code
 classifier_R
