@@ -389,17 +389,32 @@ def make_acoustic_dict(
         if f.endswith(f_end):
             if files_to_get is None or "_".join(f.split("_")[:2]) in files_to_get:
                 if use_cols is not None:
-                    feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
+                    try:
+                        feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
+                    except ValueError:
+                        # todo: add warning
+                        feats = []
                 else:
                     feats = pd.read_csv(acoustic_path + "/" + f)
-                sid = f.split("_")[0]
                 if data_type == "asist":
-                    callid = f.split("_")[2]  # asist data has format sid_mission_num
+                    label = f.split("_")
+                    if label[1] == "mission":
+                        sid = label[0]
+                        mission_id = label[2]
+                    else:
+                        try:
+                            sid = int(label[1])
+                        except ValueError:
+                            sid = int(label[1].split("-")[1])
+                        mission_id = 0  # later iterations of this should have mission IDs
+                    acoustic_dict[(sid, mission_id)] = feats
+                    # callid = f.split("_")[2]  # asist data has format sid_mission_num
                 else:
+                    sid = f.split("_")[0]
                     # clinical data has format sid_callid
                     # meld has format dia_utt
                     callid = f.split("_")[1]
-                acoustic_dict[(sid, callid)] = feats
+                    acoustic_dict[(sid, callid)] = feats
     return acoustic_dict
 
 
