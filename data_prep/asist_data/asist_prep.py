@@ -1,6 +1,7 @@
 # prepare the asist-produced audio and transcription data for neural classifiers
 import sys
-sys.path.append("/Users/meghavarshinikrishnaswami/github/asist-speech")
+# in case of path error, use:
+#sys.path.append("path_to_asist-speech")
 import data_prep.audio_extraction as audio_extraction
 import data_prep.asist_data.sentiment_score_prep as sent_prep
 
