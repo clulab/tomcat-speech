@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-set -u
+set -euo pipefail
 
-#Script to download OpenSmile v2.3.0
+# Script to download OpenSmile v2.3.0
 
 # Set the ROOTDIR environment variable, assuming that the directory structure
 # mirrors that of the git repository.
