@@ -5,9 +5,14 @@ import sys
 from datetime import date
 
 import numpy as np
+import copy
+
+# todo: will it work just putting this here?
+sys.stdout.flush()
 
 from sklearn.model_selection import train_test_split
 
+from data_prep.chalearn_data.chalearn_prep import ChalearnPrep
 from data_prep.ravdess_data.ravdess_prep import RavdessPrep
 from models.train_and_test_models import *
 from models.input_models import *
@@ -77,6 +82,10 @@ if __name__ == "__main__":
                              add_avging=model_params.add_avging,
                              use_cols=config.acoustic_columns,
                              avgd=model_params.avgd_acoustic)
+        #
+        # chalearn_data = ChalearnPrep(chalearn_path=config.chalearn_path, acoustic_length=model_params.audio_dim,
+        #                              glove=glove, add_avging=model_params.add_avging, use_cols=config.acoustic_columns,
+        #                              avgd=model_params.avgd_acoustic, pred_type=config.chalearn_predtype)
 
         # ravdess_data = RavdessPrep(ravdess_path=config.ravdess_path, acoustic_length=params.audio_dim, glove=glove,
         #                      add_avging=params.add_avging,
@@ -86,6 +95,7 @@ if __name__ == "__main__":
         # add class weights to device
         mustard_data.sarcasm_weights = mustard_data.sarcasm_weights.to(device)
         meld_data.emotion_weights = meld_data.emotion_weights.to(device)
+        # chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
         # ravdess_data.emotion_weights = ravdess_data.emotion_weights.to(device)
 
         print("Datasets created")
@@ -100,130 +110,188 @@ if __name__ == "__main__":
         all_test_losses = []
         all_test_accs = []
 
+        # todo: refactor to remove this
+        wd = model_params.weight_decay
+
         # mini search through different learning_rate values
         for lr in model_params.lrs:
-            for wd in model_params.weight_decay:
+            for b_size in model_params.batch_size:
+                for num_gru_layer in model_params.num_gru_layers:
+                    for short_emb_size in model_params.short_emb_dim:
+                        for output_d in model_params.output_dim:
+                            for dout in model_params.dropout:
+                                for txt_hidden_dim in model_params.text_gru_hidden_dim:
 
-                item_output_path = os.path.join(output_path, f"LR{lr}_WD{wd}")
+                                    this_model_params = copy.deepcopy(model_params)
 
-                # make sure the full save path exists; if not, create it
-                os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(item_output_path))
+                                    this_model_params.batch_size = b_size
+                                    this_model_params.num_gru_layers = num_gru_layer
+                                    this_model_params.short_emb_dim = short_emb_size
+                                    this_model_params.output_dim = output_d
+                                    this_model_params.dropout = dout
+                                    this_model_params.text_gru_hidden_dim = txt_hidden_dim
 
-                # this uses train-dev-test folds
-                # create instance of model
-                bimodal_trial = MultitaskModel(
-                    params=model_params,
-                    num_embeddings=num_embeddings,
-                    pretrained_embeddings=pretrained_embeddings,
-                )
-                optimizer = torch.optim.Adam(
-                    lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
-                )
+                                    print(this_model_params)
 
-                # set the classifier(s) to the right device
-                bimodal_trial = bimodal_trial.to(device)
-                print(bimodal_trial)
+                                    item_output_path = os.path.join(output_path, f"LR{lr}_BATCH{b_size}_"
+                                                                                 f"NUMLYR{num_gru_layer}_"
+                                                                                 f"SHORTEMB{short_emb_size}_"
+                                                                                 f"INT-OUTPUT{output_d}_"
+                                                                                 f"DROPOUT{dout}_"
+                                                                                 f"TEXTHIDDEN{txt_hidden_dim}")
+                                    # item_output_path = os.path.join(output_path, f"LR{lr}_WD{wd}")
 
-                # combine train and dev data
-                # ready data for mustard
-                mustard_train_ds = DatumListDataset(mustard_data.train_data, "mustard", mustard_data.sarcasm_weights)
-                mustard_dev_ds = DatumListDataset(mustard_data.dev_data, "mustard", mustard_data.sarcasm_weights)
-                mustard_test_ds = DatumListDataset(mustard_data.test_data, "mustard", mustard_data.sarcasm_weights)
+                                    # make sure the full save path exists; if not, create it
+                                    os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(item_output_path))
 
-                # add loss function for mustard
-                mustard_loss_func = nn.BCELoss(reduction="mean")
+                                    # this uses train-dev-test folds
+                                    # create instance of model
+                                    bimodal_trial = MultitaskModel(
+                                        params=this_model_params,
+                                        num_embeddings=num_embeddings,
+                                        pretrained_embeddings=pretrained_embeddings,
+                                    )
+                                    optimizer = torch.optim.Adam(
+                                        lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
+                                    )
 
-                # create multitask object
-                mustard_obj = MultitaskObject(mustard_train_ds, mustard_dev_ds, mustard_test_ds, mustard_loss_func,
-                                              task_num=0, binary=True)
+                                    # set the classifier(s) to the right device
+                                    bimodal_trial = bimodal_trial.to(device)
+                                    print(bimodal_trial)
 
-                meld_train_ds = DatumListDataset(meld_data.train_data, "meld_emotion", meld_data.emotion_weights)
-                meld_dev_ds = DatumListDataset(meld_data.dev_data, "meld_emotion", meld_data.emotion_weights)
-                meld_test_ds = DatumListDataset(meld_data.test_data, "meld_emotion", meld_data.emotion_weights)
+                                    # combine train and dev data
+                                    # ready data for mustard
+                                    # todo: delete after testing this
+                                    #   just to see what happens
+                                    # duplicate mustard training data
+                                    # mustard_train_ds = DatumListDataset(mustard_data.train_data * 10, "mustard", mustard_data.sarcasm_weights)
+                                    mustard_train_ds = DatumListDataset(mustard_data.train_data, "mustard", mustard_data.sarcasm_weights)
+                                    mustard_dev_ds = DatumListDataset(mustard_data.dev_data, "mustard", mustard_data.sarcasm_weights)
+                                    mustard_test_ds = DatumListDataset(mustard_data.test_data, "mustard", mustard_data.sarcasm_weights)
 
-                meld_loss_func = nn.CrossEntropyLoss(reduction="mean")
+                                    # add loss function for mustard
+                                    mustard_loss_func = nn.BCELoss(reduction="mean")
+                                    mustard_optmizer = torch.optim.Adam(
+                                        lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
+                                    )
 
-                meld_obj = MultitaskObject(meld_train_ds, meld_dev_ds, meld_test_ds, meld_loss_func, task_num=1)
+                                    # create multitask object
+                                    mustard_obj = MultitaskObject(mustard_train_ds, mustard_dev_ds, mustard_test_ds, mustard_loss_func,
+                                                                  task_num=0, binary=True, optimizer=mustard_optmizer)
 
-                # calculate lengths of train sets and use this to determine multipliers for the loss functions
-                mustard_len = len(mustard_train_ds)
-                meld_len = len(meld_train_ds)
+                                    meld_train_ds = DatumListDataset(meld_data.train_data, "meld_emotion", meld_data.emotion_weights)
+                                    meld_dev_ds = DatumListDataset(meld_data.dev_data, "meld_emotion", meld_data.emotion_weights)
+                                    meld_test_ds = DatumListDataset(meld_data.test_data, "meld_emotion", meld_data.emotion_weights)
 
-                total_len = mustard_len + meld_len
-                meld_multiplier = 1 - (meld_len / total_len)
-                mustard_multiplier = (1 - (mustard_len / total_len))
-                print(f"MELD multiplier is: 1 - (meld_len / total_len) = {meld_multiplier}")
-                print(f"MUStARD multiplier is: (1 - (mustard_len / total_len)) = {mustard_multiplier}")
+                                    meld_loss_func = nn.CrossEntropyLoss(reduction="mean")
+                                    meld_optimizer = torch.optim.Adam(
+                                        lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
+                                    )
 
-                # add multipliers to their relevant objects
-                mustard_obj.change_loss_multiplier(mustard_multiplier)
-                meld_obj.change_loss_multiplier(meld_multiplier)
+                                    meld_obj = MultitaskObject(meld_train_ds, meld_dev_ds, meld_test_ds, meld_loss_func, task_num=1,
+                                                               optimizer=meld_optimizer)
 
-                # set all data list
-                all_data_list = [mustard_obj, meld_obj]
+                                    # create chalearn train, dev, _ data
+                                    # todo: we need to properly extract test set
+                                    # chalearn_train_ds = DatumListDataset(chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights)
+                                    # chalearn_dev_ds = DatumListDataset(chalearn_data.dev_data, "chalearn_trats", chalearn_data.trait_weights)
+                                    # chalearn_test_ds = None
+                                    #
+                                    # chalearn_loss_func = nn.CrossEntropyLoss(reduction="mean")
+                                    # chalearn_optimizer = torch.optim.Adam(
+                                    #     lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
+                                    # )
+                                    #
+                                    # chalearn_obj = MultitaskObject(chalearn_train_ds, chalearn_dev_ds, chalearn_test_ds,
+                                    #                                chalearn_loss_func, task_num=2, optimizer=chalearn_optimizer)
 
-                print("Model, loss function, and optimization created")
 
-                # todo: set data sampler?
-                sampler = None
-                # sampler = BatchSchedulerSampler()
+                                    # calculate lengths of train sets and use this to determine multipliers for the loss functions
+                                    mustard_len = len(mustard_train_ds)
+                                    meld_len = len(meld_train_ds)
+                                    # chalearn_len = len(chalearn_train_ds)
 
-                # create a a save path and file for the model
-                model_save_file = f"{item_output_path}/{config.EXPERIMENT_DESCRIPTION}.pth"
+                                    # total_len = mustard_len + meld_len + chalearn_len
+                                    # meld_multiplier = 1 - (meld_len / total_len)
+                                    # mustard_multiplier = (1 - (mustard_len / total_len))
+                                    # chalearn_multiplier = (1 - (chalearn_len / total_len))
 
-                # make the train state to keep track of model training/development
-                train_state = make_train_state(lr, model_save_file)
+                                    # print(f"MELD multiplier is: 1 - (meld_len / total_len) = {meld_multiplier}")
+                                    # print(f"MUStARD multiplier is: (1 - (mustard_len / total_len)) = {mustard_multiplier}")
+                                    # print(f"Chalearn multiplier is: (1 - (chalearn_len / total_len)) = {chalearn_multiplier}")
 
-                # train the model and evaluate on development set
-                multitask_train_and_predict(
-                    bimodal_trial,
-                    train_state,
-                    all_data_list,
-                    model_params.batch_size,
-                    model_params.num_epochs,
-                    optimizer,
-                    device,
-                    scheduler=None,
-                    sampler=sampler,
-                    avgd_acoustic=avgd_acoustic_in_network,
-                    use_speaker=model_params.use_speaker,
-                    use_gender=model_params.use_gender,
-                )
+                                    # add multipliers to their relevant objects
+                                    # mustard_obj.change_loss_multiplier(mustard_multiplier)
+                                    # meld_obj.change_loss_multiplier(meld_multiplier)
+                                    # chalearn_obj.change_loss_multiplier(chalearn_multiplier)
 
-                # plot the loss and accuracy curves
-                # set plot titles
-                loss_title = f"Training and Dev loss for model {config.model_type} with lr {lr}"
-                acc_title = f"Avg F scores for model {config.model_type} with lr {lr}"
+                                    # set all data list
+                                    # all_data_list = [mustard_obj, meld_obj, chalearn_obj]
+                                    # all_data_list = [mustard_obj]
+                                    all_data_list = [meld_obj]
 
-                # set save names
-                loss_save = f"{item_output_path}/loss.png"
-                acc_save = f"{item_output_path}/avg_f1.png"
+                                    print("Model, loss function, and optimization created")
 
-                # plot the loss from model
-                plot_train_dev_curve(
-                    train_state["train_loss"],
-                    train_state["val_loss"],
-                    x_label="Epoch",
-                    y_label="Loss",
-                    title=loss_title,
-                    save_name=loss_save,
-                    set_axis_boundaries=False,
-                )
-                # plot the accuracy from model
-                plot_train_dev_curve(
-                    train_state["train_avg_f1"],
-                    train_state["val_avg_f1"],
-                    x_label="Epoch",
-                    y_label="Weighted AVG F1",
-                    title=acc_title,
-                    save_name=acc_save,
-                    losses=False,
-                    set_axis_boundaries=False,
-                )
+                                    # todo: set data sampler?
+                                    sampler = None
+                                    # sampler = BatchSchedulerSampler()
 
-                # add best evaluation losses and accuracy from training to set
-                all_test_losses.append(train_state["early_stopping_best_val"])
-                # all_test_accs.append(train_state['best_val_acc'])
+                                    # create a a save path and file for the model
+                                    model_save_file = f"{item_output_path}/{config.EXPERIMENT_DESCRIPTION}.pth"
+
+                                    # make the train state to keep track of model training/development
+                                    train_state = make_train_state(lr, model_save_file)
+
+                                    # train the model and evaluate on development set
+                                    multitask_train_and_predict(
+                                        bimodal_trial,
+                                        train_state,
+                                        all_data_list,
+                                        this_model_params.batch_size,
+                                        this_model_params.num_epochs,
+                                        optimizer,
+                                        device,
+                                        scheduler=None,
+                                        sampler=sampler,
+                                        avgd_acoustic=avgd_acoustic_in_network,
+                                        use_speaker=this_model_params.use_speaker,
+                                        use_gender=this_model_params.use_gender,
+                                    )
+
+                                    # plot the loss and accuracy curves
+                                    # set plot titles
+                                    loss_title = f"Training and Dev loss for model {config.model_type} with lr {lr}"
+                                    acc_title = f"Avg F scores for model {config.model_type} with lr {lr}"
+
+                                    # set save names
+                                    loss_save = f"{item_output_path}/loss.png"
+                                    acc_save = f"{item_output_path}/avg_f1.png"
+
+                                    # plot the loss from model
+                                    plot_train_dev_curve(
+                                        train_state["train_loss"],
+                                        train_state["val_loss"],
+                                        x_label="Epoch",
+                                        y_label="Loss",
+                                        title=loss_title,
+                                        save_name=loss_save,
+                                        set_axis_boundaries=False,
+                                    )
+                                    # plot the accuracy from model
+                                    plot_train_dev_curve(
+                                        train_state["train_avg_f1"],
+                                        train_state["val_avg_f1"],
+                                        x_label="Epoch",
+                                        y_label="Weighted AVG F1",
+                                        title=acc_title,
+                                        save_name=acc_save,
+                                        losses=False,
+                                        set_axis_boundaries=False,
+                                    )
+
+                                    # add best evaluation losses and accuracy from training to set
+                                    all_test_losses.append(train_state["early_stopping_best_val"])
+                                    # all_test_accs.append(train_state['best_val_acc'])
 
         # print the best model losses and accuracies for each development set in the cross-validation
         # for i, item in enumerate(all_test_losses):

@@ -96,16 +96,19 @@ class EarlyFusionMultimodalModel(nn.Module):
         )
 
         # set the size of the input into the fc layers
-        if params.avgd_acoustic or params.add_avging:
-            self.fc_input_dim = params.text_gru_hidden_dim + params.audio_dim
+        # if params.avgd_acoustic or params.add_avging:
+        self.fc_input_dim = params.text_gru_hidden_dim + params.audio_dim
             # self.fc_input_dim = params.text_gru_hidden_dim + 20
 
-        else:
-            self.fc_input_dim = (
-                params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
-            )
+        # else:
+        #     self.fc_input_dim = (
+        #         params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
+        #     )
 
-        self.acoustic_fc_1 = nn.Linear(params.audio_dim, 100)
+        if params.add_avging is False and params.avgd_acoustic is False:
+            self.acoustic_fc_1 = nn.Linear(params.fc_hidden_dim, 100)
+        else:
+            self.acoustic_fc_1 = nn.Linear(params.audio_dim, 100)
         # self.acoustic_fc_2 = nn.Linear(100, 20)
         self.acoustic_fc_2 = nn.Linear(100, params.audio_dim)
 
@@ -267,13 +270,14 @@ class EarlyFusionMultimodalModel(nn.Module):
         # output = torch.tanh(self.fc1(inputs))
         # output = self.interfc_batch_norm(output)
         # todo: abstract this so it's only calculated if not multitask
-        output = torch.relu(self.fc2(output))
+        # output = torch.relu(self.fc2(output))
         # output = F.softmax(output, dim=1)
         # output = torch.tanh(self.fc1(inputs))
 
         if self.out_dims == 1:
             output = torch.sigmoid(output)
         # return the output
+        # print(f"The output of sub-network is:\n{output}")
         return output
 
 
@@ -670,7 +674,8 @@ class PredictionLayer(nn.Module):
         self.fc1 = nn.Linear(self.input_dim, self.output_dim)
 
     def forward(self, combined_inputs):
-        out = torch.relu(self.fc1(F.dropout(combined_inputs, self.dropout)))
+        out = torch.relu(self.fc1(combined_inputs))
+        # out = torch.relu(self.fc1(F.dropout(combined_inputs, self.dropout)))
 
         if self.output_dim == 1:
             out = torch.sigmoid(out)
@@ -691,10 +696,14 @@ class MultitaskModel(nn.Module):
         # if so, assumes each dataset has its own task
         self.multi_dataset = multi_dataset
 
-        # set base of model
+        # # set base of model
         self.base = EarlyFusionMultimodalModel(
             params, num_embeddings, pretrained_embeddings
         )
+
+        # self.base = TextOnlyCNN(
+        #     params, num_embeddings, pretrained_embeddings
+        # )
 
         # set output layers
         self.task_0_predictor = PredictionLayer(params, params.output_0_dim)
@@ -718,7 +727,7 @@ class MultitaskModel(nn.Module):
             text_input,
             speaker_input=speaker_input,
             length_input=length_input,
-            acoustic_len_input=acoustic_len_input,
+            # acoustic_len_input=acoustic_len_input,
             gender_input=gender_input,
         )
 
