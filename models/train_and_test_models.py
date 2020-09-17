@@ -755,7 +755,11 @@ def multitask_train_and_predict(
             batch_task = tasks[batch_index]
 
             # step 1. zero the gradients
-            optimizer.zero_grad()
+            # zero all optimizers
+            for dataset in datasets_list:
+                dataset.optimizer.zero_grad()
+
+            # optimizer.zero_grad()
 
             y_gold = batch[4].to(device)
 
@@ -795,6 +799,8 @@ def multitask_train_and_predict(
             # print(y_pred)
 
             batch_pred = y_pred[batch_task]
+            # print(f"y predictions are:\n{y_pred}")
+            # print(f"y labels are:\n{y_gold}")
 
             if datasets_list[batch_task].binary:
                 batch_pred = batch_pred.float()
@@ -804,9 +810,11 @@ def multitask_train_and_predict(
             loss = datasets_list[batch_task].loss_fx(batch_pred, y_gold) * datasets_list[batch_task].loss_multiplier
 
             loss_t = loss.item()
+            # print(f"Loss for this batch is: {loss_t}")
 
             # calculate running loss
-            running_loss = (loss_t - running_loss) / (batch_index + 1)
+            running_loss += (loss_t - running_loss) / (batch_index + 1)
+            # print(f"Running loss is now: {running_loss}")
 
             # use loss to produce gradients
             loss.backward()
@@ -815,7 +823,13 @@ def multitask_train_and_predict(
             preds_holder[batch_task].extend([item.index(max(item)) for item in batch_pred.tolist()])
             ys_holder[batch_task].extend(y_gold.tolist())
 
-            optimizer.step()
+            # increment optimizer
+            # optimizer.step()
+            for dataset in datasets_list:
+                dataset.optimizer.step()
+
+        # print(f"All predictions are:\n{preds_holder}")
+        # print(f"All labels are:\n{ys_holder}")
 
         # add loss and accuracy information to the train state
         train_state["train_loss"].append(running_loss)
@@ -824,6 +838,7 @@ def multitask_train_and_predict(
             print(f"Training weighted f-score for task {task}: "
                   f"{precision_recall_fscore_support(ys_holder[task], preds_holder[task], average='weighted')}")
 
+        # print("TRAINING COMPLETE: NOW STARTING EVALUATION")
         # fixme: update train state to consider all tasks
         # train_state["train_avg_f1"].append(avg_f1[2])
 
@@ -888,6 +903,9 @@ def multitask_train_and_predict(
 
             batch_pred = y_pred[batch_task]
 
+            # print(f"Batch predictions are:\n{batch_pred}")
+            # print(f"Batch labels are:\n{y_gold}")
+
             if datasets_list[batch_task].binary:
                 batch_pred = batch_pred.float()
                 y_gold = y_gold.float()
@@ -896,13 +914,18 @@ def multitask_train_and_predict(
             loss = datasets_list[batch_task].loss_fx(batch_pred, y_gold) * datasets_list[batch_task].loss_multiplier
 
             loss_t = loss.item()
+            # print(f"Loss for this batch is: {loss_t}")
 
             # calculate running loss
-            running_loss = (loss_t - running_loss) / (batch_index + 1)
+            running_loss += (loss_t - running_loss) / (batch_index + 1)
+            # print(f"Running loss is: {running_loss}")
 
             # add ys to holder for error analysis
             preds_holder[batch_task].extend([item.index(max(item)) for item in batch_pred.tolist()])
             ys_holder[batch_task].extend(y_gold.tolist())
+
+        # print(f"All evaluation predictions:\n{preds_holder}")
+        # print(f"All evaluation labels:\n{ys_holder}")
 
         # print("Overall val loss: {0}, overall val acc: {1}".format(running_loss, running_acc))
         for task in preds_holder.keys():
@@ -941,20 +964,35 @@ def get_all_batches(dataset_list, batch_size, shuffle, partition="train"):
 
     # get number of tasks
     num_tasks = len(dataset_list)
+    # print(f"The number of tasks is: {num_tasks}")
 
     # batch the data for each task
     for i in range(num_tasks):
+        # print(f"Now printing partition {partition}")
         if partition == "train":
             data = DataLoader(dataset_list[i].train, batch_size=batch_size, shuffle=shuffle)
-        elif partition == "dev" or partition=="val":
+            # c = 0
+            # for batch in data:
+            #     c += 1
+            #     print(batch)
+            # print(f"Total number of batches in train partition: {c}")
+        elif partition == "dev" or partition == "val":
             data = DataLoader(dataset_list[i].dev, batch_size=batch_size, shuffle=shuffle)
         elif partition == "test":
             data = DataLoader(dataset_list[i].test, batch_size=batch_size, shuffle=shuffle)
         else:
             sys.exit(f"Error: data partition {partition} not found")
         loss_func = dataset_list[i].loss_fx
+        # print(f"The loss function is {loss_func}")
         all_batches.append(data)
         all_loss_funcs.append(loss_func)
+
+    # print(f"Printing all batches prepared:")
+    # i = 0
+    # for batch in all_batches:
+    #     i += 1
+    #     print(batch)
+    # print(f"Total number of batches: {i}")
 
     randomized_batches = []
     randomized_tasks = []
@@ -969,6 +1007,9 @@ def get_all_batches(dataset_list, batch_size, shuffle, partition="train"):
     zipped = list(zip(randomized_batches, randomized_tasks))
     random.shuffle(zipped)
     randomized_batches, randomized_tasks = list(zip(*zipped))
+
+    # print(f"Post-randomization all batches are:\n{randomized_batches}")
+    # sys.exit()
 
     return randomized_batches, randomized_tasks
 

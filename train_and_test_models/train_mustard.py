@@ -1,6 +1,6 @@
 # train the models created in models directory with MUStARD data
 # currently the main entry point into the system
-
+import shutil
 import sys
 import numpy as np
 
@@ -63,6 +63,9 @@ avgd_acoustic_in_network = params.avgd_acoustic or params.add_avging
 
 
 if __name__ == "__main__":
+    # 0. copy the config file
+    params_file = "models/parameters/earlyfusion_params.py"
+    shutil.copyfile(params_file, "output/MUStARD_TEST_TO_COMPARE_WITH_MULTITASK_config.py")
 
     # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
     glove_dict = make_glove_dict(glove_file)
@@ -107,7 +110,7 @@ if __name__ == "__main__":
             # model_type = f"TextOnly_smallerPool_100batch_wd{str(wd)}_.2split_500hidden"
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
             # model_type = "MUStARD_lateFusionTest_avgdAcoustic_BothGendEmbs"
-            model_type = "MUStARD_FORTRACY_8.24"
+            model_type = "MUStARD_TEST_TO_COMPARE_WITH_MULTITASK"
 
             # this uses train-dev-test folds
             # create instance of model
@@ -193,7 +196,7 @@ if __name__ == "__main__":
             )
 
             # make the train state to keep track of model training/development
-            train_state = make_train_state(lr, model_save_path, model_save_file)
+            train_state = make_train_state(lr, os.path.join(model_save_path, model_save_file))
 
             # set the load path for testing
             load_path = model_save_path + model_save_file
