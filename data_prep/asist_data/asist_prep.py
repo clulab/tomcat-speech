@@ -1,10 +1,24 @@
 # prepare the asist-produced audio and transcription data for neural classifiers
+
+##########################################################
+# in case of path error, use pathlib:
+#this expands ~ to full path, and saves it to variable p
+package = 'pathlib'
+try:
+    __import__(package)
+except ImportError:
+    print("downloading module. . .")
+    import pip
+    pip.main(['install', package])
 import sys
-# in case of path error, use:
-#sys.path.append("path_to_asist-speech")
+from pathlib import Path
+p = Path('~').expanduser()
+sys.path.append(str(p)+"/github/asist-speech")
+##########################################################
+
+
 import data_prep.audio_extraction as audio_extraction
 import data_prep.asist_data.sentiment_score_prep as sent_prep
-
 import os
 import pandas as pd
 import ast
@@ -17,7 +31,6 @@ import argparse
 ############               TRANSCRIPT-ALTERING CLASS                ############
 ################################################################################
 
-
 class JSONtoTSV:
     """
     Takes an AWS-generated transcript and gets its words and timestamps
@@ -29,17 +42,21 @@ class JSONtoTSV:
         word_num = word number within the file
     NOTE: Transcripts currently have bad json format, so use AST to fix
     """
-
-    def __init__(self, path, jsonfile, save_name, use_txt=True):
+    def __init__(
+        self,
+        path,
+        jsonfile,
+        savename,
+        use_txt=True,
+    ):
+    # def __init__(self, path, jsonfile, savename, use_txt=True):
         self.path = path
         self.jname = jsonfile
-        self.save_name = save_name
-
+        self.savename = savename
         if use_txt:
             self.jfile = f"{path}/{jsonfile}.txt"
         else:
             self.jfile = f"{path}/{jsonfile}.json"
-
     def convert_json(self, savepath):
         jarray = [
             ["speaker", "timestart", "timeend", "word", "utt_num", "word_num"]
@@ -111,15 +128,14 @@ class ZoomTranscriptToTSV:
         utt_num = utterance number within the conversation
     """
 
-    def __init__(self, path, txtfile, save_name):
+    def __init__(self, path, txtfile, savename):
         self.path = path
         self.text_file = path + "/" + txtfile
-        self.save_name = save_name
+        self.savename = savename
 
     def convert_transcript(self, savepath):
         # convert the transcript to a tsv
         # savepath should be the full path to saving, including the file name and ext
-
         # set holders for turn number, times, speaker, and utterances
         speakers = ["speaker"]
         utt_timestarts = ["timestart"]
@@ -171,7 +187,7 @@ class ZoomTranscriptToTSV:
                     utts.append(utt)
 
         # create a tsvfile from the data
-        with open(savepath + "/" + self.save_name + ".tsv", "w") as savefile:
+        with open(savepath + "/" + self.savename + ".tsv", "w") as savefile:
             for i in range(len(utt_nums)):
                 savefile.write(
                     "\t".join(
@@ -197,7 +213,7 @@ class ASISTInput:
         self,
         asist_path,
         save_path,
-        smilepath="~/opensmile-2.3.0",
+        smilepath= str(p)+"/opensmile-2.3.0",
         acoustic_feature_set="IS10",
         missions=None,
     ):
@@ -221,15 +237,16 @@ class ASISTInput:
         # internal files with missions had a different naming convention
         if not use_missions:
             # get participant and experiment ids
-            experiment_id = audio_file.split("_")[4]
+            experiment_id = audio_file.split("_")[0]
             participant_id = audio_file.split("_")[7]
             # set the name for saving csvs
             acoustic_savename = f"{experiment_id}_{participant_id}"
+            print("acoustic_savename", acoustic_savename)
         else:
             participant_id = audio_file.split("_")[0]
             mission = audio_file.split("_")[-1]
             acoustic_savename = f"{participant_id}_mission_{mission}"
-            print(acoustic_savename)
+            # print(acoustic_savename)
 
         # convert mp4 files to wav if needed
         if mp4:
@@ -307,10 +324,10 @@ class ASISTInput:
         audio_feats_file : the name of the file containing extracted acoustic features
         """
         # read in the saved acoustic features file
+
         audio_df = audio_extraction.load_feature_csv(
             f"{path_to_files}/{audio_feats_file}"
         )
-
         # read in the saved csv
         expanded_wds_df = pd.read_csv(
             f"{path_to_files}/{expanded_wds_file}", sep="\t"
@@ -320,9 +337,9 @@ class ASISTInput:
         combined = pd.merge(audio_df, expanded_wds_df, on="frameTime")
 
         # average across words and save as new csv
-        save_name = "_".join(audio_feats_file.split("_")[:2])
+        savename = "_".join(audio_feats_file.split("_")[:2])
         wd_avgd = audio_extraction.avg_feats_across_words(combined)
-        wd_avgd.to_csv(f"{self.save_path}/{save_name}_avgd.csv", index=False)
+        wd_avgd.to_csv(f"{self.save_path}/{savename}_avgd.csv", index=False)
 
     def extract_aws_text_data(
         self, aws_transcription_file, expand_data=False, use_missions=False
@@ -334,14 +351,13 @@ class ASISTInput:
             # get participant and experiment ids
             experiment_id = aws_transcription_file.split("_")[1]
             participant_id = aws_transcription_file.split("_")[8]
-            print(experiment_id, participant_id)
             # set the name for saving csv files
             text_savename = f"{experiment_id}_{participant_id}"
             # create instance of JSON to TSV class
             transcript_convert = JSONtoTSV(
                 self.path,
                 aws_transcription_file.split(".json")[0],
-                save_name=text_savename,
+                savename=text_savename,
                 use_txt=False,
             )
         else:
@@ -355,23 +371,23 @@ class ASISTInput:
             transcript_convert = JSONtoTSV(
                 item_path,
                 f"{mission}_transcript_full",
-                save_name=text_savename,
+                savename=text_savename,
                 use_txt=False,
             )
 
         # reorganize the transcription into a csv
         transcript_convert.convert_json(self.save_path)
-        transcript_save_name = text_savename
+        transcript_savename = text_savename
 
         if expand_data:
             audio_extraction.expand_words(
                 f"{self.save_path}/{text_savename}.tsv",
                 f"{self.save_path}/{text_savename}-expanded.tsv",
             )
-            transcript_save_name = f"{text_savename}-expanded.tsv"
+            transcript_savename = f"{text_savename}-expanded.tsv"
 
         # return name of saved transcript file
-        return transcript_save_name
+        return transcript_savename
 
     # use the previously-defined functions to extract audio and text for different conditions
     def extract_audio_and_aws_text(self, file_path, mp4=False, m4a = True):
@@ -390,33 +406,30 @@ class ASISTInput:
                 )
 
                 # create preprocessed transcript of this file
-                transcript_save_name = self.extract_aws_text_data(
+                transcript_savename = self.extract_aws_text_data(
                     item, expand_data=True
                 )
 
                 # combine and word-align acoustic and text
                 self.align_text_and_audio_word_level(
-                    self.save_path, transcript_save_name, acoustic_feats_name
+                    self.save_path, transcript_savename, acoustic_feats_name
                 )
             elif item.startswith("transcript") and item.endswith(".json"):
-                # print(item)
                 # get the name of the file without transcript and .json
                 audio_name1 = "_".join(item.split("_")[1:])
                 audio_name = audio_name1.split(".json")[0]
-                # print(audio_name)
                 # create acoustic features for this file
                 acoustic_feats_name = self.extract_audio_data(
                     file_path, audio_name, m4a
                 )
-                print(acoustic_feats_name)
                 # create preprocessed transcript of this file
-                transcript_save_name = self.extract_aws_text_data(
+                transcript_savename = self.extract_aws_text_data(
                     item, expand_data=True
                 )
 
                 # combine and word-align acoustic and text
                 self.align_text_and_audio_word_level(
-                    self.save_path, transcript_save_name, acoustic_feats_name
+                    self.save_path, transcript_savename, acoustic_feats_name
                 )
     def extract_audio_and_aws_text_with_missions(self, mp4=False):
         """
@@ -450,7 +463,7 @@ class ASISTInput:
                         )
 
                         # create preprocessed transcript of this file
-                        transcript_save_name = self.extract_aws_text_data(
+                        transcript_savename = self.extract_aws_text_data(
                             name_and_mission,
                             expand_data=True,
                             use_missions=True,
@@ -459,7 +472,7 @@ class ASISTInput:
                         # align features and transcripts
                         self.align_text_and_audio_word_level(
                             self.save_path,
-                            transcript_save_name,
+                            transcript_savename,
                             acoustic_feats_name,
                         )
 
@@ -679,7 +692,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_path",
         help="Directory in which the data resides",
-        default="~/Downloads/data_flatstructure",
+        default=str(p)+"/Downloads/data_flatstructure",
     )
     parser.add_argument(
         "--save_path",
@@ -689,7 +702,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--opensmile_path",
         help="Path to OpenSMILE",
-        default="~/opensmile-2.3.0",
+        default=str(p)+"/opensmile-2.3.0",
     )
     parser.add_argument(
         "--sentiment_text_path",
@@ -699,12 +712,12 @@ if __name__ == "__main__":
     if len(sys.argv) <= 2:
         # define variables
         # data_path = "../../Downloads/real_search_data"
-        data_path = "../../Downloads/data_flatstructure"
+        data_path = str(p)+"/Downloads/data_flatstructure"
         save_path = "output/asist_audio"
         sentiment_text_path = "output/"
         missions = ["mission_1", "mission_2", "mission_0"]
         acoustic_feature_set = "IS10"
-        smile_path = "~/opensmile-2.3.0"
+        smile_path = str(p)+"/opensmile-2.3.0"
 
         # create instance of input class
         asist = ASISTInput(
@@ -721,7 +734,6 @@ if __name__ == "__main__":
             # extract audio + zoom text, use utterance averaging of features for alignment
             asist.extract_audio_and_zoom_text(asist.path)
         elif len(sys.argv) == 2 and sys.argv[1] == "m4a_data":
-            # print("extracting m4a...")
             # extract audio + zoom text, use utterance averaging of features for alignment
             asist.extract_audio_and_aws_text(asist.path)
         elif len(sys.argv) == 2 and sys.argv[1] == "prep_for_sentiment_analyzer":
