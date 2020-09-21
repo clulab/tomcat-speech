@@ -31,12 +31,13 @@ def make_train_state(learning_rate, model_save_file):
         "early_stopping_best_val": 1e8,
         "learning_rate": learning_rate,
         "epoch_index": 0,
+        "tasks": [],
         "train_loss": [],
         "train_acc": [],
-        "train_avg_f1": [],
+        "train_avg_f1": {},
         "val_loss": [],
         "val_acc": [],
-        "val_avg_f1": [],
+        "val_avg_f1": {},
         "best_val_loss": [],
         "best_val_acc": [],
         "best_loss": 100,
@@ -726,6 +727,11 @@ def multitask_train_and_predict(
     Length of the list is the number of datasets used
     """
     num_tasks = len(datasets_list)
+    # get a list of the tasks by number
+    for dset in datasets_list:
+        train_state["tasks"].append(dset.task_num)
+        train_state["train_avg_f1"][dset.task_num] = []
+        train_state["val_avg_f1"][dset.task_num] = []
 
     for epoch_index in range(num_epochs):
 
@@ -756,10 +762,10 @@ def multitask_train_and_predict(
 
             # step 1. zero the gradients
             # zero all optimizers
-            for dataset in datasets_list:
-                dataset.optimizer.zero_grad()
+            # for dataset in datasets_list:
+            #     dataset.optimizer.zero_grad()
 
-            # optimizer.zero_grad()
+            optimizer.zero_grad()
 
             y_gold = batch[4].to(device)
 
@@ -824,9 +830,9 @@ def multitask_train_and_predict(
             ys_holder[batch_task].extend(y_gold.tolist())
 
             # increment optimizer
-            # optimizer.step()
-            for dataset in datasets_list:
-                dataset.optimizer.step()
+            optimizer.step()
+            # for dataset in datasets_list:
+            #     dataset.optimizer.step()
 
         # print(f"All predictions are:\n{preds_holder}")
         # print(f"All labels are:\n{ys_holder}")
@@ -835,12 +841,9 @@ def multitask_train_and_predict(
         train_state["train_loss"].append(running_loss)
 
         for task in preds_holder.keys():
-            print(f"Training weighted f-score for task {task}: "
-                  f"{precision_recall_fscore_support(ys_holder[task], preds_holder[task], average='weighted')}")
-
-        # print("TRAINING COMPLETE: NOW STARTING EVALUATION")
-        # fixme: update train state to consider all tasks
-        # train_state["train_avg_f1"].append(avg_f1[2])
+            task_avg_f1 = precision_recall_fscore_support(ys_holder[task], preds_holder[task], average="weighted")
+            print(f"Training weighted f-score for task {task}: {task_avg_f1}")
+            train_state["train_avg_f1"][task].append(task_avg_f1[2])
 
         # Iterate over validation set--put it in a dataloader
         batches, tasks = get_all_batches(datasets_list, batch_size=batch_size, shuffle=True, partition="dev")
@@ -929,8 +932,9 @@ def multitask_train_and_predict(
 
         # print("Overall val loss: {0}, overall val acc: {1}".format(running_loss, running_acc))
         for task in preds_holder.keys():
-            print(f"Val weighted f-score for task {task}: "
-                  f"{precision_recall_fscore_support(ys_holder[task], preds_holder[task], average='weighted')}")
+            task_avg_f1 = precision_recall_fscore_support(ys_holder[task], preds_holder[task], average="weighted")
+            print(f"Val weighted f-score for task {task}: {task_avg_f1}")
+            train_state["val_avg_f1"][task].append(task_avg_f1[2])
 
         if epoch_index % 5 == 0:
             for task in preds_holder.keys():

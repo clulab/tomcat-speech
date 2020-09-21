@@ -5,9 +5,10 @@
 *.pyc
 */__pycache__/
 
-# output directory
+# directories
 output/
 backup/
+data/
 
 #opensmile
 smile.log

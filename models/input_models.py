@@ -666,15 +666,19 @@ class PredictionLayer(nn.Module):
     def __init__(self, params, out_dim):
         super(PredictionLayer, self).__init__()
         self.input_dim = params.output_dim
+        self.inter_fc_prediction_dim = params.final_hidden_dim
         self.dropout = params.dropout
 
         # specify out_dim explicity so we can do multiple tasks at once
         self.output_dim = out_dim
 
-        self.fc1 = nn.Linear(self.input_dim, self.output_dim)
+        # self.fc1 = nn.Linear(self.input_dim, self.output_dim)
+        self.fc1 = nn.Linear(self.input_dim, self.inter_fc_prediction_dim)
+        self.fc2 = nn.Linear(self.inter_fc_prediction_dim, self.output_dim)
 
     def forward(self, combined_inputs):
-        out = torch.relu(self.fc1(combined_inputs))
+        out = torch.relu(F.dropout(self.fc1(combined_inputs), self.dropout))
+        out = torch.relu(self.fc2(out))
         # out = torch.relu(self.fc1(F.dropout(combined_inputs, self.dropout)))
 
         if self.output_dim == 1:
@@ -700,6 +704,10 @@ class MultitaskModel(nn.Module):
         self.base = EarlyFusionMultimodalModel(
             params, num_embeddings, pretrained_embeddings
         )
+
+        # self.base = LateFusionMultimodalModel(
+        #     params, num_embeddings, pretrained_embeddings
+        # )
 
         # self.base = TextOnlyCNN(
         #     params, num_embeddings, pretrained_embeddings
