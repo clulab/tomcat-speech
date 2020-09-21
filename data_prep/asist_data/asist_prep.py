@@ -95,7 +95,7 @@ class JSONtoTSV:
                     ]
                 )
 
-        with open(f"{savepath}/{savename}.tsv", "w") as tsvfile:
+        with open(f"{savepath}/{self.save_name}.tsv", "w") as tsvfile:
             for item in jarray:
                 tsvfile.write("\t".join(item) + "\n")
 
