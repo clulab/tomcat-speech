@@ -2,6 +2,21 @@
 # currently the main entry point into the system
 # add "prep_data" as an argument when running this from command line
 #       if your acoustic features have not been extracted from audio
+##########################################################
+# in case of path error, use pathlib:
+#this expands ~ to full path, and saves it to variable home_dir
+package = 'pathlib'
+try:
+    __import__(package)
+except ImportError:
+    print("downloading module. . .")
+    import pip
+    pip.main(['install', package])
+import sys
+from pathlib import Path
+home_dir = Path('~').expanduser()
+sys.path.append(str(home_dir)+"/github/asist-speech")
+##########################################################
 from data_prep.asist_data.asist_dataset_creation import AsistDataset
 from models.train_and_test_models import *
 from models.input_models import *
@@ -45,7 +60,13 @@ if cuda:
     torch.cuda.manual_seed_all(seed)
 
 # set parameters for data prep
-glove_file = "../../glove.short.300d.punct.txt"
+
+# If error in glove path, switch with:
+glove_file = "glove.short.300d.punct.txt"
+# 
+
+## If calling this from another pthon script:
+# glove_file = "../../glove.short.300d.punct.txt"
 input_dir = "output/asist_audio"
 # to test the data--this doesn't contain real outcomes
 y_path = "output/asist_audio/asist_ys/all_ys.csv"
@@ -122,6 +143,7 @@ if __name__ == "__main__":
     print("Acoustic dict created")
 
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
+    print(glove_file)
     glove_dict = make_glove_dict(glove_file)
     glove = Glove(glove_dict)
     print("Glove object created")
@@ -138,7 +160,7 @@ if __name__ == "__main__":
         norm=None,
         add_avging=True
     )
-
+    print(y_path)
     # get data for testing
     test_data = data.current_split
     test_ds = DatumListDataset(test_data, None)

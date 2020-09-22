@@ -1,18 +1,18 @@
-##########################################################
+#########################################################
 # in case of path error, use pathlib:
-#this expands ~ to full path, and saves it to variable home_dir
-# package = 'pathlib'
-# try:
-#     __import__(package)
-# except ImportError:
-#     print("downloading module. . .")
-#     import pip
-#     pip.main(['install', package])
-# import sys
-# from pathlib import Path
-# home_dir = Path('~').expanduser()
-# sys.path.append(str(home_dir)+"/github/asist-speech")
-##########################################################
+# this expands ~ to full path, and saves it to variable home_dir
+package = 'pathlib'
+try:
+    __import__(package)
+except ImportError:
+    print("downloading module. . .")
+    import pip
+    pip.main(['install', package])
+import sys
+from pathlib import Path
+home_dir = Path('~').expanduser()
+sys.path.append(str(home_dir)+"/github/asist-speech")
+#########################################################
 
 
 from collections import OrderedDict
@@ -182,8 +182,10 @@ class AsistDataset(Dataset):
             smallest = self.truncate_seq()
 
         # get the longest utterance
+        print(self.acoustic_dict)
         longest_utt = get_longest_utterance_asist([item for key, item in self.acoustic_dict.items()
                                                    if key[0] in self.valid_files])
+        # print("longest_utt", longest_utt)
 
         speaker_list = []
         for key, item in self.acoustic_dict.items():
