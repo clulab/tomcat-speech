@@ -1,3 +1,20 @@
+##########################################################
+# in case of path error, use pathlib:
+#this expands ~ to full path, and saves it to variable home_dir
+# package = 'pathlib'
+# try:
+#     __import__(package)
+# except ImportError:
+#     print("downloading module. . .")
+#     import pip
+#     pip.main(['install', package])
+# import sys
+# from pathlib import Path
+# home_dir = Path('~').expanduser()
+# sys.path.append(str(home_dir)+"/github/asist-speech")
+##########################################################
+
+
 from collections import OrderedDict
 
 import torch

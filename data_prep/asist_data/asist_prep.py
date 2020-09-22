@@ -58,6 +58,7 @@ class JSONtoTSV:
         else:
             self.jfile = f"{path}/{jsonfile}.json"
     def convert_json(self, savepath):
+        # print(self, savepath)
         jarray = [
             ["speaker", "timestart", "timeend", "word", "utt_num", "word_num"]
         ]
@@ -69,7 +70,7 @@ class JSONtoTSV:
 
         # get only the words
         all_words = fixed["results"]["items"]
-
+        # print(all_words[0])
         # set utterance and word counters
         utt = 0
         wd_num = 0
@@ -111,8 +112,7 @@ class JSONtoTSV:
                         str(word_num),
                     ]
                 )
-
-        with open(f"{savepath}/{self.save_name}.tsv", "w") as tsvfile:
+        with open(f"{savepath}/{self.savename}.tsv", "w") as tsvfile:
             for item in jarray:
                 tsvfile.write("\t".join(item) + "\n")
 
@@ -241,7 +241,7 @@ class ASISTInput:
             participant_id = audio_file.split("_")[7]
             # set the name for saving csvs
             acoustic_savename = f"{experiment_id}_{participant_id}"
-            print("acoustic_savename", acoustic_savename)
+            # print("acoustic_savename", acoustic_savename)
         else:
             participant_id = audio_file.split("_")[0]
             mission = audio_file.split("_")[-1]
