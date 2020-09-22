@@ -3,6 +3,8 @@
 from argparse import Namespace
 import os
 
+# indicate whether this code is being run locally or on the server
+USE_SERVER = True
 
 DEBUG = True # no saving of files; output in the terminal; first random seed from the list
 EXPERIMENT_ID = 1
@@ -20,12 +22,18 @@ model_type = "MULTITASK_TEST"
 glove_file = "../../glove.short.300d.punct.txt"
 # glove_file = "../../glove.42B.300d.txt"
 
-mustard_path = "../../datasets/multimodal_datasets/MUStARD"
-meld_path = "../../datasets/multimodal_datasets/MELD_formatted"
-chalearn_path = "../../datasets/multimodal_datasets/Chalearn"
-# meld_path = "../../datasets/multimodal_datasets/MELD_five_dialogues"
-# meld_path = "../../datasets/multimodal_datasets/MELD_five_utterances"
-ravdess_path = "../../datasets/multimodal_datasets/RAVDESS_speech"
+if USE_SERVER:
+    mustard_path = "/data/nlp/corpora/MM/MUStARD"
+    meld_path = "/data/nlp/corpora/MM/MELD_formatted"
+    chalearn_path = "/data/nlp/corpora/MM/Chalearn"
+else:
+    mustard_path = "../../datasets/multimodal_datasets/MUStARD"
+    meld_path = "../../datasets/multimodal_datasets/MELD_formatted"
+    chalearn_path = "../../datasets/multimodal_datasets/Chalearn"
+
+    # meld_path = "../../datasets/multimodal_datasets/MELD_five_dialogues"
+    # meld_path = "../../datasets/multimodal_datasets/MELD_five_utterances"
+    # ravdess_path = "../../datasets/multimodal_datasets/RAVDESS_speech"
 
 # set dir to save full experiments
 exp_save_path = "output/multitask/experiments"

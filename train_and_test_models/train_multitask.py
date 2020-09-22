@@ -5,10 +5,14 @@ import sys
 from datetime import date
 import pickle
 
-import numpy as np
+# import numpy as np
 import copy
 
-from sklearn.model_selection import train_test_split
+# sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
+sys.path.append("/work/johnculnan/github/asist-speech")
+sys.path.append("/work/johnculnan")
+
+# from sklearn.model_selection import train_test_split
 
 from data_prep.chalearn_data.chalearn_prep import ChalearnPrep
 from data_prep.ravdess_data.ravdess_prep import RavdessPrep
@@ -25,20 +29,18 @@ import models.parameters.multitask_config as config
 # set model parameters
 model_params = config.model_params
 
-sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
-
 # set device
 cuda = False
 
 # # Check CUDA
-# if not torch.cuda.is_available():
-#     cuda = False
+if torch.cuda.is_available():
+    cuda = True
 
 device = torch.device("cuda" if cuda else "cpu")
 
 # set random seed
 torch.manual_seed(model_params.seed)
-np.random.seed(model_params.seed)
+# np.random.seed(model_params.seed)
 random.seed(model_params.seed)
 # if cuda:
 #     torch.cuda.manual_seed_all(seed)
@@ -52,6 +54,12 @@ if __name__ == "__main__":
     # create save location
     output_path = os.path.join(config.exp_save_path, str(config.EXPERIMENT_ID) + "_" +
                                config.EXPERIMENT_DESCRIPTION + str(date.today()))
+    
+    # set location for pickled data (saving or loading)
+    if config.USER_SERVER:
+        data = "/data/nlp/corpora/MM/pickled_data"
+    else:
+        data = "data"
 
     # make sure the full save path exists; if not, create it
     os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(output_path))
@@ -65,100 +73,105 @@ if __name__ == "__main__":
         #   or make a new function e.g. print_both and have it both print and save to file
         sys.stdout = f
 
-        # # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
-        # glove_dict = make_glove_dict(config.glove_file)
-        # glove = Glove(glove_dict)
-        # print("Glove object created")
-        #
-        # # 2. MAKE DATASET
-        # mustard_data = MustardPrep(mustard_path=config.mustard_path, acoustic_length=model_params.audio_dim, glove=glove,
-        #                            add_avging=model_params.add_avging,
-        #                            use_cols=config.acoustic_columns,
-        #                            avgd=model_params.avgd_acoustic)
-        #
-        # meld_data = MeldPrep(meld_path=config.meld_path, acoustic_length=model_params.audio_dim, glove=glove,
-        #                      add_avging=model_params.add_avging,
+        # Comment out if loading data
+        # 0. CHECK TO MAKE SURE DATA DIRECTORY EXISTS
+        os.system(f'if [ ! -d "data" ]; then mkdir -p data; fi')
+
+        # comment out if loading data
+        # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
+        glove_dict = make_glove_dict(config.glove_file)
+        glove = Glove(glove_dict)
+        print("Glove object created")
+        
+        # 2. MAKE DATASET
+        mustard_data = MustardPrep(mustard_path=config.mustard_path, acoustic_length=model_params.audio_dim, glove=glove,
+                                   add_avging=model_params.add_avging,
+                                   use_cols=config.acoustic_columns,
+                                   avgd=model_params.avgd_acoustic)
+        
+        meld_data = MeldPrep(meld_path=config.meld_path, acoustic_length=model_params.audio_dim, glove=glove,
+                             add_avging=model_params.add_avging,
+                             use_cols=config.acoustic_columns,
+                             avgd=model_params.avgd_acoustic)
+        
+        chalearn_data = ChalearnPrep(chalearn_path=config.chalearn_path, acoustic_length=model_params.audio_dim,
+                                     glove=glove, add_avging=model_params.add_avging, use_cols=config.acoustic_columns,
+                                     avgd=model_params.avgd_acoustic, pred_type=config.chalearn_predtype)
+        
+        # ravdess_data = RavdessPrep(ravdess_path=config.ravdess_path, acoustic_length=params.audio_dim, glove=glove,
+        #                      add_avging=params.add_avging,
         #                      use_cols=config.acoustic_columns,
-        #                      avgd=model_params.avgd_acoustic)
-        #
-        # chalearn_data = ChalearnPrep(chalearn_path=config.chalearn_path, acoustic_length=model_params.audio_dim,
-        #                              glove=glove, add_avging=model_params.add_avging, use_cols=config.acoustic_columns,
-        #                              avgd=model_params.avgd_acoustic, pred_type=config.chalearn_predtype)
-        #
-        # # ravdess_data = RavdessPrep(ravdess_path=config.ravdess_path, acoustic_length=params.audio_dim, glove=glove,
-        # #                      add_avging=params.add_avging,
-        # #                      use_cols=config.acoustic_columns,
-        # #                      avgd=avgd_acoustic)
-        #
-        # # add class weights to device
-        # mustard_data.sarcasm_weights = mustard_data.sarcasm_weights.to(device)
-        # meld_data.emotion_weights = meld_data.emotion_weights.to(device)
-        # chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
-        # # ravdess_data.emotion_weights = ravdess_data.emotion_weights.to(device)
-        #
-        # # get train, dev, test partitions
-        # # mustard_train_ds = DatumListDataset(mustard_data.train_data * 10, "mustard", mustard_data.sarcasm_weights)
-        # mustard_train_ds = DatumListDataset(mustard_data.train_data, "mustard", mustard_data.sarcasm_weights)
-        # mustard_dev_ds = DatumListDataset(mustard_data.dev_data, "mustard", mustard_data.sarcasm_weights)
-        # mustard_test_ds = DatumListDataset(mustard_data.test_data, "mustard", mustard_data.sarcasm_weights)
-        #
-        # meld_train_ds = DatumListDataset(meld_data.train_data, "meld_emotion", meld_data.emotion_weights)
-        # meld_dev_ds = DatumListDataset(meld_data.dev_data, "meld_emotion", meld_data.emotion_weights)
-        # meld_test_ds = DatumListDataset(meld_data.test_data, "meld_emotion", meld_data.emotion_weights)
-        #
-        # # create chalearn train, dev, _ data
-        # # todo: we need to properly extract test set
-        # chalearn_train_ds = DatumListDataset(chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights)
-        # chalearn_dev_ds = DatumListDataset(chalearn_data.dev_data, "chalearn_trats", chalearn_data.trait_weights)
-        # chalearn_test_ds = None
-        #
-        # # save all data for faster loading
-        # # save meld dataset
-        # pickle.dump(meld_train_ds, open('data/meld_train.pickle', 'wb'))
-        # pickle.dump(meld_dev_ds, open('data/meld_dev.pickle', 'wb'))
-        # pickle.dump(meld_test_ds, open('data/meld_test.pickle', 'wb'))
-        #
-        # # save mustard
-        # pickle.dump(mustard_train_ds, open('data/mustard_train.pickle', 'wb'))
-        # pickle.dump(mustard_dev_ds, open('data/mustard_dev.pickle', 'wb'))
-        # pickle.dump(mustard_test_ds, open('data/mustard_test.pickle', 'wb'))
-        #
-        # # save chalearn
-        # pickle.dump(chalearn_train_ds, open('data/chalearn_train.pickle', 'wb'))
-        # pickle.dump(chalearn_dev_ds, open('data/chalearn_dev.pickle', 'wb'))
-        # # pickle.dump(chalearn_test_ds, open('data/chalearn_test.pickle', 'wb'))
-        #
-        # pickle.dump(glove, open('data/glove.pickle', 'wb'))  # todo: get different glove names
-        #
-        # print("Datasets created")
-
-        # 1. Load datasets + glove object
-        # uncomment if loading saved data
-        meld_train_ds = pickle.load(open('data/meld_train.pickle', 'rb'))
-        meld_dev_ds = pickle.load(open('data/meld_dev.pickle', 'rb'))
-        meld_test_ds = pickle.load(open('data/meld_test.pickle', 'rb'))
-
-        print("MELD data loaded")
-
-        # save mustard
-        mustard_train_ds = pickle.load(open('data/mustard_train.pickle', 'rb'))
-        mustard_dev_ds = pickle.load(open('data/mustard_dev.pickle', 'rb'))
-        mustard_test_ds = pickle.load(open('data/mustard_test.pickle', 'rb'))
-
-        print("MUSTARD data loaded")
-
-        # save chalearn
-        chalearn_train_ds = pickle.load(open('data/chalearn_train.pickle', 'rb'))
-        chalearn_dev_ds = pickle.load(open('data/chalearn_dev.pickle', 'rb'))
-        # chalearn_test_ds = pickle.load(open('data/chalearn_test.pickle', 'rb'))
+        #                      avgd=avgd_acoustic)
+        
+        # add class weights to device
+        mustard_data.sarcasm_weights = mustard_data.sarcasm_weights.to(device)
+        meld_data.emotion_weights = meld_data.emotion_weights.to(device)
+        chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
+        # ravdess_data.emotion_weights = ravdess_data.emotion_weights.to(device)
+        
+        # get train, dev, test partitions
+        # mustard_train_ds = DatumListDataset(mustard_data.train_data * 10, "mustard", mustard_data.sarcasm_weights)
+        mustard_train_ds = DatumListDataset(mustard_data.train_data, "mustard", mustard_data.sarcasm_weights)
+        mustard_dev_ds = DatumListDataset(mustard_data.dev_data, "mustard", mustard_data.sarcasm_weights)
+        mustard_test_ds = DatumListDataset(mustard_data.test_data, "mustard", mustard_data.sarcasm_weights)
+        
+        meld_train_ds = DatumListDataset(meld_data.train_data, "meld_emotion", meld_data.emotion_weights)
+        meld_dev_ds = DatumListDataset(meld_data.dev_data, "meld_emotion", meld_data.emotion_weights)
+        meld_test_ds = DatumListDataset(meld_data.test_data, "meld_emotion", meld_data.emotion_weights)
+        
+        # create chalearn train, dev, _ data
+        # todo: we need to properly extract test set
+        chalearn_train_ds = DatumListDataset(chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights)
+        chalearn_dev_ds = DatumListDataset(chalearn_data.dev_data, "chalearn_trats", chalearn_data.trait_weights)
         chalearn_test_ds = None
+        
+        # save all data for faster loading
+        # save meld dataset
+        pickle.dump(meld_train_ds, open(f'{data}/meld_train.pickle', 'wb'))
+        pickle.dump(meld_dev_ds, open(f'{data}/meld_dev.pickle', 'wb'))
+        pickle.dump(meld_test_ds, open(f'{data}/meld_test.pickle', 'wb'))
+        
+        # save mustard
+        pickle.dump(mustard_train_ds, open(f'{data}/mustard_train.pickle', 'wb'))
+        pickle.dump(mustard_dev_ds, open(f'{data}/mustard_dev.pickle', 'wb'))
+        pickle.dump(mustard_test_ds, open(f'{data}/mustard_test.pickle', 'wb'))
+        
+        # save chalearn
+        pickle.dump(chalearn_train_ds, open(f'{data}/chalearn_train.pickle', 'wb'))
+        pickle.dump(chalearn_dev_ds, open(f'{data}/chalearn_dev.pickle', 'wb'))
+        # pickle.dump(chalearn_test_ds, open(f'{data}/chalearn_test.pickle', 'wb'))
+        
+        pickle.dump(glove, open(f'{data}/glove.pickle', 'wb'))  # todo: get different glove names
+        
+        print("Datasets created")
 
-        print("ChaLearn data loaded")
+        # # 1. Load datasets + glove object
+        # # uncomment if loading saved data
+        # meld_train_ds = pickle.load(open(f'{data}/meld_train.pickle', 'rb'))
+        # meld_dev_ds = pickle.load(open(f'{data}/meld_dev.pickle', 'rb'))
+        # meld_test_ds = pickle.load(open(f'{data}/meld_test.pickle', 'rb'))
 
-        # load glove
-        glove = pickle.load(open('data/glove.pickle', 'rb'))
+        # print("MELD data loaded")
 
-        print("GloVe object loaded")
+        # # save mustard
+        # mustard_train_ds = pickle.load(open(f'{data}/mustard_train.pickle', 'rb'))
+        # mustard_dev_ds = pickle.load(open(f'{data}/mustard_dev.pickle', 'rb'))
+        # mustard_test_ds = pickle.load(open(f'{data}/mustard_test.pickle', 'rb'))
+
+        # print("MUSTARD data loaded")
+
+        # # save chalearn
+        # chalearn_train_ds = pickle.load(open(f'{data}/chalearn_train.pickle', 'rb'))
+        # chalearn_dev_ds = pickle.load(open(f'{data}/chalearn_dev.pickle', 'rb'))
+        # # chalearn_test_ds = pickle.load(open(f'{data}/chalearn_test.pickle', 'rb'))
+        # chalearn_test_ds = None
+
+        # print("ChaLearn data loaded")
+
+        # # load glove
+        # glove = pickle.load(open(f'{data}/glove.pickle', 'rb'))
+
+        # print("GloVe object loaded")
 
         # 3. CREATE NN
         # get set of pretrained embeddings and their shape
