@@ -1,6 +1,8 @@
-# asist-speech
+# tomcat-speech
 
-This repository contains python code to prepare multimodal (currently audio,text,speaker) data for input into models and to instantiate and run these models.
+This repository contains Python code to prepare multimodal (currently audio,
+text, speaker) data for input into models and to instantiate and run these
+models.
 
 All code was created for the following system requirements:
 
