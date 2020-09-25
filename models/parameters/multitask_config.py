@@ -4,7 +4,15 @@ from argparse import Namespace
 import os
 
 
-DEBUG = True # no saving of files; output in the terminal; first random seed from the list
+# DEBUG = True # no saving of files; output in the terminal; first random seed from the list
+
+# do you want to save dataset files?
+save_dataset = False
+
+# do you want to load pre-saved dataset files?
+load_dataset = False
+
+
 EXPERIMENT_ID = 1
 # during training: enter a brief description that will make the experiment easy to identify
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment

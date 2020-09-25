@@ -7,8 +7,7 @@ import pickle
 
 import numpy as np
 import copy
-
-from sklearn.model_selection import train_test_split
+import torch.nn as nn
 
 from data_prep.chalearn_data.chalearn_prep import ChalearnPrep
 from data_prep.ravdess_data.ravdess_prep import RavdessPrep
@@ -20,7 +19,6 @@ from data_prep.mustard_data.mustard_prep import *
 
 # import parameters for model
 import models.parameters.multitask_config as config
-# from models.parameters.multitask_params import model_params
 
 # set model parameters
 model_params = config.model_params
@@ -31,15 +29,15 @@ sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 cuda = False
 
 # # Check CUDA
-# if not torch.cuda.is_available():
-#     cuda = False
+if torch.cuda.is_available():
+    cuda = True
 
 device = torch.device("cuda" if cuda else "cpu")
 
 # set random seed
-torch.manual_seed(model_params.seed)
-np.random.seed(model_params.seed)
-random.seed(model_params.seed)
+torch.manual_seed(config.model_params.seed)
+np.random.seed(config.model_params.seed)
+random.seed(config.model_params.seed)
 # if cuda:
 #     torch.cuda.manual_seed_all(seed)
 
@@ -47,7 +45,7 @@ random.seed(model_params.seed)
 if __name__ == "__main__":
 
     # decide if you want to use avgd feats
-    avgd_acoustic_in_network = model_params.avgd_acoustic or model_params.add_avging
+    avgd_acoustic_in_network = config.model_params.avgd_acoustic or config.model_params.add_avging
 
     # create save location
     output_path = os.path.join(config.exp_save_path, str(config.EXPERIMENT_ID) + "_" +
@@ -65,100 +63,103 @@ if __name__ == "__main__":
         #   or make a new function e.g. print_both and have it both print and save to file
         sys.stdout = f
 
-        # # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
-        # glove_dict = make_glove_dict(config.glove_file)
-        # glove = Glove(glove_dict)
-        # print("Glove object created")
-        #
-        # # 2. MAKE DATASET
-        # mustard_data = MustardPrep(mustard_path=config.mustard_path, acoustic_length=model_params.audio_dim, glove=glove,
-        #                            add_avging=model_params.add_avging,
-        #                            use_cols=config.acoustic_columns,
-        #                            avgd=model_params.avgd_acoustic)
-        #
-        # meld_data = MeldPrep(meld_path=config.meld_path, acoustic_length=model_params.audio_dim, glove=glove,
-        #                      add_avging=model_params.add_avging,
-        #                      use_cols=config.acoustic_columns,
-        #                      avgd=model_params.avgd_acoustic)
-        #
-        # chalearn_data = ChalearnPrep(chalearn_path=config.chalearn_path, acoustic_length=model_params.audio_dim,
-        #                              glove=glove, add_avging=model_params.add_avging, use_cols=config.acoustic_columns,
-        #                              avgd=model_params.avgd_acoustic, pred_type=config.chalearn_predtype)
-        #
-        # # ravdess_data = RavdessPrep(ravdess_path=config.ravdess_path, acoustic_length=params.audio_dim, glove=glove,
-        # #                      add_avging=params.add_avging,
-        # #                      use_cols=config.acoustic_columns,
-        # #                      avgd=avgd_acoustic)
-        #
-        # # add class weights to device
-        # mustard_data.sarcasm_weights = mustard_data.sarcasm_weights.to(device)
-        # meld_data.emotion_weights = meld_data.emotion_weights.to(device)
-        # chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
-        # # ravdess_data.emotion_weights = ravdess_data.emotion_weights.to(device)
-        #
-        # # get train, dev, test partitions
-        # # mustard_train_ds = DatumListDataset(mustard_data.train_data * 10, "mustard", mustard_data.sarcasm_weights)
-        # mustard_train_ds = DatumListDataset(mustard_data.train_data, "mustard", mustard_data.sarcasm_weights)
-        # mustard_dev_ds = DatumListDataset(mustard_data.dev_data, "mustard", mustard_data.sarcasm_weights)
-        # mustard_test_ds = DatumListDataset(mustard_data.test_data, "mustard", mustard_data.sarcasm_weights)
-        #
-        # meld_train_ds = DatumListDataset(meld_data.train_data, "meld_emotion", meld_data.emotion_weights)
-        # meld_dev_ds = DatumListDataset(meld_data.dev_data, "meld_emotion", meld_data.emotion_weights)
-        # meld_test_ds = DatumListDataset(meld_data.test_data, "meld_emotion", meld_data.emotion_weights)
-        #
-        # # create chalearn train, dev, _ data
-        # # todo: we need to properly extract test set
-        # chalearn_train_ds = DatumListDataset(chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights)
-        # chalearn_dev_ds = DatumListDataset(chalearn_data.dev_data, "chalearn_trats", chalearn_data.trait_weights)
-        # chalearn_test_ds = None
-        #
-        # # save all data for faster loading
-        # # save meld dataset
-        # pickle.dump(meld_train_ds, open('data/meld_train.pickle', 'wb'))
-        # pickle.dump(meld_dev_ds, open('data/meld_dev.pickle', 'wb'))
-        # pickle.dump(meld_test_ds, open('data/meld_test.pickle', 'wb'))
-        #
-        # # save mustard
-        # pickle.dump(mustard_train_ds, open('data/mustard_train.pickle', 'wb'))
-        # pickle.dump(mustard_dev_ds, open('data/mustard_dev.pickle', 'wb'))
-        # pickle.dump(mustard_test_ds, open('data/mustard_test.pickle', 'wb'))
-        #
-        # # save chalearn
-        # pickle.dump(chalearn_train_ds, open('data/chalearn_train.pickle', 'wb'))
-        # pickle.dump(chalearn_dev_ds, open('data/chalearn_dev.pickle', 'wb'))
-        # # pickle.dump(chalearn_test_ds, open('data/chalearn_test.pickle', 'wb'))
-        #
-        # pickle.dump(glove, open('data/glove.pickle', 'wb'))  # todo: get different glove names
-        #
-        # print("Datasets created")
+        if not config.load_dataset:
+            # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
+            glove_dict = make_glove_dict(config.glove_file)
+            glove = Glove(glove_dict)
+            print("Glove object created")
 
-        # 1. Load datasets + glove object
-        # uncomment if loading saved data
-        meld_train_ds = pickle.load(open('data/meld_train.pickle', 'rb'))
-        meld_dev_ds = pickle.load(open('data/meld_dev.pickle', 'rb'))
-        meld_test_ds = pickle.load(open('data/meld_test.pickle', 'rb'))
+            # 2. MAKE DATASET
+            mustard_data = MustardPrep(mustard_path=config.mustard_path, acoustic_length=config.model_params.audio_dim, glove=glove,
+                                       add_avging=config.model_params.add_avging,
+                                       use_cols=config.acoustic_columns,
+                                       avgd=config.model_params.avgd_acoustic)
 
-        print("MELD data loaded")
+            meld_data = MeldPrep(meld_path=config.meld_path, acoustic_length=config.model_params.audio_dim, glove=glove,
+                                 add_avging=config.model_params.add_avging,
+                                 use_cols=config.acoustic_columns,
+                                 avgd=config.model_params.avgd_acoustic)
 
-        # save mustard
-        mustard_train_ds = pickle.load(open('data/mustard_train.pickle', 'rb'))
-        mustard_dev_ds = pickle.load(open('data/mustard_dev.pickle', 'rb'))
-        mustard_test_ds = pickle.load(open('data/mustard_test.pickle', 'rb'))
+            chalearn_data = ChalearnPrep(chalearn_path=config.chalearn_path, acoustic_length=config.model_params.audio_dim,
+                                         glove=glove, add_avging=config.model_params.add_avging, use_cols=config.acoustic_columns,
+                                         avgd=config.model_params.avgd_acoustic, pred_type=config.chalearn_predtype)
 
-        print("MUSTARD data loaded")
+            # ravdess_data = RavdessPrep(ravdess_path=config.ravdess_path, acoustic_length=params.audio_dim, glove=glove,
+            #                      add_avging=params.add_avging,
+            #                      use_cols=config.acoustic_columns,
+            #                      avgd=avgd_acoustic)
 
-        # save chalearn
-        chalearn_train_ds = pickle.load(open('data/chalearn_train.pickle', 'rb'))
-        chalearn_dev_ds = pickle.load(open('data/chalearn_dev.pickle', 'rb'))
-        # chalearn_test_ds = pickle.load(open('data/chalearn_test.pickle', 'rb'))
-        chalearn_test_ds = None
+            # add class weights to device
+            mustard_data.sarcasm_weights = mustard_data.sarcasm_weights.to(device)
+            meld_data.emotion_weights = meld_data.emotion_weights.to(device)
+            chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
+            # ravdess_data.emotion_weights = ravdess_data.emotion_weights.to(device)
 
-        print("ChaLearn data loaded")
+            # get train, dev, test partitions
+            # mustard_train_ds = DatumListDataset(mustard_data.train_data * 10, "mustard", mustard_data.sarcasm_weights)
+            mustard_train_ds = DatumListDataset(mustard_data.train_data, "mustard", mustard_data.sarcasm_weights)
+            mustard_dev_ds = DatumListDataset(mustard_data.dev_data, "mustard", mustard_data.sarcasm_weights)
+            mustard_test_ds = DatumListDataset(mustard_data.test_data, "mustard", mustard_data.sarcasm_weights)
 
-        # load glove
-        glove = pickle.load(open('data/glove.pickle', 'rb'))
+            meld_train_ds = DatumListDataset(meld_data.train_data, "meld_emotion", meld_data.emotion_weights)
+            meld_dev_ds = DatumListDataset(meld_data.dev_data, "meld_emotion", meld_data.emotion_weights)
+            meld_test_ds = DatumListDataset(meld_data.test_data, "meld_emotion", meld_data.emotion_weights)
 
-        print("GloVe object loaded")
+            # create chalearn train, dev, _ data
+            # todo: we need to properly extract test set
+            chalearn_train_ds = DatumListDataset(chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights)
+            chalearn_dev_ds = DatumListDataset(chalearn_data.dev_data, "chalearn_trats", chalearn_data.trait_weights)
+            chalearn_test_ds = None
+
+            if config.save_dataset:
+                # save all data for faster loading
+                # save meld dataset
+                pickle.dump(meld_train_ds, open('data/meld_train.pickle', 'wb'))
+                pickle.dump(meld_dev_ds, open('data/meld_dev.pickle', 'wb'))
+                pickle.dump(meld_test_ds, open('data/meld_test.pickle', 'wb'))
+
+                # save mustard
+                pickle.dump(mustard_train_ds, open('data/mustard_train.pickle', 'wb'))
+                pickle.dump(mustard_dev_ds, open('data/mustard_dev.pickle', 'wb'))
+                pickle.dump(mustard_test_ds, open('data/mustard_test.pickle', 'wb'))
+
+                # save chalearn
+                pickle.dump(chalearn_train_ds, open('data/chalearn_train.pickle', 'wb'))
+                pickle.dump(chalearn_dev_ds, open('data/chalearn_dev.pickle', 'wb'))
+                # pickle.dump(chalearn_test_ds, open('data/chalearn_test.pickle', 'wb'))
+
+                pickle.dump(glove, open('data/glove.pickle', 'wb'))  # todo: get different glove names
+
+            print("Datasets created")
+
+        else:
+            # 1. Load datasets + glove object
+            # uncomment if loading saved data
+            meld_train_ds = pickle.load(open('data/meld_train.pickle', 'rb'))
+            meld_dev_ds = pickle.load(open('data/meld_dev.pickle', 'rb'))
+            meld_test_ds = pickle.load(open('data/meld_test.pickle', 'rb'))
+
+            print("MELD data loaded")
+
+            # save mustard
+            mustard_train_ds = pickle.load(open('data/mustard_train.pickle', 'rb'))
+            mustard_dev_ds = pickle.load(open('data/mustard_dev.pickle', 'rb'))
+            mustard_test_ds = pickle.load(open('data/mustard_test.pickle', 'rb'))
+
+            print("MUSTARD data loaded")
+
+            # save chalearn
+            chalearn_train_ds = pickle.load(open('data/chalearn_train.pickle', 'rb'))
+            chalearn_dev_ds = pickle.load(open('data/chalearn_dev.pickle', 'rb'))
+            # chalearn_test_ds = pickle.load(open('data/chalearn_test.pickle', 'rb'))
+            chalearn_test_ds = None
+
+            print("ChaLearn data loaded")
+
+            # load glove
+            glove = pickle.load(open('data/glove.pickle', 'rb'))
+
+            print("GloVe object loaded")
 
         # 3. CREATE NN
         # get set of pretrained embeddings and their shape
@@ -171,18 +172,18 @@ if __name__ == "__main__":
         all_test_accs = []
 
         # todo: refactor to remove this
-        wd = model_params.weight_decay
+        wd = config.model_params.weight_decay
 
         # mini search through different learning_rate values
-        for lr in model_params.lrs:
-            for b_size in model_params.batch_size:
-                for num_gru_layer in model_params.num_gru_layers:
-                    for short_emb_size in model_params.short_emb_dim:
-                        for output_d in model_params.output_dim:
-                            for dout in model_params.dropout:
-                                for txt_hidden_dim in model_params.text_gru_hidden_dim:
+        for lr in config.model_params.lrs:
+            for b_size in config.model_params.batch_size:
+                for num_gru_layer in config.model_params.num_gru_layers:
+                    for short_emb_size in config.model_params.short_emb_dim:
+                        for output_d in config.model_params.output_dim:
+                            for dout in config.model_params.dropout:
+                                for txt_hidden_dim in config.model_params.text_gru_hidden_dim:
 
-                                    this_model_params = copy.deepcopy(model_params)
+                                    this_model_params = copy.deepcopy(config.model_params)
 
                                     this_model_params.batch_size = b_size
                                     this_model_params.num_gru_layers = num_gru_layer
@@ -316,12 +317,3 @@ if __name__ == "__main__":
                                             losses=False,
                                             set_axis_boundaries=False,
                                         )
-
-                                    # add best evaluation losses and accuracy from training to set
-                                    # all_test_losses.append(train_state["early_stopping_best_val"])
-                                    # all_test_accs.append(train_state['best_val_acc'])
-
-        # print the best model losses and accuracies for each development set in the cross-validation
-        # for i, item in enumerate(all_test_losses):
-        #     print("Losses for model with lr={0}: {1}".format(model_params.lrs[i], item))
-            # print("Accuracy for model with lr={0}: {1}".format(params.lrs[i], all_test_accs[i]))
