@@ -207,7 +207,7 @@ if __name__ == "__main__":
         all_test_losses = []
         all_test_accs = []
 
-        # mini search through different learning_rate values
+        # mini search through different learning_rate values etc.
         for lr in config.model_params.lrs:
             for b_size in config.model_params.batch_size:
                 for num_gru_layer in config.model_params.num_gru_layers:
@@ -221,7 +221,7 @@ if __name__ == "__main__":
                                     this_model_params = copy.deepcopy(
                                         config.model_params
                                     )
-
+ 
                                     this_model_params.batch_size = b_size
                                     this_model_params.num_gru_layers = num_gru_layer
                                     this_model_params.short_emb_dim = short_emb_size
@@ -271,6 +271,7 @@ if __name__ == "__main__":
                                     # add loss function for mustard
                                     # NOTE: multitask training doesn't work with BCELoss for mustard
                                     mustard_loss_func = nn.CrossEntropyLoss(
+                                        weight=mustard_train_ds.class_weights,
                                         reduction="mean"
                                     )
                                     # create multitask object
@@ -284,6 +285,7 @@ if __name__ == "__main__":
 
                                     # add loss function for meld
                                     meld_loss_func = nn.CrossEntropyLoss(
+                                        weight=meld_test_ds.class_weights,
                                         reduction="mean"
                                     )
                                     # create multitask object
@@ -297,6 +299,7 @@ if __name__ == "__main__":
 
                                     # add loss function for chalearn
                                     chalearn_loss_func = nn.CrossEntropyLoss(
+                                        weight=chalearn_train_ds.class_weights,
                                         reduction="mean"
                                     )
                                     # create multitask object
@@ -331,10 +334,14 @@ if __name__ == "__main__":
                                     )
 
                                     # add multipliers to their relevant objects
+                                    # TODO: add additional multiplying  (or replace multipliers) based on the label space,
+                                    # where fewer labels = more weight
                                     mustard_obj.change_loss_multiplier(
                                         mustard_multiplier
                                     )
-                                    meld_obj.change_loss_multiplier(meld_multiplier)
+                                    meld_obj.change_loss_multiplier(
+                                        meld_multiplier
+                                        )
                                     chalearn_obj.change_loss_multiplier(
                                         chalearn_multiplier
                                     )
