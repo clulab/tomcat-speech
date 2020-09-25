@@ -20,9 +20,6 @@ from data_prep.mustard_data.mustard_prep import *
 # import parameters for model
 import models.parameters.multitask_config as config
 
-# set model parameters
-model_params = config.model_params
-
 sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 
 # set device
@@ -38,8 +35,8 @@ device = torch.device("cuda" if cuda else "cpu")
 torch.manual_seed(config.model_params.seed)
 np.random.seed(config.model_params.seed)
 random.seed(config.model_params.seed)
-# if cuda:
-#     torch.cuda.manual_seed_all(seed)
+if cuda:
+    torch.cuda.manual_seed_all(config.model_params.seed)
 
 
 if __name__ == "__main__":
@@ -171,9 +168,6 @@ if __name__ == "__main__":
         all_test_losses = []
         all_test_accs = []
 
-        # todo: refactor to remove this
-        wd = config.model_params.weight_decay
-
         # mini search through different learning_rate values
         for lr in config.model_params.lrs:
             for b_size in config.model_params.batch_size:
@@ -200,7 +194,6 @@ if __name__ == "__main__":
                                                                                  f"INT-OUTPUT{output_d}_"
                                                                                  f"DROPOUT{dout}_"
                                                                                  f"TEXTHIDDEN{txt_hidden_dim}")
-                                    # item_output_path = os.path.join(output_path, f"LR{lr}_WD{wd}")
 
                                     # make sure the full save path exists; if not, create it
                                     os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(item_output_path))
@@ -214,7 +207,7 @@ if __name__ == "__main__":
                                     )
 
                                     optimizer = torch.optim.Adam(
-                                        lr=lr, params=multitask_model.parameters(), weight_decay=wd
+                                        lr=lr, params=multitask_model.parameters(), weight_decay=this_model_params.weight_decay
                                     )
 
                                     # set the classifier(s) to the right device
@@ -224,28 +217,30 @@ if __name__ == "__main__":
                                     # add loss function for mustard
                                     # NOTE: multitask training doesn't work with BCELoss for mustard
                                     mustard_loss_func = nn.CrossEntropyLoss(reduction="mean")
-
                                     # create multitask object
                                     mustard_obj = MultitaskObject(mustard_train_ds, mustard_dev_ds, mustard_test_ds,
                                                                   mustard_loss_func, task_num=0)
 
+                                    # add loss function for meld
                                     meld_loss_func = nn.CrossEntropyLoss(reduction="mean")
-
+                                    # create multitask object
                                     meld_obj = MultitaskObject(meld_train_ds, meld_dev_ds, meld_test_ds, meld_loss_func,
                                                                task_num=1)
 
+                                    # add loss function for chalearn
                                     chalearn_loss_func = nn.CrossEntropyLoss(reduction="mean")
-
+                                    # create multitask object
                                     chalearn_obj = MultitaskObject(chalearn_train_ds, chalearn_dev_ds, chalearn_test_ds,
                                                                    chalearn_loss_func, task_num=2)
-
 
                                     # calculate lengths of train sets and use this to determine multipliers for the loss functions
                                     mustard_len = len(mustard_train_ds)
                                     meld_len = len(meld_train_ds)
                                     chalearn_len = len(chalearn_train_ds)
 
+                                    # get length of all training data
                                     total_len = mustard_len + meld_len + chalearn_len
+                                    # use this to calculate multipliers
                                     meld_multiplier = 1 - (meld_len / total_len)
                                     mustard_multiplier = (1 - (mustard_len / total_len))
                                     chalearn_multiplier = (1 - (chalearn_len / total_len))
@@ -305,7 +300,7 @@ if __name__ == "__main__":
                                         save_name=loss_save,
                                         set_axis_boundaries=False,
                                     )
-                                    # plot the accuracy from model
+                                    # plot the avg f1 curves for each dataset
                                     for item in train_state["tasks"]:
                                         plot_train_dev_curve(
                                             train_state["train_avg_f1"][item],
