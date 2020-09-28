@@ -182,16 +182,21 @@ class ChalearnPrep:
         # self.openness_weights = get_class_weights()
 
         # acoustic feature normalization based on train
+        print("starting acoustic means for chalearn")
         self.all_acoustic_means, self.all_acoustic_deviations = get_acoustic_means(self.train_acoustic)
         # self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
         # self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
 
+        print("starting male acoustic means for chalearn")
         self.male_acoustic_means, self.male_deviations = get_gender_avgs(
             self.train_acoustic, self.train_genders, gender=1
         )
+
+        print("starting female acoustic means for chalearn")
         self.female_acoustic_means, self.female_deviations = get_gender_avgs(
             self.train_acoustic, self.train_genders, gender=2
         )
+        print("All acoustic means calculated for chalearn")
 
         # get the weights for chalearn personality traits
         if pred_type == "max_class":

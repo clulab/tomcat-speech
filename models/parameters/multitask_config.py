@@ -10,14 +10,14 @@ import os
 save_dataset = False
 
 # do you want to load pre-saved dataset files?
-load_dataset = False
+load_dataset = True
 
 
 EXPERIMENT_ID = 1
 # during training: enter a brief description that will make the experiment easy to identify
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
 # EXPERIMENT_DESCRIPTION = "meld-mustard-chalearn_singleOptimizer_IS10-76feats_finalFC-dropout-removed_2lyr-in-dset-specific-output_"
-EXPERIMENT_DESCRIPTION = "DELETE_ME_"
+EXPERIMENT_DESCRIPTION = "MMC_IS10-10feats_AcousticRNN_TEST_"
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
 
@@ -46,31 +46,31 @@ fusion_type = "early"
 chalearn_predtype = "max_class"
 
 # small set
-# acoustic_columns = ['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
-#                               'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
-#                               'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de']
+acoustic_columns = ['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
+                              'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
+                              'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de']
 # large set
-acoustic_columns = ['pcm_loudness_sma', 'mfcc_sma[0]', 'mfcc_sma[1]', 'mfcc_sma[2]', 'mfcc_sma[3]',
-                    'mfcc_sma[4]', 'mfcc_sma[5]', 'mfcc_sma[6]', 'mfcc_sma[7]', 'mfcc_sma[8]',
-                    'mfcc_sma[9]', 'mfcc_sma[10]', 'mfcc_sma[11]', 'mfcc_sma[12]', 'mfcc_sma[13]',
-                    'mfcc_sma[14]', 'logMelFreqBand_sma[0]', 'logMelFreqBand_sma[1]',
-                    'logMelFreqBand_sma[2]', 'logMelFreqBand_sma[3]', 'logMelFreqBand_sma[4]',
-                    'logMelFreqBand_sma[5]', 'logMelFreqBand_sma[6]', 'logMelFreqBand_sma[7]',
-                    'lspFreq_sma[0]', 'lspFreq_sma[1]', 'lspFreq_sma[2]', 'lspFreq_sma[3]',
-                    'lspFreq_sma[4]', 'lspFreq_sma[5]', 'lspFreq_sma[6]', 'lspFreq_sma[7]',
-                    'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'F0final_sma', 'jitterLocal_sma',
-                    'jitterDDP_sma', 'shimmerLocal_sma', 'pcm_loudness_sma_de', 'mfcc_sma_de[0]',
-                    'mfcc_sma_de[1]', 'mfcc_sma_de[2]', 'mfcc_sma_de[3]', 'mfcc_sma_de[4]',
-                    'mfcc_sma_de[5]', 'mfcc_sma_de[6]', 'mfcc_sma_de[7]', 'mfcc_sma_de[8]',
-                    'mfcc_sma_de[9]', 'mfcc_sma_de[10]', 'mfcc_sma_de[11]', 'mfcc_sma_de[12]',
-                    'mfcc_sma_de[13]', 'mfcc_sma_de[14]', 'logMelFreqBand_sma_de[0]',
-                    'logMelFreqBand_sma_de[1]', 'logMelFreqBand_sma_de[2]', 'logMelFreqBand_sma_de[3]',
-                    'logMelFreqBand_sma_de[4]', 'logMelFreqBand_sma_de[5]', 'logMelFreqBand_sma_de[6]',
-                    'logMelFreqBand_sma_de[7]', 'lspFreq_sma_de[0]', 'lspFreq_sma_de[1]',
-                    'lspFreq_sma_de[2]', 'lspFreq_sma_de[3]', 'lspFreq_sma_de[4]', 'lspFreq_sma_de[5]',
-                    'lspFreq_sma_de[6]', 'lspFreq_sma_de[7]', 'F0finEnv_sma_de',
-                    'voicingFinalUnclipped_sma_de', 'F0final_sma_de', 'jitterLocal_sma_de',
-                    'jitterDDP_sma_de', 'shimmerLocal_sma_de']
+# acoustic_columns = ['pcm_loudness_sma', 'mfcc_sma[0]', 'mfcc_sma[1]', 'mfcc_sma[2]', 'mfcc_sma[3]',
+#                     'mfcc_sma[4]', 'mfcc_sma[5]', 'mfcc_sma[6]', 'mfcc_sma[7]', 'mfcc_sma[8]',
+#                     'mfcc_sma[9]', 'mfcc_sma[10]', 'mfcc_sma[11]', 'mfcc_sma[12]', 'mfcc_sma[13]',
+#                     'mfcc_sma[14]', 'logMelFreqBand_sma[0]', 'logMelFreqBand_sma[1]',
+#                     'logMelFreqBand_sma[2]', 'logMelFreqBand_sma[3]', 'logMelFreqBand_sma[4]',
+#                     'logMelFreqBand_sma[5]', 'logMelFreqBand_sma[6]', 'logMelFreqBand_sma[7]',
+#                     'lspFreq_sma[0]', 'lspFreq_sma[1]', 'lspFreq_sma[2]', 'lspFreq_sma[3]',
+#                     'lspFreq_sma[4]', 'lspFreq_sma[5]', 'lspFreq_sma[6]', 'lspFreq_sma[7]',
+#                     'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'F0final_sma', 'jitterLocal_sma',
+#                     'jitterDDP_sma', 'shimmerLocal_sma', 'pcm_loudness_sma_de', 'mfcc_sma_de[0]',
+#                     'mfcc_sma_de[1]', 'mfcc_sma_de[2]', 'mfcc_sma_de[3]', 'mfcc_sma_de[4]',
+#                     'mfcc_sma_de[5]', 'mfcc_sma_de[6]', 'mfcc_sma_de[7]', 'mfcc_sma_de[8]',
+#                     'mfcc_sma_de[9]', 'mfcc_sma_de[10]', 'mfcc_sma_de[11]', 'mfcc_sma_de[12]',
+#                     'mfcc_sma_de[13]', 'mfcc_sma_de[14]', 'logMelFreqBand_sma_de[0]',
+#                     'logMelFreqBand_sma_de[1]', 'logMelFreqBand_sma_de[2]', 'logMelFreqBand_sma_de[3]',
+#                     'logMelFreqBand_sma_de[4]', 'logMelFreqBand_sma_de[5]', 'logMelFreqBand_sma_de[6]',
+#                     'logMelFreqBand_sma_de[7]', 'lspFreq_sma_de[0]', 'lspFreq_sma_de[1]',
+#                     'lspFreq_sma_de[2]', 'lspFreq_sma_de[3]', 'lspFreq_sma_de[4]', 'lspFreq_sma_de[5]',
+#                     'lspFreq_sma_de[6]', 'lspFreq_sma_de[7]', 'F0finEnv_sma_de',
+#                     'voicingFinalUnclipped_sma_de', 'F0final_sma_de', 'jitterLocal_sma_de',
+#                     'jitterDDP_sma_de', 'shimmerLocal_sma_de']
 
 model_params = Namespace(
     # consistency parameters
@@ -87,7 +87,7 @@ model_params = Namespace(
     # input dimension parameters
     text_dim=300,  # text vector length
     short_emb_dim=[30],  # length of trainable embeddings vec
-    audio_dim=76,  # 78,  # 76,  # 79,  # 10 # audio vector length
+    audio_dim=len(acoustic_columns),  # 78,  # 76,  # 79,  # 10 # audio vector length
     # audio_dim=10,
     # text NN
     kernel_1_size=3,

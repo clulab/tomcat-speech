@@ -114,7 +114,7 @@ if __name__ == "__main__":
             # ravdess_data.emotion_weights = ravdess_data.emotion_weights.to(device)
 
             # get train, dev, test partitions
-            # mustard_train_ds = DatumListDataset(mustard_data.train_data * 10, "mustard", mustard_data.sarcasm_weights)
+            mustard_train_ds = DatumListDataset(mustard_data.train_data * 10, "mustard", mustard_data.sarcasm_weights)
             mustard_train_ds = DatumListDataset(
                 mustard_data.train_data, "mustard", mustard_data.sarcasm_weights
             )
@@ -148,19 +148,19 @@ if __name__ == "__main__":
             if config.save_dataset:
                 # save all data for faster loading
                 # save meld dataset
-                pickle.dump(meld_train_ds, open("data/meld_train.pickle", "wb"))
-                pickle.dump(meld_dev_ds, open("data/meld_dev.pickle", "wb"))
-                pickle.dump(meld_test_ds, open("data/meld_test.pickle", "wb"))
+                pickle.dump(meld_train_ds, open("data/meld_IS10RNN10feat_train.pickle", "wb"))
+                pickle.dump(meld_dev_ds, open("data/meld_IS10RNN10feat_dev.pickle", "wb"))
+                pickle.dump(meld_test_ds, open("data/meld_IS10RNN10feat_test.pickle", "wb"))
 
                 # save mustard
-                pickle.dump(mustard_train_ds, open("data/mustard_train.pickle", "wb"))
-                pickle.dump(mustard_dev_ds, open("data/mustard_dev.pickle", "wb"))
-                pickle.dump(mustard_test_ds, open("data/mustard_test.pickle", "wb"))
+                pickle.dump(mustard_train_ds, open("data/mustard_IS10RNN10feat_train.pickle", "wb"))
+                pickle.dump(mustard_dev_ds, open("data/mustard_IS10RNN10feat_dev.pickle", "wb"))
+                pickle.dump(mustard_test_ds, open("data/mustard_IS10RNN10feat_test.pickle", "wb"))
 
                 # save chalearn
-                pickle.dump(chalearn_train_ds, open("data/chalearn_train.pickle", "wb"))
-                pickle.dump(chalearn_dev_ds, open("data/chalearn_dev.pickle", "wb"))
-                # pickle.dump(chalearn_test_ds, open('data/chalearn_test.pickle', 'wb'))
+                pickle.dump(chalearn_train_ds, open("data/chalearn_IS10RNN10feat_train.pickle", "wb"))
+                pickle.dump(chalearn_dev_ds, open("data/chalearn_IS10RNN10feat_dev.pickle", "wb"))
+                # pickle.dump(chalearn_test_ds, open('data/chalearn_IS10RNN10feat_test.pickle', 'wb'))
 
                 pickle.dump(
                     glove, open("data/glove.pickle", "wb")
@@ -171,22 +171,22 @@ if __name__ == "__main__":
         else:
             # 1. Load datasets + glove object
             # uncomment if loading saved data
-            meld_train_ds = pickle.load(open("data/meld_train.pickle", "rb"))
-            meld_dev_ds = pickle.load(open("data/meld_dev.pickle", "rb"))
-            meld_test_ds = pickle.load(open("data/meld_test.pickle", "rb"))
+            meld_train_ds = pickle.load(open("data/meld_IS10RNN10feat_train.pickle", "rb"))
+            meld_dev_ds = pickle.load(open("data/meld_IS10RNN10feat_dev.pickle", "rb"))
+            meld_test_ds = pickle.load(open("data/meld_IS10RNN10feat_test.pickle", "rb"))
 
             print("MELD data loaded")
 
             # save mustard
-            mustard_train_ds = pickle.load(open("data/mustard_train.pickle", "rb"))
-            mustard_dev_ds = pickle.load(open("data/mustard_dev.pickle", "rb"))
-            mustard_test_ds = pickle.load(open("data/mustard_test.pickle", "rb"))
+            mustard_train_ds = pickle.load(open("data/mustard_IS10RNN10feat_train.pickle", "rb"))
+            mustard_dev_ds = pickle.load(open("data/mustard_IS10RNN10feat_dev.pickle", "rb"))
+            mustard_test_ds = pickle.load(open("data/mustard_IS10RNN10feat_test.pickle", "rb"))
 
             print("MUSTARD data loaded")
 
             # save chalearn
-            chalearn_train_ds = pickle.load(open("data/chalearn_train.pickle", "rb"))
-            chalearn_dev_ds = pickle.load(open("data/chalearn_dev.pickle", "rb"))
+            chalearn_train_ds = pickle.load(open("data/chalearn_IS10RNN10feat_train.pickle", "rb"))
+            chalearn_dev_ds = pickle.load(open("data/chalearn_IS10RNN10feat_dev.pickle", "rb"))
             # chalearn_test_ds = pickle.load(open('data/chalearn_test.pickle', 'rb'))
             chalearn_test_ds = None
 

@@ -733,7 +733,7 @@ class MultitaskModel(nn.Module):
             text_input,
             speaker_input=speaker_input,
             length_input=length_input,
-            # acoustic_len_input=acoustic_len_input,
+            acoustic_len_input=acoustic_len_input,
             gender_input=gender_input,
         )
 

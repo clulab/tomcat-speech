@@ -152,9 +152,11 @@ class MustardPrep:
         self.sarcasm_weights = get_class_weights(self.train_y_sarcasm)
 
         # acoustic feature normalization based on train
+        print("starting acoustic means for mustard")
         self.all_acoustic_means, self.all_acoustic_deviations = get_acoustic_means(self.train_acoustic)
         # self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
         # self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
+        print("acoustic means calculated for mustard")
 
         # get the data organized for input into the NNs
         self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
