@@ -205,6 +205,13 @@ class ChalearnPrep:
             self.train_ys = torch.tensor([item.index(max(item)) for item in all_train_ys])
             self.trait_weights = get_class_weights(self.train_ys)
 
+        # get the weights for chalearn personality traits
+        if pred_type == "max_class":
+            all_train_ys = [[self.train_y_consc[i], self.train_y_openn[i], self.train_y_agree[i],
+                                  self.train_y_neur[i], self.train_y_extr[i]] for i in range(len(self.train_y_consc))]
+            self.train_ys = torch.tensor([item.index(max(item)) for item in all_train_ys])
+            self.trait_weights = get_class_weights(self.train_ys)
+
         # get the data organized for input into the NNs
         # self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
         self.train_data, self.dev_data = self.combine_xs_and_ys()

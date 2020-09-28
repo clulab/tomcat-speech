@@ -106,6 +106,7 @@ class EarlyFusionMultimodalModel(nn.Module):
         #     )
 
         if params.add_avging is False and params.avgd_acoustic is False:
+            # self.acoustic_fc_1 = nn.Linear(params.audio_dim, 100)
             self.acoustic_fc_1 = nn.Linear(params.fc_hidden_dim, 100)
         else:
             self.acoustic_fc_1 = nn.Linear(params.audio_dim, 100)
@@ -218,6 +219,7 @@ class EarlyFusionMultimodalModel(nn.Module):
         # print(encoded_text.shape)
 
         if acoustic_len_input is not None:
+            print("Accessing acoustic RNN")
             # print(acoustic_input.shape)
             # acoustic_input = self.acoustic_batch_norm(acoustic_input.permute(0, 2, 1))
             # print(acoustic_input.shape)
@@ -228,14 +230,15 @@ class EarlyFusionMultimodalModel(nn.Module):
                 batch_first=True,
                 enforce_sorted=False,
             )
-
-            # print(packed_acoustic.data.shape)
+            print("acoustic data packed")
+            print(packed_acoustic.data.shape)
             (
                 packed_acoustic_output,
                 (acoustic_hidden, acoustic_cell),
             ) = self.acoustic_rnn(packed_acoustic)
             encoded_acoustic = F.dropout(acoustic_hidden[-1], self.dropout)
             # encoded_acoustic = acoustic_hidden[-1]
+            print("Acoustic data fed through RNN")
 
         else:
             # print(acoustic_input.shape)
@@ -244,6 +247,7 @@ class EarlyFusionMultimodalModel(nn.Module):
             else:
                 encoded_acoustic = acoustic_input
 
+        print(encoded_acoustic.shape)
         encoded_acoustic = torch.tanh(
             F.dropout(self.acoustic_fc_1(encoded_acoustic), self.dropout)
         )

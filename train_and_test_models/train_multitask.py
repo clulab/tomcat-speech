@@ -9,6 +9,12 @@ import numpy as np
 import copy
 import torch.nn as nn
 
+# sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
+sys.path.append("/work/johnculnan/github/asist-speech")
+sys.path.append("/work/johnculnan")
+
+# from sklearn.model_selection import train_test_split
+
 from data_prep.chalearn_data.chalearn_prep import ChalearnPrep
 from data_prep.ravdess_data.ravdess_prep import RavdessPrep
 from models.train_and_test_models import *
@@ -19,8 +25,7 @@ from data_prep.mustard_data.mustard_prep import *
 
 # import parameters for model
 import models.parameters.multitask_config as config
-
-sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
+# from models.parameters.multitask_params import model_params
 
 # set device
 cuda = False
@@ -32,19 +37,22 @@ if torch.cuda.is_available():
 device = torch.device("cuda" if cuda else "cpu")
 
 # set random seed
+
 torch.manual_seed(config.model_params.seed)
 np.random.seed(config.model_params.seed)
 random.seed(config.model_params.seed)
 if cuda:
     torch.cuda.manual_seed_all(config.model_params.seed)
 
-
 if __name__ == "__main__":
+    # check if cuda
+    print(cuda)
+
+    # check which GPU used
+    print(torch.cuda.current_device())
 
     # decide if you want to use avgd feats
-    avgd_acoustic_in_network = (
-        config.model_params.avgd_acoustic or config.model_params.add_avging
-    )
+    avgd_acoustic_in_network = model_params.avgd_acoustic or model_params.add_avging
 
     # create save location
     output_path = os.path.join(
@@ -54,6 +62,12 @@ if __name__ == "__main__":
         + config.EXPERIMENT_DESCRIPTION
         + str(date.today()),
     )
+    
+    # set location for pickled data (saving or loading)
+    if config.USE_SERVER:
+        data = "/data/nlp/corpora/MM/pickled_data"
+    else:
+        data = "data"
 
     # make sure the full save path exists; if not, create it
     os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(output_path))
@@ -66,8 +80,11 @@ if __name__ == "__main__":
         # todo: make this flush more frequently so you can check the bottom of the log file
         #   or make a new function e.g. print_both and have it both print and save to file
         sys.stdout = f
-
+        
         if not config.load_dataset:
+            # 0. CHECK TO MAKE SURE DATA DIRECTORY EXISTS
+            os.system(f'if [ ! -d "{data}" ]; then mkdir -p {data}; fi')
+
             # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
             glove_dict = make_glove_dict(config.glove_file)
             glove = Glove(glove_dict)
@@ -398,6 +415,7 @@ if __name__ == "__main__":
                                         save_name=loss_save,
                                         set_axis_boundaries=False,
                                     )
+
                                     # plot the avg f1 curves for each dataset
                                     for item in train_state["tasks"]:
                                         plot_train_dev_curve(
