@@ -19,7 +19,7 @@ from data_prep.data_prep_helpers import (
     clean_up_word,
     get_max_num_acoustic_frames,
     transform_acoustic_item,
-)
+    get_acoustic_means)
 
 
 class ChalearnPrep:
@@ -182,15 +182,28 @@ class ChalearnPrep:
         # self.openness_weights = get_class_weights()
 
         # acoustic feature normalization based on train
-        self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
-        self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
+        print("starting acoustic means for chalearn")
+        self.all_acoustic_means, self.all_acoustic_deviations = get_acoustic_means(self.train_acoustic)
+        # self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
+        # self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
 
+        print("starting male acoustic means for chalearn")
         self.male_acoustic_means, self.male_deviations = get_gender_avgs(
             self.train_acoustic, self.train_genders, gender=1
         )
+
+        print("starting female acoustic means for chalearn")
         self.female_acoustic_means, self.female_deviations = get_gender_avgs(
             self.train_acoustic, self.train_genders, gender=2
         )
+        print("All acoustic means calculated for chalearn")
+
+        # get the weights for chalearn personality traits
+        if pred_type == "max_class":
+            all_train_ys = [[self.train_y_consc[i], self.train_y_openn[i], self.train_y_agree[i],
+                                  self.train_y_neur[i], self.train_y_extr[i]] for i in range(len(self.train_y_consc))]
+            self.train_ys = torch.tensor([item.index(max(item)) for item in all_train_ys])
+            self.trait_weights = get_class_weights(self.train_ys)
 
         # get the weights for chalearn personality traits
         if pred_type == "max_class":

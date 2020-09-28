@@ -18,7 +18,7 @@ from data_prep.data_prep_helpers import (
     get_gender_avgs,
     make_acoustic_set,
     transform_acoustic_item,
-)
+    get_acoustic_means)
 from collections import OrderedDict
 
 import torchtext
@@ -77,7 +77,7 @@ class MeldPrep:
             self.dev_dir = "IS10_dev"
             self.test_dir = "IS10_test"
 
-        print("Collecting acoustic features")
+        print("Collecting acoustic features for meld")
 
         # ordered dicts of acoustic data
         # todo: is this screwed up?
@@ -114,7 +114,7 @@ class MeldPrep:
             + list(self.test_dict.values())
         )
 
-        print("Finalizing acoustic organization")
+        print("Finalizing acoustic organization for meld")
 
         self.train_acoustic, self.train_usable_utts = make_acoustic_set(
             self.train,
@@ -181,15 +181,22 @@ class MeldPrep:
         self.sentiment_weights = get_class_weights(self.train_y_sent)
 
         # acoustic feature normalization based on train
-        self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
-        self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
+        print("starting acoustic means for meld")
+        self.all_acoustic_means, self.all_acoustic_deviations = get_acoustic_means(self.train_acoustic)
+        # self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
+        # self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
 
-        # self.male_acoustic_means, self.male_deviations = get_gender_avgs(
-        #     self.train_acoustic, self.train_genders, gender=2
-        # )
-        # self.female_acoustic_means, self.female_deviations = get_gender_avgs(
-        #     self.train_acoustic, self.train_genders, gender=1
-        # )
+        print("starting male acoustic means for meld")
+        self.male_acoustic_means, self.male_deviations = get_gender_avgs(
+            self.train_acoustic, self.train_genders, gender=2
+        )
+
+        print("starting female acoustic means for meld")
+        self.female_acoustic_means, self.female_deviations = get_gender_avgs(
+            self.train_acoustic, self.train_genders, gender=1
+        )
+
+        print("all acoustic means calculated for meld")
 
         # get the data organized for input into the NNs
         self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()

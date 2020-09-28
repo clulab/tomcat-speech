@@ -96,14 +96,14 @@ class EarlyFusionMultimodalModel(nn.Module):
         )
 
         # set the size of the input into the fc layers
-        if params.avgd_acoustic or params.add_avging:
-            self.fc_input_dim = params.text_gru_hidden_dim + params.audio_dim
+        # if params.avgd_acoustic or params.add_avging:
+        self.fc_input_dim = params.text_gru_hidden_dim + params.audio_dim
             # self.fc_input_dim = params.text_gru_hidden_dim + 20
 
-        else:
-            self.fc_input_dim = (
-                params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
-            )
+        # else:
+        #     self.fc_input_dim = (
+        #         params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
+        #     )
 
         if params.add_avging is False and params.avgd_acoustic is False:
             # self.acoustic_fc_1 = nn.Linear(params.audio_dim, 100)
@@ -705,15 +705,13 @@ class MultitaskModel(nn.Module):
         self.multi_dataset = multi_dataset
 
         # # set base of model
+        # comment this out and uncomment the below to try late fusion model
         self.base = EarlyFusionMultimodalModel(
             params, num_embeddings, pretrained_embeddings
         )
 
+        # uncomment this and comment the above to try the late fusion model
         # self.base = LateFusionMultimodalModel(
-        #     params, num_embeddings, pretrained_embeddings
-        # )
-
-        # self.base = TextOnlyCNN(
         #     params, num_embeddings, pretrained_embeddings
         # )
 
@@ -765,9 +763,4 @@ class MultitaskModel(nn.Module):
             else:
                 sys.exit(f"Task {task_num} not defined")
 
-        # print(task_0_out)
-        # print(task_1_out)
-        # print(task_2_out)
-        # print(task_3_out)
-        # sys.exit()
         return task_0_out, task_1_out, task_2_out, task_3_out

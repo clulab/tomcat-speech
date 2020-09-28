@@ -793,7 +793,6 @@ def multitask_train_and_predict(
                     task_num=tasks[batch_index]
                 )
             else:
-                print("using acoustic RNN")
                 y_pred = classifier(
                     acoustic_input=batch_acoustic,
                     text_input=batch_text,
