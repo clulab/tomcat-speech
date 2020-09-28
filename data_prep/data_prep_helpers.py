@@ -10,6 +10,7 @@ import torch
 from torch import nn
 from torch.utils.data import Dataset
 from sklearn.feature_selection import SelectKBest, chi2
+from sklearn.utils.class_weight import compute_class_weight
 
 import statistics
 
@@ -341,22 +342,33 @@ def get_avg_vec(nested_list):
     return [statistics.mean(item) for item in zip(*nested_list)]
 
 
-def get_class_weights(y_set):
-    class_counts = {}
-    y_values = y_set.tolist()
+# I found this method recently, in a discussion that sometimes weights are better
+# served in the loss function than in a sampler.  What you were returning below 
+# seem to be counts, not weights.  These are automatically calculated by sklearn, and
+# apparently based off imbalanced logistic regression.  Let's see if they help!
+def get_class_weights(y_tensor):
+    labels = [int(y) for y in y_tensor]
+    classes = sorted(list(set(labels)))
+    weights = compute_class_weight("balanced", classes, labels)
+    return torch.tensor(weights)
 
-    num_labels = max(y_values) + 1
 
-    for item in y_values:
-        if item not in class_counts:
-            class_counts[item] = 1
-        else:
-            class_counts[item] += 1
-    class_weights = [0.0] * num_labels
-    for k, v in class_counts.items():
-        class_weights[k] = float(v)
-    class_weights = torch.tensor(class_weights)
-    return class_weights
+# def get_class_weights(y_set):
+#     class_counts = {}
+#     y_values = y_set.tolist()
+
+#     num_labels = max(y_values) + 1
+
+#     for item in y_values:
+#         if item not in class_counts:
+#             class_counts[item] = 1
+#         else:
+#             class_counts[item] += 1
+#     class_weights = [0.0] * num_labels
+#     for k, v in class_counts.items():
+#         class_weights[k] = float(v)
+#     class_weights = torch.tensor(class_weights)
+#     return class_weights
 
 
 def get_gender_avgs(acoustic_data, gender_set, gender=1):
