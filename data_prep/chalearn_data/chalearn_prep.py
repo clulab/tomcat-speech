@@ -19,7 +19,7 @@ from data_prep.data_prep_helpers import (
     clean_up_word,
     get_max_num_acoustic_frames,
     transform_acoustic_item,
-)
+    get_acoustic_means)
 
 
 class ChalearnPrep:
@@ -182,8 +182,9 @@ class ChalearnPrep:
         # self.openness_weights = get_class_weights()
 
         # acoustic feature normalization based on train
-        self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
-        self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
+        self.all_acoustic_means, self.all_acoustic_deviations = get_acoustic_means(self.train_acoustic)
+        # self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
+        # self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
 
         self.male_acoustic_means, self.male_deviations = get_gender_avgs(
             self.train_acoustic, self.train_genders, gender=1

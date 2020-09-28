@@ -16,7 +16,8 @@ load_dataset = False
 EXPERIMENT_ID = 1
 # during training: enter a brief description that will make the experiment easy to identify
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
-EXPERIMENT_DESCRIPTION = "meld-mustard-chalearn_singleOptimizer_IS10-76feats_finalFC-dropout-removed_2lyr-in-dset-specific-output_"
+# EXPERIMENT_DESCRIPTION = "meld-mustard-chalearn_singleOptimizer_IS10-76feats_finalFC-dropout-removed_2lyr-in-dset-specific-output_"
+EXPERIMENT_DESCRIPTION = "DELETE_ME_"
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
 
@@ -98,7 +99,7 @@ model_params = Namespace(
     text_gru_hidden_dim=[100],  # 30,  # 50,  # 20
     # acoustic NN
     avgd_acoustic=False,  # set true to use avgd acoustic feat vectors without RNN
-    add_avging=True,  # set to true if you want to avg acoustic feature vecs upon input
+    add_avging=False,  # set to true if you want to avg acoustic feature vecs upon input
     acoustic_gru_hidden_dim=100,
     # speaker embeddings
     use_speaker=False,

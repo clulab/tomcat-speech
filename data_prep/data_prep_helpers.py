@@ -359,22 +359,47 @@ def get_class_weights(y_set):
     return class_weights
 
 
-def get_gender_avgs(acoustic_set, gender_set, gender=1):
+def get_gender_avgs(acoustic_data, gender_set, gender=1):
     """
     Get averages and standard deviations split by gender
-    param acoustic_set : the acoustic data
+    param acoustic_data : the acoustic data (tensor format)
     param gender : the gender to return avgs for; 0 = all, 1 = f, 2 = m
     """
     all_items = []
 
-    for i, item in enumerate(acoustic_set):
+    for i, item in enumerate(acoustic_data):
         if gender_set[i] == gender:
             all_items.append(torch.tensor(item))
 
     all_items = torch.stack(all_items)
 
-    mean = all_items.mean(dim=0, keepdim=False)
-    stdev = all_items.std(dim=0, keepdim=False)
+    mean, stdev = get_acoustic_means(all_items)
+    # mean = all_items.mean(dim=0, keepdim=False)
+    # stdev = all_items.std(dim=0, keepdim=False)
+
+    return mean, stdev
+
+
+def get_acoustic_means(acoustic_data):
+    """
+    Get averages and standard deviations of acoustic data
+    Should deal with 2-d and 3-d tensors
+    param acoustic_data : the acoustic data in tensor format
+    """
+    # print("Now starting to calculate acoustic means")
+    # print(acoustic_data.shape)
+    if len(acoustic_data.shape) == 3:
+        # reshape data + calculate means
+        # can do data.mean(dim=0).mean(dim=0), BUT runs out of memory
+        dim_0 = acoustic_data.shape[0]
+        dim_1 = acoustic_data.shape[1]
+        dim_2 = acoustic_data.shape[2]
+        reshaped_data = torch.reshape(acoustic_data, (dim_0 * dim_1, dim_2))
+        mean = reshaped_data.mean(dim=0, keepdim=False)
+        stdev = reshaped_data.std(dim=0, keepdim=False)
+    elif len(acoustic_data.shape) == 2:
+        mean = acoustic_data.mean(dim=0, keepdim=False)
+        stdev = acoustic_data.std(dim=0, keepdim=False)
 
     return mean, stdev
 

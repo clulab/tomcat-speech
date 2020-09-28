@@ -19,7 +19,7 @@ from data_prep.data_prep_helpers import (
     make_acoustic_set,
     transform_acoustic_item,
     create_data_folds,
-)
+    get_acoustic_means)
 from data_prep.meld_data.meld_prep import (
     get_max_num_acoustic_frames,
     make_acoustic_dict_meld,
@@ -152,8 +152,9 @@ class MustardPrep:
         self.sarcasm_weights = get_class_weights(self.train_y_sarcasm)
 
         # acoustic feature normalization based on train
-        self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
-        self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
+        self.all_acoustic_means, self.all_acoustic_deviations = get_acoustic_means(self.train_acoustic)
+        # self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
+        # self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
 
         # get the data organized for input into the NNs
         self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
