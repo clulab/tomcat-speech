@@ -47,6 +47,11 @@ random.seed(model_params.seed)
 
 
 if __name__ == "__main__":
+    # check if cuda
+    print(cuda)
+
+    # check which GPU used
+    print(torch.cuda.current_device())
 
     # decide if you want to use avgd feats
     avgd_acoustic_in_network = model_params.avgd_acoustic or model_params.add_avging
@@ -56,7 +61,7 @@ if __name__ == "__main__":
                                config.EXPERIMENT_DESCRIPTION + str(date.today()))
     
     # set location for pickled data (saving or loading)
-    if config.USER_SERVER:
+    if config.USE_SERVER:
         data = "/data/nlp/corpora/MM/pickled_data"
     else:
         data = "data"
@@ -75,9 +80,9 @@ if __name__ == "__main__":
 
         # Comment out if loading data
         # 0. CHECK TO MAKE SURE DATA DIRECTORY EXISTS
-        os.system(f'if [ ! -d "data" ]; then mkdir -p data; fi')
+        os.system(f'if [ ! -d "{data}" ]; then mkdir -p {data}; fi')
 
-        # comment out if loading data
+        # # comment out if loading data
         # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
         glove_dict = make_glove_dict(config.glove_file)
         glove = Glove(glove_dict)
@@ -127,51 +132,51 @@ if __name__ == "__main__":
         
         # save all data for faster loading
         # save meld dataset
-        pickle.dump(meld_train_ds, open(f'{data}/meld_train.pickle', 'wb'))
-        pickle.dump(meld_dev_ds, open(f'{data}/meld_dev.pickle', 'wb'))
-        pickle.dump(meld_test_ds, open(f'{data}/meld_test.pickle', 'wb'))
+        pickle.dump(meld_train_ds, open(f'{data}/meld_forRNN_train.pickle', 'wb'))
+        pickle.dump(meld_dev_ds, open(f'{data}/meld_forRNN_dev.pickle', 'wb'))
+        pickle.dump(meld_test_ds, open(f'{data}/meld_forRNN_test.pickle', 'wb'))
         
-        # save mustard
-        pickle.dump(mustard_train_ds, open(f'{data}/mustard_train.pickle', 'wb'))
-        pickle.dump(mustard_dev_ds, open(f'{data}/mustard_dev.pickle', 'wb'))
-        pickle.dump(mustard_test_ds, open(f'{data}/mustard_test.pickle', 'wb'))
-        
-        # save chalearn
-        pickle.dump(chalearn_train_ds, open(f'{data}/chalearn_train.pickle', 'wb'))
-        pickle.dump(chalearn_dev_ds, open(f'{data}/chalearn_dev.pickle', 'wb'))
-        # pickle.dump(chalearn_test_ds, open(f'{data}/chalearn_test.pickle', 'wb'))
-        
-        pickle.dump(glove, open(f'{data}/glove.pickle', 'wb'))  # todo: get different glove names
-        
-        print("Datasets created")
-
-        # # 1. Load datasets + glove object
-        # # uncomment if loading saved data
-        # meld_train_ds = pickle.load(open(f'{data}/meld_train.pickle', 'rb'))
-        # meld_dev_ds = pickle.load(open(f'{data}/meld_dev.pickle', 'rb'))
-        # meld_test_ds = pickle.load(open(f'{data}/meld_test.pickle', 'rb'))
-
-        # print("MELD data loaded")
-
         # # save mustard
-        # mustard_train_ds = pickle.load(open(f'{data}/mustard_train.pickle', 'rb'))
-        # mustard_dev_ds = pickle.load(open(f'{data}/mustard_dev.pickle', 'rb'))
-        # mustard_test_ds = pickle.load(open(f'{data}/mustard_test.pickle', 'rb'))
-
-        # print("MUSTARD data loaded")
-
+        pickle.dump(mustard_train_ds, open(f'{data}/mustard_forRNN_train.pickle', 'wb'))
+        pickle.dump(mustard_dev_ds, open(f'{data}/mustard_forRNN_dev.pickle', 'wb'))
+        pickle.dump(mustard_test_ds, open(f'{data}/mustard_forRNN_test.pickle', 'wb'))
+        
         # # save chalearn
-        # chalearn_train_ds = pickle.load(open(f'{data}/chalearn_train.pickle', 'rb'))
-        # chalearn_dev_ds = pickle.load(open(f'{data}/chalearn_dev.pickle', 'rb'))
-        # # chalearn_test_ds = pickle.load(open(f'{data}/chalearn_test.pickle', 'rb'))
-        # chalearn_test_ds = None
+        pickle.dump(chalearn_train_ds, open(f'{data}/chalearn_forRNN_train.pickle', 'wb'))
+        pickle.dump(chalearn_dev_ds, open(f'{data}/chalearn_forRNN_dev.pickle', 'wb'))
+        # pickle.dump(chalearn_test_ds, open(f'{data}/chalearn_forRNN_test.pickle', 'wb'))
+        
+        # pickle.dump(glove, open(f'{data}/glove.pickle', 'wb'))  # todo: get different glove names
+        
+        # print("Datasets created")
 
-        # print("ChaLearn data loaded")
+        # 1. Load datasets + glove object
+        # uncomment if loading saved data
+        meld_train_ds = pickle.load(open(f'{data}/meld_forRNN_train.pickle', 'rb'))
+        meld_dev_ds = pickle.load(open(f'{data}/meld_forRNN_dev.pickle', 'rb'))
+        meld_test_ds = pickle.load(open(f'{data}/meld_forRNN_test.pickle', 'rb'))
 
-        # # load glove
-        # glove = pickle.load(open(f'{data}/glove.pickle', 'rb'))
+        print("MELD data loaded")
 
-        # print("GloVe object loaded")
+        # save mustard
+        mustard_train_ds = pickle.load(open(f'{data}/mustard_forRNN_train.pickle', 'rb'))
+        mustard_dev_ds = pickle.load(open(f'{data}/mustard_forRNN_dev.pickle', 'rb'))
+        mustard_test_ds = pickle.load(open(f'{data}/mustard_forRNN_test.pickle', 'rb'))
+
+        print("MUSTARD data loaded")
+
+        # save chalearn
+        chalearn_train_ds = pickle.load(open(f'{data}/chalearn_forRNN_train.pickle', 'rb'))
+        chalearn_dev_ds = pickle.load(open(f'{data}/chalearn_forRNN_dev.pickle', 'rb'))
+        # chalearn_test_ds = pickle.load(open(f'{data}/chalearn_forRNN_test.pickle', 'rb'))
+        chalearn_test_ds = None
+
+        print("ChaLearn data loaded")
+
+        # load glove
+        glove = pickle.load(open(f'{data}/glove.pickle', 'rb'))
+
+        print("GloVe object loaded")
 
         # 3. CREATE NN
         # get set of pretrained embeddings and their shape
@@ -257,7 +262,9 @@ if __name__ == "__main__":
                                     meld_len = len(meld_train_ds)
                                     chalearn_len = len(chalearn_train_ds)
 
+                                    # total_len = mustard_len + meld_len
                                     total_len = mustard_len + meld_len + chalearn_len
+
                                     meld_multiplier = 1 - (meld_len / total_len)
                                     mustard_multiplier = (1 - (mustard_len / total_len))
                                     chalearn_multiplier = (1 - (chalearn_len / total_len))
@@ -273,6 +280,7 @@ if __name__ == "__main__":
 
                                     # set all data list
                                     all_data_list = [mustard_obj, meld_obj, chalearn_obj]
+                                    # all_data_list = [mustard_obj, meld_obj]
 
                                     print("Model, loss function, and optimization created")
 
