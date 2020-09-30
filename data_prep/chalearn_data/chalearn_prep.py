@@ -1,5 +1,5 @@
 # prepare chalearn for input into the model
-
+import math
 import os
 import pickle
 import json
@@ -62,7 +62,6 @@ class ChalearnPrep:
         # to determine whether incoming acoustic features are averaged
         self.avgd = avgd
 
-        self.avgd = False
         self.train_dir = "IS10"
         self.dev_dir = "IS10"
         self.test_dir = "IS10"
@@ -98,11 +97,12 @@ class ChalearnPrep:
         self.longest_utt = self.get_longest_utt_chalearn()
 
         # get length of longest acoustic dataframe
-        self.longest_acoustic = get_max_num_acoustic_frames(
-            list(self.train_dict.values())
-            + list(self.dev_dict.values())
+        self.longest_acoustic = 1500  # set to 15 seconds
+        # self.longest_acoustic = get_max_num_acoustic_frames(
+        #     list(self.train_dict.values())
+            # + list(self.dev_dict.values())
             # + list(self.test_dict.values())
-        )
+        # )
 
         print("Finalizing acoustic organization")
 
@@ -648,30 +648,44 @@ def make_acoustic_set_chalearn(
 
             # pull out the acoustic feats dataframe
             acoustic_data = acoustic_dict[item_id]
+            # print(acoustic_data)
+            # sys.exit()
 
             # add this dialogue + utt combo to the list of possible ones
             usable_utts.append(item_id)
 
             if not avgd and not add_avging:
                 # set intermediate acoustic holder
-                acoustic_holder = [[0] * acoustic_length] * longest_acoustic
+                acoustic_holder = torch.zeros((longest_acoustic, acoustic_length))
 
                 # add the acoustic features to the holder of features
                 for i, feats in enumerate(acoustic_data):
+                    # print(feats)
+                    # print(i)
                     # for now, using longest acoustic file in TRAIN only
                     if i >= longest_acoustic:
                         break
                     # needed because some files allegedly had length 0
                     for j, feat in enumerate(feats):
+                        # print(j)
+                        # print(feat)
                         acoustic_holder[i][j] = feat
+                # print(acoustic_holder)
+                # sys.exit()
             else:
                 if avgd:
-                    acoustic_holder = acoustic_data
+                    acoustic_holder = torch.tensor(acoustic_data)
                 elif add_avging:
-                    acoustic_holder = torch.mean(torch.tensor(acoustic_data), dim=0)
+                    # acoustic_holder = torch.mean(torch.tensor(acoustic_data), dim=0)
+                    # try skipping first, size-cutoff + skip end of that cutoff
+                    # skip first and last 100ms (10 frames)
+                    # acoustic_holder = torch.mean(torch.tensor(acoustic_data)[10:min(1491, len(acoustic_data) - 9)], dim=0)
+                    # try skipping first and last 5%
+                    data_len = len(acoustic_data)
+                    acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.05):math.ceil(data_len * 0.95)], dim=0)
 
             # add features as tensor to acoustic data
-            all_acoustic.append(torch.tensor(acoustic_holder))
+            all_acoustic.append(acoustic_holder)
 
     # pad the sequence and reshape it to proper format
     # this is here to keep the formatting for acoustic RNN

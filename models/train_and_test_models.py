@@ -759,6 +759,7 @@ def multitask_train_and_predict(
         for batch_index, batch in enumerate(batches):
             # find the task for this batch
             batch_task = tasks[batch_index]
+            # print(f"BATCH TASK IS: {batch_task}")
 
             # step 1. zero the gradients
             # zero all optimizers
@@ -768,6 +769,9 @@ def multitask_train_and_predict(
             optimizer.zero_grad()
 
             y_gold = batch[4].to(device)
+            #
+            # print(y_gold)
+            # print(y_gold.dtype)
 
             batch_acoustic = batch[0].to(device)
             batch_text = batch[1].to(device)
@@ -805,6 +809,8 @@ def multitask_train_and_predict(
             # print(y_pred)
 
             batch_pred = y_pred[batch_task]
+            # print(batch_pred)
+            # print(batch_pred.dtype)
             # print(f"y predictions are:\n{y_pred}")
             # print(f"y labels are:\n{y_gold}")
 
@@ -812,6 +818,8 @@ def multitask_train_and_predict(
                 batch_pred = batch_pred.float()
                 y_gold = y_gold.float()
 
+            # print(datasets_list[batch_task].loss_multiplier)
+            # print(datasets_list[batch_task].loss_fx)
             # calculate loss
             loss = datasets_list[batch_task].loss_fx(batch_pred, y_gold) * datasets_list[batch_task].loss_multiplier
 

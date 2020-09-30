@@ -92,7 +92,7 @@ class EarlyFusionMultimodalModel(nn.Module):
             hidden_size=params.acoustic_gru_hidden_dim,
             num_layers=params.num_gru_layers,
             batch_first=True,
-            bidirectional=False,
+            bidirectional=True,
         )
 
         # set the size of the input into the fc layers
@@ -170,15 +170,10 @@ class EarlyFusionMultimodalModel(nn.Module):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
         embs = F.dropout(self.embedding(text_input), 0.1).detach()
-        # embs = self.embedding(text_input).detach()
 
         short_embs = F.dropout(self.short_embedding(text_input), 0.1)
-        # short_embs = self.short_embedding(text_input)
 
         all_embs = torch.cat((embs, short_embs), dim=2)
-        # add text normalization -- must operate over dim 1 so permute
-        # all_embs = self.text_batch_norm(all_embs.permute(0, 2, 1))
-        # all_embs = all_embs.permute(0, 2, 1)
 
         # get speaker embeddings, if needed
         if speaker_input is not None:
@@ -187,58 +182,32 @@ class EarlyFusionMultimodalModel(nn.Module):
         if gender_input is not None:
             gender_embs = self.gender_embedding(gender_input)
 
-        # packed = nn.utils.rnn.pack_padded_sequence(embs, length_input, batch_first=True, enforce_sorted=False)
         packed = nn.utils.rnn.pack_padded_sequence(
             all_embs, length_input, batch_first=True, enforce_sorted=False
         )
 
         # feed embeddings through GRU
         packed_output, (hidden, cell) = self.text_rnn(packed)
-        # print(hidden.shape)
-        # print(packed_output.data.shape)
-        # print(cell.shape)
-        # sys.exit()
-        # split_point = int(self.text_gru_hidden_dim / 2)
-        # forward_hidden = hidden[-1, :, :split_point]
-        # backward_hidden = hidden[0, :, split_point:]
-        #
-        # print(split_point)
-        # print(forward_hidden.shape)
-        # print(backward_hidden.shape)
-        # sys.exit()
-
-        # all_hidden = torch.cat((forward_hidden, backward_hidden), dim=1)
-        # print(all_hidden.shape)
-        # sys.exit()
-        # padded_output, lens = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first=True)
         encoded_text = F.dropout(hidden[-1], 0.3)
-        # encoded_text = F.dropout(all_hidden, self.dropout)
-
-        # encoded_text = hidden[-1]
-
-        # print(encoded_text.shape)
 
         if acoustic_len_input is not None:
-            print("Accessing acoustic RNN")
             # print(acoustic_input.shape)
             # acoustic_input = self.acoustic_batch_norm(acoustic_input.permute(0, 2, 1))
             # print(acoustic_input.shape)
             # acoustic_input = acoustic_input.permute(0, 2, 1)
             packed_acoustic = nn.utils.rnn.pack_padded_sequence(
                 acoustic_input,
-                acoustic_len_input,
+                # acoustic_len_input,
+                acoustic_len_input.clamp(max=1500),
                 batch_first=True,
                 enforce_sorted=False,
             )
-            print("acoustic data packed")
-            print(packed_acoustic.data.shape)
             (
                 packed_acoustic_output,
                 (acoustic_hidden, acoustic_cell),
             ) = self.acoustic_rnn(packed_acoustic)
             encoded_acoustic = F.dropout(acoustic_hidden[-1], self.dropout)
             # encoded_acoustic = acoustic_hidden[-1]
-            print("Acoustic data fed through RNN")
 
         else:
             # print(acoustic_input.shape)
@@ -247,7 +216,6 @@ class EarlyFusionMultimodalModel(nn.Module):
             else:
                 encoded_acoustic = acoustic_input
 
-        print(encoded_acoustic.shape)
         encoded_acoustic = torch.tanh(
             F.dropout(self.acoustic_fc_1(encoded_acoustic), self.dropout)
         )

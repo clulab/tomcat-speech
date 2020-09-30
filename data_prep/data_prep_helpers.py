@@ -350,7 +350,7 @@ def get_class_weights(y_tensor):
     labels = [int(y) for y in y_tensor]
     classes = sorted(list(set(labels)))
     weights = compute_class_weight("balanced", classes, labels)
-    return torch.tensor(weights)
+    return torch.tensor(weights, dtype=torch.float)
 
 
 # def get_class_weights(y_set):
@@ -587,7 +587,7 @@ def make_acoustic_set(
 
             if not avgd and not add_avging:
                 # set intermediate acoustic holder
-                acoustic_holder = [[0] * acoustic_length] * longest_acoustic
+                acoustic_holder = torch.zeros((longest_acoustic, acoustic_length))
 
                 # add the acoustic features to the holder of features
                 for i, feats in enumerate(acoustic_data):
@@ -599,16 +599,20 @@ def make_acoustic_set(
                         acoustic_holder[i][j] = feat
             else:
                 if avgd:
-                    acoustic_holder = acoustic_data
+                    acoustic_holder = torch.tensor(acoustic_data)
                 elif add_avging:
-                    acoustic_holder = torch.mean(torch.tensor(acoustic_data), dim=0)
+                    # acoustic_holder = torch.mean(torch.tensor(acoustic_data), dim=0)
+                    # acoustic_holder = torch.mean(torch.tensor(acoustic_data)[10:min(1491, len(acoustic_data) - 9)], dim=0)
+                    # try skipping first and last 5%
+                    data_len = len(acoustic_data)
+                    acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.05):math.ceil(data_len * 0.95)], dim=0)
 
                     # get average of all non-padding vectors
                     # nonzero_avg = get_nonzero_avg(torch.tensor(acoustic_data))
                     # acoustic_holder = nonzero_avg
 
             # add features as tensor to acoustic data
-            all_acoustic.append(torch.tensor(acoustic_holder))
+            all_acoustic.append(acoustic_holder)
 
     # pad the sequence and reshape it to proper format
     # this is here to keep the formatting for acoustic RNN

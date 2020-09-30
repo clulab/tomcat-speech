@@ -93,11 +93,12 @@ class MustardPrep:
         self.longest_utt = get_longest_utt(self.utterances["utterance"])
         self.longest_dia = None  # mustard is not organized as dialogues
 
-        self.longest_acoustic = get_max_num_acoustic_frames(
-            list(self.train_dict.values())
-            + list(self.dev_dict.values())
-            + list(self.test_dict.values())
-        )
+        self.longest_acoustic = 1500
+        # self.longest_acoustic = get_max_num_acoustic_frames(
+        #     list(self.train_dict.values())
+        #     # + list(self.dev_dict.values())
+        #     # + list(self.test_dict.values())
+        # )
 
         # get acoustic and usable utterance data
         self.train_acoustic, self.train_usable_utts = make_acoustic_set(
