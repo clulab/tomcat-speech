@@ -2,7 +2,9 @@
 
 set -euo pipefail
 
-# Script to download/sync ASIST data
+# Script to download/sync ASIST data.
+# Note: This does not work with Python 3.8 (as of 2020-10-01), but it does work
+# with Python 3.7.
 
 # Set the ROOTDIR environment variable, assuming that the directory structure
 # mirrors that of the git repository.
