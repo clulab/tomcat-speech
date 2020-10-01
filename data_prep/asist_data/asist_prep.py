@@ -1,20 +1,7 @@
 # prepare the asist-produced audio and transcription data for neural classifiers
 
-##########################################################
-# in case of path error, use pathlib:
-#this expands ~ to full path, and saves it to variable home_dir
-package = 'pathlib'
-try:
-    __import__(package)
-except ImportError:
-    print("downloading module. . .")
-    import pip
-    pip.main(['install', package])
 import sys
 from pathlib import Path
-home_dir = Path('~').expanduser()
-sys.path.append(str(home_dir)+"/github/asist-speech")
-##########################################################
 
 
 import data_prep.audio_extraction as audio_extraction
@@ -213,7 +200,7 @@ class ASISTInput:
         self,
         asist_path,
         save_path,
-        smilepath= str(home_dir)+"/opensmile-2.3.0",
+        smilepath="opensmile-2.3.0",
         acoustic_feature_set="IS10",
         missions=None,
     ):
