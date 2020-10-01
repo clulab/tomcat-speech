@@ -1,6 +1,0 @@
-wheel
-torch
-pandas
-numpy
-sklearn
-matplotlib
