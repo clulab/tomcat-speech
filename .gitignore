@@ -4,6 +4,8 @@
 # python
 *.pyc
 */__pycache__/
+*egg-info
+pip-wheel-metadata
 
 # output directory
 output/
