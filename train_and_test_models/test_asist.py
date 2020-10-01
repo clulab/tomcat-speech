@@ -42,58 +42,74 @@ import sys
 import glob
 import os
 
-# set device
-cuda = True
-
-# Check CUDA
-if not torch.cuda.is_available():
-    cuda = False
-
-device = torch.device("cuda" if cuda else "cpu")
-
-# set random seed
-seed = params.seed
-torch.manual_seed(seed)
-np.random.seed(seed)
-random.seed(seed)
-if cuda:
-    torch.cuda.manual_seed_all(seed)
-
-# set parameters for data prep
-
-# If error in glove path, switch with:
-glove_file = "glove.short.300d.punct.txt"
-# 
-
-## If calling this from another pthon script:
-# glove_file = "../../glove.short.300d.punct.txt"
-input_dir = "output/asist_audio"
-# to test the data--this doesn't contain real outcomes
-y_path = "output/asist_audio/asist_ys/all_ys.csv"
-# set number of splits
-num_splits = 1
-# set model name and model type
-model = params.model
-model_type = "BimodalCNN_k=4"
-# set number of columns to skip in data input files
-cols_to_skip = 4 # 2 for Zoom, 4 for AWS
-# path to directory where best models are saved
-model_save_path = "output/models/"
-# make sure the full save path exists; if not, create it
-os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_save_path))
-# decide if you want to plot the loss/accuracy curves for training
-get_plot = True
-model_plot_path = "output/plots/"
-os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path))
-
-# decide if you want to use avgd feats
-avgd_acoustic = params.avgd_acoustic
-avgd_acoustic_in_network = params.avgd_acoustic or params.add_avging
-
-# set the path to the trained model
-saved_model = "output/models/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--input_dir",
+        help="Directory in which the input data resides",
+    )
+    parser.add_argument(
+        "--glove_file",
+        help="Path to Glove file",
+        default = "glove.short.300d.punct.txt"
+    )
+
+    # to test the data--this doesn't contain real outcomes
+    parser.add_argument(
+        "--ys_path",
+        help="Path to ys file",
+        default = "output/asist_audio/asist_ys/all_ys.csv"
+    )
+
+    args = parser.parse_args()
+    # set device
+    cuda = True
+
+    # Check CUDA
+    if not torch.cuda.is_available():
+        cuda = False
+
+    device = torch.device("cuda" if cuda else "cpu")
+
+    # set random seed
+    seed = params.seed
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    if cuda:
+        torch.cuda.manual_seed_all(seed)
+
+    # set parameters for data prep
+
+    # If error in glove path, switch with:
+
+    ## If calling this from another pthon script:
+
+    # set number of splits
+    num_splits = 1
+    # set model name and model type
+    model = params.model
+    model_type = "BimodalCNN_k=4"
+    # set number of columns to skip in data input files
+    cols_to_skip = 4 # 2 for Zoom, 4 for AWS
+    # path to directory where best models are saved
+    model_save_path = "output/models/"
+    # make sure the full save path exists; if not, create it
+    os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_save_path))
+    # decide if you want to plot the loss/accuracy curves for training
+    get_plot = True
+    model_plot_path = "output/plots/"
+    os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path))
+
+    # decide if you want to use avgd feats
+    avgd_acoustic = params.avgd_acoustic
+    avgd_acoustic_in_network = params.avgd_acoustic or params.add_avging
+
+    # set the path to the trained model
+    saved_model = "output/models/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
+
     # 0. RUN ASIST DATA PREP AND REORGANIZATION FOR INPUT INTO THE MODEL
     if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
         os.system("time python data_prep/asist_data/asist_prep.py")
@@ -122,7 +138,7 @@ if __name__ == "__main__":
     #         data_type="asist")
 
     # uncomment if using aws data
-    acoustic_dict = make_acoustic_dict(input_dir, "_avgd.csv", use_cols=[
+    acoustic_dict = make_acoustic_dict(args.input_dir, "_avgd.csv", use_cols=[
             "word",
             "speaker",
             "utt_num",
@@ -143,8 +159,8 @@ if __name__ == "__main__":
     print("Acoustic dict created")
 
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
-    print(glove_file)
-    glove_dict = make_glove_dict(glove_file)
+    print(args.glove_file)
+    glove_dict = make_glove_dict(args.glove_file)
     glove = Glove(glove_dict)
     print("Glove object created")
 
@@ -153,14 +169,14 @@ if __name__ == "__main__":
         acoustic_dict,
         glove,
         cols_to_skip=cols_to_skip,
-        ys_path=y_path,
+        ys_path=args.ys_path,
         splits=1,
         sequence_prep="pad",
         truncate_from="start",
         norm=None,
         add_avging=True
     )
-    print(y_path)
+    print(ys_path)
     # get data for testing
     test_data = data.current_split
     test_ds = DatumListDataset(test_data, None)
