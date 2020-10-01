@@ -3,20 +3,8 @@
 # add "prep_data" as an argument when running this from command line
 #       if your acoustic features have not been extracted from audio
 ##########################################################
-# in case of path error, use pathlib:
-#this expands ~ to full path, and saves it to variable home_dir
-package = 'pathlib'
-try:
-    __import__(package)
-except ImportError:
-    print("downloading module. . .")
-    import pip
-    pip.main(['install', package])
 import sys
 from pathlib import Path
-home_dir = Path('~').expanduser()
-sys.path.append(str(home_dir)+"/github/asist-speech")
-##########################################################
 from data_prep.asist_data.asist_dataset_creation import AsistDataset
 from models.train_and_test_models import *
 from models.input_models import *
