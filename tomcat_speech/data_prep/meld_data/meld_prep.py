@@ -60,7 +60,9 @@ class MeldPrep:
         self.acoustic_length = acoustic_length
 
         # get gender of speakers
-        self.speaker2gender = get_speaker_gender(f"{self.path}/speaker2idx.csv")
+        self.speaker2gender = get_speaker_gender(
+            f"{self.path}/speaker2idx.csv"
+        )
 
         # to determine whether incoming acoustic features are averaged
         self.avgd = avgd
@@ -162,7 +164,9 @@ class MeldPrep:
             self.dev_y_emo,
             self.dev_y_sent,
             self.dev_utt_lengths,
-        ) = self.make_meld_data_tensors(self.dev_data_file, self.dev_usable_utts, glove)
+        ) = self.make_meld_data_tensors(
+            self.dev_data_file, self.dev_usable_utts, glove
+        )
 
         (
             self.test_utts,
@@ -180,8 +184,12 @@ class MeldPrep:
         self.sentiment_weights = get_class_weights(self.train_y_sent)
 
         # acoustic feature normalization based on train
-        self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
-        self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
+        self.all_acoustic_means = self.train_acoustic.mean(
+            dim=0, keepdim=False
+        )
+        self.all_acoustic_deviations = self.train_acoustic.std(
+            dim=0, keepdim=False
+        )
 
         self.male_acoustic_means, self.male_deviations = get_gender_avgs(
             self.train_acoustic, self.train_genders, gender=2
@@ -191,7 +199,11 @@ class MeldPrep:
         )
 
         # get the data organized for input into the NNs
-        self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
+        (
+            self.train_data,
+            self.dev_data,
+            self.test_data,
+        ) = self.combine_xs_and_ys()
 
     def combine_xs_and_ys(self):
         """
@@ -295,7 +307,9 @@ class MeldPrep:
         test_utts_df = self.test_data_file
 
         # concatenate them and put utterances in array
-        all_utts_df = pd.concat([train_utts_df, dev_utts_df, test_utts_df], axis=0)
+        all_utts_df = pd.concat(
+            [train_utts_df, dev_utts_df, test_utts_df], axis=0
+        )
         all_utts = all_utts_df["Utterance"].tolist()
 
         for i, item in enumerate(all_utts):
@@ -305,7 +319,9 @@ class MeldPrep:
                 longest = len(item)
 
         # get longest dialogue length
-        longest_dia = max(all_utts_df["Utterance_ID"].tolist()) + 1  # because 0-indexed
+        longest_dia = (
+            max(all_utts_df["Utterance_ID"].tolist()) + 1
+        )  # because 0-indexed
 
         return longest, longest_dia
 
@@ -373,7 +389,9 @@ class MeldPrep:
             utt_lengths,
         )
 
-    def make_dialogue_aware_meld_data_tensors(self, text_path, all_utts_list, glove):
+    def make_dialogue_aware_meld_data_tensors(
+        self, text_path, all_utts_list, glove
+    ):
         """
         Prepare the tensors of utterances + speakers, emotion and sentiment scores
         This preserves dialogue structure for use within networks
@@ -458,7 +476,11 @@ class MeldPrep:
 
 # helper functions
 def make_acoustic_dict_meld(
-    acoustic_path, f_end="_IS10.csv", files_to_get=None, use_cols=None, avgd=True
+    acoustic_path,
+    f_end="_IS10.csv",
+    files_to_get=None,
+    use_cols=None,
+    avgd=True,
 ):
     """
     makes a dict of (dia, utt): data for use in MELD objects
@@ -479,10 +501,15 @@ def make_acoustic_dict_meld(
                 separator = ";"
 
             # read in the file as a dataframe
-            if files_to_get is None or "_".join(f.split("_")[:2]) in files_to_get:
+            if (
+                files_to_get is None
+                or "_".join(f.split("_")[:2]) in files_to_get
+            ):
                 if use_cols is not None:
                     feats = pd.read_csv(
-                        acoustic_path + "/" + f, usecols=use_cols, sep=separator
+                        acoustic_path + "/" + f,
+                        usecols=use_cols,
+                        sep=separator,
                     )
                 else:
                     feats = pd.read_csv(acoustic_path + "/" + f, sep=separator)
@@ -499,7 +526,9 @@ def make_acoustic_dict_meld(
                     acoustic_lengths[(dia_id, utt_id)] = feats.shape[0]
 
     # sort acoustic lengths so they are in the same order as other data
-    acoustic_lengths = [value for key, value in sorted(acoustic_lengths.items())]
+    acoustic_lengths = [
+        value for key, value in sorted(acoustic_lengths.items())
+    ]
 
     return acoustic_dict, acoustic_lengths
 

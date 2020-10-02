@@ -10,7 +10,10 @@ import torch
 from torch import nn
 from torchtext.data import get_tokenizer
 
-from tomcat_speech.data_prep.audio_extraction import ExtractAudio, convert_mp4_to_wav
+from tomcat_speech.data_prep.audio_extraction import (
+    ExtractAudio,
+    convert_mp4_to_wav,
+)
 import pandas as pd
 
 from tomcat_speech.data_prep.data_prep_helpers import (
@@ -69,7 +72,10 @@ class ChalearnPrep:
         # ordered dicts of acoustic data
         # todo: is this screwed up?
         #   ordered dict--is it same order as acoustic_lengths
-        self.train_dict, self.train_acoustic_lengths = make_acoustic_dict_chalearn(
+        (
+            self.train_dict,
+            self.train_acoustic_lengths,
+        ) = make_acoustic_dict_chalearn(
             "{0}/{1}".format(self.train_path, self.train_dir),
             f_end,
             use_cols=use_cols,
@@ -103,7 +109,10 @@ class ChalearnPrep:
 
         print("Finalizing acoustic organization")
 
-        self.train_acoustic, self.train_usable_utts = make_acoustic_set_chalearn(
+        (
+            self.train_acoustic,
+            self.train_usable_utts,
+        ) = make_acoustic_set_chalearn(
             self.train,
             self.train_dict,
             acoustic_length=acoustic_length,
@@ -140,7 +149,9 @@ class ChalearnPrep:
             self.train_y_consc,
             self.train_y_inter,
             self.train_utt_lengths,
-        ) = self.make_data_tensors(self.train_data_file, self.train_usable_utts, glove)
+        ) = self.make_data_tensors(
+            self.train_data_file, self.train_usable_utts, glove
+        )
 
         (
             self.dev_utts,
@@ -153,7 +164,9 @@ class ChalearnPrep:
             self.dev_y_consc,
             self.dev_y_inter,
             self.dev_utt_lengths,
-        ) = self.make_data_tensors(self.dev_data_file, self.dev_usable_utts, glove)
+        ) = self.make_data_tensors(
+            self.dev_data_file, self.dev_usable_utts, glove
+        )
 
         # (
         #     self.test_utts,
@@ -179,8 +192,12 @@ class ChalearnPrep:
         # self.openness_weights = get_class_weights()
 
         # acoustic feature normalization based on train
-        self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
-        self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
+        self.all_acoustic_means = self.train_acoustic.mean(
+            dim=0, keepdim=False
+        )
+        self.all_acoustic_deviations = self.train_acoustic.std(
+            dim=0, keepdim=False
+        )
 
         self.male_acoustic_means, self.male_deviations = get_gender_avgs(
             self.train_acoustic, self.train_genders, gender=1
@@ -445,7 +462,9 @@ def preprocess_chalearn_data(
         # extract features using opensmile
         for audio_file in os.listdir(path_to_files):
             audio_name = audio_file.split(".wav")[0]
-            audio_save_name = str(audio_name) + "_" + acoustic_feature_set + ".csv"
+            audio_save_name = (
+                str(audio_name) + "_" + acoustic_feature_set + ".csv"
+            )
             extractor = ExtractAudio(
                 path_to_files, audio_file, acoustic_save_path, smile_path
             )
@@ -477,7 +496,9 @@ def create_gold_tsv_chalearn(gold_file, utts_file, gender_file, save_name):
     if all_files != all_files_utts:
         print("utts dict and gold labels don't contain the same set of files")
     if all_files != sorted(genders_dict.keys()):
-        print("gold labels and gender labels don't contain the same set of files")
+        print(
+            "gold labels and gender labels don't contain the same set of files"
+        )
 
     with open(save_name, "w") as tsvfile:
         tsvfile.write(
@@ -540,7 +561,9 @@ def make_acoustic_dict_chalearn(
                 acoustic_lengths[id] = feats.shape[0]
 
     # sort acoustic lengths so they are in the same order as other data
-    acoustic_lengths = [value for key, value in sorted(acoustic_lengths.items())]
+    acoustic_lengths = [
+        value for key, value in sorted(acoustic_lengths.items())
+    ]
 
     return acoustic_dict, acoustic_lengths
 
@@ -603,7 +626,9 @@ def make_acoustic_set_chalearn(
                 if avgd:
                     acoustic_holder = acoustic_data
                 elif add_avging:
-                    acoustic_holder = torch.mean(torch.tensor(acoustic_data), dim=0)
+                    acoustic_holder = torch.mean(
+                        torch.tensor(acoustic_data), dim=0
+                    )
 
             # add features as tensor to acoustic data
             all_acoustic.append(torch.tensor(acoustic_holder))

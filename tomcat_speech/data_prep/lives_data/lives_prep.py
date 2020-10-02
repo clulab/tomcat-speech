@@ -89,7 +89,9 @@ class ClinicalDataset(Dataset):
             for row in call.itertuples():
                 for i, wd in enumerate(row):
                     if i >= self.cols_to_skip + 1:
-                        self.min_max_scaler.update((i - (self.cols_to_skip + 1)), wd)
+                        self.min_max_scaler.update(
+                            (i - (self.cols_to_skip + 1)), wd
+                        )
 
     def __len__(self):
         return len(self.current_split)
@@ -111,7 +113,9 @@ class ClinicalDataset(Dataset):
             for key, val in self.data_for_model_input.items()
             if (key != n and key != prev)
         ]
-        self.remaining_splits = functools.reduce(operator.iconcat, remaining_splits, [])
+        self.remaining_splits = functools.reduce(
+            operator.iconcat, remaining_splits, []
+        )
 
     def get_data_splits(self):
         data_dict = {}
@@ -233,7 +237,9 @@ class ClinicalDataset(Dataset):
                 else:
                     acoustic_data.append(torch.tensor(intermediate_acoustic))
                     ordered_words.append(torch.tensor(intermediate_wds))
-                    ordered_speakers.append(torch.tensor(intermediate_speakers))
+                    ordered_speakers.append(
+                        torch.tensor(intermediate_speakers)
+                    )
 
         # use zero-padding to make all sequences the same length
         # if we need to pad, we MUST pack
@@ -251,11 +257,15 @@ class ClinicalDataset(Dataset):
             if self.truncate_from == "start":
                 acoustic_data = [item[-smallest:] for item in acoustic_data]
                 ordered_words = [item[-smallest:] for item in ordered_words]
-                ordered_speakers = [item[-smallest:] for item in ordered_speakers]
+                ordered_speakers = [
+                    item[-smallest:] for item in ordered_speakers
+                ]
             else:
                 acoustic_data = [item[:smallest] for item in acoustic_data]
                 ordered_words = [item[:smallest] for item in ordered_words]
-                ordered_speakers = [item[:smallest] for item in ordered_speakers]
+                ordered_speakers = [
+                    item[:smallest] for item in ordered_speakers
+                ]
 
             acoustic_data = torch.tensor(acoustic_data)
             ordered_words = torch.tensor(ordered_words)
@@ -336,7 +346,9 @@ class ClinicalDataset(Dataset):
                 else:
                     acoustic_data.append(torch.tensor(intermediate_acoustic))
                     ordered_words.append(torch.tensor(intermediate_wds))
-                    ordered_speakers.append(torch.tensor(intermediate_speakers))
+                    ordered_speakers.append(
+                        torch.tensor(intermediate_speakers)
+                    )
 
         # use zero-padding to make all sequences the same length
         # if we need to pad, we MUST pack
@@ -354,11 +366,15 @@ class ClinicalDataset(Dataset):
             if self.truncate_from == "start":
                 acoustic_data = [item[-smallest:] for item in acoustic_data]
                 ordered_words = [item[-smallest:] for item in ordered_words]
-                ordered_speakers = [item[-smallest:] for item in ordered_speakers]
+                ordered_speakers = [
+                    item[-smallest:] for item in ordered_speakers
+                ]
             else:
                 acoustic_data = [item[:smallest] for item in acoustic_data]
                 ordered_words = [item[:smallest] for item in ordered_words]
-                ordered_speakers = [item[:smallest] for item in ordered_speakers]
+                ordered_speakers = [
+                    item[:smallest] for item in ordered_speakers
+                ]
 
             acoustic_data = torch.tensor(acoustic_data)
             ordered_words = torch.tensor(ordered_words)
@@ -399,7 +415,9 @@ class ClinicalDataset(Dataset):
 
         for i, item in enumerate(self.x_acoustic):
             # print(i)
-            all_data.append((item, self.x_glove[i], self.x_speaker[i], self.y_data[i]))
+            all_data.append(
+                (item, self.x_glove[i], self.x_speaker[i], self.y_data[i])
+            )
 
         return all_data
 

@@ -4,7 +4,9 @@
 #       if your acoustic features have not been extracted from audio
 ##########################################################
 import sys
-from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDataset
+from tomcat_speech.data_prep.asist_data.asist_dataset_creation import (
+    AsistDataset,
+)
 from tomcat_speech.models.train_and_test_models import *
 from tomcat_speech.models.input_models import *
 
@@ -28,6 +30,7 @@ import os
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--input_dir",
@@ -36,13 +39,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--glove_file",
         help="Path to Glove file",
-        default = "glove.short.300d.punct.txt"
+        default="glove.short.300d.punct.txt",
     )
     # to test the data--this doesn't contain real outcomes
     parser.add_argument(
         "--ys_path",
         help="Path to ys file",
-        default = "output/asist_audio/asist_ys/all_ys.csv"
+        default="output/asist_audio/asist_ys/all_ys.csv",
     )
     args = parser.parse_args()
     # set device
@@ -67,15 +70,19 @@ if __name__ == "__main__":
     model = params.model
     model_type = "BimodalCNN_k=4"
     # set number of columns to skip in data input files
-    cols_to_skip = 4 # 2 for Zoom, 4 for AWS
+    cols_to_skip = 4  # 2 for Zoom, 4 for AWS
     # path to directory where best models are saved
     model_save_path = "output/models/"
     # make sure the full save path exists; if not, create it
-    os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_save_path))
+    os.system(
+        'if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_save_path)
+    )
     # decide if you want to plot the loss/accuracy curves for training
     get_plot = True
     model_plot_path = "output/plots/"
-    os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path))
+    os.system(
+        'if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path)
+    )
     # decide if you want to use avgd feats
     avgd_acoustic = params.avgd_acoustic
     avgd_acoustic_in_network = params.avgd_acoustic or params.add_avging
@@ -85,7 +92,9 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
         os.system("time python data_prep/asist_data/asist_prep.py")
     elif len(sys.argv) > 1 and sys.argv[1] == "mp4_data":
-        os.system("time python data_prep/asist_data/asist_prep.py mp4_data")  # fixme
+        os.system(
+            "time python data_prep/asist_data/asist_prep.py mp4_data"
+        )  # fixme
     elif len(sys.argv) > 1 and sys.argv[1] == "m4a_data":
         os.system("time python data_prep/asist_data/asist_prep.py m4a_data")
     # 1. IMPORT AUDIO AND TEXT
@@ -107,7 +116,10 @@ if __name__ == "__main__":
     #          ],
     #         data_type="asist")
     # uncomment if using aws data
-    acoustic_dict = make_acoustic_dict(args.input_dir, "_avgd.csv", use_cols=[
+    acoustic_dict = make_acoustic_dict(
+        args.input_dir,
+        "_avgd.csv",
+        use_cols=[
             "word",
             "speaker",
             "utt_num",
@@ -122,8 +134,9 @@ if __name__ == "__main__":
             "voicingFinalUnclipped_sma_de",
             "jitterLocal_sma_de",
             "shimmerLocal_sma_de",
-             ],
-            data_type="asist")
+        ],
+        data_type="asist",
+    )
     print("Acoustic dict created")
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
     print(args.glove_file)
@@ -140,7 +153,7 @@ if __name__ == "__main__":
         sequence_prep="pad",
         truncate_from="start",
         norm=None,
-        add_avging=True
+        add_avging=True,
     )
     print(ys_path)
     # get data for testing
@@ -151,7 +164,9 @@ if __name__ == "__main__":
     # get set of pretrained embeddings and their shape
     pretrained_embeddings = glove.data
     num_embeddings = pretrained_embeddings.size()[0]
-    print("shape of pretrained embeddings is: {0}".format(data.glove.data.size()))
+    print(
+        "shape of pretrained embeddings is: {0}".format(data.glove.data.size())
+    )
     # create test model
     classifier = EarlyFusionMultimodalModel(
         params=params,

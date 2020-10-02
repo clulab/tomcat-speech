@@ -39,7 +39,9 @@ def subset_glove(glove_path, vocab_set, vec_len=100, add_unk=True):
                 num_items += 1
                 subset.append(vals)
                 if add_unk:
-                    unk_vec = unk_vec + np.array([float(item) for item in vals[1:]])
+                    unk_vec = unk_vec + np.array(
+                        [float(item) for item in vals[1:]]
+                    )
     if add_unk:
         unk_vec = unk_vec / num_items
         unk_vec = ["<UNK>"] + unk_vec.tolist()
