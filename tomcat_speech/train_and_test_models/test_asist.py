@@ -4,7 +4,6 @@
 #       if your acoustic features have not been extracted from audio
 ##########################################################
 import sys
-from pathlib import Path
 from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDataset
 from tomcat_speech.models.train_and_test_models import *
 from tomcat_speech.models.input_models import *
@@ -24,7 +23,6 @@ import numpy as np
 import random
 import torch
 import sys
-import glob
 import os
 
 
@@ -40,24 +38,19 @@ if __name__ == "__main__":
         help="Path to Glove file",
         default = "glove.short.300d.punct.txt"
     )
-
     # to test the data--this doesn't contain real outcomes
     parser.add_argument(
         "--ys_path",
         help="Path to ys file",
         default = "output/asist_audio/asist_ys/all_ys.csv"
     )
-
     args = parser.parse_args()
     # set device
     cuda = True
-
     # Check CUDA
     if not torch.cuda.is_available():
         cuda = False
-
     device = torch.device("cuda" if cuda else "cpu")
-
     # set random seed
     seed = params.seed
     torch.manual_seed(seed)
@@ -65,13 +58,9 @@ if __name__ == "__main__":
     random.seed(seed)
     if cuda:
         torch.cuda.manual_seed_all(seed)
-
     # set parameters for data prep
-
     # If error in glove path, switch with:
-
     ## If calling this from another pthon script:
-
     # set number of splits
     num_splits = 1
     # set model name and model type
@@ -87,14 +76,11 @@ if __name__ == "__main__":
     get_plot = True
     model_plot_path = "output/plots/"
     os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path))
-
     # decide if you want to use avgd feats
     avgd_acoustic = params.avgd_acoustic
     avgd_acoustic_in_network = params.avgd_acoustic or params.add_avging
-
     # set the path to the trained model
     saved_model = "output/models/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
-
     # 0. RUN ASIST DATA PREP AND REORGANIZATION FOR INPUT INTO THE MODEL
     if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
         os.system("time python data_prep/asist_data/asist_prep.py")
@@ -102,7 +88,6 @@ if __name__ == "__main__":
         os.system("time python data_prep/asist_data/asist_prep.py mp4_data")  # fixme
     elif len(sys.argv) > 1 and sys.argv[1] == "m4a_data":
         os.system("time python data_prep/asist_data/asist_prep.py m4a_data")
-
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
     # comment out if using aws data
@@ -121,7 +106,6 @@ if __name__ == "__main__":
     #         "shimmerLocal_sma_de",
     #          ],
     #         data_type="asist")
-
     # uncomment if using aws data
     acoustic_dict = make_acoustic_dict(args.input_dir, "_avgd.csv", use_cols=[
             "word",
@@ -140,15 +124,12 @@ if __name__ == "__main__":
             "shimmerLocal_sma_de",
              ],
             data_type="asist")
-
     print("Acoustic dict created")
-
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
     print(args.glove_file)
     glove_dict = make_glove_dict(args.glove_file)
     glove = Glove(glove_dict)
     print("Glove object created")
-
     # 3. MAKE DATASET
     data = AsistDataset(
         acoustic_dict,
@@ -166,27 +147,22 @@ if __name__ == "__main__":
     test_data = data.current_split
     test_ds = DatumListDataset(test_data, None)
     print("Dataset created")
-
     # 6. CREATE NN
     # get set of pretrained embeddings and their shape
     pretrained_embeddings = glove.data
     num_embeddings = pretrained_embeddings.size()[0]
     print("shape of pretrained embeddings is: {0}".format(data.glove.data.size()))
-
     # create test model
     classifier = EarlyFusionMultimodalModel(
         params=params,
         num_embeddings=num_embeddings,
         pretrained_embeddings=pretrained_embeddings,
     )
-
     # get saved parameters
     classifier.load_state_dict(torch.load(saved_model))
     classifier.to(device)
-
     # set loss function
     loss_func = nn.CrossEntropyLoss(reduction="mean")
-
     # test the model
     ordered_predictions = predict_without_gold_labels(
         classifier,
@@ -197,7 +173,5 @@ if __name__ == "__main__":
         use_speaker=params.use_speaker,
         use_gender=params.use_gender,
     )
-
     print(ordered_predictions)
-
     # todo: add function to save predictions to json
