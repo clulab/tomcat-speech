@@ -1,7 +1,6 @@
 # prepare the asist-produced audio and transcription data for neural classifiers
 
 import sys
-from pathlib import Path
 
 
 import data_prep.audio_extraction as audio_extraction

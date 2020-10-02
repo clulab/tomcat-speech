@@ -1,9 +1,7 @@
 # prepare the data from MUStARD dataset
-import math
 import os
 import json
 from collections import OrderedDict
-import random
 
 import torch
 from torch import nn

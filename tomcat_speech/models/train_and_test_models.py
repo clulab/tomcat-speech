@@ -1,7 +1,5 @@
 # implement training and testing for models
 
-from collections import OrderedDict
-import random
 
 import torch
 import torch.nn as nn
