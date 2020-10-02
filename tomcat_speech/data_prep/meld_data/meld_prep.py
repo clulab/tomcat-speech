@@ -1,7 +1,6 @@
 # prepare MELD input for usage in networks
 
 import os
-import sys
 
 import pandas as pd
 

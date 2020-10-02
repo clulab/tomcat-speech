@@ -20,7 +20,6 @@ from tomcat_speech.models.parameters.multitask_params import params
 import numpy as np
 import random
 import torch
-import sys
 
 
 # set device

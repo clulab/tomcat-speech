@@ -4,7 +4,6 @@ import data_prep.audio_extraction as extraction
 
 import pandas as pd
 import os
-import sys
 
 # set paths
 # path to transcription files

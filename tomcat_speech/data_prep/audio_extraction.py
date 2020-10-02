@@ -4,7 +4,7 @@
 
 # required packages
 import os, sys
-import json, re
+import re
 from pprint import pprint
 import subprocess as sp
 
