@@ -11,9 +11,9 @@ import torch.optim as optim
 # import parameters for model
 from torch.utils.data import DataLoader
 
-from models.bimodal_models import BimodalCNN
-from models.parameters.multitask_params import *
-from models.plot_training import *
+from tomcat_speech.models.bimodal_models import BimodalCNN
+from tomcat_speech.models.parameters.multitask_params import *
+from tomcat_speech.models.plot_training import *
 
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score

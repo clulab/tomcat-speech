@@ -9,8 +9,8 @@ import torch
 from torch import nn
 from torchtext.data import get_tokenizer
 
-from data_prep.audio_extraction import convert_mp4_to_wav, ExtractAudio
-from data_prep.data_prep_helpers import (
+from tomcat_speech.data_prep.audio_extraction import convert_mp4_to_wav, ExtractAudio
+from tomcat_speech.data_prep.data_prep_helpers import (
     clean_up_word,
     get_speaker_to_index_dict,
     make_acoustic_dict,
@@ -20,7 +20,7 @@ from data_prep.data_prep_helpers import (
     transform_acoustic_item,
     create_data_folds,
 )
-from data_prep.meld_data.meld_prep import (
+from tomcat_speech.data_prep.meld_data.meld_prep import (
     get_max_num_acoustic_frames,
     make_acoustic_dict_meld,
 )

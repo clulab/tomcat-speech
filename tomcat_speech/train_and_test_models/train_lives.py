@@ -1,21 +1,21 @@
 # test the models created in py_code directory
 # currently the main entry point into the system
 
-from models.bimodal_models import BimodalCNN, MultichannelCNN
-from models.baselines import LRBaseline
-from models.train_and_test_models import *
+from tomcat_speech.models.bimodal_models import BimodalCNN, MultichannelCNN
+from tomcat_speech.models.baselines import LRBaseline
+from tomcat_speech.models.train_and_test_models import *
 
-from models.input_models import *
-from data_prep.lives_data.lives_prep import *
-from data_prep.data_prep_helpers import *
+from tomcat_speech.models.input_models import *
+from tomcat_speech.data_prep.lives_data.lives_prep import *
+from tomcat_speech.data_prep.data_prep_helpers import *
 
 # import parameters for model
 # comment or uncomment as needed
-# from models.parameters.bimodal_params import params
-from models.parameters.multitask_params import params
+# from tomcat_speech.models.parameters.bimodal_params import params
+from tomcat_speech.models.parameters.multitask_params import params
 
-# from models.parameters.lr_baseline_1_params import params
-# from models.parameters.multichannel_cnn_params import params
+# from tomcat_speech.models.parameters.lr_baseline_1_params import params
+# from tomcat_speech.models.parameters.multichannel_cnn_params import params
 
 import numpy as np
 import random
