@@ -88,7 +88,8 @@ def update_train_state(model, train_state):
 
         # Stop early ?
         train_state["stop_early"] = (
-            train_state["early_stopping_step"] >= params.early_stopping_criteria
+            train_state["early_stopping_step"]
+            >= params.early_stopping_criteria
         )
 
     return train_state
@@ -206,9 +207,13 @@ def train_and_predict(
             # print(y_gold)
             # add ys to holder for error analysis
             if binary:
-                preds_holder.extend([round(item[0]) for item in y_pred.tolist()])
+                preds_holder.extend(
+                    [round(item[0]) for item in y_pred.tolist()]
+                )
             else:
-                preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+                preds_holder.extend(
+                    [item.index(max(item)) for item in y_pred.tolist()]
+                )
             ys_holder.extend(y_gold.tolist())
 
             # step 3. compute the loss
@@ -219,7 +224,9 @@ def train_and_predict(
 
             if len(list(y_pred.size())) > 1:
                 if binary:
-                    y_pred = torch.tensor([round(item[0]) for item in y_pred.tolist()])
+                    y_pred = torch.tensor(
+                        [round(item[0]) for item in y_pred.tolist()]
+                    )
                 else:
                     y_pred = torch.tensor(
                         [item.index(max(item)) for item in y_pred.tolist()]
@@ -322,9 +329,13 @@ def train_and_predict(
 
             # add ys to holder for error analysis
             if binary:
-                preds_holder.extend([round(item[0]) for item in y_pred.tolist()])
+                preds_holder.extend(
+                    [round(item[0]) for item in y_pred.tolist()]
+                )
             else:
-                preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+                preds_holder.extend(
+                    [item.index(max(item)) for item in y_pred.tolist()]
+                )
             ys_holder.extend(y_gold.tolist())
 
             loss = loss_func(y_pred, y_gold)
@@ -333,7 +344,9 @@ def train_and_predict(
             # compute the loss
             if len(list(y_pred.size())) > 1:
                 if binary:
-                    y_pred = torch.tensor([round(item[0]) for item in y_pred.tolist()])
+                    y_pred = torch.tensor(
+                        [round(item[0]) for item in y_pred.tolist()]
+                    )
                 else:
                     y_pred = torch.tensor(
                         [item.index(max(item)) for item in y_pred.tolist()]
@@ -367,7 +380,9 @@ def train_and_predict(
         train_state["val_acc"].append(running_acc)
 
         # update the train state now that our epoch is complete
-        train_state = update_train_state(model=classifier, train_state=train_state)
+        train_state = update_train_state(
+            model=classifier, train_state=train_state
+        )
 
         # update scheduler if there is one
         if scheduler is not None:
@@ -467,8 +482,12 @@ def multitask_train_and_predict(
             #     sys.exit(1)
 
             # add ys to holder for error analysis
-            preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
-            preds_2_holder.extend([item.index(max(item)) for item in y_2_pred.tolist()])
+            preds_holder.extend(
+                [item.index(max(item)) for item in y_pred.tolist()]
+            )
+            preds_2_holder.extend(
+                [item.index(max(item)) for item in y_2_pred.tolist()]
+            )
             ys_holder.extend(y_gold.tolist())
             ys_2_holder.extend(y_2_gold.tolist())
 
@@ -562,8 +581,12 @@ def multitask_train_and_predict(
             y_2_gold = batch[5].to(device)
 
             # add ys to holder for error analysis
-            preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
-            preds_2_holder.extend([item.index(max(item)) for item in y_2_pred.tolist()])
+            preds_holder.extend(
+                [item.index(max(item)) for item in y_pred.tolist()]
+            )
+            preds_2_holder.extend(
+                [item.index(max(item)) for item in y_2_pred.tolist()]
+            )
             ys_holder.extend(y_gold.tolist())
             ys_2_holder.extend(y_2_gold.tolist())
 
@@ -603,7 +626,9 @@ def multitask_train_and_predict(
         train_state["val_loss"].append(running_loss)
 
         # update the train state now that our epoch is complete
-        train_state = update_train_state(model=classifier, train_state=train_state)
+        train_state = update_train_state(
+            model=classifier, train_state=train_state
+        )
 
         # update scheduler if there is one
         if scheduler is not None:
@@ -680,7 +705,9 @@ def test_model(
         y_gold = batch[4].to(device)
 
         # add ys to holder for error analysis
-        preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+        preds_holder.extend(
+            [item.index(max(item)) for item in y_pred.tolist()]
+        )
         ys_holder.extend(y_gold.tolist())
 
         loss = loss_func(y_pred, y_gold)
@@ -688,7 +715,9 @@ def test_model(
 
         # compute the loss
         if len(list(y_pred.size())) > 1:
-            y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
+            y_pred = torch.tensor(
+                [item.index(max(item)) for item in y_pred.tolist()]
+            )
         else:
             y_pred = torch.round(y_pred)
 
@@ -709,13 +738,15 @@ def test_model(
     print(classification_report(ys_holder, preds_holder, digits=4))
 
 
-def predict_without_gold_labels(classifier,
+def predict_without_gold_labels(
+    classifier,
     test_ds,
     batch_size,
     device="cpu",
     avgd_acoustic=True,
     use_speaker=True,
-    use_gender=False,):
+    use_gender=False,
+):
     """
     Test a pretrained model
     """
@@ -764,6 +795,8 @@ def predict_without_gold_labels(classifier,
             )
 
         # add ys to holder for error analysis
-        preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+        preds_holder.extend(
+            [item.index(max(item)) for item in y_pred.tolist()]
+        )
 
     return preds_holder

@@ -64,7 +64,9 @@ class EarlyFusionMultimodalModel(nn.Module):
     aligned at the word-level
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None):
+    def __init__(
+        self, params, num_embeddings=None, pretrained_embeddings=None
+    ):
         super(EarlyFusionMultimodalModel, self).__init__()
         # input text + acoustic + speaker
         self.text_dim = params.text_dim
@@ -126,7 +128,9 @@ class EarlyFusionMultimodalModel(nn.Module):
         self.embedding = nn.Embedding(
             num_embeddings, self.text_dim, _weight=pretrained_embeddings
         )
-        self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
+        self.short_embedding = nn.Embedding(
+            num_embeddings, params.short_emb_dim
+        )
         # self.embedding = nn.Embedding(num_embeddings, self.text_dim)
         # self.text_batch_norm = nn.BatchNorm1d(self.text_dim + params.short_emb_dim)
 
@@ -255,9 +259,13 @@ class EarlyFusionMultimodalModel(nn.Module):
         # combine modalities as required by architecture
         # inputs = torch.cat((acoustic_input, encoded_text), 1)
         if speaker_input is not None:
-            inputs = torch.cat((encoded_acoustic, encoded_text, speaker_embs), 1)
+            inputs = torch.cat(
+                (encoded_acoustic, encoded_text, speaker_embs), 1
+            )
         elif gender_input is not None:
-            inputs = torch.cat((encoded_acoustic, encoded_text, gender_embs), 1)
+            inputs = torch.cat(
+                (encoded_acoustic, encoded_text, gender_embs), 1
+            )
         else:
             inputs = torch.cat((encoded_acoustic, encoded_text), 1)
 
@@ -282,14 +290,18 @@ class LateFusionMultimodalModel(nn.Module):
     A late fusion model that combines modalities only at decision time
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None):
+    def __init__(
+        self, params, num_embeddings=None, pretrained_embeddings=None
+    ):
         super(LateFusionMultimodalModel, self).__init__()
         self.text_dim = params.text_dim
         self.audio_dim = params.audio_dim
         self.num_embeddings = num_embeddings
         self.num_speakers = params.num_speakers
         self.text_gru_hidden_dim = params.text_gru_hidden_dim
-        self.text_fc_input_dim = params.text_gru_hidden_dim + params.gender_emb_dim
+        self.text_fc_input_dim = (
+            params.text_gru_hidden_dim + params.gender_emb_dim
+        )
         self.text_fc_hidden_dim = 100
 
         # get number of output dims
@@ -305,7 +317,9 @@ class LateFusionMultimodalModel(nn.Module):
         )
 
         # initialize fully connected layers
-        self.text_fc1 = nn.Linear(self.text_fc_input_dim, self.text_fc_hidden_dim)
+        self.text_fc1 = nn.Linear(
+            self.text_fc_input_dim, self.text_fc_hidden_dim
+        )
         self.text_fc2 = nn.Linear(self.text_fc_hidden_dim, params.output_dim)
 
         # initialize acoustic portions of model
@@ -335,7 +349,9 @@ class LateFusionMultimodalModel(nn.Module):
         self.embedding = nn.Embedding(
             num_embeddings, self.text_dim, _weight=pretrained_embeddings
         )
-        self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
+        self.short_embedding = nn.Embedding(
+            num_embeddings, params.short_emb_dim
+        )
 
         # initialize speaker embeddings
         self.speaker_embedding = nn.Embedding(
@@ -504,7 +520,10 @@ class AudioOnlyRNN(nn.Module):
         # acoustic_input = self.acoustic_batch_norm(acoustic_input)
         # pack acoustic input
         packed = nn.utils.rnn.pack_padded_sequence(
-            acoustic_input, length_input, batch_first=True, enforce_sorted=False
+            acoustic_input,
+            length_input,
+            batch_first=True,
+            enforce_sorted=False,
         )
 
         # feed embeddings through GRU
@@ -576,11 +595,17 @@ class TextOnlyCNN(nn.Module):
             )
             self.pretrained_embeddings = True
 
-        self.conv1 = nn.Conv1d(self.in_channels, self.out_channels, self.k1_size)
+        self.conv1 = nn.Conv1d(
+            self.in_channels, self.out_channels, self.k1_size
+        )
         self.maxconv1 = nn.MaxPool1d(kernel_size=self.k1_size)
-        self.conv2 = nn.Conv1d(self.in_channels, self.out_channels, self.k2_size)
+        self.conv2 = nn.Conv1d(
+            self.in_channels, self.out_channels, self.k2_size
+        )
         self.maxconv2 = nn.MaxPool1d(kernel_size=self.k2_size)
-        self.conv3 = nn.Conv1d(self.in_channels, self.out_channels, self.k3_size)
+        self.conv3 = nn.Conv1d(
+            self.in_channels, self.out_channels, self.k3_size
+        )
         self.maxconv3 = nn.MaxPool1d(kernel_size=self.k3_size)
 
         # a second convolutional layer to run on top of the first ones
@@ -640,7 +665,9 @@ class TextOnlyCNN(nn.Module):
         # conv6_out = F.leaky_relu(self.conv6(torch.cat((feats4, feats5), 1)))
 
         # feats6
-        all_feats = F.max_pool1d(intermediate, intermediate.size(dim=2)).squeeze(dim=2)
+        all_feats = F.max_pool1d(
+            intermediate, intermediate.size(dim=2)
+        ).squeeze(dim=2)
 
         # all_feats = torch.cat((feats4, feats5, feats6), 1)
 
@@ -681,7 +708,10 @@ class MultitaskModel(nn.Module):
     """
 
     def __init__(
-        self, params, num_embeddings=None, pretrained_embeddings=None,
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
     ):
         super(MultitaskModel, self).__init__()
         # set base of model

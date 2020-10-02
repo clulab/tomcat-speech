@@ -113,9 +113,7 @@ if __name__ == "__main__":
             # model_type = f"TextOnly_smallerPool_100batch_wd{str(wd)}_.2split_500hidden"
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
             # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
-            model_type = (
-                "MELD_IS10sm_500txthid_.1InDrpt_.3textdrpt_.4acdrpt_.5finalFCdrpt"
-            )
+            model_type = "MELD_IS10sm_500txthid_.1InDrpt_.3textdrpt_.4acdrpt_.5finalFCdrpt"
 
             # this uses train-dev-test folds
             # create instance of model
@@ -181,7 +179,9 @@ if __name__ == "__main__":
             )
 
             # make the train state to keep track of model training/development
-            train_state = make_train_state(lr, model_save_path, model_save_file)
+            train_state = make_train_state(
+                lr, model_save_path, model_save_file
+            )
 
             # train the model and evaluate on development set
             if multitask:
@@ -222,14 +222,22 @@ if __name__ == "__main__":
 
             # plot the loss and accuracy curves
             # set plot titles
-            loss_title = "Training and Dev loss for model {0} with lr {1}".format(
+            loss_title = (
+                "Training and Dev loss for model {0} with lr {1}".format(
+                    model_type, lr
+                )
+            )
+            acc_title = "Avg F scores for model {0} with lr {1}".format(
                 model_type, lr
             )
-            acc_title = "Avg F scores for model {0} with lr {1}".format(model_type, lr)
 
             # set save names
-            loss_save = "output/plots/{0}_lr{1}_loss.png".format(model_type, lr)
-            acc_save = "output/plots/{0}_lr{1}_avg_f1.png".format(model_type, lr)
+            loss_save = "output/plots/{0}_lr{1}_loss.png".format(
+                model_type, lr
+            )
+            acc_save = "output/plots/{0}_lr{1}_avg_f1.png".format(
+                model_type, lr
+            )
 
             # plot the loss from model
             plot_train_dev_curve(

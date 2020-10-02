@@ -25,7 +25,9 @@ class DatumListDataset(Dataset):
     A dataset to hold a list of datums
     """
 
-    def __init__(self, data_list, data_type="meld_emotion", class_weights=None):
+    def __init__(
+        self, data_list, data_type="meld_emotion", class_weights=None
+    ):
         self.data_list = data_list
         self.data_type = data_type
 
@@ -49,7 +51,8 @@ class DatumListDataset(Dataset):
             for datum in self.data_list:
                 yield datum[4]
         elif (
-            self.data_type == "meld_sentiment" or self.data_type == "ravdess_intensity"
+            self.data_type == "meld_sentiment"
+            or self.data_type == "ravdess_intensity"
         ):
             for datum in self.data_list:
                 yield datum[5]
@@ -132,7 +135,9 @@ class MinMaxScaleRange:
     use min-max scaling
     """
 
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         self.mins = {}
         self.maxes = {}
 
@@ -390,10 +395,15 @@ def make_acoustic_dict(
     acoustic_dict = {}
     for f in os.listdir(acoustic_path):
         if f.endswith(f_end):
-            if files_to_get is None or "_".join(f.split("_")[:2]) in files_to_get:
+            if (
+                files_to_get is None
+                or "_".join(f.split("_")[:2]) in files_to_get
+            ):
                 if use_cols is not None:
                     try:
-                        feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
+                        feats = pd.read_csv(
+                            acoustic_path + "/" + f, usecols=use_cols
+                        )
                     except ValueError:
                         # todo: add warning
                         feats = []
@@ -461,7 +471,9 @@ def make_acoustic_set(
         if (item.split("_")[0], item.split("_")[1]) in acoustic_dict.keys():
 
             # pull out the acoustic feats dataframe
-            acoustic_data = acoustic_dict[(item.split("_")[0], item.split("_")[1])]
+            acoustic_data = acoustic_dict[
+                (item.split("_")[0], item.split("_")[1])
+            ]
 
             # add this dialogue + utt combo to the list of possible ones
             usable_utts.append((item.split("_")[0], item.split("_")[1]))
@@ -482,7 +494,9 @@ def make_acoustic_set(
                 if avgd:
                     acoustic_holder = acoustic_data
                 elif add_avging:
-                    acoustic_holder = torch.mean(torch.tensor(acoustic_data), dim=0)
+                    acoustic_holder = torch.mean(
+                        torch.tensor(acoustic_data), dim=0
+                    )
 
                     # get average of all non-padding vectors
                     # nonzero_avg = get_nonzero_avg(torch.tensor(acoustic_data))
@@ -538,7 +552,9 @@ def scale_feature(value, min_val, max_val, lower=0.0, upper=1.0):
         return upper
     else:
         # the result will be a value in [lower, upper]
-        return lower + (upper - lower) * (value - min_val) / (max_val - min_val)
+        return lower + (upper - lower) * (value - min_val) / (
+            max_val - min_val
+        )
 
 
 def transform_acoustic_item(item, acoustic_means, acoustic_stdev):

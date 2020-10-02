@@ -188,10 +188,14 @@ if __name__ == "__main__":
             # combine train and dev data
             train_and_dev = data.train_data + data.dev_data
 
-            train_data, dev_data = train_test_split(train_and_dev, test_size=0.2)  # .3
+            train_data, dev_data = train_test_split(
+                train_and_dev, test_size=0.2
+            )  # .3
 
             train_ds = DatumListDataset(
-                train_data, data_type="meld_emotion", class_weights=data.emotion_weights
+                train_data,
+                data_type="meld_emotion",
+                class_weights=data.emotion_weights,
             )
             # train_targets = torch.stack(list(train_ds.targets()))
             # sampler_weights = data.emotion_weights
@@ -215,7 +219,9 @@ if __name__ == "__main__":
             )
 
             # make the train state to keep track of model training/development
-            train_state = make_train_state(lr, model_save_path, model_save_file)
+            train_state = make_train_state(
+                lr, model_save_path, model_save_file
+            )
 
             # train the model and evaluate on development set
             if multitask:
@@ -255,14 +261,22 @@ if __name__ == "__main__":
 
             # plot the loss and accuracy curves
             # set plot titles
-            loss_title = "Training and Dev loss for model {0} with lr {1}".format(
+            loss_title = (
+                "Training and Dev loss for model {0} with lr {1}".format(
+                    model_type, lr
+                )
+            )
+            acc_title = "Avg F scores for model {0} with lr {1}".format(
                 model_type, lr
             )
-            acc_title = "Avg F scores for model {0} with lr {1}".format(model_type, lr)
 
             # set save names
-            loss_save = "output/plots/{0}_lr{1}_loss.png".format(model_type, lr)
-            acc_save = "output/plots/{0}_lr{1}_avg_f1.png".format(model_type, lr)
+            loss_save = "output/plots/{0}_lr{1}_loss.png".format(
+                model_type, lr
+            )
+            acc_save = "output/plots/{0}_lr{1}_avg_f1.png".format(
+                model_type, lr
+            )
 
             # plot the loss from model
             plot_train_dev_curve(

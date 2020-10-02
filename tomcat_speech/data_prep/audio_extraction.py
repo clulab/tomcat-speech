@@ -163,7 +163,7 @@ class AudioSplit:
                         str(timeend),
                         f"{self.fullp}/{speaker}/{n}",
                         "-loglevel",
-                        "quiet"
+                        "quiet",
                     ]
                 )
                 # Consider using a tqdm progress bar here - Adarsh
@@ -244,6 +244,7 @@ def transform_audio(txtfile):
                 audio_input.join_audio(f"{extension}-{speaker}.txt", speaker)
 
             sp.run(["rm", "-r", f"{path}/{extension}"])
+
 
 def load_feature_csv(audio_csv):
     """
@@ -368,7 +369,8 @@ def convert_mp4_to_wav(mp4_file):
         print(f"{wav_name} already exists")
 
     return wav_name
-    
+
+
 def convert_m4a_to_wav(m4a_file):
     # if the audio is in an mp4 file, convert to wav
     # file is saved to the location where the mp4 was found
@@ -383,6 +385,7 @@ def convert_m4a_to_wav(m4a_file):
         print("{} already exists".format(wav_name))
 
     return wav_name
+
 
 def extract_portions_of_mp4_or_wav(
     path_to_sound_file,

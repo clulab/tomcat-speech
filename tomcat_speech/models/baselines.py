@@ -57,7 +57,9 @@ class LRBaseline(nn.Module):
         super(LRBaseline, self).__init__()
         self.text_dim = params.text_dim
         self.audio_dim = params.audio_dim
-        self.input_dim = params.text_dim + params.audio_dim + params.spkr_emb_dim
+        self.input_dim = (
+            params.text_dim + params.audio_dim + params.spkr_emb_dim
+        )
 
         if params.use_speaker:
             self.speaker_embeddings = nn.Embedding(
@@ -91,7 +93,9 @@ class LRBaseline(nn.Module):
         # concatenate embedding + acoustic inut and feed this through linear layer
         if speaker_input is not None:
             spk_embs = self.speaker_embeddings(speaker_input)
-            inputs = torch.cat((acoustic_input, embs, spk_embs), 2).permute(0, 2, 1)
+            inputs = torch.cat((acoustic_input, embs, spk_embs), 2).permute(
+                0, 2, 1
+            )
         else:
             inputs = torch.cat((acoustic_input, embs), 2).permute(0, 2, 1)
 

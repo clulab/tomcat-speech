@@ -7,7 +7,10 @@ import torch
 from torch import nn
 from torchtext.data import get_tokenizer
 
-from tomcat_speech.data_prep.audio_extraction import convert_mp4_to_wav, ExtractAudio
+from tomcat_speech.data_prep.audio_extraction import (
+    convert_mp4_to_wav,
+    ExtractAudio,
+)
 from tomcat_speech.data_prep.data_prep_helpers import (
     clean_up_word,
     get_speaker_to_index_dict,
@@ -150,11 +153,19 @@ class MustardPrep:
         self.sarcasm_weights = get_class_weights(self.train_y_sarcasm)
 
         # acoustic feature normalization based on train
-        self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
-        self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
+        self.all_acoustic_means = self.train_acoustic.mean(
+            dim=0, keepdim=False
+        )
+        self.all_acoustic_deviations = self.train_acoustic.std(
+            dim=0, keepdim=False
+        )
 
         # get the data organized for input into the NNs
-        self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
+        (
+            self.train_data,
+            self.dev_data,
+            self.test_data,
+        ) = self.combine_xs_and_ys()
 
     def combine_xs_and_ys(self):
         """
