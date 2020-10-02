@@ -10,10 +10,10 @@ import torch
 from torch import nn
 from torchtext.data import get_tokenizer
 
-from data_prep.audio_extraction import ExtractAudio, convert_mp4_to_wav
+from tomcat_speech.data_prep.audio_extraction import ExtractAudio, convert_mp4_to_wav
 import pandas as pd
 
-from data_prep.data_prep_helpers import (
+from tomcat_speech.data_prep.data_prep_helpers import (
     get_class_weights,
     get_gender_avgs,
     clean_up_word,

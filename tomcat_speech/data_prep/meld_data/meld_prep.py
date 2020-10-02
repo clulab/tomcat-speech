@@ -9,7 +9,7 @@ import torch
 from torch import nn
 from torch.utils.data import Dataset
 
-from data_prep.data_prep_helpers import (
+from tomcat_speech.data_prep.data_prep_helpers import (
     clean_up_word,
     get_speaker_to_index_dict,
     get_max_num_acoustic_frames,

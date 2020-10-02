@@ -4,16 +4,16 @@ import sys
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-from data_prep.ravdess_data.ravdess_prep import RavdessPrep
-from models.train_and_test_models import *
+from tomcat_speech.data_prep.ravdess_data.ravdess_prep import RavdessPrep
+from tomcat_speech.models.train_and_test_models import *
 
-from models.input_models import *
-from data_prep.data_prep_helpers import *
-from data_prep.meld_data.meld_prep import *
-from data_prep.mustard_data.mustard_prep import *
+from tomcat_speech.models.input_models import *
+from tomcat_speech.data_prep.data_prep_helpers import *
+from tomcat_speech.data_prep.meld_data.meld_prep import *
+from tomcat_speech.data_prep.mustard_data.mustard_prep import *
 
 # import parameters for model
-from models.parameters.multitask_params import params
+from tomcat_speech.models.parameters.multitask_params import params
 
 sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 

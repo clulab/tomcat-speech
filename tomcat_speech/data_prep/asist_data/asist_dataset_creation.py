@@ -14,7 +14,7 @@ import operator
 import os
 import random
 
-from data_prep.data_prep_helpers import (
+from tomcat_speech.data_prep.data_prep_helpers import (
     MinMaxScaleRange,
     get_longest_utterance,
     clean_up_word,

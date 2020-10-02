@@ -5,23 +5,20 @@
 ##########################################################
 import sys
 from pathlib import Path
-from data_prep.asist_data.asist_dataset_creation import AsistDataset
-from models.train_and_test_models import *
-from models.input_models import *
+from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDataset
+from tomcat_speech.models.train_and_test_models import *
+from tomcat_speech.models.input_models import *
 
-from data_prep.data_prep_helpers import *
-from data_prep.data_prep_helpers import make_acoustic_dict
-import data_prep.asist_data.sentiment_score_prep as score_prep
-import data_prep.asist_data.asist_prep as asist_prep
+from tomcat_speech.data_prep.data_prep_helpers import *
 
 # import parameters for model
 # comment or uncomment as needed
-from models.parameters.bimodal_params import params
-from models.parameters.multitask_params import params
+# from tomcat_speech.models.parameters.bimodal_params import params
+from tomcat_speech.models.parameters.multitask_params import params
 
-# from models.parameters.multitask_params import params
-# from models.parameters.lr_baseline_1_params import params
-# from models.parameters.multichannel_cnn_params import params
+# from tomcat_speech.models.parameters.multitask_params import params
+# from tomcat_speech.models.parameters.lr_baseline_1_params import params
+# from tomcat_speech.models.parameters.multichannel_cnn_params import params
 
 import numpy as np
 import random

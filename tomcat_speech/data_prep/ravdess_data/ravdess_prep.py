@@ -6,11 +6,11 @@ import torch
 from torch import nn
 from torchtext.data import get_tokenizer
 
-from data_prep.audio_extraction import ExtractAudio
+from tomcat_speech.data_prep.audio_extraction import ExtractAudio
 import pandas as pd
 
-from data_prep.data_prep_helpers import get_class_weights, get_gender_avgs
-from data_prep.data_prep_helpers import create_data_folds_list
+from tomcat_speech.data_prep.data_prep_helpers import get_class_weights, get_gender_avgs
+from tomcat_speech.data_prep.data_prep_helpers import create_data_folds_list
 
 
 class RavdessPrep:

@@ -6,7 +6,7 @@ import sys
 
 import pandas as pd
 import numpy as np
-from data_prep.data_prep_helpers import clean_up_word
+from tomcat_speech.data_prep.data_prep_helpers import clean_up_word
 
 
 def get_all_vocab(data_dir):
