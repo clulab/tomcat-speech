@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# This script creates a virtual environment for the project and installs it as
+# an editable Python package. The script is primarily meant for developers
+# who need to install the package in editable mode, rather than end-users.
+
+# Usage: ./install
+
+# Set the ROOT environment variable, assuming that the directory structure
+# mirrors that of the git repository.
+ROOT="$(cd "$( dirname "${BASH_SOURCE[0]}" )/../" >/dev/null 2>&1 && pwd)"
+export ROOT
+
+# If a virtual enviroment exists for this project in the .venv directory,
+# activate it. If it doesn't exist yet, create it first.
+# Note: Whenever you are working on the project, activate this virtual
+# enviroment first.
+"$ROOT"/scripts/activate_virtualenv
+
+pip install -e .
