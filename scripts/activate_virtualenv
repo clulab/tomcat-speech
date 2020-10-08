@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# This script activates the virtual environment for the scivocab webapp,
-# creating it if it doesn't exist. After that, it installs the prerequisites
-# for the app.
+# This script activates the virtual environment for the project
+# creating it if it doesn't exist.
 # Usage: ./activate_virtualenv
 
 # Set the ROOT environment variable, assuming that the directory structure
