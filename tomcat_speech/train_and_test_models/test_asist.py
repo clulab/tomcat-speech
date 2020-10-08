@@ -41,6 +41,9 @@ if __name__ == "__main__":
         help="Path to Glove file",
         default="glove.short.300d.punct.txt",
     )
+        default = "glove.short.300d.punct.txt"
+    )
+
     # to test the data--this doesn't contain real outcomes
     parser.add_argument(
         "--ys_path",
@@ -48,12 +51,16 @@ if __name__ == "__main__":
         default="output/asist_audio/asist_ys/all_ys.csv",
     )
     args = parser.parse_args()
+
+
     # set device
     cuda = True
     # Check CUDA
     if not torch.cuda.is_available():
         cuda = False
     device = torch.device("cuda" if cuda else "cpu")
+
+
     # set random seed
     seed = params.seed
     torch.manual_seed(seed)
@@ -64,6 +71,13 @@ if __name__ == "__main__":
     # set parameters for data prep
     # If error in glove path, switch with:
     ## If calling this from another pthon script:
+
+    # set parameters for data prep
+
+    # If error in glove path, switch with:
+
+    ## If calling this from another pthon script:
+
     # set number of splits
     num_splits = 1
     # set model name and model type
@@ -88,6 +102,23 @@ if __name__ == "__main__":
     avgd_acoustic_in_network = params.avgd_acoustic or params.add_avging
     # set the path to the trained model
     saved_model = "output/models/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
+    cols_to_skip = 4 # 2 for Zoom, 4 for AWS
+    # path to directory where best models are saved
+    model_save_path = "output/models/"
+    # make sure the full save path exists; if not, create it
+    os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_save_path))
+    # decide if you want to plot the loss/accuracy curves for training
+    get_plot = True
+    model_plot_path = "output/plots/"
+    os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path))
+
+    # decide if you want to use avgd feats
+    avgd_acoustic = params.avgd_acoustic
+    avgd_acoustic_in_network = params.avgd_acoustic or params.add_avging
+
+    # set the path to the trained model
+    saved_model = "output/models/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
+
     # 0. RUN ASIST DATA PREP AND REORGANIZATION FOR INPUT INTO THE MODEL
     if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
         os.system("time python data_prep/asist_data/asist_prep.py")
