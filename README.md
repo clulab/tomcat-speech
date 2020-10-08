@@ -14,6 +14,10 @@ models.
   ./scripts/download_opensmile
   ```
 * GloVE: https://nlp.stanford.edu/projects/glove/
+Check for the following libraries/modules:
+* ffmpeg (conda)- to resolve `sh: ffmpeg: command not found`
+
+
 
 
 ## Installation
