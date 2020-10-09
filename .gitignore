@@ -32,11 +32,11 @@ smile.log
 ./output
 ./classifier_R/extra/ 
 glove.short.300d.txt
-#glove.short.300d.punct.txt
-#python_readme.md
+glove.short.300d.punct.txt
+python_readme.md
 external/opensmile*
 data/*
-#requirements.txt
+requirements.txt
 
 
 # R code
