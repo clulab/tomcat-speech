@@ -21,8 +21,13 @@ smile.log
 *.mp3
 *.mp4
 *.p
+*.m4a
+*.json
+
+
 ./output
 glove.short.300d.txt
+glove.short.300d.punct.txt
 python_readme.md
 
 external/opensmile*
