@@ -605,8 +605,20 @@ def make_acoustic_set(
                     # acoustic_holder = torch.mean(torch.tensor(acoustic_data)[10:min(1491, len(acoustic_data) - 9)], dim=0)
                     # try skipping first and last 5%
                     data_len = len(acoustic_data)
-                    acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.05):math.ceil(data_len * 0.95)], dim=0)
-
+                    # acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.05):math.ceil(data_len * 0.95)], dim=0)
+                    # try skipping first and last 25% 15%
+                    # acoustic_holder = torch.rand(76 * 3)
+                    acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
+                    # acoustic_holder = torch.cat((acoustic_holder, acoustic_holder, acoustic_holder), 0)
+                    # try using means, medians, stdev
+                    # try mean, mean + stdev, mean - stdev
+                    # acoustic_means = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
+                    # acoustic_med = torch.median(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)[0]
+                    # acoustic_stdev = torch.std(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
+                    # acoustic_meanplus = acoustic_means + acoustic_stdev
+                    # acoustic_meanminus = acoustic_means - acoustic_stdev
+                    # acoustic_holder = torch.cat((acoustic_means, acoustic_meanplus, acoustic_meanminus))
+                    # acoustic_holder = torch.cat((acoustic_means, acoustic_med, acoustic_stdev), 0)
                     # get average of all non-padding vectors
                     # nonzero_avg = get_nonzero_avg(torch.tensor(acoustic_data))
                     # acoustic_holder = nonzero_avg

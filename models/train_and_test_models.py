@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 # import parameters for model
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, RandomSampler
 
 from models.bimodal_models import BimodalCNN
 from models.parameters.earlyfusion_params import *
@@ -976,18 +976,11 @@ def get_all_batches(dataset_list, batch_size, shuffle, partition="train"):
 
     # get number of tasks
     num_tasks = len(dataset_list)
-    # print(f"The number of tasks is: {num_tasks}")
 
     # batch the data for each task
     for i in range(num_tasks):
-        # print(f"Now printing partition {partition}")
         if partition == "train":
             data = DataLoader(dataset_list[i].train, batch_size=batch_size, shuffle=shuffle)
-            # c = 0
-            # for batch in data:
-            #     c += 1
-            #     print(batch)
-            # print(f"Total number of batches in train partition: {c}")
         elif partition == "dev" or partition == "val":
             data = DataLoader(dataset_list[i].dev, batch_size=batch_size, shuffle=shuffle)
         elif partition == "test":
@@ -995,20 +988,14 @@ def get_all_batches(dataset_list, batch_size, shuffle, partition="train"):
         else:
             sys.exit(f"Error: data partition {partition} not found")
         loss_func = dataset_list[i].loss_fx
-        # print(f"The loss function is {loss_func}")
+        # put batches together
         all_batches.append(data)
         all_loss_funcs.append(loss_func)
-
-    # print(f"Printing all batches prepared:")
-    # i = 0
-    # for batch in all_batches:
-    #     i += 1
-    #     print(batch)
-    # print(f"Total number of batches: {i}")
 
     randomized_batches = []
     randomized_tasks = []
 
+    # randomize batches
     task_num = 0
     for batches in all_batches:
         for i, batch in enumerate(batches):
@@ -1020,8 +1007,99 @@ def get_all_batches(dataset_list, batch_size, shuffle, partition="train"):
     random.shuffle(zipped)
     randomized_batches, randomized_tasks = list(zip(*zipped))
 
-    # print(f"Post-randomization all batches are:\n{randomized_batches}")
-    # sys.exit()
+    return randomized_batches, randomized_tasks
+
+
+def get_all_batches_oversampling(dataset_list, batch_size, shuffle, partition="train"):
+    """
+    Create all batches and put them together as a single dataset
+    """
+    # set holder for batches
+    all_batches = []
+    all_loss_funcs = []
+
+    # get number of tasks
+    num_tasks = len(dataset_list)
+
+    max_dset_len = 0
+    if partition == "train":
+        for i in range(num_tasks):
+            if len(dataset_list[i].train) > max_dset_len:
+                max_dset_len = len(dataset_list[i].train)
+
+    print(f"Max dataset length is: {max_dset_len}")
+
+    if partition == "train":
+        # only train set should include this sampler!
+        # cannot use shuffle with random sampler
+        for i in range(num_tasks):
+            data_sampler = RandomSampler(data_source=dataset_list[i].train, replacement=True,
+                                         num_samples=max_dset_len)
+            # print(f'length of samples is: {len(data_sampler)}')
+            data = DataLoader(dataset_list[i].train, batch_size=batch_size, shuffle=False,
+                              sampler=data_sampler)
+            loss_func = dataset_list[i].loss_fx
+            # put batches together
+            all_batches.append(data)
+            all_loss_funcs.append(loss_func)
+
+        print(f"The total number of datasets should match this number: {len(all_batches)}")
+        randomized_batches = []
+        randomized_tasks = []
+
+        # make batched tuples of (task 0, task 1, task 2)
+        # all sets of batches should be same length
+        for batch in all_batches[0]:
+            randomized_batches.append([batch])
+            randomized_tasks.append(0)
+        # print(f"The total number of batches after the first dataset is {len(randomized_batches)}")
+        # print(f"The total number of tasks after the first dataset is {len(randomized_tasks)}")
+        for batches in all_batches[1:]:
+            # print(f"The number of batches should be {len(batches)}")
+            for i, batch in enumerate(batches):
+                randomized_batches[i].append(batch)
+                # randomized_batches.append((batch, all_batches[1][i], all_batches[2][i]))
+
+    else:
+        # batch the data for each task
+        for i in range(num_tasks):
+            if partition == "dev" or partition == "val":
+                data = DataLoader(dataset_list[i].dev, batch_size=batch_size, shuffle=shuffle)
+            elif partition == "test":
+                data = DataLoader(dataset_list[i].test, batch_size=batch_size, shuffle=shuffle)
+            else:
+                sys.exit(f"Error: data partition {partition} not found")
+            loss_func = dataset_list[i].loss_fx
+            # put batches together
+            all_batches.append(data)
+            all_loss_funcs.append(loss_func)
+
+        randomized_batches = []
+        randomized_tasks = []
+
+        # add all batches to list to be randomized
+        task_num = 0
+        for batches in all_batches:
+            for i, batch in enumerate(batches):
+                randomized_batches.append(batch)
+                randomized_tasks.append(task_num)
+            task_num += 1
+
+    # print(f"length of batches before randomization: {len(randomized_batches)}")
+    # print(f"len of batch 0: {len(randomized_batches[0])}")
+    # print(f"len of batch 1: {len(randomized_batches[1])}")
+    # for i, batch in enumerate(randomized_batches):
+    #     if len(batch) != len(randomized_batches[0]):
+    #         print(f"len of batch {i} is {len(batch)}")
+
+    # randomize the batches
+    zipped = list(zip(randomized_batches, randomized_tasks))
+    random.shuffle(zipped)
+    randomized_batches, randomized_tasks = list(zip(*zipped))
+
+    # print(f"Length of batches after randomization: {len(randomized_batches)}")
+    # print(f"len of batch 0: {len(randomized_batches[0])}")
+    # print(f"len of batch 1: {len(randomized_batches[1])}")
 
     return randomized_batches, randomized_tasks
 
@@ -1085,3 +1163,329 @@ def predict_without_gold_labels(classifier,
 
     return preds_holder
 
+
+def multitask_train_and_predict_with_gradnorm(
+    classifier,
+    train_state,
+    datasets_list,
+    batch_size,
+    num_epochs,
+    optimizer1,
+    device="cpu",
+    avgd_acoustic=True,
+    use_speaker=True,
+    use_gender=False,
+    optimizer2_learning_rate=0.001
+):
+    """
+    Train_ds_list and val_ds_list are lists of MultTaskObject objects!
+    Length of the list is the number of datasets used
+    Includes gradnorm from https://github.com/hosseinshn/GradNorm/blob/master/GradNormv10.ipynb
+    """
+    # set loss function
+    loss_fx = nn.CrossEntropyLoss(reduction="mean")
+
+    num_tasks = len(datasets_list)
+
+    gradient_loss_fx = nn.L1Loss()
+
+    # set holder for loss weights
+    loss_weights = []
+
+    # get a list of the tasks by number
+    for dset in datasets_list:
+        train_state["tasks"].append(dset.task_num)
+        train_state["train_avg_f1"][dset.task_num] = []
+        train_state["val_avg_f1"][dset.task_num] = []
+        # initialize weight for each dataset
+        loss_weights.append(torch.tensor(torch.FloatTensor([1]), requires_grad=True))
+
+    optimizer2 = torch.optim.Adam(loss_weights, lr=optimizer2_learning_rate)
+
+    for epoch_index in range(num_epochs):
+
+        print("Now starting epoch {0}".format(epoch_index))
+
+        train_state["epoch_index"] = epoch_index
+
+        # Iterate over training dataset
+        running_loss = 0.0
+
+        # set classifier(s) to training mode
+        classifier.train()
+
+        batches, _ = get_all_batches_oversampling(datasets_list, batch_size=batch_size, shuffle=True)
+
+        print("printing length of all batches")
+        print(len(batches))
+        # set holders to use for error analysis
+        ys_holder = {}
+        for i in range(num_tasks):
+            ys_holder[i] = []
+        preds_holder = {}
+        for i in range(num_tasks):
+            preds_holder[i] = []
+
+        # for each batch in the list of batches created by the dataloader
+        for batch_index, batch in enumerate(batches):
+            # print("printing length of 0th batch")
+            # print(len(batch))
+            # print(len(batch[0]))
+            # print(len(batch[1]))
+            # set holder for all task losses and loss weights for the batch
+            all_task_losses = []
+            all_task_loss_weights = []
+            all_task_loss_0s = []
+
+            # prepare tensor of gradient weights for task losses
+            for _ in range(num_tasks):
+                all_task_loss_weights.append(torch.tensor(torch.FloatTensor(1), requires_grad=True))
+
+            # go through each task in turn from within the batch
+            for task_idx, task_batch in enumerate(batch):
+                # print(len(task_batch))
+                # print(task_batch[0])
+                # sys.exit()
+                # identify the task for this portion of the batch
+                batch_task = task_idx
+                # get gold labels from the task
+                y_gold = task_batch[4].to(device)
+
+                batch_acoustic = task_batch[0].to(device)
+                batch_text = task_batch[1].to(device)
+                if use_speaker:
+                    batch_speakers = task_batch[2].to(device)
+                else:
+                    batch_speakers = None
+
+                if use_gender:
+                    batch_genders = task_batch[3].to(device)
+                else:
+                    batch_genders = None
+                batch_lengths = task_batch[-2].to(device)
+                batch_acoustic_lengths = task_batch[-1].to(device)
+
+                if avgd_acoustic:
+                    y_pred = classifier(
+                        acoustic_input=batch_acoustic,
+                        text_input=batch_text,
+                        speaker_input=batch_speakers,
+                        length_input=batch_lengths,
+                        gender_input=batch_genders,
+                        task_num=batch_task
+                    )
+                else:
+                    y_pred = classifier(
+                        acoustic_input=batch_acoustic,
+                        text_input=batch_text,
+                        speaker_input=batch_speakers,
+                        length_input=batch_lengths,
+                        acoustic_len_input=batch_acoustic_lengths,
+                        gender_input=batch_genders,
+                        task_num=batch_task
+                    )
+
+                batch_pred = y_pred[batch_task]
+
+                # get the loss for that task in that batch
+                task_loss = loss_weights[batch_task] * loss_fx(batch_pred, y_gold)
+                all_task_losses.append(torch.tensor(task_loss, requires_grad=True))
+
+                # for first epoch, set loss per item
+                if epoch_index == 0:
+                    task_loss_0 = task_loss.data
+                    all_task_loss_0s.append(torch.tensor(task_loss_0, requires_grad=True))
+
+                # add ys to holder for error analysis
+                preds_holder[batch_task].extend([item.index(max(item)) for item in batch_pred.tolist()])
+                ys_holder[batch_task].extend(y_gold.tolist())
+
+            # calculate total loss
+            # sum_of_losses = torch.zeros(1)
+            # for loss in all_task_losses:
+            #     sum_of_losses = torch.add(loss, sum_of_losses)
+            #
+            # loss = torch.div(sum_of_losses, len(all_task_losses))
+            loss = torch.div(sum(all_task_losses), len(all_task_losses))
+            # print(loss)
+            # print(type(loss))
+
+            optimizer1.zero_grad()
+
+            # use loss to produce gradients
+            # authors used 'retain_graph', but currently not in backward() list of parameters
+            loss.backward()
+
+            # get gradients of first layer of task-specific calculations
+            param = list(classifier.parameters())
+            all_normed_grads = []
+            for task in range(num_tasks):
+                print(all_task_losses[task])
+                print(param[0])
+                print(param[0].shape)
+                task_grad = torch.autograd.grad(all_task_losses[task], param[0], retain_graph=True, create_graph=True)
+                normed_grad = torch.norm(task_grad[0], 2)
+                all_normed_grads.append(normed_grad)
+
+            # calculate average of normed gradients
+            normed_grad_avg = torch.div(sum(all_normed_grads), len(all_normed_grads))
+
+            # calculate relative losses
+            all_task_loss_hats = []
+            for task in range(num_tasks):
+                task_loss_hat = torch.div(all_task_losses[task], all_task_loss_0s[task])
+                all_task_loss_hats.append(task_loss_hat)
+            loss_hat_avg = torch.div(sum(all_task_loss_hats), len(all_task_loss_hats))
+
+            # calculate relative inverse training rate for tasks
+            all_task_inv_rates = []
+            for task in range(num_tasks):
+                task_inv_rate = torch.div(all_task_loss_hats[task], loss_hat_avg)
+                all_task_inv_rates.append(task_inv_rate)
+
+            # calculate constant target for gradnorm paper equation 2
+            alph = .16  # as selected in paper. could move to config + alter
+            all_C_values = []
+            for task in range(num_tasks):
+                task_C = normed_grad_avg * all_task_inv_rates[task] ** alph
+                task_C = task_C.detach()
+                all_C_values.append(task_C)
+
+            optimizer2.zero_grad()
+
+            # calculate gradient loss using equation 2 in gradnorm paper
+            all_task_gradient_losses = []
+            for task in range(num_tasks):
+                task_gradient_loss = gradient_loss_fx(all_normed_grads[task], all_C_values[task])
+                all_task_gradient_losses.append(task_gradient_loss)
+            gradient_loss = sum(all_task_gradient_losses)
+            # propagate the loss
+            gradient_loss.backward()
+
+            # increment weights for loss
+            optimizer2.step()
+
+            # increment optimizer for model
+            optimizer1.step()
+
+            # renormalize the loss weights
+            all_weights = sum(loss_weights)
+            coef = num_tasks / all_weights
+            loss_weights = [item * coef for item in loss_weights]
+
+            # get loss calculations for train state
+            # this is NOT gradnorm's calculation
+            loss_t = loss.item()
+            # calculate running loss
+            running_loss += (loss_t - running_loss) / (batch_index + 1)
+
+        # add loss and accuracy information to the train state
+        train_state["train_loss"].append(running_loss)
+
+        for task in preds_holder.keys():
+            task_avg_f1 = precision_recall_fscore_support(ys_holder[task], preds_holder[task], average="weighted")
+            print(f"Training weighted f-score for task {task}: {task_avg_f1}")
+            train_state["train_avg_f1"][task].append(task_avg_f1[2])
+
+        # Iterate over validation set--put it in a dataloader
+        batches, tasks = get_all_batches(datasets_list, batch_size=batch_size, shuffle=True, partition="dev")
+
+        # reset loss and accuracy to zero
+        running_loss = 0.0
+
+        # set classifier to evaluation mode
+        classifier.eval()
+
+        # set holders to use for error analysis
+        ys_holder = {}
+        for i in range(num_tasks):
+            ys_holder[i] = []
+        preds_holder = {}
+        for i in range(num_tasks):
+            preds_holder[i] = []
+
+        # holder for losses for each task in dev set
+        task_val_losses = []
+        for _ in range(num_tasks):
+            task_val_losses.append(0.0)
+
+        # for each batch in the list of batches created by the dataloader
+        for batch_index, batch in enumerate(batches):
+            # get the task for this batch
+            batch_task = tasks[batch_index]
+
+            y_gold = batch[4].to(device)
+
+            batch_acoustic = batch[0].to(device)
+            batch_text = batch[1].to(device)
+            if use_speaker:
+                batch_speakers = batch[2].to(device)
+            else:
+                batch_speakers = None
+
+            if use_gender:
+                batch_genders = batch[3].to(device)
+            else:
+                batch_genders = None
+            batch_lengths = batch[-2].to(device)
+            batch_acoustic_lengths = batch[-1].to(device)
+
+            # compute the output
+            if avgd_acoustic:
+                y_pred = classifier(
+                    acoustic_input=batch_acoustic,
+                    text_input=batch_text,
+                    speaker_input=batch_speakers,
+                    length_input=batch_lengths,
+                    gender_input=batch_genders,
+                    task_num=tasks[batch_index]
+                )
+            else:
+                y_pred = classifier(
+                    acoustic_input=batch_acoustic,
+                    text_input=batch_text,
+                    speaker_input=batch_speakers,
+                    length_input=batch_lengths,
+                    acoustic_len_input=batch_acoustic_lengths,
+                    gender_input=batch_genders,
+                    task_num=tasks[batch_index]
+                )
+
+            batch_pred = y_pred[batch_task]
+
+            if datasets_list[batch_task].binary:
+                batch_pred = batch_pred.float()
+                y_gold = y_gold.float()
+
+            # calculate loss
+            loss = loss_weights[batch_task] * loss_fx(batch_pred, y_gold)
+            loss_t = loss.item()
+
+            # calculate running loss
+            running_loss += (loss_t - running_loss) / (batch_index + 1)
+
+            # add ys to holder for error analysis
+            preds_holder[batch_task].extend([item.index(max(item)) for item in batch_pred.tolist()])
+            ys_holder[batch_task].extend(y_gold.tolist())
+
+        for task in preds_holder.keys():
+            task_avg_f1 = precision_recall_fscore_support(ys_holder[task], preds_holder[task], average="weighted")
+            print(f"Val weighted f-score for task {task}: {task_avg_f1}")
+            train_state["val_avg_f1"][task].append(task_avg_f1[2])
+
+        if epoch_index % 5 == 0:
+            for task in preds_holder.keys():
+                print(f"Classification report and confusion matrix for task {task}:")
+                print(confusion_matrix(ys_holder[task], preds_holder[task]))
+                print("======================================================")
+                print(classification_report(ys_holder[task], preds_holder[task], digits=4))
+
+        # add loss and accuracy to train state
+        train_state["val_loss"].append(running_loss)
+
+        # update the train state now that our epoch is complete
+        train_state = update_train_state(model=classifier, train_state=train_state)
+
+        # if it's time to stop, end the training process
+        if train_state["stop_early"]:
+            break

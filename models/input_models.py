@@ -567,7 +567,7 @@ class TextOnlyCNN(nn.Module):
         # self.conv6 = nn.Conv1d(self.out_channels * 2, self.out_channels, self.k3_size)
 
         # fully connected layers
-        self.fc1 = nn.Linear(self.out_channels * 3, params.text_cnn_hidden_dim)
+        self.fc1 = nn.Linear(self.out_channels, params.text_cnn_hidden_dim)
         # self.fc1 = nn.Linear(self.out_channels, params.text_cnn_hidden_dim)
         self.fc2 = nn.Linear(params.text_cnn_hidden_dim, self.output_dim)
 

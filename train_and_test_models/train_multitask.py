@@ -387,20 +387,35 @@ if __name__ == "__main__":
                                     train_state = make_train_state(lr, model_save_file)
 
                                     # train the model and evaluate on development set
-                                    multitask_train_and_predict(
-                                        multitask_model,
-                                        train_state,
-                                        all_data_list,
-                                        this_model_params.batch_size,
-                                        this_model_params.num_epochs,
-                                        optimizer,
-                                        device,
-                                        scheduler=None,
-                                        sampler=sampler,
-                                        avgd_acoustic=avgd_acoustic_in_network,
-                                        use_speaker=this_model_params.use_speaker,
-                                        use_gender=this_model_params.use_gender,
-                                    )
+                                    if this_model_params.use_gradnorm:
+                                        multitask_train_and_predict_with_gradnorm(
+                                            multitask_model,
+                                            train_state,
+                                            all_data_list,
+                                            this_model_params.batch_size,
+                                            this_model_params.num_epochs,
+                                            optimizer,
+                                            device,
+                                            avgd_acoustic=avgd_acoustic_in_network,
+                                            use_speaker=this_model_params.use_speaker,
+                                            use_gender=this_model_params.use_gender,
+                                            optimizer2_learning_rate=lr
+                                        )
+                                    else:
+                                        multitask_train_and_predict(
+                                            multitask_model,
+                                            train_state,
+                                            all_data_list,
+                                            this_model_params.batch_size,
+                                            this_model_params.num_epochs,
+                                            optimizer,
+                                            device,
+                                            scheduler=None,
+                                            sampler=sampler,
+                                            avgd_acoustic=avgd_acoustic_in_network,
+                                            use_speaker=this_model_params.use_speaker,
+                                            use_gender=this_model_params.use_gender,
+                                        )
 
                                     # plot the loss and accuracy curves
                                     # set plot titles
