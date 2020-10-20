@@ -69,8 +69,6 @@ class ChalearnPrep:
         print("Collecting acoustic features")
 
         # ordered dicts of acoustic data
-        # todo: is this screwed up?
-        #   ordered dict--is it same order as acoustic_lengths
         self.train_dict, self.train_acoustic_lengths = make_acoustic_dict_chalearn(
             "{0}/{1}".format(self.train_path, self.train_dir),
             f_end,
@@ -177,15 +175,10 @@ class ChalearnPrep:
         # todo: determine how we're binning and get class weights
         # self.median_openness = torch.median(self.train_y_openn)
         self.mean_openness = torch.mean(self.train_y_openn)
-        # print(self.mean_openness)
-        # sys.exit()
-        # self.openness_weights = get_class_weights()
 
         # acoustic feature normalization based on train
         print("starting acoustic means for chalearn")
         self.all_acoustic_means, self.all_acoustic_deviations = get_acoustic_means(self.train_acoustic)
-        # self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
-        # self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
 
         print("starting male acoustic means for chalearn")
         self.male_acoustic_means, self.male_deviations = get_gender_avgs(
@@ -201,16 +194,28 @@ class ChalearnPrep:
         # get the weights for chalearn personality traits
         if pred_type == "max_class":
             all_train_ys = [[self.train_y_consc[i], self.train_y_openn[i], self.train_y_agree[i],
-                                  self.train_y_neur[i], self.train_y_extr[i]] for i in range(len(self.train_y_consc))]
+                             self.train_y_neur[i], self.train_y_extr[i]] for i in range(len(self.train_y_consc))]
             self.train_ys = torch.tensor([item.index(max(item)) for item in all_train_ys])
             self.trait_weights = get_class_weights(self.train_ys)
 
         # get the weights for chalearn personality traits
         if pred_type == "max_class":
             all_train_ys = [[self.train_y_consc[i], self.train_y_openn[i], self.train_y_agree[i],
-                                  self.train_y_neur[i], self.train_y_extr[i]] for i in range(len(self.train_y_consc))]
+                             self.train_y_neur[i], self.train_y_extr[i]] for i in range(len(self.train_y_consc))]
             self.train_ys = torch.tensor([item.index(max(item)) for item in all_train_ys])
             self.trait_weights = get_class_weights(self.train_ys)
+        elif pred_type == "high-low" or pred_type == "binary" or pred_type == "high-med-low" or pred_type == "ternary":
+            self.train_y_consc = convert_ys(self.train_y_consc, pred_type)
+            self.train_y_openn = convert_ys(self.train_y_consc, pred_type)
+            self.train_y_agree = convert_ys(self.train_y_agree, pred_type)
+            self.train_y_extr = convert_ys(self.train_y_extr, pred_type)
+            self.train_y_neur = convert_ys(self.train_y_neur, pred_type)
+            # get weights for each trait
+            self.consc_weights = get_class_weights(self.train_y_consc)
+            self.openn_weights = get_class_weights(self.train_y_openn)
+            self.agree_weights = get_class_weights(self.train_y_agree)
+            self.extr_weights = get_class_weights(self.train_y_extr)
+            self.neur_weights = get_class_weights(self.neur_weights)
 
         # get the data organized for input into the NNs
         # self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
@@ -256,8 +261,6 @@ class ChalearnPrep:
                 ys = [self.train_y_extr[i], self.train_y_neur[i],
                       self.train_y_agree[i], self.train_y_openn[i],
                       self.train_y_consc[i]]
-                # item_y = [0, 0, 0, 0, 0]
-                # item_y[ys.index(max(ys))] = 1
                 item_y = ys.index(max(ys))
                 train_data.append((
                     item_transformed,
@@ -265,7 +268,6 @@ class ChalearnPrep:
                     0,
                     self.train_genders[i],
                     torch.tensor(item_y),
-                    # torch.tensor(item_y, dtype=torch.float64),
                     self.train_ethnicities[i],
                     self.train_utt_lengths[i],
                     self.train_acoustic_lengths[i]
@@ -303,8 +305,6 @@ class ChalearnPrep:
                 ys = [self.dev_y_extr[i], self.dev_y_neur[i],
                       self.dev_y_agree[i], self.dev_y_openn[i],
                       self.dev_y_consc[i]]
-                # item_y = [0, 0, 0, 0, 0]
-                # item_y[ys.index(max(ys))] = 1
                 item_y = ys.index(max(ys))
                 dev_data.append(
                     (
@@ -313,7 +313,6 @@ class ChalearnPrep:
                         0,  # todo: eventually add speaker ?
                         self.dev_genders[i],
                         torch.tensor(item_y),
-                        # torch.tensor(item_y, dtype=torch.float64),
                         self.dev_ethnicities[i],
                         self.dev_utt_lengths[i],
                         self.dev_acoustic_lengths[i],
@@ -483,6 +482,28 @@ def convert_chalearn_pickle_to_json(path, file):
         json.dump(data, jfile)
 
 
+def convert_ys(ys, conversion="high-low"):
+    """
+    Convert a set of ys into binary high-low labels
+    or ternary high-medium-low labels
+    """
+    new_ys = []
+    for item in ys:
+        if conversion == "high-low" or conversion == "binary":
+            if item >= 0.5:
+                new_ys.append(1)
+            else:
+                new_ys.append(0)
+        elif conversion == "high-med-low" or conversion == "ternary":
+            if item >= 0.67:
+                new_ys.append(2)
+            elif 0.34 <= item < 0.67:
+                new_ys.append(1)
+            else:
+                new_ys.append(0)
+    return new_ys
+
+
 def preprocess_chalearn_data(
     base_path, acoustic_save_dir, smile_path, acoustic_feature_set="IS10"
 ):
@@ -648,8 +669,6 @@ def make_acoustic_set_chalearn(
 
             # pull out the acoustic feats dataframe
             acoustic_data = acoustic_dict[item_id]
-            # print(acoustic_data)
-            # sys.exit()
 
             # add this dialogue + utt combo to the list of possible ones
             usable_utts.append(item_id)
@@ -660,18 +679,13 @@ def make_acoustic_set_chalearn(
 
                 # add the acoustic features to the holder of features
                 for i, feats in enumerate(acoustic_data):
-                    # print(feats)
-                    # print(i)
+
                     # for now, using longest acoustic file in TRAIN only
                     if i >= longest_acoustic:
                         break
                     # needed because some files allegedly had length 0
                     for j, feat in enumerate(feats):
-                        # print(j)
-                        # print(feat)
                         acoustic_holder[i][j] = feat
-                # print(acoustic_holder)
-                # sys.exit()
             else:
                 if avgd:
                     acoustic_holder = torch.tensor(acoustic_data)
