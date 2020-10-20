@@ -1192,6 +1192,11 @@ def multitask_train_and_predict_with_gradnorm(
     # set holder for loss weights
     loss_weights = []
 
+    # set holder for task loss 0s
+    # todo: this is NOT how they do it in the gradnorm code
+    #  but they only seem to have values for epoch 0...
+    all_task_loss_0s = []
+
     # get a list of the tasks by number
     for dset in datasets_list:
         train_state["tasks"].append(dset.task_num)
@@ -1216,8 +1221,7 @@ def multitask_train_and_predict_with_gradnorm(
 
         batches, _ = get_all_batches_oversampling(datasets_list, batch_size=batch_size, shuffle=True)
 
-        print("printing length of all batches")
-        print(len(batches))
+        # print(f"printing length of all batches {len(batches)}")
         # set holders to use for error analysis
         ys_holder = {}
         for i in range(num_tasks):
@@ -1228,13 +1232,16 @@ def multitask_train_and_predict_with_gradnorm(
 
         # for each batch in the list of batches created by the dataloader
         for batch_index, batch in enumerate(batches):
-            print(f"Starting batch {batch_index}")
+            # print(f"Starting batch {batch_index}")
             # set holder for all task losses and loss weights for the batch
             all_task_losses = []
-            all_task_loss_0s = []
+
+            if epoch_index == 0:
+                all_task_loss_0s = []
 
             # go through each task in turn from within the batch
             for task_idx, task_batch in enumerate(batch):
+                # print(f"Starting task {task_idx}")
                 # identify the task for this portion of the batch
                 batch_task = task_idx
                 # get gold labels from the task
@@ -1278,7 +1285,7 @@ def multitask_train_and_predict_with_gradnorm(
 
                 # get the loss for that task in that batch
                 task_loss = loss_weights[batch_task] * loss_fx(batch_pred, y_gold)
-                print(f"task_loss is {task_loss}")
+                # print(f"task_loss is {task_loss}")
                 # sys.exit()
                 all_task_losses.append(task_loss)
 
@@ -1292,11 +1299,9 @@ def multitask_train_and_predict_with_gradnorm(
                 ys_holder[batch_task].extend(y_gold.tolist())
 
             # calculate total loss
-            # sum_of_task_losses = all_task_losses[0]
-            # for item in all_task_losses[1:]:
-            #     sum_of_task_losses.add_(item)
-            # loss = torch.div(sum_of_task_losses, len(all_task_losses))
+            # print(f"All task losses are {all_task_losses}")
             loss = torch.div(sum(all_task_losses), len(all_task_losses))
+            # print(loss)
 
             optimizer1.zero_grad()
 
@@ -1306,27 +1311,14 @@ def multitask_train_and_predict_with_gradnorm(
             # get gradients of first layer of task-specific calculations
             param = list(classifier.parameters())
             final_shared_lyr_wt = param[40]
-            # param_for_layer_check = list(classifier.named_parameters())
-            # for i, p in enumerate(param_for_layer_check):
-            #     print(f"parameter {i}")
-            #     print(p[0])
-            #     print(p[1])
             all_normed_grads = []
             for task in range(num_tasks):
                 # use the final shared layer weights to calculate gradient
                 # here, this is param[40]
-                # print(all_task_losses[task])
-                # print(param[40])
-                # print(param[40][1].shape)
-                # print(all_task_losses[task])
-                # print(all_task_losses[task].shape)
-                # task_grad = torch.autograd.grad(all_task_losses[task], param[40][1], retain_graph=True, create_graph=True)
                 task_grad = torch.autograd.grad(all_task_losses[task], final_shared_lyr_wt, create_graph=True)
-                print(task_grad)
+                # print(task_grad)
                 normed_grad = torch.norm(task_grad[0], 2)
-                print(normed_grad)
-                # sys.exit()
-                # normed_grad = torch.norm(task_grad[0], 2)
+                # print(normed_grad)
                 all_normed_grads.append(normed_grad)
 
             # calculate average of normed gradients
@@ -1334,6 +1326,9 @@ def multitask_train_and_predict_with_gradnorm(
 
             # calculate relative losses
             all_task_loss_hats = []
+            # print(f"The number of tasks is {num_tasks}")
+            # print(f"All task losses are: {all_task_losses}")
+            # print(f"All task loss 0s are: {all_task_loss_0s}")
             for task in range(num_tasks):
                 task_loss_hat = torch.div(all_task_losses[task], all_task_loss_0s[task])
                 all_task_loss_hats.append(task_loss_hat)
@@ -1362,7 +1357,7 @@ def multitask_train_and_predict_with_gradnorm(
                 all_task_gradient_losses.append(task_gradient_loss)
             gradient_loss = sum(all_task_gradient_losses)
             # propagate the loss
-            gradient_loss.backward()
+            gradient_loss.backward(retain_graph=True)
 
             # increment weights for loss
             optimizer2.step()
@@ -1378,7 +1373,7 @@ def multitask_train_and_predict_with_gradnorm(
             # get loss calculations for train state
             # this is NOT gradnorm's calculation
             loss_t = loss.item()
-            print(loss_t)
+            # print(loss_t)
             # calculate running loss
             running_loss += (loss_t - running_loss) / (batch_index + 1)
 
