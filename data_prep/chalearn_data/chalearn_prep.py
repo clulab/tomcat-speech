@@ -210,12 +210,18 @@ class ChalearnPrep:
             self.train_y_agree = convert_ys(self.train_y_agree, pred_type)
             self.train_y_extr = convert_ys(self.train_y_extr, pred_type)
             self.train_y_neur = convert_ys(self.train_y_neur, pred_type)
+
+            self.dev_y_consc = convert_ys(self.dev_y_consc, pred_type)
+            self.dev_y_openn = convert_ys(self.dev_y_openn, pred_type)
+            self.dev_y_agree = convert_ys(self.dev_y_agree, pred_type)
+            self.dev_y_extr = convert_ys(self.dev_y_extr, pred_type)
+            self.dev_y_neur = convert_ys(self.dev_y_neur, pred_type)
             # get weights for each trait
             self.consc_weights = get_class_weights(self.train_y_consc)
             self.openn_weights = get_class_weights(self.train_y_openn)
             self.agree_weights = get_class_weights(self.train_y_agree)
             self.extr_weights = get_class_weights(self.train_y_extr)
-            self.neur_weights = get_class_weights(self.neur_weights)
+            self.neur_weights = get_class_weights(self.train_y_neur)
 
         # get the data organized for input into the NNs
         # self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
@@ -488,13 +494,14 @@ def convert_ys(ys, conversion="high-low"):
     or ternary high-medium-low labels
     """
     new_ys = []
-    for item in ys:
-        if conversion == "high-low" or conversion == "binary":
+    if conversion == "high-low" or conversion == "binary":
+        for item in ys:
             if item >= 0.5:
                 new_ys.append(1)
             else:
                 new_ys.append(0)
-        elif conversion == "high-med-low" or conversion == "ternary":
+    elif conversion == "high-med-low" or conversion == "ternary":
+        for item in ys:
             if item >= 0.67:
                 new_ys.append(2)
             elif 0.34 <= item < 0.67:
