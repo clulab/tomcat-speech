@@ -4,6 +4,7 @@
 #       if your acoustic features have not been extracted from audio
 ##########################################################
 import sys
+import os
 from tomcat_speech.data_prep.asist_data.asist_dataset_creation import (
     AsistDataset,
 )
@@ -16,6 +17,7 @@ from tomcat_speech.data_prep.data_prep_helpers import *
 # comment or uncomment as needed
 # from tomcat_speech.models.parameters.bimodal_params import params
 from tomcat_speech.models.parameters.multitask_params import params
+from gender_classifier import(genderclassifier)
 
 # from tomcat_speech.models.parameters.multitask_params import params
 # from tomcat_speech.models.parameters.lr_baseline_1_params import params
@@ -25,7 +27,6 @@ import numpy as np
 import random
 import torch
 import sys
-import os
 
 
 if __name__ == "__main__":
@@ -40,9 +41,7 @@ if __name__ == "__main__":
         "--glove_file",
         help="Path to Glove file",
         default="glove.short.300d.punct.txt",
-    )
-        default = "glove.short.300d.punct.txt"
-    )
+    )    
 
     # to test the data--this doesn't contain real outcomes
     parser.add_argument(
@@ -184,9 +183,10 @@ if __name__ == "__main__":
         sequence_prep="pad",
         truncate_from="start",
         norm=None,
-        add_avging=True,
+        # add_avging=True,
+        add_avging=False,
     )
-    print(ys_path)
+    # print(ys_path)
     # get data for testing
     test_data = data.current_split
     test_ds = DatumListDataset(test_data, None)

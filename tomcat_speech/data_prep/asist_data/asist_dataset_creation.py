@@ -47,7 +47,7 @@ class AsistDataset(Dataset):
         self.cols_to_skip = cols_to_skip
         self.acoustic_dict = OrderedDict(acoustic_dict)
         self.glove = glove
-        self.ys_df = pd.read_csv(ys_path)
+        # self.ys_df = pd.read_csv(ys_path) #remove this
         self.norm = norm
         self.sequence_prep = sequence_prep
         self.truncate_from = truncate_from
@@ -59,7 +59,7 @@ class AsistDataset(Dataset):
             self.min_max_scaler = MinMaxScaleRange()
             self.get_min_max_scales()
 
-        self.valid_files = self.ys_df["sid"].tolist()
+        #self.valid_files = self.ys_df["sid"].tolist()
         self.skipped_files = []
 
         # self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove()
@@ -559,7 +559,7 @@ class AsistDataset(Dataset):
         ordered_ys = []
 
         # set index for ys dataframe to sid to use it in search
-        ys = self.ys_df.set_index(["sid"])
+        #ys = self.ys_df.set_index(["sid"])
 
         # for each (sid, callid) pair in acoustic dict's keys
         for tup in self.acoustic_dict.keys():
