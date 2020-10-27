@@ -65,7 +65,7 @@ class EarlyFusionMultimodalModel(nn.Module):
     aligned at the word-level
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None):
+    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None, acoustic_cnn=False):
         super(EarlyFusionMultimodalModel, self).__init__()
         # input text + acoustic + speaker
         self.text_dim = params.text_dim
@@ -73,6 +73,7 @@ class EarlyFusionMultimodalModel(nn.Module):
         self.num_embeddings = num_embeddings
         self.num_speakers = params.num_speakers
         self.text_gru_hidden_dim = params.text_gru_hidden_dim
+        self.acoustic_cnn = acoustic_cnn
 
         # get number of output dims
         self.out_dims = params.output_dim
@@ -87,13 +88,34 @@ class EarlyFusionMultimodalModel(nn.Module):
             bidirectional=True,
         )
 
-        self.acoustic_rnn = nn.LSTM(
-            input_size=params.audio_dim,
-            hidden_size=params.acoustic_gru_hidden_dim,
-            num_layers=params.num_gru_layers,
-            batch_first=True,
-            bidirectional=True,
-        )
+        if self.acoustic_cnn:
+            self.acoustic_cnn = nn.Sequential(
+                nn.Conv2d(1, out_channels=128, kernel_size=(3, 3), padding=1),
+                nn.BatchNorm2d(128),
+                nn.ELU(),
+                nn.MaxPool2d(kernel_size=(3, 5)),
+                nn.Conv2d(128, out_channels=256, kernel_size=(3, 3), padding=1),
+                nn.BatchNorm2d(256),
+                nn.ELU(),
+                nn.MaxPool2d(kernel_size=(3, 5)),
+                nn.Conv2d(256, out_channels=512, kernel_size=(3, 3), padding=1),
+                nn.BatchNorm2d(512),
+                nn.ELU(),
+                nn.MaxPool2d(kernel_size=(3, 5)),
+                nn.Conv2d(512, out_channels=1024, kernel_size=(3, 3), padding=1),
+                nn.BatchNorm2d(1024),
+                nn.ELU(),
+                nn.MaxPool2d(kernel_size=(4, 3)),
+            )
+
+        else:
+            self.acoustic_rnn = nn.LSTM(
+                input_size=params.audio_dim,
+                hidden_size=params.acoustic_gru_hidden_dim,
+                num_layers=params.num_gru_layers,
+                batch_first=True,
+                bidirectional=True,
+            )
 
         # set the size of the input into the fc layers
         # if params.avgd_acoustic or params.add_avging:
@@ -105,7 +127,9 @@ class EarlyFusionMultimodalModel(nn.Module):
         #         params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
         #     )
 
-        if params.add_avging is False and params.avgd_acoustic is False:
+        if self.acoustic_cnn:
+            self.acoustic_fc_1 = nn.Linear(1024, 100)
+        elif params.add_avging is False and params.avgd_acoustic is False:
             # self.acoustic_fc_1 = nn.Linear(params.audio_dim, 100)
             self.acoustic_fc_1 = nn.Linear(params.fc_hidden_dim, 100)
         else:
@@ -190,43 +214,50 @@ class EarlyFusionMultimodalModel(nn.Module):
         packed_output, (hidden, cell) = self.text_rnn(packed)
         encoded_text = F.dropout(hidden[-1], 0.3)
 
-        if acoustic_len_input is not None:
-            # print(acoustic_input.shape)
-            # acoustic_input = self.acoustic_batch_norm(acoustic_input.permute(0, 2, 1))
-            # print(acoustic_input.shape)
-            # acoustic_input = acoustic_input.permute(0, 2, 1)
-            packed_acoustic = nn.utils.rnn.pack_padded_sequence(
-                acoustic_input,
-                # acoustic_len_input,
-                acoustic_len_input.clamp(max=1500),
-                batch_first=True,
-                enforce_sorted=False,
-            )
-            (
-                packed_acoustic_output,
-                (acoustic_hidden, acoustic_cell),
-            ) = self.acoustic_rnn(packed_acoustic)
-            encoded_acoustic = F.dropout(acoustic_hidden[-1], self.dropout)
-            # encoded_acoustic = acoustic_hidden[-1]
+        if self.acoustic_cnn:
+            output = self.acoustic_cnn(acoustic_input)
+            output = output.view(-1, 1024)
+            encoded_acoustic = torch.relu(F.dropout(self.acoustic_fc_1(output), self.dropout))
+            encoded_acoustic = torch.tanh(F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout))
 
         else:
-            # print(acoustic_input.shape)
-            if len(acoustic_input.shape) > 2:
-                encoded_acoustic = acoustic_input.squeeze()
+            if acoustic_len_input is not None:
+                # print(acoustic_input.shape)
+                # acoustic_input = self.acoustic_batch_norm(acoustic_input.permute(0, 2, 1))
+                # print(acoustic_input.shape)
+                # acoustic_input = acoustic_input.permute(0, 2, 1)
+                packed_acoustic = nn.utils.rnn.pack_padded_sequence(
+                    acoustic_input,
+                    # acoustic_len_input,
+                    acoustic_len_input.clamp(max=1500),
+                    batch_first=True,
+                    enforce_sorted=False,
+                )
+                (
+                    packed_acoustic_output,
+                    (acoustic_hidden, acoustic_cell),
+                ) = self.acoustic_rnn(packed_acoustic)
+                encoded_acoustic = F.dropout(acoustic_hidden[-1], self.dropout)
+                # encoded_acoustic = acoustic_hidden[-1]
+
             else:
-                encoded_acoustic = acoustic_input
+                # print(acoustic_input.shape)
+                if len(acoustic_input.shape) > 2:
+                    encoded_acoustic = acoustic_input.squeeze()
+                else:
+                    encoded_acoustic = acoustic_input
 
-        encoded_acoustic = torch.tanh(
-            F.dropout(self.acoustic_fc_1(encoded_acoustic), self.dropout)
-        )
-        encoded_acoustic = torch.tanh(
-            F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout)
-        )
-        # print(encoded_acoustic.shape)
-        # encoded_acoustic = self.acoustic_batch_norm(encoded_acoustic)
+            encoded_acoustic = torch.tanh(
+                F.dropout(self.acoustic_fc_1(encoded_acoustic), self.dropout)
+            )
+            encoded_acoustic = torch.tanh(
+                F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout)
+            )
+            # print(encoded_acoustic.shape)
+            # encoded_acoustic = self.acoustic_batch_norm(encoded_acoustic)
 
-        # inputs = encoded_text
-        # print(encoded_acoustic.shape)
+            # inputs = encoded_text
+            # print(encoded_acoustic.shape)
 
         # combine modalities as required by architecture
         # inputs = torch.cat((acoustic_input, encoded_text), 1)
@@ -507,6 +538,63 @@ class AudioOnlyRNN(nn.Module):
             output = torch.sigmoid(output)
 
         # return the output
+        return output
+
+class AudioCNN(nn.Module):
+    """
+    A CNN with input channels with different kernel size operating over input
+    """
+
+    def __init__(self, params):
+        super(AudioCNN, self).__init__()
+        # input dimensions
+        self.audio_dim = params.audio_dim
+        self.in_channels = self.audio_dim[0]
+        self.num_features = self.audio_dim[1]
+
+        # number of classes
+        self.output_dim = params.output_dim
+
+        # self.num_cnn_layers = params.num_cnn_layers
+        self.dropout = params.dropout
+
+        self.conv1 = nn.Conv2d(self.in_channels, out_channels=128, kernel_size=(3, 3), padding=1)
+        self.conv1_bn = nn.BatchNorm2d(128)
+        self.pool1 = nn.MaxPool2d(kernel_size=(3, 5))
+        self.conv2 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(3, 3), padding=1)
+        self.conv2_bn = nn.BatchNorm2d(256)
+        self.pool2 = nn.MaxPool2d(kernel_size=(3, 5))
+        self.conv3 = nn.Conv2d(in_channels=256, out_channels=512, kernel_size=(3, 3), padding=1)
+        self.conv3_bn = nn.BatchNorm2d(512)
+        self.pool3 = nn.MaxPool2d(kernel_size=(3, 5))
+        self.conv4 = nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=(3, 3), padding=1)
+        self.conv4_bn = nn.BatchNorm2d(1024)
+        self.pool4 = nn.MaxPool2d(kernel_size=(4, 3))
+        # self.conv5 = nn.Conv2d(in_channels=1024, out_channels=2048, kernel_size=(3, 3), padding=1)
+        # self.conv5_bn = nn.BatchNorm2d(2048)
+        # self.pool5 = nn.MaxPool2d(kernel_size=(3, 2))
+        self.fc1 = nn.Linear(in_features=1024, out_features=self.output_dim)
+
+    def forward(self, acoustic_input):
+
+        self.inputs = acoustic_input
+        # feed data into convolutional layers
+        x = self.conv1(self.inputs)
+        # print("conv1: ", x.size())
+        x = self.pool1(F.elu(self.conv1_bn(x)))
+        # print("pool1: ", x.size())
+        x = self.pool2(F.elu(self.conv2_bn(self.conv2(x))))
+        # print("conv2/pool2: ", x.size())
+        x = self.pool3(F.elu(self.conv3_bn(self.conv3(x))))
+        # print("conv3/pool3: ", x.size())
+        x = self.pool4(F.elu(self.conv4_bn(self.conv4(x))))
+        # print("conv4/pool4: ", x.size())
+        # x = self.pool5(F.elu(self.conv5_bn(self.conv5(x))))
+        # print("conv5/pool5: ", x.size())
+        x = x.view(-1, 1024)
+        # get predictions
+        output = torch.sigmoid(self.fc1(x))
+        # output = self.fc1(x)
         return output
 
 
