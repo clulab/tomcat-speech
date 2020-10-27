@@ -46,3 +46,7 @@ classifier_R/.RData
 
 # Virtual environment
 .venv
+
+# builds
+build/
+dist/
