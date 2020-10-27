@@ -17,7 +17,7 @@ from tomcat_speech.data_prep.data_prep_helpers import *
 # comment or uncomment as needed
 # from tomcat_speech.models.parameters.bimodal_params import params
 from tomcat_speech.models.parameters.multitask_params import params
-from gender_classifier import(genderclassifier)
+from gender_classifier import genderclassifier
 
 # from tomcat_speech.models.parameters.multitask_params import params
 # from tomcat_speech.models.parameters.lr_baseline_1_params import params
@@ -47,8 +47,21 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ys_path",
         help="Path to ys file",
-        default="output/asist_audio/asist_ys/all_ys.csv",
+        default="output/asist_audio/asist_ys/all_ys.csv", # exit condition
     )
+
+    parser.add_argument(
+        "--transcript-type",
+        help="json or zoom",
+        # default="", # check this 
+    )
+    parser.add_argument(
+        "--media-type",
+        help="mp3, m4a, or wav, mp4",
+        # default="", # check this 
+    )
+
+
     args = parser.parse_args()
 
 
@@ -85,40 +98,31 @@ if __name__ == "__main__":
     # set number of columns to skip in data input files
     cols_to_skip = 4  # 2 for Zoom, 4 for AWS
     # path to directory where best models are saved
-    model_save_path = "output/models/"
+    model_save_path = "output/models/" # pass parameter! 
     # make sure the full save path exists; if not, create it
     os.system(
         'if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_save_path)
     )
     # decide if you want to plot the loss/accuracy curves for training
-    get_plot = True
-    model_plot_path = "output/plots/"
-    os.system(
-        'if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path)
-    )
+    # get_plot = True
+    # model_plot_path = "output/plots/"
+    # os.system(
+    #     'if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path)
+    # )
+
     # decide if you want to use avgd feats
     avgd_acoustic = params.avgd_acoustic
     avgd_acoustic_in_network = params.avgd_acoustic or params.add_avging
     # set the path to the trained model
     saved_model = "output/models/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
     cols_to_skip = 4 # 2 for Zoom, 4 for AWS
-    # path to directory where best models are saved
-    model_save_path = "output/models/"
-    # make sure the full save path exists; if not, create it
-    os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_save_path))
-    # decide if you want to plot the loss/accuracy curves for training
-    get_plot = True
-    model_plot_path = "output/plots/"
-    os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path))
 
-    # decide if you want to use avgd feats
-    avgd_acoustic = params.avgd_acoustic
-    avgd_acoustic_in_network = params.avgd_acoustic or params.add_avging
-
-    # set the path to the trained model
-    saved_model = "output/models/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
 
     # 0. RUN ASIST DATA PREP AND REORGANIZATION FOR INPUT INTO THE MODEL
+
+    # use argparse instead: see if this is even needed. Important to use one method.
+#see if this can be moved to asist_prep.py instead
+
     if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
         os.system("time python data_prep/asist_data/asist_prep.py")
     elif len(sys.argv) > 1 and sys.argv[1] == "mp4_data":
@@ -127,6 +131,7 @@ if __name__ == "__main__":
         )  # fixme
     elif len(sys.argv) > 1 and sys.argv[1] == "m4a_data":
         os.system("time python data_prep/asist_data/asist_prep.py m4a_data")
+
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
     # comment out if using aws data
@@ -178,7 +183,7 @@ if __name__ == "__main__":
         acoustic_dict,
         glove,
         cols_to_skip=cols_to_skip,
-        ys_path=args.ys_path,
+        ys_path=args.ys_path, #check if john's datast object accepts "none"
         splits=1,
         sequence_prep="pad",
         truncate_from="start",
@@ -186,7 +191,7 @@ if __name__ == "__main__":
         # add_avging=True,
         add_avging=False,
     )
-    # print(ys_path)
+
     # get data for testing
     test_data = data.current_split
     test_ds = DatumListDataset(test_data, None)
@@ -207,8 +212,6 @@ if __name__ == "__main__":
     # get saved parameters
     classifier.load_state_dict(torch.load(saved_model))
     classifier.to(device)
-    # set loss function
-    loss_func = nn.CrossEntropyLoss(reduction="mean")
     # test the model
     ordered_predictions = predict_without_gold_labels(
         classifier,
