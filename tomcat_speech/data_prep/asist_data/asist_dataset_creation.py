@@ -27,7 +27,7 @@ class AsistDataset(Dataset):
         self,
         acoustic_dict,
         glove,
-        ys_path,
+        ys_path = None,
         splits=3,
         cols_to_skip=5,
         norm="minmax",
@@ -47,7 +47,9 @@ class AsistDataset(Dataset):
         self.cols_to_skip = cols_to_skip
         self.acoustic_dict = OrderedDict(acoustic_dict)
         self.glove = glove
-        # self.ys_df = pd.read_csv(ys_path) #remove this
+        if ys_path != None:
+            self.ys_df = pd.read_csv(ys_path) #remove this
+
         self.norm = norm
         self.sequence_prep = sequence_prep
         self.truncate_from = truncate_from
@@ -68,9 +70,12 @@ class AsistDataset(Dataset):
             self.x_glove,
             self.x_speaker,
             self.x_utt_lengths,
-        ) = self.combine_acoustic_and_glove_wd_level()
+            # self.x_speaker_gender, #sa
+        ) = self.combine_acoustic_and_glove_wd_level() 
         # self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove_utt_level()
+        
         # todo: we should get gender info on participants OR predict it
+        # add call to wrapper function that calls the gender classifier
         self.speaker_gender_data = 0
         self.y_data = self.create_ordered_ys()
         self.y_data = self.create_ordered_ys_utt_level(
@@ -559,7 +564,7 @@ class AsistDataset(Dataset):
         ordered_ys = []
 
         # set index for ys dataframe to sid to use it in search
-        #ys = self.ys_df.set_index(["sid"])
+        ys = self.ys_df.set_index(["sid"])
 
         # for each (sid, callid) pair in acoustic dict's keys
         for tup in self.acoustic_dict.keys():

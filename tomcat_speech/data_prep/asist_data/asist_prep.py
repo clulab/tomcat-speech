@@ -326,9 +326,10 @@ class ASISTInput:
             f"{path_to_files}/{expanded_wds_file}", sep="\t"
         )
         # add break point
-         
+
         # combine the files
         combined = pd.merge(audio_df, expanded_wds_df, on="frameTime")
+        # find out if there are speaker labels
 
         # average across words and save as new csv
         savename = "_".join(audio_feats_file.split("_")[:2])

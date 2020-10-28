@@ -44,11 +44,11 @@ if __name__ == "__main__":
     )    
 
     # to test the data--this doesn't contain real outcomes
-    parser.add_argument(
-        "--ys_path",
-        help="Path to ys file",
-        default="output/asist_audio/asist_ys/all_ys.csv", # exit condition
-    )
+    # parser.add_argument(
+    #     "--ys_path",
+    #     help="Path to ys file",
+    #     default="output/asist_audio/asist_ys/all_ys.csv", # exit condition
+    # )
 
     parser.add_argument(
         "--transcript-type",
@@ -183,7 +183,6 @@ if __name__ == "__main__":
         acoustic_dict,
         glove,
         cols_to_skip=cols_to_skip,
-        ys_path=args.ys_path, #check if john's datast object accepts "none"
         splits=1,
         sequence_prep="pad",
         truncate_from="start",
