@@ -3,8 +3,6 @@
 # add "prep_data" as an argument when running this from command line
 #       if your acoustic features have not been extracted from audio
 ##########################################################
-import sys
-import os
 from tomcat_speech.data_prep.asist_data.asist_dataset_creation import (
     AsistDataset,
 )
@@ -17,7 +15,7 @@ from tomcat_speech.data_prep.data_prep_helpers import *
 # comment or uncomment as needed
 # from tomcat_speech.models.parameters.bimodal_params import params
 from tomcat_speech.models.parameters.multitask_params import params
-from gender_classifier import genderclassifier
+# from tomcat_speech.data_prep.asist_data.gender_classifier import genderclassifier
 
 # from tomcat_speech.models.parameters.multitask_params import params
 # from tomcat_speech.models.parameters.lr_baseline_1_params import params
@@ -38,13 +36,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--input_dir",
         help="Directory in which the input data resides",
-        default= str(home_dir) + "/github/asist-speech/output/asist_audio", # check if default needed
+        default=str(home_dir) + "/github/asist-speech/output/asist_audio",  # check if default needed
     )
     parser.add_argument(
         "--glove_file",
         help="Path to Glove file",
         default="glove.short.300d.punct.txt",
-    )    
+    )
 
     # to test the data--this doesn't contain real outcomes
     # parser.add_argument(
@@ -56,17 +54,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--transcript-type",
         help="json or zoom",
-        default= None, # check this 
+        default=None,  # check this
     )
     parser.add_argument(
         "--media-type",
         help="mp3, m4a, or wav, mp4",
-        default= None, # check this 
+        default=None,  # check this
     )
 
-
     args = parser.parse_args()
-
 
     # set device
     cuda = True
@@ -74,7 +70,6 @@ if __name__ == "__main__":
     if not torch.cuda.is_available():
         cuda = False
     device = torch.device("cuda" if cuda else "cpu")
-
 
     # set random seed
     seed = params.seed
@@ -97,7 +92,7 @@ if __name__ == "__main__":
     cols_to_skip = 4  # 2 for Zoom, 4 for AWS
 
     # path to directory where best models are saved
-    model_save_path = "output/models/" # pass parameter! 
+    model_save_path = "output/models/"  # pass parameter!
     # make sure the full save path exists; if not, create it
     os.system(
         'if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_save_path)
@@ -115,11 +110,10 @@ if __name__ == "__main__":
     # set the path to the trained model
     saved_model = "output/models/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
 
-
     # 0. RUN ASIST DATA PREP AND REORGANIZATION FOR INPUT INTO THE MODEL
 
     # use argparse instead: see if this is even needed. Important to use one method.
-#see if this can be moved to asist_prep.py instead
+    # see if this can be moved to asist_prep.py instead
 
     if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
         os.system("time python data_prep/asist_data/asist_prep.py")
@@ -172,12 +166,12 @@ if __name__ == "__main__":
         data_type="asist",
     )
     print("Acoustic dict created")
-    
+
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
     glove_dict = make_glove_dict(args.glove_file)
     glove = Glove(glove_dict)
     print("Glove object created")
-    
+
     # 3. MAKE DATASET
     data = AsistDataset(
         acoustic_dict,
@@ -187,7 +181,7 @@ if __name__ == "__main__":
         sequence_prep="pad",
         truncate_from="start",
         norm=None,
-        add_avging= False,
+        add_avging=False,
     )
 
     # get data for testing
@@ -216,9 +210,9 @@ if __name__ == "__main__":
         test_ds,
         params.batch_size,
         device,
-        avgd_acoustic= params.avgd_acoustic, # or params.add_avging
-        use_speaker= params.use_speaker,
-        use_gender= params.use_gender,
+        avgd_acoustic=params.avgd_acoustic,  # or params.add_avging
+        use_speaker=params.use_speaker,
+        use_gender=params.use_gender,
     )
     print(ordered_predictions)
     # todo: add function to save predictions to json

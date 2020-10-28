@@ -6,9 +6,9 @@ import os
 import random
 import re
 import sys
-
-import data_prep.asist_data.sentiment_score_prep as sent_prep
-import data_prep.audio_extraction as audio_extraction
+import subprocess as sp
+import tomcat_speech.data_prep.asist_data.sentiment_score_prep as sent_prep
+import tomcat_speech.data_prep.audio_extraction as audio_extraction
 import pandas as pd
 
 
@@ -486,7 +486,7 @@ class ASISTInput:
                             acoustic_feats_name,
                         )
 
-    def extract_audio_and_zoom_text(self, file_path, mp4=True):
+    def extract_audio_and_zoom_text(self, file_path, mp4=True, m4a=False):
         """
         Extract the audio and zoom-generated transcripts; keep them separate
         """
