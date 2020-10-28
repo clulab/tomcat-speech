@@ -50,3 +50,5 @@ classifier_R/.RData
 # builds
 build/
 dist/
+# Preventing people from accidentally committing ASIST human subjects data to the repo.
+HSR*
