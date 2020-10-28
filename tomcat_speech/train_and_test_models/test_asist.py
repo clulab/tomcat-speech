@@ -29,7 +29,7 @@ import torch
 import sys
 
 p = "~"
-home = os.path.expanduser(p) 
+home_dir = os.path.expanduser(p)
 
 if __name__ == "__main__":
     import argparse
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--input_dir",
         help="Directory in which the input data resides",
-        default= str(home) + "/github/asist-speech/output/asist_audio", # check if default needed
+        default= str(home_dir) + "/github/asist-speech/output/asist_audio", # check if default needed
     )
     parser.add_argument(
         "--glove_file",
@@ -95,6 +95,7 @@ if __name__ == "__main__":
     model_type = "BimodalCNN_k=4"
     # set number of columns to skip in data input files
     cols_to_skip = 4  # 2 for Zoom, 4 for AWS
+
     # path to directory where best models are saved
     model_save_path = "output/models/" # pass parameter! 
     # make sure the full save path exists; if not, create it
@@ -109,11 +110,10 @@ if __name__ == "__main__":
     # )
 
     # decide if you want to use avgd feats
-    avgd_acoustic = params.avgd_acoustic
-    avgd_acoustic_in_network = params.avgd_acoustic or params.add_avging
+    # avgd_acoustic = params.avgd_acoustic or params.add_avging
+    # avgd_acoustic_in_network = params.add_avging
     # set the path to the trained model
     saved_model = "output/models/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
-    cols_to_skip = 4 # 2 for Zoom, 4 for AWS
 
 
     # 0. RUN ASIST DATA PREP AND REORGANIZATION FOR INPUT INTO THE MODEL
@@ -174,7 +174,6 @@ if __name__ == "__main__":
     print("Acoustic dict created")
     
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
-    # print(args.glove_file)
     glove_dict = make_glove_dict(args.glove_file)
     glove = Glove(glove_dict)
     print("Glove object created")
@@ -188,7 +187,6 @@ if __name__ == "__main__":
         sequence_prep="pad",
         truncate_from="start",
         norm=None,
-        # add_avging=True,
         add_avging=  False,
     )
 
@@ -218,9 +216,9 @@ if __name__ == "__main__":
         test_ds,
         params.batch_size,
         device,
-        avgd_acoustic=avgd_acoustic_in_network,
-        use_speaker=params.use_speaker,
-        use_gender=params.use_gender,
+        avgd_acoustic= params.avgd_acoustic, # or params.add_avging
+        use_speaker= params.use_speaker,
+        use_gender= params.use_gender,
     )
     print(ordered_predictions)
     # todo: add function to save predictions to json

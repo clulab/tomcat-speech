@@ -1,17 +1,15 @@
 # prepare the asist-produced audio and transcription data for neural classifiers
 
-import sys
-from pathlib import Path
-
-
-import data_prep.audio_extraction as audio_extraction
-import data_prep.asist_data.sentiment_score_prep as sent_prep
-import os
-import pandas as pd
+import argparse
 import ast
+import os
 import random
 import re
-import argparse
+import sys
+
+import data_prep.asist_data.sentiment_score_prep as sent_prep
+import data_prep.audio_extraction as audio_extraction
+import pandas as pd
 
 
 ################################################################################
@@ -32,11 +30,11 @@ class JSONtoTSV:
     """
 
     def __init__(
-        self,
-        path,
-        jsonfile,
-        savename,
-        use_txt=True,
+            self,
+            path,
+            jsonfile,
+            savename,
+            use_txt=True,
     ):
         # def __init__(self, path, jsonfile, savename, use_txt=True):
         self.path = path
@@ -69,8 +67,8 @@ class JSONtoTSV:
         for item in all_words:
 
             if (
-                item["type"] == "punctuation"
-                and item["alternatives"][0]["content"] in utt_enders
+                    item["type"] == "punctuation"
+                    and item["alternatives"][0]["content"] in utt_enders
             ):
                 utt += 1
 
@@ -200,12 +198,12 @@ class ZoomTranscriptToTSV:
 
 class ASISTInput:
     def __init__(
-        self,
-        asist_path,
-        save_path,
-        smilepath="opensmile-2.3.0",
-        acoustic_feature_set="IS10",
-        missions=None,
+            self,
+            asist_path,
+            save_path,
+            smilepath="opensmile-2.3.0",
+            acoustic_feature_set="IS10",
+            missions=None,
     ):
         self.path = asist_path
         self.save_path = save_path
@@ -221,7 +219,7 @@ class ASISTInput:
             self.missions = ["mission_2"]
 
     def extract_audio_data(
-        self, audio_path, audio_file, mp4=False, use_missions=False, m4a=True
+            self, audio_path, audio_file, mp4=False, use_missions=False, m4a=True
     ):
         """
         Extract acoustic features from a given file
@@ -268,7 +266,7 @@ class ASISTInput:
 
         # extract audio features and save csv if not already extracted
         if os.path.exists(
-            self.save_path + "/" + acoustic_savename + "_feats.csv"
+                self.save_path + "/" + acoustic_savename + "_feats.csv"
         ):
             print(
                 f"Acoustic features already extracted for file {acoustic_savename}"
@@ -309,7 +307,7 @@ class ASISTInput:
                 transcript_convert.convert_transcript(self.save_path)
 
     def align_text_and_audio_word_level(
-        self, path_to_files, expanded_wds_file, audio_feats_file
+            self, path_to_files, expanded_wds_file, audio_feats_file
     ):
         """
         Align and combine text and audio data at the word level
@@ -337,7 +335,7 @@ class ASISTInput:
         wd_avgd.to_csv(f"{self.save_path}/{savename}_avgd.csv", index=False)
 
     def extract_aws_text_data(
-        self, aws_transcription_file, expand_data=False, use_missions=False
+            self, aws_transcription_file, expand_data=False, use_missions=False
     ):
         """
         Convert AWS transcriptions into usable csv transcription files
@@ -366,11 +364,11 @@ class ASISTInput:
             text_savename = aws_transcription_file
             # set the path to the item--participant_id is the directory name
             item_path = (
-                self.path + "/" + text_savename.split("_")[0]
+                    self.path + "/" + text_savename.split("_")[0]
             )  # edit according to use case
             # set the name of the mission--transcript names contain the mission
             mission = (
-                "mission_" + text_savename.split("_")[-1]
+                    "mission_" + text_savename.split("_")[-1]
             )  # edit according to use case
             # create instance of JSON to TSV class
             transcript_convert = JSONtoTSV(
@@ -453,7 +451,7 @@ class ASISTInput:
             if os.path.isdir(item_path):
                 for mission in self.missions:
                     if f"{mission}_transcript_full.txt" in os.listdir(
-                        item_path
+                            item_path
                     ) and check_transcript(
                         f"{item_path}/{mission}_transcript_full.txt"
                     ):
@@ -524,7 +522,7 @@ class ASISTInput:
         for item in os.listdir(self.save_path):
             # check to make sure it's a file of acoustic features
             if item.endswith("_feats.csv") and "mission" not in item.split(
-                "_"
+                    "_"
             ):
 
                 print(item + " found")
@@ -556,7 +554,6 @@ class ASISTInput:
 
                 # ID all rows id df between start and end of an utterace
                 for row in utt_df.itertuples():
-
                     # get the goal start and end time
                     start_str = row.timestart
                     end_str = row.timeend
@@ -569,7 +566,9 @@ class ASISTInput:
                         acoustic_df["frameTime"].between(start_time, end_time)
                     ]
 
+                    # use this_utterance as input for gender_classifier.
                     # get the mean values of all columns
+
                     this_utt_avgd = this_utterance.mean().tolist()
                     this_utt_avgd.append(
                         start_str
@@ -704,7 +703,8 @@ def run_sentiment_analysis_pipeline(asist, sentiment_text_path):
 ################################################################################
 ############                         USAGE                          ############
 ################################################################################
-
+p = "~"
+home_dir = os.path.expanduser(p)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -755,6 +755,6 @@ if __name__ == "__main__":
             # extract audio + zoom text, use utterance averaging of features for alignment
             asist.extract_audio_and_aws_text(asist.path)
         elif (
-            len(sys.argv) == 2 and sys.argv[1] == "prep_for_sentiment_analyzer"
+                len(sys.argv) == 2 and sys.argv[1] == "prep_for_sentiment_analyzer"
         ):
             run_sentiment_analysis_pipeline(asist, sentiment_text_path)

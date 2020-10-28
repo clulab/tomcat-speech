@@ -27,13 +27,13 @@ class AsistDataset(Dataset):
         self,
         acoustic_dict,
         glove,
-        # ys_path = None,
+        ys_path = None,
         splits=3,
         cols_to_skip=5,
         norm="minmax",
         sequence_prep=None,
         truncate_from="start",
-        add_avging=False,
+        add_avging= False,
     ):
         """
         :param acoustic_dict: dict of {(sid, call) : data}
