@@ -28,6 +28,8 @@ import random
 import torch
 import sys
 
+p = "~"
+home = os.path.expanduser(p) 
 
 if __name__ == "__main__":
     import argparse
@@ -36,6 +38,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--input_dir",
         help="Directory in which the input data resides",
+        default= str(home) + "/github/asist-speech/output/asist_audio", # check if default needed
     )
     parser.add_argument(
         "--glove_file",
@@ -53,12 +56,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--transcript-type",
         help="json or zoom",
-        # default="", # check this 
+        default= None, # check this 
     )
     parser.add_argument(
         "--media-type",
         help="mp3, m4a, or wav, mp4",
-        # default="", # check this 
+        default= None, # check this 
     )
 
 
@@ -80,14 +83,9 @@ if __name__ == "__main__":
     random.seed(seed)
     if cuda:
         torch.cuda.manual_seed_all(seed)
-    # set parameters for data prep
-    # If error in glove path, switch with:
-    ## If calling this from another pthon script:
 
     # set parameters for data prep
-
     # If error in glove path, switch with:
-
     ## If calling this from another pthon script:
 
     # set number of splits
@@ -134,7 +132,7 @@ if __name__ == "__main__":
 
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
-    # comment out if using aws data
+    # comment if using aws data:
     # acoustic_dict = make_acoustic_dict(input_dir, "_avgd.csv", use_cols=[
     #         "speaker",
     #         "utt",
@@ -150,7 +148,8 @@ if __name__ == "__main__":
     #         "shimmerLocal_sma_de",
     #          ],
     #         data_type="asist")
-    # uncomment if using aws data
+
+    # uncomment if using aws data:
     acoustic_dict = make_acoustic_dict(
         args.input_dir,
         "_avgd.csv",
@@ -173,11 +172,13 @@ if __name__ == "__main__":
         data_type="asist",
     )
     print("Acoustic dict created")
+    
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
-    print(args.glove_file)
+    # print(args.glove_file)
     glove_dict = make_glove_dict(args.glove_file)
     glove = Glove(glove_dict)
     print("Glove object created")
+    
     # 3. MAKE DATASET
     data = AsistDataset(
         acoustic_dict,
@@ -188,7 +189,7 @@ if __name__ == "__main__":
         truncate_from="start",
         norm=None,
         # add_avging=True,
-        add_avging=False,
+        add_avging=  False,
     )
 
     # get data for testing

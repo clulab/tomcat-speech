@@ -27,7 +27,7 @@ class AsistDataset(Dataset):
         self,
         acoustic_dict,
         glove,
-        ys_path = None,
+        # ys_path = None,
         splits=3,
         cols_to_skip=5,
         norm="minmax",
@@ -48,12 +48,13 @@ class AsistDataset(Dataset):
         self.acoustic_dict = OrderedDict(acoustic_dict)
         self.glove = glove
         if ys_path != None:
-            self.ys_df = pd.read_csv(ys_path) #remove this
+            self.ys_df = pd.read_csv(ys_path) #remove this later, in case testing in definitely not needed
 
         self.norm = norm
         self.sequence_prep = sequence_prep
         self.truncate_from = truncate_from
-        self.add_avging = add_avging
+        if add_avging== True:
+            self.add_avging = add_avging
 
         if norm == "minmax":
             # currently uses index-keyed min-max for features
