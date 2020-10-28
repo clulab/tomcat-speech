@@ -187,7 +187,7 @@ if __name__ == "__main__":
         sequence_prep="pad",
         truncate_from="start",
         norm=None,
-        add_avging=  False,
+        add_avging= False,
     )
 
     # get data for testing
