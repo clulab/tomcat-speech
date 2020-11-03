@@ -36,7 +36,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--input_dir",
         help="Directory in which the input data resides",
-        default=str(home_dir) + "/github/asist-speech/output/asist_audio",  # check if default needed
+        default="output/asist_audio",  # check if default needed
     )
     parser.add_argument(
         "--glove_file",
@@ -60,6 +60,11 @@ if __name__ == "__main__":
         "--media-type",
         help="mp3, m4a, or wav, mp4",
         default=None,  # check this
+    )
+    parser.add_argument(
+        "--saved-model",
+        help="enter the path to saved model you would like to use in testing",
+        default="tomcat_speech/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
     )
 
     args = parser.parse_args()
@@ -108,7 +113,6 @@ if __name__ == "__main__":
     avgd_acoustic = params.avgd_acoustic or params.add_avging
     # avgd_acoustic_in_network = params.add_avging
     # set the path to the trained model
-    saved_model = "tomcat_speech/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
 
     # 0. RUN ASIST DATA PREP AND REORGANIZATION FOR INPUT INTO THE MODEL
 
@@ -116,13 +120,13 @@ if __name__ == "__main__":
     # see if this can be moved to asist_prep.py instead
 
     if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
-        os.system("time python data_prep/asist_data/asist_prep.py")
+        os.system("time python tomcat_speech/data_prep/asist_data/asist_prep.py")
     elif len(sys.argv) > 1 and sys.argv[1] == "mp4_data":
         os.system(
-            "time python data_prep/asist_data/asist_prep.py mp4_data"
+            "time python tomcat_speech/data_prep/asist_data/asist_prep.py mp4_data"
         )  # fixme
     elif len(sys.argv) > 1 and sys.argv[1] == "m4a_data":
-        os.system("time python data_prep/asist_data/asist_prep.py m4a_data")
+        os.system("time python tomcat_speech/data_prep/asist_data/asist_prep.py m4a_data")
 
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
