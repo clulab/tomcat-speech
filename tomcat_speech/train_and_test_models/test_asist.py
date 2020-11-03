@@ -98,10 +98,10 @@ if __name__ == "__main__":
 
     # path to directory where best models are saved
     model_save_path = "output/models/"  # pass parameter!
+
     # make sure the full save path exists; if not, create it
-    os.system(
-        'if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_save_path)
-    )
+    os.makedirs(model_save_path, exist_ok=True)
+
     # decide if you want to plot the loss/accuracy curves for training
     # get_plot = True
     # model_plot_path = "output/plots/"
