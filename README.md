@@ -30,6 +30,13 @@ environment to install the project as an editable package.
     pip install -e .
 
 
+**Note for MacPorts users only**: `pip install torchtext` is broken, so we recommend
+running `sudo port install py-torchtext` to install `torchtext` system-wide,
+and when you create a virtual environment, have it inherit the system-wide
+packages with the `--system-site-packages` flag, like shown below:
+
+    python -m venv --system-site-packages path/to/venv
+
 ## Contents of the tomcat_speech directory.
 
 Under the `tomcat_speech` directory, we have a few subdirectories, described
