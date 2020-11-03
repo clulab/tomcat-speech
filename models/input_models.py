@@ -105,7 +105,7 @@ class EarlyFusionMultimodalModel(nn.Module):
                 nn.Conv2d(512, out_channels=1024, kernel_size=(3, 3), padding=1),
                 nn.BatchNorm2d(1024),
                 nn.ELU(),
-                nn.MaxPool2d(kernel_size=(4, 3)),
+                nn.MaxPool2d(kernel_size=(4, 3))
             )
 
         else:
@@ -753,7 +753,7 @@ class MultitaskModel(nn.Module):
     """
 
     def __init__(
-        self, params, num_embeddings=None, pretrained_embeddings=None, multi_dataset=True
+        self, params, num_embeddings=None, pretrained_embeddings=None, multi_dataset=True, acoustic_cnn=False
     ):
         super(MultitaskModel, self).__init__()
         # save whether there are multiple datasets
@@ -763,7 +763,7 @@ class MultitaskModel(nn.Module):
         # # set base of model
         # comment this out and uncomment the below to try late fusion model
         self.base = EarlyFusionMultimodalModel(
-            params, num_embeddings, pretrained_embeddings
+            params, num_embeddings, pretrained_embeddings, acoustic_cnn
         )
 
         # uncomment this and comment the above to try the late fusion model
