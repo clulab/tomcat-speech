@@ -206,7 +206,7 @@ if __name__ == "__main__":
         pretrained_embeddings=pretrained_embeddings,
     )
     # get saved parameters
-    classifier.load_state_dict(torch.load(saved_model))
+    classifier.load_state_dict(torch.load(args.saved_model))
     classifier.to(device)
     # test the model
     ordered_predictions = predict_without_gold_labels(
