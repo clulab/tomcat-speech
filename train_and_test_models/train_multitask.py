@@ -167,25 +167,29 @@ if __name__ == "__main__":
             if config.save_dataset:
                 # save all data for faster loading
                 # save meld dataset
-                pickle.dump(meld_train_ds, open("data/meld_IS10RNN10feat_15sec_train.pickle", "wb"))
-                pickle.dump(meld_dev_ds, open("data/meld_IS10RNN10feat_15sec_dev.pickle", "wb"))
-                pickle.dump(meld_test_ds, open("data/meld_IS10RNN10feat_15sec_test.pickle", "wb"))
+                pickle.dump(meld_train_ds, open("data/meld_IS10RNN76feat_15sec_train.pickle", "wb"))
+                pickle.dump(meld_dev_ds, open("data/meld_IS10RNN76feat_15sec_dev.pickle", "wb"))
+                pickle.dump(meld_test_ds, open("data/meld_IS10RNN76feat_15sec_test.pickle", "wb"))
 
                 # save mustard
-                pickle.dump(mustard_train_ds, open("data/mustard_IS10RNN10feat_15sec_train.pickle", "wb"))
-                pickle.dump(mustard_dev_ds, open("data/mustard_IS10RNN10feat_15sec_dev.pickle", "wb"))
-                pickle.dump(mustard_test_ds, open("data/mustard_IS10RNN10feat_15sec_test.pickle", "wb"))
+                pickle.dump(mustard_train_ds, open("data/mustard_IS10RNN76feat_15sec_train.pickle", "wb"))
+                pickle.dump(mustard_dev_ds, open("data/mustard_IS10RNN76feat_15sec_dev.pickle", "wb"))
+                pickle.dump(mustard_test_ds, open("data/mustard_IS10RNN76feat_15sec_test.pickle", "wb"))
                 #
                 # # save chalearn
-                pickle.dump(chalearn_train_ds, open("data/chalearn_IS10RNN10feat_15sec_train.pickle", "wb"))
-                pickle.dump(chalearn_dev_ds, open("data/chalearn_IS10RNN10feat_15sec_dev.pickle", "wb"))
+                pickle.dump(chalearn_train_ds, open("data/chalearn_IS10RNN76feat_15sec_train.pickle", "wb"))
+                pickle.dump(chalearn_dev_ds, open("data/chalearn_IS10RNN76feat_15sec_dev.pickle", "wb"))
                 # pickle.dump(chalearn_test_ds, open('data/chalearn_IS10RNN10feat_15sec_test.pickle', 'wb'))
+
+                sys.exit()
 
                 pickle.dump(
                     glove, open("data/glove.pickle", "wb")
                 )  # todo: get different glove names
 
             print("Datasets created")
+
+
 
         else:
             # 1. Load datasets + glove object

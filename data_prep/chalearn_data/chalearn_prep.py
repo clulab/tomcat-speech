@@ -273,8 +273,8 @@ class ChalearnPrep:
                     self.train_utts[i],
                     0,
                     self.train_genders[i],
-                    torch.tensor(item_y),
                     self.train_ethnicities[i],
+                    torch.tensor(item_y),
                     self.train_utt_lengths[i],
                     self.train_acoustic_lengths[i]
                     )
@@ -318,8 +318,8 @@ class ChalearnPrep:
                         self.dev_utts[i],
                         0,  # todo: eventually add speaker ?
                         self.dev_genders[i],
-                        torch.tensor(item_y),
                         self.dev_ethnicities[i],
+                        torch.tensor(item_y),
                         self.dev_utt_lengths[i],
                         self.dev_acoustic_lengths[i],
                     )

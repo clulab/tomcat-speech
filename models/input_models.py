@@ -89,7 +89,7 @@ class EarlyFusionMultimodalModel(nn.Module):
         self.acoustic_rnn = nn.LSTM(
             input_size=params.audio_dim,
             hidden_size=params.acoustic_gru_hidden_dim,
-            num_layers=params.num_gru_layers,
+            num_layers=4,
             batch_first=True,
             bidirectional=True,
         )

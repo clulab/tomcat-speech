@@ -1269,7 +1269,7 @@ def multitask_train_and_predict_with_gradnorm(
     # set holder for task loss 0s
     # todo: this is NOT how they do it in the gradnorm code
     #  but they only seem to have values for epoch 0...
-    all_task_loss_0s = []
+    all_task_loss_0s = [0.] * num_tasks
 
     # get a list of the tasks by number
     for dset in datasets_list:
@@ -1310,8 +1310,13 @@ def multitask_train_and_predict_with_gradnorm(
             # set holder for all task losses and loss weights for the batch
             all_task_losses = []
 
-            if epoch_index == 0:
-                all_task_loss_0s = []
+
+            # # let this list have the length 3
+            # # move this to inside of enumerate(batch)
+            # #  and instead of clearing it out, say
+            # # all_task_loss_0s[task_idx] == whatever.item()
+            # if epoch_index == 0:
+            #     all_task_loss_0s = []
 
             # go through each task in turn from within the batch
             for task_idx, task_batch in enumerate(batch):
@@ -1364,9 +1369,11 @@ def multitask_train_and_predict_with_gradnorm(
                 all_task_losses.append(task_loss)
 
                 # for first epoch, set loss per item
+                # todo: try log(3) as in footnote 2 of paper
                 if epoch_index == 0:
                     task_loss_0 = task_loss.item()
-                    all_task_loss_0s.append(task_loss_0)
+                    all_task_loss_0s[task_idx] = task_loss_0
+                    # all_task_loss_0s.append(task_loss_0)
 
                 # add ys to holder for error analysis
                 preds_holder[batch_task].extend([item.index(max(item)) for item in batch_pred.tolist()])
