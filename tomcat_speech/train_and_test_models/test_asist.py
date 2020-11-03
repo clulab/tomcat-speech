@@ -105,7 +105,7 @@ if __name__ == "__main__":
     # )
 
     # decide if you want to use avgd feats
-    # avgd_acoustic = params.avgd_acoustic or params.add_avging
+    avgd_acoustic = params.avgd_acoustic or params.add_avging
     # avgd_acoustic_in_network = params.add_avging
     # set the path to the trained model
     saved_model = "output/models/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
@@ -181,7 +181,7 @@ if __name__ == "__main__":
         sequence_prep="pad",
         truncate_from="start",
         norm=None,
-        add_avging=False,
+        add_avging=params.add_avging,
     )
 
     # get data for testing
@@ -210,7 +210,7 @@ if __name__ == "__main__":
         test_ds,
         params.batch_size,
         device,
-        avgd_acoustic=params.avgd_acoustic,  # or params.add_avging
+        avgd_acoustic=avgd_acoustic,
         use_speaker=params.use_speaker,
         use_gender=params.use_gender,
     )

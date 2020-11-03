@@ -238,7 +238,6 @@ class EarlyFusionMultimodalModel(nn.Module):
             # encoded_acoustic = acoustic_hidden[-1]
 
         else:
-            # print(acoustic_input.shape)
             if len(acoustic_input.shape) > 2:
                 encoded_acoustic = acoustic_input.squeeze()
             else:

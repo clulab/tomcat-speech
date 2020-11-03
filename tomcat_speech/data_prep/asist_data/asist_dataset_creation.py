@@ -29,7 +29,7 @@ class AsistDataset(Dataset):
         norm="minmax",
         sequence_prep=None,
         truncate_from="start",
-        add_avging= False,
+        add_avging=False,
     ):
         """
         :param acoustic_dict: dict of {(sid, call) : data}
@@ -43,14 +43,17 @@ class AsistDataset(Dataset):
         self.cols_to_skip = cols_to_skip
         self.acoustic_dict = OrderedDict(acoustic_dict)
         self.glove = glove
-        if ys_path != None:
-            self.ys_df = pd.read_csv(ys_path) #remove this later, in case testing in definitely not needed
+        if ys_path is not None:
+            self.ys_df = pd.read_csv(ys_path)
             self.valid_files = self.ys_df["sid"].tolist()
+        else:
+            self.ys_df = None
+            self.valid_files = [key[0] for key in self.acoustic_dict.keys()]
         self.norm = norm
         self.sequence_prep = sequence_prep
         self.truncate_from = truncate_from
-        if add_avging== True:
-            self.add_avging = add_avging
+
+        self.add_avging = add_avging
 
         if norm == "minmax":
             # currently uses index-keyed min-max for features
@@ -74,11 +77,12 @@ class AsistDataset(Dataset):
         # todo: we should get gender info on participants OR predict it
         # add call to wrapper function that calls the gender classifier
         self.speaker_gender_data = 0
-        self.y_data = self.create_ordered_ys()
-        self.y_data = self.create_ordered_ys_utt_level(
+        if self.ys_df is not None:
+            self.y_data = self.create_ordered_ys()
+            self.y_data = self.create_ordered_ys_utt_level(
             num_utts=len(self.x_utt_lengths)
-        )
-        self.data = self.combine_xs_and_ys()
+            )
+        self.data = self.combine_data()
         self.splits = splits
         self.data_for_model_input = self.get_data_splits()
 
@@ -584,26 +588,39 @@ class AsistDataset(Dataset):
         ordered_ys = [random.randint(0, 1) for _ in range(num_utts)]
         return ordered_ys
 
-    def combine_xs_and_ys(self):
-        # combine all x and y data into list of tuples for easier access with DataLoader
+    def combine_data(self):
+        # combine all x and y data into list of tuples
+        # if no gold labels, only combine x data
         all_data = []
 
-        for i, item in enumerate(self.x_acoustic):
-            # print(i)
-            # todo: this should be fixed earlier in code
-            acoustic_length = len(item)
-            # add in
-            all_data.append(
-                (
-                    item,
-                    self.x_glove[i],
-                    self.x_speaker[i],
-                    self.speaker_gender_data,
-                    self.y_data[i],
-                    self.x_utt_lengths[i],
-                    acoustic_length,
+        if self.ys_df:
+            for i, item in enumerate(self.x_acoustic):
+                # todo: this should be fixed earlier in code
+                acoustic_length = len(item)
+                all_data.append(
+                    (
+                        item,
+                        self.x_glove[i],
+                        self.x_speaker[i],
+                        self.speaker_gender_data,
+                        self.y_data[i],
+                        self.x_utt_lengths[i],
+                        acoustic_length,
+                    )
                 )
-            )
+        else:
+            for i, item in enumerate(self.x_acoustic):
+                acoustic_length = len(item)
+                all_data.append(
+                    (
+                        item,
+                        self.x_glove[i],
+                        self.x_speaker[i],
+                        self.speaker_gender_data,
+                        self.x_utt_lengths[i],
+                        acoustic_length,
+                    )
+                )
 
         return all_data
 
