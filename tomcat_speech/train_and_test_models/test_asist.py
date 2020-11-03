@@ -108,7 +108,7 @@ if __name__ == "__main__":
     avgd_acoustic = params.avgd_acoustic or params.add_avging
     # avgd_acoustic_in_network = params.add_avging
     # set the path to the trained model
-    saved_model = "output/models/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
+    saved_model = "tomcat_speech/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
 
     # 0. RUN ASIST DATA PREP AND REORGANIZATION FOR INPUT INTO THE MODEL
 
