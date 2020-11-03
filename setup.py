@@ -21,6 +21,7 @@ setup(
     install_requires=[
         "wheel",
         "torch",
+        "torchtext",
         "pandas",
         "numpy",
         "sklearn",
