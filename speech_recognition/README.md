@@ -5,8 +5,10 @@
     * Sentence-level transcription and confidence
     * Word-level transcription and confidence
     * Speaker-diarization
-    * Inputs from different channels
-* To use google cloud speech-to-text function, you should have an authentication for google cloud.
+    * Transcribe inputs from different channels
+* To use google cloud speech-to-text function:
+    * You should have an authentication for google cloud.
+    * You should have google cloud module:`pip install google-cloud-speech`
 * You can transcribe 60 minutes of speech per month for free, and then it will cost you a money.
 * You can find more information about Google Cloud Speech-to-Text here:
 https://cloud.google.com/speech-to-text
