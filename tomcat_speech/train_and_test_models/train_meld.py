@@ -15,10 +15,10 @@ from tomcat_speech.data_prep.data_prep_helpers import *
 from tomcat_speech.data_prep.meld_data.meld_prep import *
 from tomcat_speech.data_prep.mustard_data.mustard_prep import *
 
-# import parameters for model
+# Import parameters for model
 from tomcat_speech.models.parameters.multitask_params import params
 
-# set device
+# Set device
 cuda = False
 
 # # Check CUDA
@@ -37,10 +37,7 @@ random.seed(seed)
 
 # set parameters for data prep
 # todo: should be updated later to a glove subset appropriate for this task
-# glove_file = "/work/bsharp/glove.short.300d.punct.txt"
-# glove_file = "/data/nlp/corpora/glove/glove.840B.300d.no_proc_header.txt"
-glove_file = "../../glove.short.300d.punct.txt"
-# glove_file = "../../glove.42B.300d.txt"
+glove_file = sys.argv[1]
 
 # meld_path = "/data/nlp/corpora/MM/MELD_five_dialogues"
 # meld_path = "/data/nlp/corpora/MM/MELD_formatted"
@@ -56,9 +53,10 @@ model = params.model
 model_save_path = "output/models/"
 # make sure the full save path exists; if not, create it
 os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_save_path))
+
 # set dir to plot the loss/accuracy curves for training
 model_plot_path = "output/plots/"
-os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path))
+os.makedirs(model_plot_path, exist_ok=True)
 
 # decide if you want to use avgd feats
 avgd_acoustic = params.avgd_acoustic
