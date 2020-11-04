@@ -26,7 +26,7 @@ class JSONtoTSV:
         word = the word predicted
         utt_num = utterance number within the file
         word_num = word number within the file
-    NOTE: Transcripts currently have bad json format, so use AST to fix
+    NOTE: Transcripts currently have bad JSON format, so use AST to fix
     """
 
     def __init__(
@@ -36,7 +36,6 @@ class JSONtoTSV:
             savename,
             use_txt=True,
     ):
-        # def __init__(self, path, jsonfile, savename, use_txt=True):
         self.path = path
         self.jname = jsonfile
         self.savename = savename
@@ -46,7 +45,6 @@ class JSONtoTSV:
             self.jfile = f"{path}/{jsonfile}.json"
 
     def convert_json(self, savepath):
-        # print(self, savepath)
         jarray = [
             ["speaker", "timestart", "timeend", "word", "utt_num", "word_num"]
         ]
@@ -58,7 +56,6 @@ class JSONtoTSV:
 
         # get only the words
         all_words = fixed["results"]["items"]
-        # print(all_words[0])
         # set utterance and word counters
         utt = 0
         wd_num = 0
@@ -296,7 +293,7 @@ class ASISTInput:
 
     def extract_zoom_text_data(self):
         """
-        Convert Zoom transcriptions into usable csv transcription files
+        Convert Zoom transcriptions into usable TSV transcription files
         """
         # look for transcript items
         for item in os.listdir(self.path):
@@ -738,37 +735,30 @@ if __name__ == "__main__":
         help="Path to text-based sentiment analysis outputs",
         default="output/",
     )
-    if len(sys.argv) <= 2:
-        # define variables
-        # data_path = "../../Downloads/real_search_data"
-        data_path = str(home_dir) + "/Downloads/data_flatstructure"
-        save_path = "output/asist_audio"
-        sentiment_text_path = "output/"
-        missions = ["mission_1", "mission_2", "mission_0"]
-        acoustic_feature_set = "IS10"
-        smile_path = str(home_dir) + "/opensmile-2.3.0"
 
-        # create instance of input class
-        asist = ASISTInput(
-            data_path,
-            save_path,
-            smile_path,
-            missions=missions,
-            acoustic_feature_set=acoustic_feature_set,
-        )
-        if len(sys.argv) == 1:
-            # asist.extract_tomcat_audio_and_text_data()
-            asist.extract_audio_and_aws_text_with_missions()
-        elif len(sys.argv) == 2 and sys.argv[1] == "mp4_data":
-            # extract audio + zoom text, use utterance averaging of features for alignment
-            asist.extract_audio_and_zoom_text(asist.path)
-        elif len(sys.argv) == 2 and sys.argv[1] == "m4a_data":
-            # extract audio + zoom text, use utterance averaging of features for alignment
-            asist.extract_audio_and_aws_text(asist.path)
-        elif len(sys.argv) == 2 and sys.argv[1] == "mp3_data":
-            # extract audio + zoom text, use utterance averaging of features for alignment
-            asist.extract_audio_and_aws_text(asist.path)
-        elif (
-                len(sys.argv) == 2 and sys.argv[1] == "prep_for_sentiment_analyzer"
-        ):
-            run_sentiment_analysis_pipeline(asist, sentiment_text_path)
+    parser.add_argument(
+        "--prep_type",
+        help="Type of data prep to do",
+    )
+
+    args = parser.parse_args()
+
+    # define variables
+    missions = ["mission_1", "mission_2", "mission_0"]
+    acoustic_feature_set = "IS10"
+
+    # create instance of input class
+    asist = ASISTInput(
+        args.data_path,
+        args.save_path,
+        args.opensmile_path,
+        missions=missions,
+        acoustic_feature_set=acoustic_feature_set,
+    )
+    if len(sys.argv) == 1:
+        asist.extract_audio_and_aws_text_with_missions()
+    if args.prep_type == "extract_audio_and_aws_text":
+        # extract audio + zoom text, use utterance averaging of features for alignment
+        asist.extract_audio_and_aws_text(asist.path)
+    elif args.prep_type == "prep_for_sentiment_analyzer":
+        run_sentiment_analysis_pipeline(asist, args.sentiment_text_path)

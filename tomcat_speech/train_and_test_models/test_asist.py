@@ -27,7 +27,6 @@ import torch
 import sys
 
 p = "~"
-home_dir = os.path.expanduser(p)
 
 if __name__ == "__main__":
     import argparse
@@ -205,7 +204,7 @@ if __name__ == "__main__":
     pretrained_embeddings = glove.data
     num_embeddings = pretrained_embeddings.size()[0]
     print(
-        "shape of pretrained embeddings is: {0}".format(data.glove.data.size())
+        f"shape of pretrained embeddings is: {data.glove.data.size()}"
     )
     # create test model
     classifier = EarlyFusionMultimodalModel(
