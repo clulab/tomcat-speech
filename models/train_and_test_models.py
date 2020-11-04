@@ -36,10 +36,10 @@ def make_train_state(learning_rate, model_save_file):
         "tasks": [],
         "train_loss": [],
         "train_acc": [],
-        "train_avg_f1": {},
+        "train_avg_f1": [],
         "val_loss": [],
         "val_acc": [],
-        "val_avg_f1": {},
+        "val_avg_f1": [],
         "best_val_loss": [],
         "best_val_acc": [],
         "best_loss": 100,
@@ -403,6 +403,7 @@ def train_and_predict_transformer(
     train_ds,
     val_ds,
     # batch_size,
+    # num_workers,
     num_epochs,
     loss_func,
     optimizer,
@@ -425,9 +426,9 @@ def train_and_predict_transformer(
         # set classifier(s) to training mode
         classifier.train()
 
-        # batches = DataLoader(
-        #     train_ds, batch_size=batch_size, shuffle=True, sampler=sampler
-        # )
+        #batches = DataLoader(
+        #     train_ds, num_workers=num_workers, batch_size=batch_size, shuffle=True, sampler=sampler
+        #)
 
         # assign holders
         ys_holder = []
@@ -440,17 +441,18 @@ def train_and_predict_transformer(
 
             # Load batch
             input_ids = batch['token'].type(torch.LongTensor)
+            # print(input_ids.size())
             # print(batch['length'])
             # attention_mask = batch['length'].to(device)
             labels = torch.as_tensor(batch['label']).to(device)
-
+            # print(labels.size())
             # outputs = classifier(input_ids, attention_mask=attention_mask, labels=labels)
             # outputs = classifier(input_ids, labels=labels)
             outputs = classifier.predict('meld_emotion', input_ids.to(device))
             preds = outputs.argmax(dim=1)
 
-            print(preds)
-            print(labels)
+            # print(preds)
+            # print(labels)
 
             ys_holder.extend(labels.tolist())
             preds_holder.extend(preds.tolist())
@@ -489,9 +491,9 @@ def train_and_predict_transformer(
         # set classifier(s) to evaluation mode
         classifier.eval()
 
-        # batches = DataLoader(
-        #     train_ds, batch_size=batch_size, shuffle=True, sampler=sampler
-        # )
+        #batches = DataLoader(
+        #     val_ds, num_workers=num_workers, batch_size=batch_size, shuffle=True, sampler=sampler
+        #)
 
         # assign holders
         ys_holder = []

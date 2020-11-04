@@ -1,5 +1,9 @@
 ### Generate dataset for AudioOnly Roberta
 
+import sys
+
+sys.path.append("/work/seongjinpark/tomcat-speech")
+
 import torch
 import os
 from collections import defaultdict
@@ -58,19 +62,27 @@ class AudioOnlyData(torch.utils.data.Dataset):
             self.label_info[file_id]["emot"] = emotion_to_int(emotion)
             self.label_info[file_id]["sent"] = sentiment_to_int(sentiment)
 
-        self.wav_names = [name.replace(".wav", "") for name in os.listdir("data/audio_train")]
+        self.wav_names = []
+        for wav in os.listdir(audio_token_path):
+            name = wav.replace(".txt", "")
+            if name in list(self.label_info.keys()):
+                self.wav_names.append(name)
+
+        # self.wav_names = [name.replace(".txt", "") for name in os.listdir(audio_token_path) if name in self.label_info.keys()]
 
     def __len__(self):
         return len(self.wav_names)
 
     def __getitem__(self, idx):
+        # pirint(self.wav_names[idx])
         audio_token_name = os.path.join(self.audio_token, self.wav_names[idx] + ".txt")
         at = torch.as_tensor(np.genfromtxt(audio_token_name, delimiter="\t", dtype=np.int32)[:-1])
-        emotion_label = self.label_info[self.wav_names[idx]]["emot"]
+        try:
+            emotion_label = self.label_info[self.wav_names[idx]]["emot"]
+            # audio_length = self.length_data[self.wav_names[idx]][0]
+            item = {'token': at, 'label': emotion_label}
 
-        # audio_length = self.length_data[self.wav_names[idx]][0]
-
-        item = {'token': at, 'label': emotion_label}
-
-        return item
+            return item
+        except KeyError:
+            next
 
