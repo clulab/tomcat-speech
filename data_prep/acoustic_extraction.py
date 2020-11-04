@@ -8,12 +8,12 @@ def read_audio(audio_path="", rnn=True):
 
     audio_dict = {}
 
-    ### Uncomment this if you want to check max_len of the audio file
+    ### Uncomment this if you want to check max_len of the audio_train file
     # max_time = 0
-    # for audio in audio_files:
-    # if (".mp3") in audio:
-    #     audio_name = audio.replace(".mp3", "")
-    #     filename = os.path.join(audio_path, audio)
+    # for audio_train in audio_files:
+    # if (".mp3") in audio_train:
+    #     audio_name = audio_train.replace(".mp3", "")
+    #     filename = os.path.join(audio_path, audio_train)
     #
     #     waveform, sample_rate = torchaudio.load(filename, normalization=True)
     #     # print(np.shape(waveform))
@@ -50,7 +50,7 @@ def read_audio(audio_path="", rnn=True):
             # concat_feature = mel_spectrogram
 
             if rnn:
-                ### For RNN, clip the audio if it's longer than 596
+                ### For RNN, clip the audio_train if it's longer than 596
                 ### Else, just use it as it is
                 mel_time = mel_spectrogram.size()[2]
                 if mel_time > 596:
@@ -62,7 +62,7 @@ def read_audio(audio_path="", rnn=True):
 
                 audio_dict[audio_name] = target_tensor
             else:
-                ### For CNN, clip the audio if it's longer than 596
+                ### For CNN, clip the audio_train if it's longer than 596
                 ### Else, zero-padding
                 mel_time = mel_spectrogram.size()[2]
                 audio_length.append(mel_time)
@@ -75,7 +75,7 @@ def read_audio(audio_path="", rnn=True):
                     target_tensor[:, :, :mel_time] = concat_feature
 
                 audio_dict[audio_name] = target_tensor
-    # print("num. audio: ", len(audio_length))
+    # print("num. audio_train: ", len(audio_length))
     # print("min: ", min(audio_length))
     # print("median: ", np.median(audio_length))
     # print("mean: ", np.mean(audio_length))

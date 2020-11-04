@@ -1,4 +1,4 @@
-# extract information from audio
+# extract information from audio_train
 # this information is modified from the code in:
 # https://github.com/jmculnan/audio_feature_extraction (private repo)
 
@@ -79,7 +79,7 @@ class TRSToCSV:
 
 class ExtractAudio:
     """
-    Takes audio and extracts features from it using openSMILE
+    Takes audio_train and extracts features from it using openSMILE
     """
 
     def __init__(
@@ -125,7 +125,7 @@ class ExtractAudio:
 
 
 class AudioSplit:
-    """Takes audio, can split and join using ffmpeg"""
+    """Takes audio_train, can split and join using ffmpeg"""
 
     def __init__(self, path, pathext, audio_name, diarized_csv):
         self.path = path
@@ -138,7 +138,7 @@ class AudioSplit:
 
     def split_audio(self):
         """
-        Splits audio based on an input csvfile.
+        Splits audio_train based on an input csvfile.
         csvfile is assumed to start with the following format:
           speaker,timestart,timeend where
           speaker   = caller or patient
@@ -172,7 +172,7 @@ class AudioSplit:
 
     def make_textfile(self, audiodir, speaker):
         """
-        Make a .txt file containing the names of all audio in the directory
+        Make a .txt file containing the names of all audio_train in the directory
         Used for ffmpeg concatenation
         """
         txtfilepath = f"{self.fullp}/{speaker}/{self.ext}-{speaker}.txt"
@@ -183,7 +183,7 @@ class AudioSplit:
 
     def join_audio(self, txtfile, speaker):
         """
-        Joins audio in an input directory using a textfile with path info
+        Joins audio_train in an input directory using a textfile with path info
         """
         os.makedirs(f"{self.path}/output", exist_ok=True)
 
@@ -210,10 +210,10 @@ class AudioSplit:
 
 def transform_audio(txtfile):
     """
-    Used for taking audio and transforming it in the way initially envisioned
+    Used for taking audio_train and transforming it in the way initially envisioned
     for LIvES project.
     txtfile = the path to a file containing rows of:
-        path : a path to the audio data
+        path : a path to the audio_train data
         trsfile : the name of the transcription file (without .trs)
         callwav : the name of wav file being transformed
     todo: does this need to be changed to be relevant for this input?
@@ -247,7 +247,7 @@ def transform_audio(txtfile):
 
 def load_feature_csv(audio_csv):
     """
-    Load audio features from an existing csv
+    Load audio_train features from an existing csv
     audio_csv = the path to and name of the csv file
     """
     # todo: should we add ability to remove columns here, or somewhere else?
@@ -355,7 +355,7 @@ class GetFeatures:
 
 
 def convert_mp4_to_wav(mp4_file):
-    # if the audio is in an mp4 file, convert to wav
+    # if the audio_train is in an mp4 file, convert to wav
     # file is saved to the location where the mp4 was found
     # returns the name of the file and its path
     file_name = mp4_file.split(".mp4")[0]
@@ -370,7 +370,7 @@ def convert_mp4_to_wav(mp4_file):
     return wav_name
     
 def convert_m4a_to_wav(m4a_file):
-    # if the audio is in an mp4 file, convert to wav
+    # if the audio_train is in an mp4 file, convert to wav
     # file is saved to the location where the mp4 was found
     # returns the name of the file and its path
     file_name = m4a_file.split(".m4a")[0]

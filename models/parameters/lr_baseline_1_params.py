@@ -12,7 +12,7 @@ params = Namespace(
     early_stopping_criteria=50,
     # input dimension parameters
     text_dim=300,  # text vector length
-    audio_dim=79,  # 10 # audio vector length
+    audio_dim=79,  # 10 # audio_train vector length
     # speaker parameters
     spkr_emb_dim=3,
     num_speakers=2,

@@ -105,9 +105,9 @@ class MultichannelCNN(nn.Module):
 
 class BimodalCNN(nn.Module):
     """
-    A CNN for bimodal (text, audio) data; layers after 1 operate over output of layer 1?
+    A CNN for bimodal (text, audio_train) data; layers after 1 operate over output of layer 1?
     text_dim : length of each input text vector
-    audio_dim : length of each input audio vector
+    audio_dim : length of each input audio_train vector
     hidden_dim : size of hidden layer
     output_dim : length of output vector
     """
@@ -260,9 +260,9 @@ class BimodalCNN(nn.Module):
 # will need to be updated if used--written at the very beginning
 # class BimodalRNN(nn.Module):
 #     """
-#     An RNN for bimodal (text, audio) data
+#     An RNN for bimodal (text, audio_train) data
 #     text_dim : length of each input text vector
-#     audio_dim : length of each input audio vector
+#     audio_dim : length of each input audio_train vector
 #     hidden_dim : size of hidden layer todo: why is there only one hidden layer?
 #     output_dim : length of output vector
 #     """
@@ -320,9 +320,9 @@ class BimodalCNN(nn.Module):
 
 class UttLevelBimodalCNN(nn.Module):
     """
-    A CNN for bimodal (text, audio) data; layers after 1 operate over output of layer 1?
+    A CNN for bimodal (text, audio_train) data; layers after 1 operate over output of layer 1?
     text_dim : length of each input text vector
-    audio_dim : length of each input audio vector
+    audio_dim : length of each input audio_train vector
     hidden_dim : size of hidden layer
     output_dim : length of output vector
     """

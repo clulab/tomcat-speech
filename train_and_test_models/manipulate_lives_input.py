@@ -1,4 +1,4 @@
-# test audio data extraction and formatting code from audio_extraction.py
+# test audio_train data extraction and formatting code from audio_extraction.py
 
 import data_prep.audio_extraction as extraction
 
@@ -8,9 +8,9 @@ import sys
 
 # set paths
 # path to transcription files
-trs_path = "/Volumes/LIvES/323_files/audio"
+trs_path = "/Volumes/LIvES/323_files/audio_train"
 # trs_path = "/Volumes/LIvES/multimodal_data/failed_items"
-# path to audio files
+# path to audio_train files
 audio_path = trs_path
 # path to save output
 save_path = "/Volumes/LIvES/multimodal_data_updated"
@@ -29,7 +29,7 @@ for item in os.listdir(trs_path):
             # trans_convert = extraction.TRSToCSV(trs_path, item_name)
             # trans_convert.convert_trs(save_path) # convert and save trs file
 
-            # extract audio features with OpenSMILE
+            # extract audio_train features with OpenSMILE
             acoustic_savename = "{0}_{1}".format(item_name, feature_set)
             audio_extract = extraction.ExtractAudio(
                 audio_path, "{0}.wav".format(item_name), save_path

@@ -5,12 +5,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 class BaseGRU(nn.Module):
     """
     The basic GRU model to be used inside of the encoder
     Abstracted out since it may be used TWICE within the encoder
-    (1x for text, 1x for audio)
+    (1x for text, 1x for audio_train)
     """
 
     def __init__(
@@ -444,7 +443,7 @@ class LateFusionMultimodalModel(nn.Module):
 
 class AudioOnlyRNN(nn.Module):
     """
-    An RNN used with RAVDESS, where primary information comes from audio
+    An RNN used with RAVDESS, where primary information comes from audio_train
     Has capacity to include gender embeddings, todo: add anything?
     """
 

@@ -3,6 +3,8 @@ import sys
 from collections import OrderedDict
 import random
 
+# import numpy as np
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -393,6 +395,166 @@ def train_and_predict(
         # if it's time to stop, end the training process
         if train_state["stop_early"]:
             break
+
+
+def train_and_predict_transformer(
+    classifier,
+    train_state,
+    train_ds,
+    val_ds,
+    # batch_size,
+    num_epochs,
+    loss_func,
+    optimizer,
+    device,
+    scheduler=None,
+    sampler=None,
+    binary=False,
+    split_point=0.0,
+):
+    # print(classifier)
+    for epoch_index in range(num_epochs):
+        print("Now starting epoch {0}".format(epoch_index))
+
+        train_state["epoch_index"] = epoch_index
+
+        # Iterate over training dataset
+        running_loss = 0.0
+        running_acc = 0.0
+
+        # set classifier(s) to training mode
+        classifier.train()
+
+        # batches = DataLoader(
+        #     train_ds, batch_size=batch_size, shuffle=True, sampler=sampler
+        # )
+
+        # assign holders
+        ys_holder = []
+        preds_holder = []
+
+        # for batch in batches:
+        for (batch_index, batch) in enumerate(train_ds):
+            # reset the gradients
+            optimizer.zero_grad()
+
+            # Load batch
+            input_ids = batch['token'].type(torch.LongTensor)
+            # print(batch['length'])
+            # attention_mask = batch['length'].to(device)
+            labels = torch.as_tensor(batch['label']).to(device)
+
+            # outputs = classifier(input_ids, attention_mask=attention_mask, labels=labels)
+            # outputs = classifier(input_ids, labels=labels)
+            outputs = classifier.predict('meld_emotion', input_ids.to(device))
+            preds = outputs.argmax(dim=1)
+
+            print(preds)
+            print(labels)
+
+            ys_holder.extend(labels.tolist())
+            preds_holder.extend(preds.tolist())
+
+            loss = loss_func(outputs, labels)
+            loss_t = loss.item()
+
+            # calculating running loss
+            running_loss += (loss_t - running_loss) / (batch_index + 1)
+
+            # backprop. loss
+            loss.backward()
+            # optimizer for the gradient step
+            optimizer.step()
+
+            # compute the accuracy
+            acc_t = torch.eq(preds, labels).sum().item() / len(labels)
+
+            running_acc += (acc_t - running_acc) / (batch_index + 1)
+
+        # add loss and accuracy information to the train state
+        train_state["train_loss"].append(running_loss)
+        train_state["train_acc"].append(running_acc)
+
+        avg_f1 = precision_recall_fscore_support(
+            ys_holder, preds_holder, average="weighted"
+        )
+        train_state["train_avg_f1"].append(avg_f1[2])
+        # print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
+        print("Training weighted F-score: " + str(avg_f1))
+
+        # Iterate over dev dataset
+        running_loss = 0.0
+        running_acc = 0.0
+
+        # set classifier(s) to evaluation mode
+        classifier.eval()
+
+        # batches = DataLoader(
+        #     train_ds, batch_size=batch_size, shuffle=True, sampler=sampler
+        # )
+
+        # assign holders
+        ys_holder = []
+        preds_holder = []
+
+        # for batch in batches:
+        for (batch_index, batch) in enumerate(val_ds):
+
+            # Load batch
+            input_ids = batch['token'].type(torch.LongTensor)
+            # print(batch['length'])
+            # attention_mask = batch['length'].to(device)
+            labels = torch.as_tensor(batch['label']).to(device)
+
+            # outputs = classifier(input_ids, attention_mask=attention_mask, labels=labels)
+            # outputs = classifier(input_ids, labels=labels)
+            outputs = classifier.predict('meld_emotion', input_ids.to(device))
+            preds = outputs.argmax(dim=1)
+
+            # print(preds)
+            # print(labels)
+
+            ys_holder.extend(labels.tolist())
+            preds_holder.extend(preds.tolist())
+
+            loss = loss_func(outputs, labels)
+            loss_t = loss.item()
+
+            # calculating running loss
+            running_loss += (loss_t - running_loss) / (batch_index + 1)
+
+            # compute the accuracy
+            acc_t = torch.eq(preds, labels).sum().item() / len(labels)
+
+            running_acc += (acc_t - running_acc) / (batch_index + 1)
+
+        avg_f1 = precision_recall_fscore_support(
+            ys_holder, preds_holder, average="weighted"
+        )
+        train_state["val_avg_f1"].append(avg_f1[2])
+        print("Weighted F=score: " + str(avg_f1))
+
+        # get confusion matrix
+        if epoch_index % 5 == 0:
+            print(confusion_matrix(ys_holder, preds_holder))
+            print("Classification report: ")
+            print(classification_report(ys_holder, preds_holder, digits=4))
+
+        # add loss and accuracy to train state
+        train_state["val_loss"].append(running_loss)
+        train_state["val_acc"].append(running_acc)
+
+        # update the train state now that our epoch is complete
+        train_state = update_train_state(model=classifier, train_state=train_state)
+
+        # update scheduler if there is one
+        if scheduler is not None:
+            scheduler.step(train_state["val_loss"][-1])
+
+        # if it's time to stop, end the training process
+        if train_state["stop_early"]:
+            break
+
 
 #
 # def single_dataset_multitask_train_and_predict(

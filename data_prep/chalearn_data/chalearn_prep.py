@@ -489,7 +489,7 @@ def preprocess_chalearn_data(
     """
     Preprocess the ravdess data by extracting acoustic features from wav files
     base_path : the path to the base RAVDESS directory
-    paths : list of paths where audio is located
+    paths : list of paths where audio_train is located
     acoustic_save_dir : the directory in which to save acoustic feature files
     smile_path : the path to OpenSMILE
     acoustic_feature_set : the feature set to use with ExtractAudio
@@ -499,7 +499,7 @@ def preprocess_chalearn_data(
     paths = [path_to_train, path_to_dev]
 
     for p in paths:
-        # set path to audio files
+        # set path to audio_train files
         path_to_files = os.path.join(p, "mp4")
         # set path to acoustic feats
         acoustic_save_path = os.path.join(p, acoustic_save_dir)
@@ -640,7 +640,7 @@ def make_acoustic_set_chalearn(
     all_acoustic = []
     usable_utts = []
 
-    # for all items with audio + gold label
+    # for all items with audio_train + gold label
     for idx, item in enumerate(valid_utts):
         item_id = item.split(".mp4")[0]
         # if that dialogue and utterance appears has an acoustic feats file

@@ -98,7 +98,7 @@ model_params = Namespace(
     # input dimension parameters
     text_dim=300,  # text vector length
     short_emb_dim=[30],  # length of trainable embeddings vec
-    audio_dim=len(acoustic_columns),  # 78,  # 76,  # 79,  # 10 # audio vector length
+    audio_dim=len(acoustic_columns),  # 78,  # 76,  # 79,  # 10 # audio_train vector length
     # audio_dim=10,
     # text NN
     kernel_1_size=3,

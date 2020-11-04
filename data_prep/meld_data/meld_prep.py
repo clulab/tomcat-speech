@@ -543,7 +543,7 @@ def make_acoustic_dict_meld(
 #     all_acoustic = []
 #     usable_utts = []
 #
-#     # for all items with audio + gold label
+#     # for all items with audio_train + gold label
 #     for idx, item in enumerate(valid_dia_utt):
 #         # if that dialogue and utterance appears has an acoustic feats file
 #         if (item.split("_")[0], item.split("_")[1]) in acoustic_dict.keys():

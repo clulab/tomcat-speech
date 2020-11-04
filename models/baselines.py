@@ -47,9 +47,9 @@ class UttLRBaseline(nn.Module):
 
 class LRBaseline(nn.Module):
     """
-    A logistic regression model for bimodal (text, audio) data
+    A logistic regression model for bimodal (text, audio_train) data
     text_dim : number of dimensions in each text input vector (e.g. 300)
-    audio_dim : number of dimensions in each audio input vector (e.g. 20)
+    audio_dim : number of dimensions in each audio_train input vector (e.g. 20)
     output_dim : number of dimensions in output vector (binary default)
     """
 

@@ -1,7 +1,7 @@
 # test the models created in py_code directory with ASIST dataset
 # currently the main entry point into the system
 # add "prep_data" as an argument when running this from command line
-#       if your acoustic features have not been extracted from audio
+#       if your acoustic features have not been extracted from audio_train
 from data_prep.asist_data.asist_dataset_creation import AsistDataset
 from models.train_and_test_models import *
 from models.input_models import *
