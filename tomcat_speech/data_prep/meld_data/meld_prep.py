@@ -44,9 +44,9 @@ class MeldPrep:
         self.train_path = meld_path + "/train"
         self.dev_path = meld_path + "/dev"
         self.test_path = meld_path + "/test"
-        self.train = "{0}/train_sent_emo.csv".format(self.train_path)
-        self.dev = "{0}/dev_sent_emo.csv".format(self.dev_path)
-        self.test = "{0}/test_sent_emo.csv".format(self.test_path)
+        self.train = f"{self.train_path}/train_sent_emo.csv"
+        self.dev = f"{self.dev_path}/dev_sent_emo.csv"
+        self.test = f"{self.test_path}/test_sent_emo.csv"
 
         # get files containing gold labels/data
         self.train_data_file = pd.read_csv(self.train)
