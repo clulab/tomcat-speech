@@ -9,9 +9,6 @@ data/glove.short.300d.punct.txt:
 
 build/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth: tomcat_speech/train_and_test_models/train_meld.py \
 																	data/glove.short.300d.punct.txt
-	# For the below invocation to work, train_meld.py needs to be able to
-	# accept a command line argument sys.argv[1] that specifies the the input
-	# glove file.
 	mkdir -p $(@D)
 	python $^ $@
 
