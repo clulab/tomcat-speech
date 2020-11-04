@@ -386,7 +386,20 @@ def convert_m4a_to_wav(m4a_file):
 
     return wav_name
 
+def convert_mp3_to_wav(mp3_file):
+    # if the audio is in an mp4 file, convert to wav
+    # file is saved to the location where the mp4 was found
+    # returns the name of the file and its path
+    file_name = mp3_file.split(".mp3")[0]
+    wav_name = "{}.wav".format(file_name)
+    # check if the file already exists
+    if not os.path.exists(wav_name):
+        os.system("ffmpeg -i {0} -ac 1 {1}".format(mp3_file, wav_name))
+    # otherwise, print that it exists
+    else:
+        print("{} already exists".format(wav_name))
 
+    return wav_name
 def extract_portions_of_mp4_or_wav(
     path_to_sound_file,
     sound_file,

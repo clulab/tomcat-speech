@@ -45,26 +45,25 @@ if __name__ == "__main__":
     )
 
     # to test the data--this doesn't contain real outcomes
-    # parser.add_argument(
-    #     "--ys_path",
-    #     help="Path to ys file",
-    #     default="output/asist_audio/asist_ys/all_ys.csv", # exit condition
-    # )
-
     parser.add_argument(
-        "--transcript-type",
-        help="json or zoom",
-        default=None,  # check this
+        "--ys_path",
+        help="Path to ys file",
+        default=None, # exit condition
     )
     parser.add_argument(
-        "--media-type",
-        help="mp3, m4a, or wav, mp4",
+        "--media_type",
+        help="mp3, m4a, mp4 or wav",
         default=None,  # check this
     )
     parser.add_argument(
         "--saved-model",
         help="enter the path to saved model you would like to use in testing",
         default="tomcat_speech/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
+    )
+    parser.add_argument(
+        "--acoustic_dict",
+        help="choose type of transcript used: aws or zoom",
+        default="aws",
     )
 
     args = parser.parse_args()
@@ -115,60 +114,69 @@ if __name__ == "__main__":
     # set the path to the trained model
 
     # 0. RUN ASIST DATA PREP AND REORGANIZATION FOR INPUT INTO THE MODEL
-
     # use argparse instead: see if this is even needed. Important to use one method.
     # see if this can be moved to asist_prep.py instead
-
-    if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
-        os.system("time python tomcat_speech/data_prep/asist_data/asist_prep.py")
-    elif len(sys.argv) > 1 and sys.argv[1] == "mp4_data":
+    if args.media_type == "mp4":
         os.system(
             "time python tomcat_speech/data_prep/asist_data/asist_prep.py mp4_data"
         )  # fixme
-    elif len(sys.argv) > 1 and sys.argv[1] == "m4a_data":
-        os.system("time python tomcat_speech/data_prep/asist_data/asist_prep.py m4a_data")
+    elif args.media_type == "m4a":
+        os.system(
+            "time python tomcat_speech/data_prep/asist_data/asist_prep.py m4a_data"
+        )  # fixme
+    elif args.media_type == "mp3":
+        os.system(
+            "time python tomcat_speech/data_prep/asist_data/asist_prep.py mp3_data"
+        )  # fixme
+    elif args.media_type == "wav":
+        os.system(
+            "time python tomcat_speech/data_prep/asist_data/asist_prep.py"
+        )  # fixme
 
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
-    # comment if using aws data:
-    # acoustic_dict = make_acoustic_dict(input_dir, "_avgd.csv", use_cols=[
-    #         "speaker",
-    #         "utt",
-    #         "pcm_loudness_sma",
-    #         "F0finEnv_sma",
-    #         "voicingFinalUnclipped_sma",
-    #         "jitterLocal_sma",
-    #         "shimmerLocal_sma",
-    #         "pcm_loudness_sma_de",
-    #         "F0finEnv_sma_de",
-    #         "voicingFinalUnclipped_sma_de",
-    #         "jitterLocal_sma_de",
-    #         "shimmerLocal_sma_de",
-    #          ],
-    #         data_type="asist")
-
-    # uncomment if using aws data:
-    acoustic_dict = make_acoustic_dict(
-        args.input_dir,
-        "_avgd.csv",
-        use_cols=[
-            "word",
-            "speaker",
-            "utt_num",
-            "word_num",
-            "pcm_loudness_sma",
-            "F0finEnv_sma",
-            "voicingFinalUnclipped_sma",
-            "jitterLocal_sma",
-            "shimmerLocal_sma",
-            "pcm_loudness_sma_de",
-            "F0finEnv_sma_de",
-            "voicingFinalUnclipped_sma_de",
-            "jitterLocal_sma_de",
-            "shimmerLocal_sma_de",
-        ],
-        data_type="asist",
-    )
+    if args.acoustic_dict == "aws":
+        acoustic_dict = make_acoustic_dict(
+            args.input_dir,
+            "_avgd.csv",
+            use_cols=[
+                "word",
+                "speaker",
+                "utt_num",
+                "word_num",
+                "pcm_loudness_sma",
+                "F0finEnv_sma",
+                "voicingFinalUnclipped_sma",
+                "jitterLocal_sma",
+                "shimmerLocal_sma",
+                "pcm_loudness_sma_de",
+                "F0finEnv_sma_de",
+                "voicingFinalUnclipped_sma_de",
+                "jitterLocal_sma_de",
+                "shimmerLocal_sma_de",
+            ],
+            data_type="asist",
+        )
+    elif args.acoustic_dict == "zoom":
+        acoustic_dict = make_acoustic_dict(
+            input_dir,
+            "_avgd.csv",
+            use_cols=[
+                "speaker",
+                "utt",
+                "pcm_loudness_sma",
+                "F0finEnv_sma",
+                "voicingFinalUnclipped_sma",
+                "jitterLocal_sma",
+                "shimmerLocal_sma",
+                "pcm_loudness_sma_de",
+                "F0finEnv_sma_de",
+                "voicingFinalUnclipped_sma_de",
+                "jitterLocal_sma_de",
+                "shimmerLocal_sma_de",
+            ],
+                data_type="asist",
+        )
     print("Acoustic dict created")
 
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT

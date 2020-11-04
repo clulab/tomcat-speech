@@ -219,7 +219,8 @@ class ASISTInput:
             self.missions = ["mission_2"]
 
     def extract_audio_data(
-            self, audio_path, audio_file, mp4=False, use_missions=False, m4a=True
+            self, audio_path, audio_file, use_missions=False, media_type=None
+            # mp4=False, m4a=True, mp3=False
     ):
         """
         Extract acoustic features from a given file
@@ -239,7 +240,7 @@ class ASISTInput:
             # print(acoustic_savename)
 
         # convert mp4 files to wav if needed
-        if mp4:
+        if media_type == "mp4":
             audio_path_and_file = audio_path + "/" + audio_file
             audio_path = audio_extraction.convert_mp4_to_wav(
                 audio_path_and_file + ".mp4"
@@ -248,11 +249,21 @@ class ASISTInput:
                 -1
             ]  # because we don't want the full path
             audio_path = "/".join(audio_path.split("/")[:-1])
-        if m4a:
+        elif media_type == "m4a":
             print("m4a files detected")
             audio_path_and_file = audio_path + "/" + audio_file
             audio_path = audio_extraction.convert_m4a_to_wav(
                 audio_path_and_file + ".m4a"
+            )
+            audio_name = audio_path.split("/")[
+                -1
+            ]  # because we don't want the full path
+            audio_path = "/".join(audio_path.split("/")[:-1])
+        elif media_type == "mp3":
+            print("mp3 files detected")
+            audio_path_and_file = audio_path + "/" + audio_file
+            audio_path = audio_extraction.convert_mp3_to_wav(
+                audio_path_and_file + ".mp3"
             )
             audio_name = audio_path.split("/")[
                 -1
@@ -752,6 +763,9 @@ if __name__ == "__main__":
             # extract audio + zoom text, use utterance averaging of features for alignment
             asist.extract_audio_and_zoom_text(asist.path)
         elif len(sys.argv) == 2 and sys.argv[1] == "m4a_data":
+            # extract audio + zoom text, use utterance averaging of features for alignment
+            asist.extract_audio_and_aws_text(asist.path)
+        elif len(sys.argv) == 2 and sys.argv[1] == "mp3_data":
             # extract audio + zoom text, use utterance averaging of features for alignment
             asist.extract_audio_and_aws_text(asist.path)
         elif (
