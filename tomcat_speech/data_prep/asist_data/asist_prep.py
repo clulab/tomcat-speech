@@ -6,6 +6,7 @@ import os
 import random
 import re
 import sys
+from pathlib import Path
 import subprocess as sp
 import tomcat_speech.data_prep.asist_data.sentiment_score_prep as sent_prep
 import tomcat_speech.data_prep.audio_extraction as audio_extraction
@@ -228,7 +229,6 @@ class ASISTInput:
                 otherwise.
             media_type: Extension of audio file
         """
-        print("FLAG", audio_path, audio_file)
         # internal files with missions had a different naming convention
         if not uaz_data:
             # get participant and experiment ids
@@ -241,38 +241,41 @@ class ASISTInput:
             mission = audio_file.split("_")[-1]
             acoustic_savename = f"{participant_id}_mission_{mission}"
 
-        # convert mp4 files to wav if needed
-        if media_type == "mp4":
-            audio_path_and_file = audio_path + "/" + audio_file
-            audio_path = audio_extraction.convert_mp4_to_wav(
-                audio_path_and_file + ".mp4"
-            )
-            audio_name = audio_path.split("/")[
-                -1
-            ]  # because we don't want the full path
-            audio_path = "/".join(audio_path.split("/")[:-1])
-        elif media_type == "m4a":
-            print("m4a files detected")
-            audio_path_and_file = audio_path + "/" + audio_file
-            audio_path = audio_extraction.convert_m4a_to_wav(
-                audio_path_and_file + ".m4a"
-            )
-            audio_name = audio_path.split("/")[
-                -1
-            ]  # because we don't want the full path
-            audio_path = "/".join(audio_path.split("/")[:-1])
-        elif media_type == "mp3":
-            print("mp3 files detected")
-            audio_path_and_file = audio_path + "/" + audio_file
-            audio_path = audio_extraction.convert_mp3_to_wav(
-                audio_path_and_file + ".mp3"
-            )
-            audio_name = audio_path.split("/")[
-                -1
-            ]  # because we don't want the full path
-            audio_path = "/".join(audio_path.split("/")[:-1])
-        else:
+        if uaz_data:
             audio_name = "player_audio.wav"
+        else:
+            media_type = Path(audio_file).suffix
+            print(media_type)
+            # convert mp4 files to wav if needed
+            if media_type == ".mp4":
+                audio_path_and_file = audio_path + "/" + audio_file
+                audio_path = audio_extraction.convert_mp4_to_wav(
+                    audio_path_and_file + ".mp4"
+                )
+                audio_name = audio_path.split("/")[
+                    -1
+                ]  # because we don't want the full path
+                audio_path = "/".join(audio_path.split("/")[:-1])
+            elif media_type == ".m4a":
+                print("m4a files detected")
+                audio_path_and_file = audio_path + "/" + audio_file
+                audio_path = audio_extraction.convert_m4a_to_wav(
+                    audio_path_and_file + ".m4a"
+                )
+                audio_name = audio_path.split("/")[
+                    -1
+                ]  # because we don't want the full path
+                audio_path = "/".join(audio_path.split("/")[:-1])
+            elif media_type == ".mp3":
+                print("mp3 files detected")
+                audio_path_and_file = audio_path + "/" + audio_file
+                audio_path = audio_extraction.convert_mp3_to_wav(
+                    audio_path_and_file + ".mp3"
+                )
+                audio_name = audio_path.split("/")[
+                    -1
+                ]  # because we don't want the full path
+                audio_path = "/".join(audio_path.split("/")[:-1])
 
         # open corresponding audio and send through extraction; return csv file
         print("Extracting openSMILE features...")
