@@ -1,5 +1,7 @@
 # This Makefile is a work in progress - it has not been tested yet!
 
+all: test
+
 external/opensmile-3.0:
 	./scripts/download_opensmile
 
