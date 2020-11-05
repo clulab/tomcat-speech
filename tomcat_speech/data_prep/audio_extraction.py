@@ -99,10 +99,10 @@ class ExtractAudio:
         """
         # todo: can all of these take -lldcsvoutput ?
         conf_dict = {
-            "ISO9": "IS09_emotion.conf",
-            "IS10": "IS10_paraling.conf",
-            "IS12": "IS12_speaker_trait.conf",
-            "IS13": "IS13_ComParE.conf",
+            "ISO9": "is09-13/IS09_emotion.conf",
+            "IS10": "is09-13/IS10_paraling.conf",
+            "IS12": "is09-13/IS12_speaker_trait.conf",
+            "IS13": "is09-13/IS13_ComParE.conf",
         }
 
         fconf = conf_dict.get(feature_set, "IS09_emotion.conf")
