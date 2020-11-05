@@ -7,7 +7,9 @@ def genderclassifier(f0_list):
     end = int(round(0.75 * n))
     f0 = pd.DataFrame(f0_list)
 
-    df = f0.iloc[beg:end, ]
+    df = f0.iloc[
+        beg:end,
+    ]
     val = df[(df["F0final_sma"] >= 50) & (df["F0final_sma"] <= 360)]
     f0_val = mean(val["F0final_sma"])
 

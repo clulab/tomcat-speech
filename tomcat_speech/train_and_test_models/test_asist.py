@@ -15,6 +15,7 @@ from tomcat_speech.data_prep.data_prep_helpers import *
 # comment or uncomment as needed
 # from tomcat_speech.models.parameters.bimodal_params import params
 from tomcat_speech.models.parameters.multitask_params import params
+
 # from tomcat_speech.data_prep.asist_data.gender_classifier import genderclassifier
 
 # from tomcat_speech.models.parameters.multitask_params import params
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ys_path",
         help="Path to ys file",
-        default=None, # exit condition
+        default=None,  # exit condition
     )
     parser.add_argument(
         "--media_type",
@@ -57,7 +58,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--saved-model",
         help="enter the path to saved model you would like to use in testing",
-        default="tomcat_speech/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth"
+        default="tomcat_speech/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth",
     )
     parser.add_argument(
         "--acoustic_dict",
@@ -174,7 +175,7 @@ if __name__ == "__main__":
                 "jitterLocal_sma_de",
                 "shimmerLocal_sma_de",
             ],
-                data_type="asist",
+            data_type="asist",
         )
     print("Acoustic dict created")
 
@@ -203,9 +204,7 @@ if __name__ == "__main__":
     # get set of pretrained embeddings and their shape
     pretrained_embeddings = glove.data
     num_embeddings = pretrained_embeddings.size()[0]
-    print(
-        f"shape of pretrained embeddings is: {data.glove.data.size()}"
-    )
+    print(f"shape of pretrained embeddings is: {data.glove.data.size()}")
     # create test model
     classifier = EarlyFusionMultimodalModel(
         params=params,

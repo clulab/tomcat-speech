@@ -23,7 +23,7 @@ class AsistDataset(Dataset):
         self,
         acoustic_dict,
         glove,
-        ys_path = None,
+        ys_path=None,
         splits=3,
         cols_to_skip=5,
         norm="minmax",
@@ -61,7 +61,6 @@ class AsistDataset(Dataset):
             self.min_max_scaler = MinMaxScaleRange()
             self.get_min_max_scales()
 
-
         self.skipped_files = []
 
         # self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove()
@@ -71,16 +70,16 @@ class AsistDataset(Dataset):
             self.x_speaker,
             self.x_utt_lengths,
             # self.x_speaker_gender, #sa
-        ) = self.combine_acoustic_and_glove_wd_level() 
+        ) = self.combine_acoustic_and_glove_wd_level()
         # self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove_utt_level()
-        
+
         # todo: we should get gender info on participants OR predict it
         # add call to wrapper function that calls the gender classifier
         self.speaker_gender_data = 0
         if self.ys_df is not None:
             self.y_data = self.create_ordered_ys()
             self.y_data = self.create_ordered_ys_utt_level(
-            num_utts=len(self.x_utt_lengths)
+                num_utts=len(self.x_utt_lengths)
             )
         self.data = self.combine_data()
         self.splits = splits

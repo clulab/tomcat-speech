@@ -1,13 +1,15 @@
 import os
 from pathlib import Path
 import re
+
+
 def mfcc_wav(
     smile_directory,
     file_directory,
     acoustic_feature_set="IS10",
-    #savedir
+    # savedir
 ):
-    p = Path('~').expanduser()
+    p = Path("~").expanduser()
     smile_path = p / smile_directory
     path_to_files = p / file_directory
 
@@ -15,7 +17,7 @@ def mfcc_wav(
     Extract mfcc values by recursively searching for all .wav files in subdirectories and 
     saving a corresponding .csv file in an output folder, appropriately named.
     """
-    folder_list = [ f.name for f in os.scandir(path_to_files) if f.is_dir() ]
+    folder_list = [f.name for f in os.scandir(path_to_files) if f.is_dir()]
     # print(folder_list)
     # folder_list = [x[0] for x in os.walk(path_to_files)]
     for folder in folder_list:
@@ -26,7 +28,14 @@ def mfcc_wav(
         for audio_file in os.listdir(folder):
             if re.match(".*wav", audio_file):
                 audio_name = audio_file.split(".wav")[0]
-                audio_save_name = str(folder) + "_" + str(audio_name) + "_" + acoustic_feature_set + ".csv"
+                audio_save_name = (
+                    str(folder)
+                    + "_"
+                    + str(audio_name)
+                    + "_"
+                    + acoustic_feature_set
+                    + ".csv"
+                )
                 extractor = ExtractAudio(
                     input_dir, audio_file, savedir, smile_path
                 )
@@ -34,15 +43,18 @@ def mfcc_wav(
                     feature_set=acoustic_feature_set, savename=audio_save_name
                 )
 
+
 class ExtractAudio:
     """
     Takes audio and extracts features from it using openSMILE
     """
+
     def __init__(self, path, audiofile, savedir, smilepath):
         self.path = path
         self.afile = path / audiofile
         self.savedir = savedir
         self.smile = smilepath
+
     def save_acoustic_csv(self, feature_set, savename):
         """
         Get the CSV for set of acoustic features for a .wav file
@@ -70,9 +82,11 @@ class ExtractAudio:
                 self.smile, fconf, self.afile, self.savedir, savename
             )
         )
+
+
 if __name__ == "__main__":
-    
+
     file_directory = "Downloads/RAVDESS"
     smile_directory = "opensmile-2.3.0"
 
-    mfcc_wav(smile_directory,file_directory)
+    mfcc_wav(smile_directory, file_directory)
