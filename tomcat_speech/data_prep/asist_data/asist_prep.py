@@ -503,18 +503,14 @@ class ASISTInput:
         # extract audio
         for item in os.listdir(file_path):
             # if item.endswith("_video.mp4"):
-            if item.endswith(".mp4"):
-                # get the name of the audio file without .mp4
-                audio_name = item.split(".mp4")[0]
 
-                # create acoustic features for this file
-                _ = self.extract_audio_data(file_path, audio_name, mp4)
-            elif item.endswith(".m4a"):
-                # get the name of the audio file without .m4a
-                audio_name = item.split(".m4a")[0]
+            # TODO Adarsh - check if this should be more specific, like
+            # checking if it equals some other filename.
+            use_missions = True if item.endswith(".mp4") else False
+            audio_name = item.split(".mp4")[0]
+            # Create acoustic features for this file
+            _ = self.extract_audio_data(file_path, audio_name, use_missions)
 
-                # create acoustic features for this file
-                _ = self.extract_audio_data(file_path, audio_name, m4a)
         # extract transcripts
         self.extract_zoom_text_data()
 
