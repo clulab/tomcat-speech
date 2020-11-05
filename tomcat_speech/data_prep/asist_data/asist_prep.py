@@ -118,7 +118,7 @@ class ZoomTranscriptToTSV:
 
     def __init__(self, path, txtfile, savename):
         self.path = path
-        self.text_file = path + "/" + txtfile
+        self.text_file = txtfile
         self.savename = savename
 
     def convert_transcript(self, savepath):
@@ -617,6 +617,7 @@ def split_zoom_time(timestamp):
     split the hh:mm:ss.sss zoom timestamps to seconds + ms
     used to calculate start and end of acoustic features
     """
+    print(timestamp)
     h, m, s = timestamp.split(":")
     return (float(h) * 60 + float(m)) * 60 + float(s)
 

@@ -122,7 +122,7 @@ if __name__ == "__main__":
         )  # fixme
     elif args.media_type == "m4a":
         os.system(
-            "time python tomcat_speech/data_prep/asist_data/asist_prep.py m4a_data"
+            f"time python tomcat_speech/data_prep/asist_data/asist_prep.py m4a_data"
         )  # fixme
     elif args.media_type == "mp3":
         os.system(
@@ -159,7 +159,7 @@ if __name__ == "__main__":
         )
     elif args.acoustic_dict == "zoom":
         acoustic_dict = make_acoustic_dict(
-            input_dir,
+            args.input_dir,
             "_avgd.csv",
             use_cols=[
                 "speaker",
