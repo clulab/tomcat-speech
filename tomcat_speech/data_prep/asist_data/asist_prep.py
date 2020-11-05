@@ -297,10 +297,12 @@ class ASISTInput:
         """
         # look for transcript items
         for item in os.listdir(self.path):
-            if item.endswith("_transcript.txt"):
+            if item.endswith(".vtt"):
                 # get participant and experiment ids
                 experiment_id = item.split("_")[4]
                 participant_id = item.split("_")[7]
+                print(item)
+                sys.exit(0)
 
                 # set the path to the item
                 text_path = self.path + "/" + item
@@ -757,8 +759,8 @@ if __name__ == "__main__":
     )
     if len(sys.argv) == 1:
         asist.extract_audio_and_aws_text_with_missions()
-    if args.prep_type == "extract_audio_and_aws_text":
+    if args.prep_type == "extract_audio_and_zoom_text":
         # extract audio + zoom text, use utterance averaging of features for alignment
-        asist.extract_audio_and_aws_text(asist.path)
+        asist.extract_audio_and_zoom_text(asist.path)
     elif args.prep_type == "prep_for_sentiment_analyzer":
         run_sentiment_analysis_pipeline(asist, args.sentiment_text_path)

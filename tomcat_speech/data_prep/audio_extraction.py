@@ -113,7 +113,7 @@ class ExtractAudio:
         # run openSMILE
         sp.run(
             [
-                f"{self.smile}/SMILExtract",
+                f"{self.smile}/bin/SMILExtract",
                 "-C",
                 f"{self.smile}/config/{fconf}",
                 "-I",
