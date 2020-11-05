@@ -25,7 +25,8 @@ setup(
         "pandas",
         "numpy",
         "sklearn",
-        "matplotlib"
+        "matplotlib",
+        "tqdm"
     ],
     python_requires=">=3.7",
 )
