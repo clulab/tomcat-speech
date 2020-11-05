@@ -1,4 +1,4 @@
-# prepare the asist-produced audio and transcription data for neural classifiers
+# Prepare the asist-produced audio and transcription data for neural classifiers
 
 import argparse
 import ast
@@ -11,6 +11,8 @@ import subprocess as sp
 import tomcat_speech.data_prep.asist_data.sentiment_score_prep as sent_prep
 import tomcat_speech.data_prep.audio_extraction as audio_extraction
 import pandas as pd
+from glob import glob
+from tqdm import tqdm
 
 
 ################################################################################
@@ -231,10 +233,9 @@ class ASISTInput:
         """
         # internal files with missions had a different naming convention
         if not uaz_data:
-            # get participant and experiment ids
-            experiment_id = audio_file.split("_")[0]
-            participant_id = audio_file.split("_")[7]
             # set the name for saving csvs
+            experiment_id = Path(audio_path).parents[0].stem
+            participant_id = audio_path.split("-")[-2].split('_')[0]
             acoustic_savename = f"{experiment_id}_{participant_id}"
         else:
             participant_id = audio_file.split("_")[0]
@@ -245,7 +246,6 @@ class ASISTInput:
             audio_name = "player_audio.wav"
         else:
             media_type = Path(audio_file).suffix
-            print(media_type)
             # convert mp4 files to wav if needed
             if media_type == ".mp4":
                 audio_path_and_file = audio_path + "/" + audio_file
@@ -260,7 +260,7 @@ class ASISTInput:
                 print("m4a files detected")
                 audio_path_and_file = audio_path + "/" + audio_file
                 audio_path = audio_extraction.convert_m4a_to_wav(
-                    audio_path_and_file + ".m4a"
+                    audio_path_and_file
                 )
                 audio_name = audio_path.split("/")[
                     -1
@@ -270,12 +270,15 @@ class ASISTInput:
                 print("mp3 files detected")
                 audio_path_and_file = audio_path + "/" + audio_file
                 audio_path = audio_extraction.convert_mp3_to_wav(
-                    audio_path_and_file + ".mp3"
+                    audio_path_and_file
                 )
                 audio_name = audio_path.split("/")[
                     -1
                 ]  # because we don't want the full path
                 audio_path = "/".join(audio_path.split("/")[:-1])
+            else:
+                # If the media type is not an audio file, then return early.
+                return
 
         # open corresponding audio and send through extraction; return csv file
         print("Extracting openSMILE features...")
@@ -304,23 +307,22 @@ class ASISTInput:
         Convert Zoom transcriptions into usable TSV transcription files
         """
         # look for transcript items
-        for item in os.listdir(self.path):
-            if item.endswith(".vtt"):
-                # get participant and experiment ids
-                experiment_id = item.split("_")[4]
-                participant_id = item.split("_")[7]
+        for item in tqdm(glob(f"{self.path}/*.vtt"), desc="Processing .vtt files"):
+            # Get participant and experiment ids
+            experiment_id = Path(item).parents[0].stem
+            participant_id = item.split("-")[-2].split('_')[0]
 
-                # set the path to the item
-                text_path = self.path + "/" + item
+            # set the path to the item
+            text_path = self.path + "/" + item
 
-                # set the name for saving csv files
-                text_savename = f"{experiment_id}_{participant_id}"
+            # set the name for saving csv files
+            text_savename = f"{experiment_id}_{participant_id}"
 
-                # reorganize the transcription into a csv
-                transcript_convert = ZoomTranscriptToTSV(
-                    self.path, item, text_savename
-                )
-                transcript_convert.convert_transcript(self.save_path)
+            # reorganize the transcription into a csv
+            transcript_convert = ZoomTranscriptToTSV(
+                self.path, item, text_savename
+            )
+            transcript_convert.convert_transcript(self.save_path)
 
     def align_text_and_audio_word_level(
             self, path_to_files, expanded_wds_file, audio_feats_file
@@ -502,12 +504,12 @@ class ASISTInput:
                             acoustic_feats_name,
                         )
 
-    def extract_audio_and_zoom_text(self, file_path, mp4=True, m4a=False):
+    def extract_audio_and_zoom_text(self, directory, mp4=True, m4a=False):
         """
         Extract the audio and zoom-generated transcripts; keep them separate
         """
         # extract audio
-        for item in os.listdir(file_path):
+        for item in tqdm(glob(f"{directory}/*.vtt"), desc="processing .vtt files"):
             # if item.endswith("_video.mp4"):
 
             # TODO Adarsh - check if this should be more specific, like
@@ -515,7 +517,7 @@ class ASISTInput:
             uaz_data = True if item.endswith(".mp4") else False
             audio_name = item.split(".mp4")[0]
             # Create acoustic features for this file
-            _ = self.extract_audio_data(file_path, audio_name, uaz_data)
+            _ = self.extract_audio_data(directory, audio_name, uaz_data)
 
         # extract transcripts
         self.extract_zoom_text_data()
