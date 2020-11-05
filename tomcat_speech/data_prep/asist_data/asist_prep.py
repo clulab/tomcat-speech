@@ -216,25 +216,30 @@ class ASISTInput:
             self.missions = ["mission_2"]
 
     def extract_audio_data(
-            self, audio_path, audio_file, use_missions=False, media_type=None
-            # mp4=False, m4a=True, mp3=False
+            self, audio_path, audio_file, uaz_data: bool = False, media_type=None
     ):
         """
         Extract acoustic features from a given file
+
+        Args:
+            audio_path: Audio path
+            audio_file: Audio file
+            uaz_data: True if this is from UAZ internal data collection, false
+                otherwise.
+            media_type: Extension of audio file
         """
+        print("FLAG", audio_path, audio_file)
         # internal files with missions had a different naming convention
-        if not use_missions:
+        if not uaz_data:
             # get participant and experiment ids
             experiment_id = audio_file.split("_")[0]
             participant_id = audio_file.split("_")[7]
             # set the name for saving csvs
             acoustic_savename = f"{experiment_id}_{participant_id}"
-            # print("acoustic_savename", acoustic_savename)
         else:
             participant_id = audio_file.split("_")[0]
             mission = audio_file.split("_")[-1]
             acoustic_savename = f"{participant_id}_mission_{mission}"
-            # print(acoustic_savename)
 
         # convert mp4 files to wav if needed
         if media_type == "mp4":
@@ -301,8 +306,6 @@ class ASISTInput:
                 # get participant and experiment ids
                 experiment_id = item.split("_")[4]
                 participant_id = item.split("_")[7]
-                print(item)
-                sys.exit(0)
 
                 # set the path to the item
                 text_path = self.path + "/" + item
@@ -345,12 +348,12 @@ class ASISTInput:
         wd_avgd.to_csv(f"{self.save_path}/{savename}_avgd.csv", index=False)
 
     def extract_aws_text_data(
-            self, aws_transcription_file, expand_data=False, use_missions=False
+            self, aws_transcription_file, expand_data=False, uaz_data=False
     ):
         """
         Convert AWS transcriptions into usable csv transcription files
         """
-        if not use_missions:
+        if not uaz_data:
             # get participant and experiment ids
             experiment_id = aws_transcription_file.split("_")[
                 1
@@ -479,14 +482,14 @@ class ASISTInput:
                             audio_path,
                             acoustic_savename,
                             mp4,
-                            use_missions=True,
+                            uaz_data=True,
                         )
 
                         # create preprocessed transcript of this file
                         transcript_savename = self.extract_aws_text_data(
                             name_and_mission,
                             expand_data=True,
-                            use_missions=True,
+                            uaz_data=True,
                         )
 
                         # align features and transcripts
@@ -506,10 +509,10 @@ class ASISTInput:
 
             # TODO Adarsh - check if this should be more specific, like
             # checking if it equals some other filename.
-            use_missions = True if item.endswith(".mp4") else False
+            uaz_data = True if item.endswith(".mp4") else False
             audio_name = item.split(".mp4")[0]
             # Create acoustic features for this file
-            _ = self.extract_audio_data(file_path, audio_name, use_missions)
+            _ = self.extract_audio_data(file_path, audio_name, uaz_data)
 
         # extract transcripts
         self.extract_zoom_text_data()
