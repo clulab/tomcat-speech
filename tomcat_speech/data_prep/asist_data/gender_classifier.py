@@ -9,8 +9,7 @@ def genderclassifier(f0_list):
     ]
     val = df[(df["F0final_sma"] >= 50) & (df["F0final_sma"] <= 360)]
     f0_val = mean(val["F0final_sma"])
-
-    model = pd.read_csv("Downloads/datasets/f0_list.csv")
+    model = pd.read_csv("tomcat_speech/models/f0_list.csv")
     f0_m = model[model["gender"] == 2].mean()
     f0_f = model[model["gender"] == 1].mean()
 
