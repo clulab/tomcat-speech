@@ -3,6 +3,7 @@
 # add "prep_data" as an argument when running this from command line
 #       if your acoustic features have not been extracted from audio
 ##########################################################
+
 from tomcat_speech.data_prep.asist_data.asist_dataset_creation import (
     AsistDataset,
 )
@@ -11,16 +12,9 @@ from tomcat_speech.models.input_models import *
 
 from tomcat_speech.data_prep.data_prep_helpers import *
 
-# import parameters for model
-# comment or uncomment as needed
-# from tomcat_speech.models.parameters.bimodal_params import params
+# Import parameters for model
 from tomcat_speech.models.parameters.multitask_params import params
 
-# from tomcat_speech.data_prep.asist_data.gender_classifier import genderclassifier
-
-# from tomcat_speech.models.parameters.multitask_params import params
-# from tomcat_speech.models.parameters.lr_baseline_1_params import params
-# from tomcat_speech.models.parameters.multichannel_cnn_params import params
 
 import numpy as np
 import random
@@ -110,7 +104,7 @@ if __name__ == "__main__":
 
     # set parameters for data prep
     # If error in glove path, switch with:
-    ## If calling this from another pthon script:
+    ## If calling this from another python script:
 
     # set number of splits
     num_splits = 1
