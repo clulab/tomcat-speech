@@ -13,11 +13,11 @@ $(DATA_DIR): scripts/sync_asist_data
 .PHONY: $(DATA_DIR)
 
 data/glove.short.300d.punct.txt:
-	mkdir -p $(@D)
+	@mkdir -p $(@D)
 	curl http://vanga.sista.arizona.edu/tomcat/$@ -o $@
 
 data/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth:
-	mkdir -p $(@D)
+	@mkdir -p $(@D)
 	curl http://vanga.sista.arizona.edu/tomcat/$@ -o $@
 
 M4A_FILES = $(wildcard $(DATA_DIR)/HSR*.m4a)
@@ -36,12 +36,12 @@ test: $(DATA_DIR)\
 
 # Recipe to convert .m4a files to .wav files
 build/wav_files/%.wav: $(DATA_DIR)/%.m4a
-	mkdir -p $(@D)
+	@mkdir -p $(@D)
 	ffmpeg -i $< -ac 1 $@
 
 # Recipe to convert .vtt files to .tsv files
 build/tsv_files/%.tsv: scripts/vtt_to_tsv $(DATA_DIR)/%.vtt
-	mkdir -p $(@D)
+	@mkdir -p $(@D)
 	$^ $@
 
 
@@ -53,7 +53,7 @@ OPENSMILE_CSV_FILES = $(patsubst build/wav_files/%.wav, build/opensmile_output/%
 
 # Recipe to create an OpenSMILE output CSV from a .wav file
 build/opensmile_output/%.csv: build/wav_files/%.wav
-	mkdir -p $(@D)
+	@mkdir -p $(@D)
 	$(OPENSMILE_DIR)/bin/SMILExtract\
 		-C $(OPENSMILE_DIR)/config/is09-13/IS10_paraling.conf\
 		-I $<\
