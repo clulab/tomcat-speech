@@ -20,8 +20,6 @@ data/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth:
 	@mkdir -p $(@D)
 	curl http://vanga.sista.arizona.edu/tomcat/$@ -o $@
 
-M4A_FILES = $(wildcard $(DATA_DIR)/HSR*.m4a)
-WAV_FILES = $(patsubst $(DATA_DIR)/%.m4a, build/wav_files/%.wav, $(M4A_FILES))
 
 test: $(DATA_DIR)\
 	external/opensmile-3.0\
@@ -45,11 +43,6 @@ build/tsv_files/%.tsv: scripts/vtt_to_tsv $(DATA_DIR)/%.vtt
 	$^ $@
 
 
-VTT_FILES = $(wildcard $(DATA_DIR)/HSR*.vtt)
-TSV_FILES = $(patsubst $(DATA_DIR)/%.vtt, build/tsv_files/%.tsv, $(VTT_FILES))
-
-# Defining set of OpenSMILE CSV files
-OPENSMILE_CSV_FILES = $(patsubst build/wav_files/%.wav, build/opensmile_output/%.csv, $(WAV_FILES))
 
 # Recipe to create an OpenSMILE output CSV from a .wav file
 build/opensmile_output/%.csv: build/wav_files/%.wav
@@ -60,6 +53,33 @@ build/opensmile_output/%.csv: build/wav_files/%.wav
 		-lldcsvoutput\
 		$@
 
+
+# ==================================================
+# ASIST-specific portion of the Makefile starts here
+# ==================================================
+
+# We only want .vtt files from HSR data
+VTT_FILES = $(wildcard $(DATA_DIR)/HSR*.vtt)
+
+AVERAGED_CSV_FILES= $(patsubst build/tsv_files/HSRData_AudioTranscript_%.tsv, build/averaged_csv_files/%.csv, $(TSV_FILES))
+
+TSV_FILES = $(patsubst $(DATA_DIR)/%.vtt, build/tsv_files/%.tsv, $(VTT_FILES))
+M4A_FILES = $(wildcard $(DATA_DIR)/*.m4a)
+WAV_FILES = $(patsubst $(DATA_DIR)/%.m4a, build/wav_files/%.wav, $(M4A_FILES))
+
+# Defining set of OpenSMILE CSV files
+OPENSMILE_CSV_FILES = $(patsubst build/wav_files/%.wav, build/opensmile_output/%.csv, $(WAV_FILES))
+
+
+build/averaged_csv_files/%.csv: scripts/align_text_and_acoustic_data\
+								build/tsv_files/HSRData_AudioTranscript_%.tsv\
+								build/opensmile_output/HSRData_Audio_%.csv
+	mkdir -p $(@D)
+	$^ $@
+
+
+
 tsv_files: $(TSV_FILES)
 wav_files: $(WAV_FILES)
 opensmile_csv_files: $(OPENSMILE_CSV_FILES)
+averaged_csv_files: $(firstword $(AVERAGED_CSV_FILES))
