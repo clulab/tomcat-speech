@@ -41,4 +41,4 @@ for caption in webvtt.read(args.input_vtt_file):
 df = pd.DataFrame(records)
 
 # Output the dataframe to TSV
-df.to_csv(args.output_tsv_file, index=False)
+df.to_csv(args.output_tsv_file, index=False, sep="\t")
