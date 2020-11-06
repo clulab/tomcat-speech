@@ -7,10 +7,15 @@
 from tomcat_speech.data_prep.asist_data.asist_dataset_creation import (
     AsistDataset,
 )
-from tomcat_speech.models.train_and_test_models import *
-from tomcat_speech.models.input_models import *
+from tomcat_speech.models.train_and_test_models import predict_without_gold_labels
+from tomcat_speech.models.input_models import EarlyFusionMultimodalModel
 
-from tomcat_speech.data_prep.data_prep_helpers import *
+from tomcat_speech.data_prep.data_prep_helpers import (
+    make_acoustic_dict,
+    make_glove_dict,
+    Glove,
+    DatumListDataset
+)
 
 # Import parameters for model
 from tomcat_speech.models.parameters.multitask_params import params
