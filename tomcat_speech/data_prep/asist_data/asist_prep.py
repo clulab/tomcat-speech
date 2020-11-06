@@ -314,9 +314,6 @@ class ASISTInput:
             experiment_id = Path(item).parents[0].stem
             participant_id = item.split("-")[-2].split("_")[0]
 
-            # set the path to the item
-            self.path + "/" + item
-
             # set the name for saving csv files
             text_savename = f"{experiment_id}_{participant_id}"
 
