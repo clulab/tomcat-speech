@@ -28,17 +28,6 @@ $(EMOTION_MODEL):
 	curl http://vanga.sista.arizona.edu/tomcat/$@ -o $@
 
 
-test: tomcat_speech/train_and_test_models/test_asist.py\
-	$(OPENSMILE_DIR)\
-	$(EMOTION_MODEL)\
-	$(GLOVE_FILE)
-	python $<\
-		--prep_type extract_audio_and_zoom_text\
-		--data_path $(DATA_DIR)\
-		--opensmile_path $(OPENSMILE_DIR)\
-		--media_type $(MEDIA_TYPE)\
-		--glove_file $(GLOVE_FILE)
-
 # Recipe to convert .$(MEDIA_TYPE) files to .wav files
 build/wav_files/%.wav: $(DATA_DIR)/%.$(MEDIA_TYPE)
 	@mkdir -p $(@D)
