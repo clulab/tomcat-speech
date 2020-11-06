@@ -34,6 +34,30 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--data_path",
+        help="Directory in which the data resides",
+        default="/Downloads/data_flatstructure",
+    )
+    parser.add_argument(
+        "--save_path",
+        help="Directory to which the output should be written",
+        default="output/asist_audio",
+    )
+    parser.add_argument(
+        "--opensmile_path",
+        help="Path to OpenSMILE",
+        default="/opensmile-2.3.0",
+    )
+    parser.add_argument(
+        "--sentiment_text_path",
+        help="Path to text-based sentiment analysis outputs",
+        default="output/",
+    )
+    parser.add_argument(
+        "--prep_type",
+        help="Type of data prep to do",
+    )
+    parser.add_argument(
         "--input_dir",
         help="Directory in which the input data resides",
         default="output/asist_audio",  # check if default needed
@@ -68,6 +92,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    print(args)
     # set device
     cuda = True
     # Check CUDA
@@ -118,19 +143,20 @@ if __name__ == "__main__":
     # see if this can be moved to asist_prep.py instead
     if args.media_type == "mp4":
         os.system(
-            "time python tomcat_speech/data_prep/asist_data/asist_prep.py mp4_data"
+            "time python tomcat_speech/data_prep/asist_data/asist_prep.py media_type=mp4_data"
         )  # fixme
     elif args.media_type == "m4a":
         os.system(
-            f"time python tomcat_speech/data_prep/asist_data/asist_prep.py m4a_data"
+            f"time python tomcat_speech/data_prep/asist_data/asist_prep.py --media_type=m4a_data\
+             --data_path={args.data_path} --prep_type={args.prep_type} --opensmile_path={args.opensmile_path}"
         )  # fixme
     elif args.media_type == "mp3":
         os.system(
-            "time python tomcat_speech/data_prep/asist_data/asist_prep.py mp3_data"
+            "time python tomcat_speech/data_prep/asist_data/asist_prep.py media_type=mp3_data"
         )  # fixme
     elif args.media_type == "wav":
         os.system(
-            "time python tomcat_speech/data_prep/asist_data/asist_prep.py"
+            "time python tomcat_speech/data_prep/asist_data/asist_prep.py media_type=wav"
         )  # fixme
 
     # 1. IMPORT AUDIO AND TEXT

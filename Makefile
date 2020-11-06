@@ -24,12 +24,14 @@ WAV_FILES = $(patsubst $(DATA_DIR)/%.m4a, build/wav_files/%.wav, $(M4A_FILES))
 
 test: $(DATA_DIR)\
 	external/opensmile-3.0\
-	data/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth
-	python tomcat_speech/data_prep/asist_data/asist_prep.py\
+	data/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth\
+	data/glove.short.300d.punct.txt
+	python tomcat_speech/train_and_test_models/test_asist.py\
 		--prep_type extract_audio_and_zoom_text\
-		--data_path $(DATA_DIR)\
-		--opensmile_path external/opensmile-3.0
-
+		--data_path data/study-1_2020.08\
+		--opensmile_path external/opensmile-3.0\
+		--media_type m4a\
+		--glove_file data/glove.short.300d.punct.txt
 
 # Convert .m4a files to .wav files
 build/wav_files/%.wav: $(DATA_DIR)/%.m4a

@@ -732,6 +732,11 @@ if __name__ == "__main__":
         default=str(home_dir) + "/Downloads/data_flatstructure",
     )
     parser.add_argument(
+        "--media_type",
+        help="mp3, m4a, mp4 or wav",
+        default=None,  # check this
+    )
+    parser.add_argument(
         "--save_path",
         help="Directory to which the output should be written",
         default="output/asist_audio",
