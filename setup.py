@@ -26,7 +26,8 @@ setup(
         "numpy",
         "sklearn",
         "matplotlib",
-        "tqdm"
+        "tqdm",
+        "webvtt-py"
     ],
     python_requires=">=3.7",
 )
