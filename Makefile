@@ -40,9 +40,9 @@ build/wav_files/%.wav: $(DATA_DIR)/%.m4a
 	ffmpeg -i $< -ac 1 $@
 
 # Recipe to convert .vtt files to .tsv files
-build/tsv_files/%.tsv: $(DATA_DIR)/%.vtt
+build/tsv_files/%.tsv: scripts/vtt_to_tsv $(DATA_DIR)/%.vtt
 	mkdir -p $(@D)
-	scripts/vtt_to_tsv $< $@
+	$^ $@
 
 
 VTT_FILES = $(wildcard $(DATA_DIR)/HSR*.vtt)
