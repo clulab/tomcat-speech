@@ -15,8 +15,8 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "output_csv",
-    help="Output CSV with averaged acoustic features at the utterance level",
+    "output_tsv",
+    help="Output TSV with averaged acoustic features at the utterance level",
 )
 args = parser.parse_args()
 
@@ -76,4 +76,4 @@ acoustic = pd.DataFrame(all_acoustic_items, columns=col_names)
 df = pd.merge(utt_df, acoustic, on="timestart")
 
 # save the joined df as a new TSV
-df.to_csv(args.output_csv, index=False, sep="\t")
+df.to_csv(args.output_tsv, index=False, sep="\t")

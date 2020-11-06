@@ -69,7 +69,7 @@ build/opensmile_output/%.csv: build/wav_files/%.wav
 # We only want .vtt files from HSR data
 VTT_FILES = $(wildcard $(DATA_DIR)/HSR*.vtt)
 
-AVERAGED_CSV_FILES= $(patsubst build/tsv_files/HSRData_AudioTranscript_%.tsv, build/averaged_csv_files/%.csv, $(TSV_FILES))
+AVERAGED_TSV_FILES= $(patsubst build/tsv_files/HSRData_AudioTranscript_%.tsv, build/averaged_tsv_files/%.tsv, $(TSV_FILES))
 
 TSV_FILES = $(patsubst $(DATA_DIR)/%.vtt, build/tsv_files/%.tsv, $(VTT_FILES))
 M4A_FILES = $(wildcard $(DATA_DIR)/*.$(MEDIA_TYPE))
@@ -79,7 +79,7 @@ WAV_FILES = $(patsubst $(DATA_DIR)/%.$(MEDIA_TYPE), build/wav_files/%.wav, $(M4A
 OPENSMILE_CSV_FILES = $(patsubst build/wav_files/%.wav, build/opensmile_output/%.csv, $(WAV_FILES))
 
 
-build/averaged_csv_files/%.csv: scripts/align_text_and_acoustic_data\
+build/averaged_tsv_files/%.tsv: scripts/align_text_and_acoustic_data\
 								build/tsv_files/HSRData_AudioTranscript_%.tsv\
 								build/opensmile_output/HSRData_Audio_%.csv
 	@mkdir -p $(@D)
@@ -90,4 +90,6 @@ build/averaged_csv_files/%.csv: scripts/align_text_and_acoustic_data\
 tsv_files: $(TSV_FILES)
 wav_files: $(WAV_FILES)
 opensmile_csv_files: $(OPENSMILE_CSV_FILES)
-averaged_csv_files: $(firstword $(AVERAGED_CSV_FILES))
+averaged_tsv_files: $(firstword $(AVERAGED_TSV_FILES))
+test2: scripts/test_asist $(GLOVE_FILE) $(EMOTION_MODEL) $(firstword $(AVERAGED_TSV_FILES))
+	$^
