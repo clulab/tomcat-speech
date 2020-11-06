@@ -44,7 +44,7 @@ build/opensmile_output/%.csv: build/wav_files/%.wav\
 							$(OPENSMILE_DIR)/config/$(OPENSMILE_CONFIG)
 	@mkdir -p $(@D)
 	@echo "Extracting features from $< ..."
-	@$(OPENSMILE_DIR)/bin/SMILExtract\
+	$(OPENSMILE_DIR)/bin/SMILExtract\
 		-C $(OPENSMILE_DIR)/config/$(OPENSMILE_CONFIG)\
 		-I $<\
 		-lldcsvoutput\
@@ -81,5 +81,5 @@ wav_files: $(WAV_FILES)
 opensmile_csv_files: $(OPENSMILE_CSV_FILES)
 averaged_tsv_files: $(firstword $(AVERAGED_TSV_FILES))
 
-asist_output.txt: scripts/test_asist $(GLOVE_FILE) $(EMOTION_MODEL) $(firstword $(AVERAGED_TSV_FILES))
+asist_output.txt: scripts/run_asist_analysis $(GLOVE_FILE) $(EMOTION_MODEL) $(firstword $(AVERAGED_TSV_FILES))
 	$^
