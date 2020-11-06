@@ -1,6 +1,6 @@
 # This Makefile is a work in progress - it has not been tested yet!
 
-all: test
+all: asist_output.txt
 
 DATA_DIR = data/study-1_2020.08
 OPENSMILE_DIR = external/opensmile-3.0
@@ -38,8 +38,6 @@ build/tsv_files/%.tsv: scripts/vtt_to_tsv $(DATA_DIR)/%.vtt
 	@mkdir -p $(@D)
 	$^ $@
 
-
-
 # Recipe to create an OpenSMILE output CSV from a .wav file
 build/opensmile_output/%.csv: build/wav_files/%.wav $(OPENSMILE_DIR)
 	@mkdir -p $(@D)
@@ -48,7 +46,7 @@ build/opensmile_output/%.csv: build/wav_files/%.wav $(OPENSMILE_DIR)
 		-C $(OPENSMILE_DIR)/config/$(OPENSMILE_CONFIG)\
 		-I $<\
 		-lldcsvoutput\
-		$@ &> /dev/null
+		$@
 
 
 # ==================================================
@@ -80,5 +78,6 @@ tsv_files: $(TSV_FILES)
 wav_files: $(WAV_FILES)
 opensmile_csv_files: $(OPENSMILE_CSV_FILES)
 averaged_tsv_files: $(firstword $(AVERAGED_TSV_FILES))
-test2: scripts/test_asist $(GLOVE_FILE) $(EMOTION_MODEL) $(firstword $(AVERAGED_TSV_FILES))
+
+asist_output.txt: scripts/test_asist $(GLOVE_FILE) $(EMOTION_MODEL) $(firstword $(AVERAGED_TSV_FILES))
 	$^
