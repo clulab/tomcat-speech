@@ -14,7 +14,6 @@ from tomcat_speech.data_prep.audio_extraction import (
 from tomcat_speech.data_prep.data_prep_helpers import (
     clean_up_word,
     get_speaker_to_index_dict,
-    make_acoustic_dict,
     get_longest_utt,
     get_class_weights,
     make_acoustic_set,

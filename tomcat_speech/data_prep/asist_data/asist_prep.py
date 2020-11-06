@@ -315,7 +315,7 @@ class ASISTInput:
             participant_id = item.split("-")[-2].split("_")[0]
 
             # set the path to the item
-            text_path = self.path + "/" + item
+            self.path + "/" + item
 
             # set the name for saving csv files
             text_savename = f"{experiment_id}_{participant_id}"

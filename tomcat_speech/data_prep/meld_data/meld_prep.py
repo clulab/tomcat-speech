@@ -5,12 +5,9 @@ import os
 import pandas as pd
 
 import torch
-from torch import nn
-from torch.utils.data import Dataset
 
 from tomcat_speech.data_prep.data_prep_helpers import (
     clean_up_word,
-    get_speaker_to_index_dict,
     get_max_num_acoustic_frames,
     get_speaker_gender,
     get_class_weights,
@@ -20,9 +17,7 @@ from tomcat_speech.data_prep.data_prep_helpers import (
 )
 from collections import OrderedDict
 
-import torchtext
 from torchtext.data import get_tokenizer
-from torch.nn.utils.rnn import pad_sequence
 
 
 class MeldPrep:

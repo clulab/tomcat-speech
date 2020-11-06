@@ -4,7 +4,6 @@
 import sys
 import numpy as np
 
-from sklearn.model_selection import train_test_split
 
 from tomcat_speech.models.train_and_test_models import *
 from tomcat_speech.models.input_models import *

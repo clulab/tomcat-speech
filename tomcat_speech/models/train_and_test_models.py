@@ -2,22 +2,16 @@
 
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 
 # import parameters for model
 from torch.utils.data import DataLoader
 
-from tomcat_speech.models.bimodal_models import BimodalCNN
 from tomcat_speech.models.parameters.multitask_params import *
 from tomcat_speech.models.plot_training import *
 
 from sklearn.metrics import confusion_matrix
-from sklearn.metrics import f1_score
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
-from sklearn.metrics import accuracy_score
 
 
 # adapted from https://github.com/joosthub/PyTorchNLPBook/blob/master/chapters/chapter_6/classifying-surnames/Chapter-6-Surname-Classification-with-RNNs.ipynb

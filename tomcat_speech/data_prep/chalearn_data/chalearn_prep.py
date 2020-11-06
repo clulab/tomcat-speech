@@ -12,12 +12,10 @@ from torchtext.data import get_tokenizer
 
 from tomcat_speech.data_prep.audio_extraction import (
     ExtractAudio,
-    convert_mp4_to_wav,
 )
 import pandas as pd
 
 from tomcat_speech.data_prep.data_prep_helpers import (
-    get_class_weights,
     get_gender_avgs,
     clean_up_word,
     get_max_num_acoustic_frames,
@@ -216,7 +214,6 @@ class ChalearnPrep:
         """
         train_data = []
         dev_data = []
-        test_data = []
 
         for i, item in enumerate(self.train_acoustic):
             # normalize

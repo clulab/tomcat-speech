@@ -2,7 +2,6 @@
 
 import sys
 import numpy as np
-from sklearn.model_selection import train_test_split
 
 from tomcat_speech.data_prep.ravdess_data.ravdess_prep import RavdessPrep
 from tomcat_speech.models.train_and_test_models import *

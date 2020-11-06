@@ -106,7 +106,6 @@ class Glove(object):
 
     def get_index2glove_dict(self):
         # create index: vector dict
-        c = 0
         idx2glove = {}
         for k, v in self.glove_dict.items():
             idx2glove[self.wd2idx[k]] = v
