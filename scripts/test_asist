@@ -15,11 +15,6 @@ parser.add_argument(
     default="tomcat_speech/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth",
 )
 parser.add_argument(
-    "transcript_type",
-    help="Give the transcript type that will be used (zoom or aws)",
-    default="zoom"
-)
-parser.add_argument(
     "input_csvfiles",
     help="Input CSV files for training and testing the model.",
     nargs="+"
@@ -117,7 +112,7 @@ if __name__ == "__main__":
         truncate_from="start",
         norm=None,
         add_avging=params.add_avging,
-        transcript_type=args.transcript_type
+        transcript_type="zoom"
     )
 
     # get data for testing

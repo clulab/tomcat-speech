@@ -83,11 +83,6 @@ if __name__ == "__main__":
         help="enter the path to saved model you would like to use in testing",
         default="tomcat_speech/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth",
     )
-    parser.add_argument(
-        "transcript_type",
-        help="Give the transcript type that will be used (zoom or aws)",
-        default="zoom"
-    )
 
     args = parser.parse_args()
 
@@ -218,7 +213,7 @@ if __name__ == "__main__":
         truncate_from="start",
         norm=None,
         add_avging=params.add_avging,
-        transcript_type=args.transcript_type
+        transcript_type="zoom"
     )
 
     # get data for testing

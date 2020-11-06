@@ -10,8 +10,6 @@ EMOTION_MODEL = data/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth
 
 # Set the type of audio file that needs to be converted (m4a/mp4)
 MEDIA_TYPE=m4a
-# set the type of transcript that needs to be read (zoom/aws)
-TRANSCRIPT_TYPE=zoom
 
 $(OPENSMILE_DIR):
 	./scripts/download_opensmile
@@ -39,8 +37,7 @@ test: tomcat_speech/train_and_test_models/test_asist.py\
 		--data_path $(DATA_DIR)\
 		--opensmile_path $(OPENSMILE_DIR)\
 		--media_type $(MEDIA_TYPE)\
-		--glove_file $(GLOVE_FILE)\
-		--transcript_type $(TRANSCRIPT_TYPE)
+		--glove_file $(GLOVE_FILE)
 
 # Recipe to convert .$(MEDIA_TYPE) files to .wav files
 build/wav_files/%.wav: $(DATA_DIR)/%.$(MEDIA_TYPE)
@@ -94,5 +91,5 @@ tsv_files: $(TSV_FILES)
 wav_files: $(WAV_FILES)
 opensmile_csv_files: $(OPENSMILE_CSV_FILES)
 averaged_tsv_files: $(firstword $(AVERAGED_TSV_FILES))
-test2: scripts/test_asist $(GLOVE_FILE) $(EMOTION_MODEL) $(TRANSCRIPT_TYPE) $(firstword $(AVERAGED_TSV_FILES))
+test2: scripts/test_asist $(GLOVE_FILE) $(EMOTION_MODEL) $(firstword $(AVERAGED_TSV_FILES))
 	$^
