@@ -30,11 +30,10 @@ for caption in webvtt.read(args.input_vtt_file):
 
     records.append(
         {
-            "filename": Path(args.input_vtt_file).stem,
-            "start_timestamp": caption.start,
-            "end_timestamp": caption.end,
             "speaker": speaker,
-            "text": text,
+            "timestart": caption.start,
+            "timeend": caption.end,
+            "utt": text,
         }
     )
 
@@ -42,4 +41,4 @@ for caption in webvtt.read(args.input_vtt_file):
 df = pd.DataFrame(records)
 
 # Output the dataframe to TSV
-df.to_csv(args.output_tsv_file)
+df.to_csv(args.output_tsv_file, index=False)
