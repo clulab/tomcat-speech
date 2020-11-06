@@ -54,11 +54,12 @@ build/tsv_files/%.tsv: scripts/vtt_to_tsv $(DATA_DIR)/%.vtt
 # Recipe to create an OpenSMILE output CSV from a .wav file
 build/opensmile_output/%.csv: build/wav_files/%.wav
 	@mkdir -p $(@D)
-	$(OPENSMILE_DIR)/bin/SMILExtract\
+	@echo "Extracting features from $< ..."
+	@$(OPENSMILE_DIR)/bin/SMILExtract\
 		-C $(OPENSMILE_DIR)/config/$(OPENSMILE_CONFIG)\
 		-I $<\
 		-lldcsvoutput\
-		$@
+		$@ &> /dev/null
 
 
 # ==================================================
@@ -81,7 +82,7 @@ OPENSMILE_CSV_FILES = $(patsubst build/wav_files/%.wav, build/opensmile_output/%
 build/averaged_csv_files/%.csv: scripts/align_text_and_acoustic_data\
 								build/tsv_files/HSRData_AudioTranscript_%.tsv\
 								build/opensmile_output/HSRData_Audio_%.csv
-	mkdir -p $(@D)
+	@mkdir -p $(@D)
 	$^ $@
 
 
