@@ -52,7 +52,7 @@ build/tsv_files/%.tsv: scripts/vtt_to_tsv $(DATA_DIR)/%.vtt
 
 
 # Recipe to create an OpenSMILE output CSV from a .wav file
-build/opensmile_output/%.csv: build/wav_files/%.wav
+build/opensmile_output/%.csv: build/wav_files/%.wav $(OPENSMILE_DIR)
 	@mkdir -p $(@D)
 	@echo "Extracting features from $< ..."
 	@$(OPENSMILE_DIR)/bin/SMILExtract\
