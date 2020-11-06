@@ -24,6 +24,7 @@ from tomcat_speech.models.parameters.multitask_params import params
 import numpy as np
 import random
 import torch
+import os
 
 p = "~"
 
@@ -83,9 +84,9 @@ if __name__ == "__main__":
         default="tomcat_speech/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth",
     )
     parser.add_argument(
-        "--acoustic_dict",
-        help="choose type of transcript used: aws or zoom",
-        default="aws",
+        "transcript_type",
+        help="Give the transcript type that will be used (zoom or aws)",
+        default="zoom"
     )
 
     args = parser.parse_args()
@@ -159,7 +160,7 @@ if __name__ == "__main__":
 
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
-    if args.acoustic_dict == "aws":
+    if args.transcript_type == "aws":
         acoustic_dict = make_acoustic_dict(
             args.input_dir,
             "_avgd.csv",
@@ -181,7 +182,7 @@ if __name__ == "__main__":
             ],
             data_type="asist",
         )
-    elif args.acoustic_dict == "zoom":
+    elif args.transcript_type == "zoom":
         acoustic_dict = make_acoustic_dict(
             args.input_dir,
             "_avgd.csv",
@@ -212,12 +213,12 @@ if __name__ == "__main__":
     data = AsistDataset(
         acoustic_dict,
         glove,
-        cols_to_skip=cols_to_skip,
         splits=1,
         sequence_prep="pad",
         truncate_from="start",
         norm=None,
         add_avging=params.add_avging,
+        transcript_type=args.transcript_type
     )
 
     # get data for testing

@@ -24,11 +24,11 @@ class AsistDataset(Dataset):
         glove,
         ys_path=None,
         splits=3,
-        cols_to_skip=5,
         norm="minmax",
         sequence_prep=None,
         truncate_from="start",
         add_avging=False,
+        transcript_type="zoom"
     ):
         """
         :param acoustic_dict: dict of {(sid, call) : data}
@@ -39,7 +39,7 @@ class AsistDataset(Dataset):
         :param sequence_prep: the way sequences are handled, options: truncate, pad, None
         :param truncate_from: whether to truncate from start or end of file
         """
-        self.cols_to_skip = cols_to_skip
+        self.cols_to_skip = 2 if transcript_type.lower() == "zoom" else 4
         self.acoustic_dict = OrderedDict(acoustic_dict)
         self.glove = glove
         if ys_path is not None:
@@ -64,15 +64,17 @@ class AsistDataset(Dataset):
         #Tests gender classifier:print('start')
 
         # self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove()
-        (
-            self.x_acoustic,
-            self.x_glove,
-            self.x_speaker,
-            self.x_utt_lengths,
-            #self.x_speaker_gender, #sa
-        ) = self.combine_acoustic_and_glove_wd_level()
         #Tests gender classifierprint('end')
-        # self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove_utt_level()
+        if transcript_type.lower() == "zoom":
+            self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove_utt_level()
+        else:
+            (
+                self.x_acoustic,
+                self.x_glove,
+                self.x_speaker,
+                self.x_utt_lengths,
+                #self.x_speaker_gender, #sa
+            ) = self.combine_acoustic_and_glove_wd_level()
 
         # todo: we should get gender info on participants OR predict it
         # add call to wrapper function that calls the gender classifier
@@ -189,7 +191,6 @@ class AsistDataset(Dataset):
                 if key[0] in self.valid_files
             ]
         )
-        # print("longest_utt", longest_utt)
 
         speaker_list = []
         for key, item in self.acoustic_dict.items():
@@ -659,6 +660,8 @@ class AsistDataset(Dataset):
 def get_longest_utterance_asist(pd_dataframes):
     """
     Get the longest utterance in the dataset
+    Used with data from Zoom that has column 'utt' that
+    contains each utterance as a single string
     :param pd_dataframes: the dataframes for the dataset
     :return:
     """
