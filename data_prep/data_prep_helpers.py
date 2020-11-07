@@ -6,14 +6,16 @@ import sys
 from collections import OrderedDict
 
 import pandas as pd
+import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import Dataset
 from sklearn.feature_selection import SelectKBest, chi2
 from sklearn.utils.class_weight import compute_class_weight
+from fairseq.models.wav2vec import Wav2VecModel
+import torchaudio
 
 import statistics
-
 
 # classes
 from torch.utils.data.sampler import RandomSampler
@@ -42,14 +44,14 @@ class DatumListDataset(Dataset):
 
     def targets(self):
         if (
-            self.data_type == "meld_emotion"
-            or self.data_type == "mustard"
-            or self.data_type == "ravdess_emotion"
+                self.data_type == "meld_emotion"
+                or self.data_type == "mustard"
+                or self.data_type == "ravdess_emotion"
         ):
             for datum in self.data_list:
                 yield datum[4]
         elif (
-            self.data_type == "meld_sentiment" or self.data_type == "ravdess_intensity"
+                self.data_type == "meld_sentiment" or self.data_type == "ravdess_intensity"
         ):
             for datum in self.data_list:
                 yield datum[5]
@@ -59,6 +61,7 @@ class MultitaskObject(object):
     """
     An object to hold the data and meta-information for each of the datasets/tasks
     """
+
     def __init__(self, train_data, dev_data, test_data, class_loss_func, task_num, binary=False,
                  optimizer=None):
         """
@@ -215,17 +218,17 @@ class MinMaxScaleRange:
     use min-max scaling
     """
 
-    def __init__(self,):
+    def __init__(self, ):
         self.mins = {}
         self.maxes = {}
 
     def update(self, key, val):
         if (
-            key in self.mins.keys() and val < self.mins[key]
+                key in self.mins.keys() and val < self.mins[key]
         ) or key not in self.mins.keys():
             self.mins[key] = val
         if (
-            key in self.maxes.keys() and val > self.maxes[key]
+                key in self.maxes.keys() and val > self.maxes[key]
         ) or key not in self.maxes.keys():
             self.maxes[key] = val
 
@@ -302,8 +305,8 @@ def create_data_folds(data, perc_train, perc_test):
 
     # get slices of dataset
     train_data = shuffled.iloc[: int(train_len)]
-    test_data = shuffled.iloc[int(train_len) : int(train_len) + int(test_len)]
-    dev_data = shuffled.iloc[int(train_len) + int(test_len) :]
+    test_data = shuffled.iloc[int(train_len): int(train_len) + int(test_len)]
+    dev_data = shuffled.iloc[int(train_len) + int(test_len):]
 
     # return data
     return train_data, dev_data, test_data
@@ -329,8 +332,8 @@ def create_data_folds_list(data, perc_train, perc_test):
 
     # get datasets
     train_data = data[:train_len]
-    test_data = data[train_len : train_len + test_len]
-    dev_data = data[train_len + test_len :]
+    test_data = data[train_len: train_len + test_len]
+    dev_data = data[train_len + test_len:]
 
     # return data
     return train_data, dev_data, test_data
@@ -495,11 +498,11 @@ def get_speaker_to_index_dict(speaker_set):
 
 
 def make_acoustic_dict(
-    acoustic_path,
-    f_end="_IS09_avgd.csv",
-    use_cols=None,
-    data_type="clinical",
-    files_to_get=None,
+        acoustic_path,
+        f_end="_IS09_avgd.csv",
+        use_cols=None,
+        data_type="clinical",
+        files_to_get=None,
 ):
     """
     makes a dict of (sid, call): data for use in ClinicalDataset objects
@@ -541,13 +544,13 @@ def make_acoustic_dict(
 
 
 def make_acoustic_set(
-    text_path,
-    acoustic_dict,
-    data_type,
-    acoustic_length,
-    longest_acoustic,
-    add_avging=True,
-    avgd=False,
+        text_path,
+        acoustic_dict,
+        data_type,
+        acoustic_length,
+        longest_acoustic,
+        add_avging=True,
+        avgd=False,
 ):
     """
     Prep the acoustic data using the acoustic dict
@@ -608,7 +611,8 @@ def make_acoustic_set(
                     # acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.05):math.ceil(data_len * 0.95)], dim=0)
                     # try skipping first and last 25% 15%
                     # acoustic_holder = torch.rand(76 * 3)
-                    acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
+                    acoustic_holder = torch.mean(
+                        torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
                     # acoustic_holder = torch.cat((acoustic_holder, acoustic_holder, acoustic_holder), 0)
                     # try using means, medians, stdev
                     # try mean, mean + stdev, mean - stdev
@@ -684,3 +688,54 @@ def transform_acoustic_item(item, acoustic_means, acoustic_stdev):
     acoustic_stdev : the corresponding stdev vector
     """
     return (item - acoustic_means) / acoustic_stdev
+
+
+def make_w2v_dict(audio_path="", w2v_model="", rnn=False):
+    cp = torch.load(w2v_model)
+
+    model = Wav2VecModel.build_model(cp['args'], task=None)
+    model.load_state_dict(cp['model'])
+
+    wav_names = [wav for wav in os.listdir(audio_path) if wav.endswith("wav") or wav.endswith("mp3")]
+
+    audio_dict = {}
+    audio_length = {}
+    for wav in wav_names:
+        if wav.endswith("wav"):
+            wav_name = wav.replace(".wav", "")
+        else:
+            wav_name = wav.replace(".mp3", "")
+
+        # print(wav_name)
+        filename = os.path.join(audio_path, wav)
+
+        waveform, sample_rate = torchaudio.load(filename, normalization=True)
+        z = model.feature_extractor(waveform)
+        aggregated_feat = model.feature_aggregator(z)
+        mel_time = aggregated_feat.size()[2]
+        if rnn:
+            if mel_time > 686:
+                target_tensor = aggregated_feat[:, :, :686]
+                audio_length[wav_name] = 686
+            else:
+                target_tensor = aggregated_feat
+                audio_length[wav_name] = mel_time
+
+        else:
+            if mel_time > 686:
+                target_tensor = aggregated_feat[:, :, :686]
+                audio_length[wav_name] = 686
+            else:
+                target_tensor = torch.zeros(1, 512, 686)
+
+                diff = mel_time - 686
+
+                random_start = np.random.randint(0, diff + 1)
+                end = mel_time - diff + random_start
+
+                target_tensor[:, :, random_start:end] = aggregated_feat
+                audio_length[wav_name] = mel_time
+
+        audio_dict[wav_name] = target_tensor
+
+    return audio_dict, audio_length
