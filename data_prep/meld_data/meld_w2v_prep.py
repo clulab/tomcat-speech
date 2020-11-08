@@ -122,19 +122,19 @@ class MeldPrep:
             self.test_dataset = torch.load(self.meld_test_data)
         else:
             print("CREATING DATASET")
-            self.train_dataset = MeldPrepData(audio_path=self.audio_path,
+            self.train_dataset = MeldPrepData(audio_data_path=self.audio_path,
                                               response_data=self.train)
 
             with open(os.path.join(self.meld_train_data), "wb") as data_file:
                 torch.save(self.train_dataset, data_file)
 
-            self.dev_dataset = MeldPrepData(audio_path=self.audio_path,
+            self.dev_dataset = MeldPrepData(audio_data_path=self.audio_path,
                                             response_data=self.dev)
 
             with open(os.path.join(meld_data_path, "dev.pt"), "wb") as data_file:
                 torch.save(self.dev_dataset, data_file)
 
-            self.test_dataset = MeldPrepData(audio_path=self.audio_path,
+            self.test_dataset = MeldPrepData(audio_data_path=self.audio_path,
                                              response_data=self.test)
 
             with open(os.path.join(meld_data_path, "test.pt"), "wb") as data_file:
