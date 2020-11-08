@@ -93,31 +93,30 @@ def update_train_state(model, train_state):
 
         # Stop early ?
         train_state["stop_early"] = (
-            train_state["early_stopping_step"] >= params.early_stopping_criteria
+                train_state["early_stopping_step"] >= params.early_stopping_criteria
         )
 
     return train_state
 
 
 def train_and_predict(
-    classifier,
-    train_state,
-    train_ds,
-    val_ds,
-    batch_size,
-    num_epochs,
-    loss_func,
-    optimizer,
-    device="cpu",
-    scheduler=None,
-    sampler=None,
-    avgd_acoustic=True,
-    use_speaker=True,
-    use_gender=False,
-    binary=False,
-    split_point=0.0,
+        classifier,
+        train_state,
+        train_ds,
+        val_ds,
+        batch_size,
+        num_epochs,
+        loss_func,
+        optimizer,
+        device="cpu",
+        scheduler=None,
+        sampler=None,
+        avgd_acoustic=True,
+        use_speaker=True,
+        use_gender=False,
+        binary=False,
+        split_point=0.0,
 ):
-
     for epoch_index in range(num_epochs):
 
         print("Now starting epoch {0}".format(epoch_index))
@@ -398,20 +397,20 @@ def train_and_predict(
 
 
 def train_and_predict_transformer(
-    classifier,
-    train_state,
-    train_ds,
-    val_ds,
-    # batch_size,
-    # num_workers,
-    num_epochs,
-    loss_func,
-    optimizer,
-    device,
-    scheduler=None,
-    sampler=None,
-    binary=False,
-    split_point=0.0,
+        classifier,
+        train_state,
+        train_ds,
+        val_ds,
+        # batch_size,
+        # num_workers,
+        num_epochs,
+        loss_func,
+        optimizer,
+        device,
+        scheduler=None,
+        sampler=None,
+        binary=False,
+        split_point=0.0,
 ):
     # print(classifier)
     for epoch_index in range(num_epochs):
@@ -426,9 +425,9 @@ def train_and_predict_transformer(
         # set classifier(s) to training mode
         classifier.train()
 
-        #batches = DataLoader(
+        # batches = DataLoader(
         #     train_ds, num_workers=num_workers, batch_size=batch_size, shuffle=True, sampler=sampler
-        #)
+        # )
 
         # assign holders
         ys_holder = []
@@ -491,9 +490,9 @@ def train_and_predict_transformer(
         # set classifier(s) to evaluation mode
         classifier.eval()
 
-        #batches = DataLoader(
+        # batches = DataLoader(
         #     val_ds, num_workers=num_workers, batch_size=batch_size, shuffle=True, sampler=sampler
-        #)
+        # )
 
         # assign holders
         ys_holder = []
@@ -501,7 +500,6 @@ def train_and_predict_transformer(
 
         # for batch in batches:
         for (batch_index, batch) in enumerate(val_ds):
-
             # Load batch
             input_ids = batch['token'].type(torch.LongTensor)
             # print(batch['length'])
@@ -530,6 +528,243 @@ def train_and_predict_transformer(
 
             running_acc += (acc_t - running_acc) / (batch_index + 1)
 
+        avg_f1 = precision_recall_fscore_support(
+            ys_holder, preds_holder, average="weighted"
+        )
+        train_state["val_avg_f1"].append(avg_f1[2])
+        print("Weighted F=score: " + str(avg_f1))
+
+        # get confusion matrix
+        if epoch_index % 5 == 0:
+            print(confusion_matrix(ys_holder, preds_holder))
+            print("Classification report: ")
+            print(classification_report(ys_holder, preds_holder, digits=4))
+
+        # add loss and accuracy to train state
+        train_state["val_loss"].append(running_loss)
+        train_state["val_acc"].append(running_acc)
+
+        # update the train state now that our epoch is complete
+        train_state = update_train_state(model=classifier, train_state=train_state)
+
+        # update scheduler if there is one
+        if scheduler is not None:
+            scheduler.step(train_state["val_loss"][-1])
+
+        # if it's time to stop, end the training process
+        if train_state["stop_early"]:
+            break
+
+
+def train_and_predict_w2v(
+        classifier,
+        train_state,
+        train_ds,
+        val_ds,
+        batch_size,
+        num_epochs,
+        loss_func,
+        optimizer,
+        device="cpu",
+        scheduler=None,
+        sampler=None,
+        binary=False,
+        split_point=0.0,
+):
+    for epoch_index in range(num_epochs):
+
+        print("Now starting epoch {0}".format(epoch_index))
+
+        train_state["epoch_index"] = epoch_index
+
+        # Iterate over training dataset
+        running_loss = 0.0
+        running_acc = 0.0
+
+        # set classifier(s) to training mode
+        classifier.train()
+
+        batches = DataLoader(
+            train_ds, batch_size=batch_size, shuffle=True, sampler=sampler
+        )
+
+        # set holders to use for error analysis
+        ys_holder = []
+        preds_holder = []
+
+        # for each batch in the list of batches created by the dataloader
+        for batch_index, batch in enumerate(batches):
+            # get the gold labels
+            y_gold = batch['label'].to(device)
+
+            if split_point > 0:
+                y_gold = torch.tensor(
+                    [
+                        1.0 if y_gold[i] > split_point else 0.0
+                        for i in range(len(y_gold))
+                    ]
+                )
+            # y_gold = batch.targets()
+
+            # step 1. zero the gradients
+            optimizer.zero_grad()
+
+            # step 2. compute the output
+            batch_acoustic = batch['audio'].to(device)
+            batch_acoustic_lengths = batch['length'].to(device)
+
+            y_pred = classifier(
+                acoustic_input=batch_acoustic,
+                acoustic_len_input=batch_acoustic_lengths,
+            )
+
+            if binary:
+                y_pred = y_pred.float()
+                y_gold = y_gold.float()
+
+            # uncomment for prediction spot-checking during training
+            # if epoch_index % 10 == 0:
+            #     print(y_pred)
+            #     print(y_gold)
+            # if epoch_index == 35:
+            #     sys.exit(1)
+            # print("THE PREDICTIONS ARE: ")
+            # print(y_pred)
+            # print(y_gold)
+
+            # add ys to holder for error analysis
+            if binary:
+                preds_holder.extend([round(item[0]) for item in y_pred.tolist()])
+            else:
+                preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+            ys_holder.extend(y_gold.tolist())
+
+            # step 3. compute the loss
+            # print(y_pred)
+            # print(y_gold)
+            # print(f"y-gold shape is: {y_gold.shape}")
+            # print(y_pred)
+            # print(f"y-pred shape is: {y_pred.shape}")
+            loss = loss_func(y_pred, y_gold)
+            loss_t = loss.item()  # loss for the item
+
+            if len(list(y_pred.size())) > 1:
+                if binary:
+                    y_pred = torch.tensor([round(item[0]) for item in y_pred.tolist()])
+                else:
+                    # if type(y_gold[0]) == list or torch.is_tensor(y_gold[0]):
+                    #     y_gold = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
+                    y_pred = torch.tensor(
+                        [item.index(max(item)) for item in y_pred.tolist()]
+                    )
+                    # print(y_gold)
+                    # print(y_pred)
+                    # print(type(y_gold))
+                    # print(type(y_pred))
+            else:
+                y_pred = torch.round(y_pred)
+
+            # calculate running loss
+            running_loss += (loss_t - running_loss) / (batch_index + 1)
+
+            # step 4. use loss to produce gradients
+            loss.backward()
+
+            # step 5. use optimizer to take gradient step
+            optimizer.step()
+
+            # compute the accuracy
+            acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
+
+            running_acc += (acc_t - running_acc) / (batch_index + 1)
+
+            # uncomment to see loss and accuracy measures for every minibatch
+            # print("loss: {0}, running_loss: {1}, acc: {0}, running_acc: {1}".format(loss_t, running_loss,
+            #                                                                       acc_t, running_acc))
+
+        # add loss and accuracy information to the train state
+        train_state["train_loss"].append(running_loss)
+        train_state["train_acc"].append(running_acc)
+
+        avg_f1 = precision_recall_fscore_support(
+            ys_holder, preds_holder, average="weighted"
+        )
+        train_state["train_avg_f1"].append(avg_f1[2])
+        # print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
+        print("Training weighted F-score: " + str(avg_f1))
+
+        # Iterate over validation set--put it in a dataloader
+        val_batches = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
+
+        # reset loss and accuracy to zero
+        running_loss = 0.0
+        running_acc = 0.0
+
+        # set classifier to evaluation mode
+        classifier.eval()
+
+        # set holders to use for error analysis
+        ys_holder = []
+        preds_holder = []
+
+        # for each batch in the dataloader
+        for batch_index, batch in enumerate(val_batches):
+            # compute the output
+            batch_acoustic = batch['audio'].to(device)
+            batch_acoustic_lengths = batch['length'].to(device)
+
+            y_pred = classifier(
+                acoustic_input=batch_acoustic,
+                acoustic_len_input=batch_acoustic_lengths,
+            )
+
+            # get the gold labels
+            # y_gold = batch[7].to(device)
+            y_gold = batch['label'].to(device)
+
+            if split_point > 0:
+                y_gold = torch.tensor(
+                    [
+                        1.0 if y_gold[i] > split_point else 0.0
+                        for i in range(len(y_gold))
+                    ]
+                )
+            # y_gold = batch.targets()
+
+            if binary:
+                y_pred = y_pred.float()
+                y_gold = y_gold.float()
+
+            # add ys to holder for error analysis
+            if binary:
+                preds_holder.extend([round(item[0]) for item in y_pred.tolist()])
+            else:
+                preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+            ys_holder.extend(y_gold.tolist())
+
+            loss = loss_func(y_pred, y_gold)
+            running_loss += (loss.item() - running_loss) / (batch_index + 1)
+
+            # compute the loss
+            if len(list(y_pred.size())) > 1:
+                if binary:
+                    y_pred = torch.tensor([round(item[0]) for item in y_pred.tolist()])
+                else:
+                    y_pred = torch.tensor(
+                        [item.index(max(item)) for item in y_pred.tolist()]
+                    )
+            else:
+                y_pred = torch.round(y_pred)
+
+            # compute the accuracy
+            acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
+            running_acc += (acc_t - running_acc) / (batch_index + 1)
+
+            # uncomment to see loss and accuracy for each minibatch
+            # print("val_loss: {0}, running_val_loss: {1}, val_acc: {0}, running_val_acc: {1}".format(loss_t, running_loss,
+            #                                                                       acc_t, running_acc))
+
+        # print("Overall val loss: {0}, overall val acc: {1}".format(running_loss, running_acc))
         avg_f1 = precision_recall_fscore_support(
             ys_holder, preds_holder, average="weighted"
         )
@@ -772,17 +1007,15 @@ def get_batch_predictions(batch, classifier, gold_idx, use_speaker=False,
     return y_pred, y_2_pred, y_3_pred, gold
 
 
-
-
 def test_model(
-    classifier,
-    test_ds,
-    batch_size,
-    loss_func,
-    device="cpu",
-    avgd_acoustic=True,
-    use_speaker=True,
-    use_gender=False,
+        classifier,
+        test_ds,
+        batch_size,
+        loss_func,
+        device="cpu",
+        avgd_acoustic=True,
+        use_speaker=True,
+        use_gender=False,
 ):
     """
     Test a pretrained model
@@ -873,18 +1106,18 @@ def test_model(
 
 
 def multitask_train_and_predict(
-    classifier,
-    train_state,
-    datasets_list,
-    batch_size,
-    num_epochs,
-    optimizer,
-    device="cpu",
-    scheduler=None,
-    sampler=None,
-    avgd_acoustic=True,
-    use_speaker=True,
-    use_gender=False,
+        classifier,
+        train_state,
+        datasets_list,
+        batch_size,
+        num_epochs,
+        optimizer,
+        device="cpu",
+        scheduler=None,
+        sampler=None,
+        avgd_acoustic=True,
+        use_speaker=True,
+        use_gender=False,
 ):
     """
     Train_ds_list and val_ds_list are lists of MultTaskObject objects!
@@ -1269,12 +1502,12 @@ def get_all_batches_oversampling(dataset_list, batch_size, shuffle, partition="t
 
 
 def predict_without_gold_labels(classifier,
-    test_ds,
-    batch_size,
-    device="cpu",
-    avgd_acoustic=True,
-    use_speaker=True,
-    use_gender=False,):
+                                test_ds,
+                                batch_size,
+                                device="cpu",
+                                avgd_acoustic=True,
+                                use_speaker=True,
+                                use_gender=False, ):
     """
     Test a pretrained model
     """
@@ -1329,17 +1562,17 @@ def predict_without_gold_labels(classifier,
 
 
 def multitask_train_and_predict_with_gradnorm(
-    classifier,
-    train_state,
-    datasets_list,
-    batch_size,
-    num_epochs,
-    optimizer1,
-    device="cpu",
-    avgd_acoustic=True,
-    use_speaker=True,
-    use_gender=False,
-    optimizer2_learning_rate=0.001
+        classifier,
+        train_state,
+        datasets_list,
+        batch_size,
+        num_epochs,
+        optimizer1,
+        device="cpu",
+        avgd_acoustic=True,
+        use_speaker=True,
+        use_gender=False,
+        optimizer2_learning_rate=0.001
 ):
     """
     Train_ds_list and val_ds_list are lists of MultTaskObject objects!

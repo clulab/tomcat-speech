@@ -510,7 +510,7 @@ class AudioOnlyRNN(nn.Module):
         # acoustic_input = self.acoustic_batch_norm(acoustic_input)
         # pack acoustic input
         packed = nn.utils.rnn.pack_padded_sequence(
-            acoustic_input, length_input, batch_first=True, enforce_sorted=False
+            acoustic_input, acoustic_len_input, batch_first=True, enforce_sorted=False
         )
 
         # feed embeddings through GRU
