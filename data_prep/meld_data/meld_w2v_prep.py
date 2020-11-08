@@ -44,8 +44,8 @@ def sentiment_to_int(sentiment):
 
 
 class MeldPrepData(torch.utils.data.Dataset):
-    def __init__(self, audio_path, wav_model, response_data):
-        self.audio_path = audio_path
+    def __init__(self, audio_data_path, response_data):
+        self.audio_path = audio_data_path
         self.sentiment = {}
 
         with open(response_data, "r") as f:
@@ -67,9 +67,9 @@ class MeldPrepData(torch.utils.data.Dataset):
 
         self.wav_names = []
 
-        self.audio_dict, self.audio_length = make_w2v_dict(self.audio_path, wav_model, rnn=True)
+        self.wav_names = [name for name in list(self.label_info.keys())]
 
-        self.wav_names = [name for name in list(self.audio_dict.keys())]
+        self.audio_dict, self.audio_length = make_w2v_dict(self.audio_path, self.wav_names, rnn=True)
 
     def __len__(self):
         return len(self.wav_names)
@@ -99,9 +99,10 @@ class MeldPrep:
             wav_model
     ):
         self.path = meld_path
-        self.train_path = meld_path + "/train"
-        self.dev_path = meld_path + "/dev"
-        self.test_path = meld_path + "/test"
+        self.audio_path = meld_path + "/meld_data"
+        # self.train_path = meld_path + "/train"
+        # self.dev_path = meld_path + "/dev"
+        # self.test_path = meld_path + "/test"
         self.train = "{0}/train_sent_emo.csv".format(meld_path)
         self.dev = "{0}/dev_sent_emo.csv".format(meld_path)
         self.test = "{0}/test_sent_emo.csv".format(meld_path)
@@ -121,22 +122,19 @@ class MeldPrep:
             self.test_dataset = torch.load(self.meld_test_data)
         else:
             print("CREATING DATASET")
-            self.train_dataset = MeldPrepData(audio_path=self.train_path,
-                                              wav_model=wav_model,
+            self.train_dataset = MeldPrepData(audio_path=self.audio_path,
                                               response_data=self.train)
 
             with open(os.path.join(self.meld_train_data), "wb") as data_file:
                 torch.save(self.train_dataset, data_file)
 
-            self.dev_dataset = MeldPrepData(audio_path=self.dev_path,
-                                            wav_model=wav_model,
+            self.dev_dataset = MeldPrepData(audio_path=self.audio_path,
                                             response_data=self.dev)
 
             with open(os.path.join(meld_data_path, "dev.pt"), "wb") as data_file:
                 torch.save(self.dev_dataset, data_file)
 
-            self.test_dataset = MeldPrepData(audio_path=self.test_path,
-                                             wav_model=wav_model,
+            self.test_dataset = MeldPrepData(audio_path=self.audio_path,
                                              response_data=self.test)
 
             with open(os.path.join(meld_data_path, "test.pt"), "wb") as data_file:

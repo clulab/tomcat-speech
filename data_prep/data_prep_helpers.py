@@ -690,29 +690,23 @@ def transform_acoustic_item(item, acoustic_means, acoustic_stdev):
     return (item - acoustic_means) / acoustic_stdev
 
 
-def make_w2v_dict(audio_path="", w2v_model="", rnn=False):
-    cp = torch.load(w2v_model)
+def make_w2v_dict(audio_path="", wav_names=[], rnn=False):
 
-    model = Wav2VecModel.build_model(cp['args'], task=None)
-    model.load_state_dict(cp['model'])
-
-    wav_names = [wav for wav in os.listdir(audio_path) if wav.endswith("wav") or wav.endswith("mp3")]
+    # list_wavs = wav_names
 
     audio_dict = {}
     audio_length = {}
-    for wav in wav_names:
-        if wav.endswith("wav"):
-            wav_name = wav.replace(".wav", "")
-        else:
-            wav_name = wav.replace(".mp3", "")
+
+    for wav_name in wav_names:
+        torch_file = wav_name + ".pt"
 
         # print(wav_name)
-        filename = os.path.join(audio_path, wav)
+        filename = os.path.join(audio_path, torch_file)
 
-        waveform, sample_rate = torchaudio.load(filename, normalization=True)
-        z = model.feature_extractor(waveform)
-        aggregated_feat = model.feature_aggregator(z)
+        aggregated_feat = torch.load(filename)
+
         mel_time = aggregated_feat.size()[2]
+
         if rnn:
             if mel_time > 686:
                 target_tensor = aggregated_feat[:, :, :686]
