@@ -40,9 +40,9 @@ random.seed(seed)
 print(os.getcwd())
 # meld_path = "/data/nlp/corpora/MM/MELD_five_dialogues"
 # meld_path = "/data/nlp/corpora/MM/MELD_formatted"
-meld_path = "data/"
-meld_data_path = "data/meld_data"
-wav_model = "data/wav2vec_large.pt"
+meld_path = "/work/seongjinpark/tomcat-speech/data"
+meld_data_path = "/work/seongjinpark/tomcat-speech/data/train_test_meld"
+wav_model = "/work/seongjinpark/tomcat-speech/data/wav2vec_large.pt"
 # meld_path = "../../datasets/multimodal_datasets/MELD_five_utterances"
 # meld_path = "../../datasets/multimodal_datasets/MUStARD"
 
@@ -51,11 +51,11 @@ data_type = "meld"
 # set model name and model type
 model = params.model
 # path to directory where best models are saved
-model_save_path = "output/models/"
+model_save_path = "/work/seongjinpark/tomcat-speech/output/models/"
 # make sure the full save path exists; if not, create it
 os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_save_path))
 # set dir to plot the loss/accuracy curves for training
-model_plot_path = "output/plots/"
+model_plot_path = "/work/seongjinpark/tomcat-speech/output/plots/"
 os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path))
 
 if __name__ == "__main__":
@@ -64,14 +64,13 @@ if __name__ == "__main__":
 
     data = MeldPrep(
         meld_path=meld_path,
-        meld_data_path=meld_data_path,
-        wav_model=wav_model
+        meld_data_path=meld_data_path
     )
 
     # add class weights to device
-    train_data = MeldPrep.get_train()
-    dev_data = MeldPrep.get_dev()
-    test = MeldPrep.get_test()
+    train_data = data.get_train()
+    dev_data = data.get_dev()
+    test = data.get_test()
     print("Dataset created")
 
     # # 3. CREATE NN
