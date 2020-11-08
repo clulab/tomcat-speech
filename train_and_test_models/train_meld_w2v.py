@@ -7,7 +7,7 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 
-# sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
+sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 
 from models.train_and_test_models import *
 
