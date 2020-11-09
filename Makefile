@@ -7,9 +7,14 @@ OPENSMILE_DIR = external/opensmile-3.0
 OPENSMILE_CONFIG = is09-13/IS10_paraling.conf
 GLOVE_FILE = data/glove.short.300d.punct.txt
 EMOTION_MODEL = data/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth
+GENDER_CLASSIFIER_MODEL = data/f0_list.csv
 
 # Set the type of audio file that needs to be converted (m4a/mp4)
 MEDIA_TYPE=m4a
+
+# Create the data directory if it doesn't exist yet.
+data:
+	mkdir -p $@
 
 $(OPENSMILE_DIR):
 	./scripts/download_opensmile
@@ -19,14 +24,14 @@ $(DATA_DIR): scripts/sync_asist_data
 
 .PHONY: $(DATA_DIR)
 
-$(GLOVE_FILE):
-	@mkdir -p $(@D)
+$(GLOVE_FILE): data
 	curl http://vanga.sista.arizona.edu/tomcat/$@ -o $@
 
-$(EMOTION_MODEL):
-	@mkdir -p $(@D)
+$(EMOTION_MODEL): data
 	curl http://vanga.sista.arizona.edu/tomcat/$@ -o $@
 
+$(GENDER_CLASSIFIER_MODEL): data
+	curl http://vanga.sista.arizona.edu/tomcat/$@ -o $@
 
 # Recipe to convert .$(MEDIA_TYPE) files to .wav files
 build/wav_files/%.wav: $(DATA_DIR)/%.$(MEDIA_TYPE)
@@ -83,7 +88,7 @@ averaged_tsv_files: $(firstword $(AVERAGED_TSV_FILES))
 test_asist_output.txt: scripts/run_asist_analysis $(GLOVE_FILE) $(EMOTION_MODEL) $(firstword $(AVERAGED_TSV_FILES))
 	$^
 
-test: test_asist_output.txt
+test: test_asist_output.txt $(GENDER_CLASSIFIER_MODEL)
 
 asist_output.txt: scripts/run_asist_analysis $(GLOVE_FILE) $(EMOTION_MODEL) $(AVERAGED_TSV_FILES)
 	$^
