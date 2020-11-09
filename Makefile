@@ -81,5 +81,10 @@ wav_files: $(WAV_FILES)
 opensmile_csv_files: $(OPENSMILE_CSV_FILES)
 averaged_tsv_files: $(firstword $(AVERAGED_TSV_FILES))
 
-asist_output.txt: scripts/run_asist_analysis $(GLOVE_FILE) $(EMOTION_MODEL) $(firstword $(AVERAGED_TSV_FILES))
+test_asist_output.txt: scripts/run_asist_analysis $(GLOVE_FILE) $(EMOTION_MODEL) $(firstword $(AVERAGED_TSV_FILES))
+	$^
+
+test: test_asist_output.txt
+
+asist_output.txt: scripts/run_asist_analysis $(GLOVE_FILE) $(EMOTION_MODEL) $(AVERAGED_TSV_FILES)
 	$^
