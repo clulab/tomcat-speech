@@ -16,4 +16,4 @@ export ROOT
 # enviroment first.
 "$ROOT"/scripts/activate_virtualenv
 
-pip install -e .
+pip3 install -e .
