@@ -14,6 +14,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, RandomSampler
 
 from models.bimodal_models import BimodalCNN
+from models.attn_models import *
 from models.parameters.bimodal_params import *
 from models.plot_training import *
 
@@ -802,6 +803,118 @@ def train_and_predict_w2v(
         if train_state["stop_early"]:
             break
 
+
+def train_and_predict_attn(
+        classifier,
+        train_state,
+        train_ds,
+        val_ds,
+        batch_size,
+        num_epochs,
+        loss_func,
+        optimizer,
+        device="cpu",
+        scheduler=None,
+        sampler=None,
+        binary=False,
+        split_point=0.0,
+):
+    for epoch_index in range(num_epochs):
+
+        print("Now starting epoch {0}".format(epoch_index))
+
+        train_state["epoch_index"] = epoch_index
+
+        # Iterate over training dataset
+        running_loss = 0.0
+        running_acc = 0.0
+
+        # set classifier(s) to training mode
+        classifier.train()
+
+        batches = DataLoader(
+            train_ds, batch_size=batch_size, shuffle=True, sampler=sampler
+        )
+
+        # set holders to use for error analysis
+        ys_holder = []
+        preds_holder = []
+
+        # for each batch in the list of batches created by the dataloader
+        for batch_index, batch in enumerate(batches):
+            # get the gold labels
+            y_gold = batch['label'].to(device)
+
+            if split_point > 0:
+                y_gold = torch.tensor(
+                    [
+                        1.0 if y_gold[i] > split_point else 0.0
+                        for i in range(len(y_gold))
+                    ]
+                )
+            # y_gold = batch.targets()
+
+            # step 1. zero the gradients
+            optimizer.zero_grad()
+
+            # step 2. compute the output
+            batch_acoustic = batch['audio'].to(device)
+            # print(batch_acoustic.size())
+            batch_acoustic = batch_acoustic.transpose(1, 2)
+            # batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic)
+            batch_acoustic_lengths = batch['length']
+
+            y_pred, _ = classifier(batch_acoustic)
+
+            if len(list(y_pred.size())) > 1:
+                if binary:
+                    y_pred = torch.tensor([round(item[0]) for item in y_pred.tolist()])
+                else:
+                    # if type(y_gold[0]) == list or torch.is_tensor(y_gold[0]):
+                    #     y_gold = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
+                    y_pred = torch.tensor(
+                        [item.index(max(item)) for item in y_pred.tolist()]
+                    )
+                    # print(y_gold)
+                    # print(y_pred)
+                    # print(type(y_gold))
+                    # print(type(y_pred))
+            else:
+                y_pred = torch.round(y_pred)
+
+            y_pred = y_pred.to(device)
+
+            loss = loss_func(y_pred, y_gold)
+            loss_t = loss.item()  # loss for the item
+
+            # calculate running loss
+            running_loss += (loss_t - running_loss) / (batch_index + 1)
+
+            # step 4. use loss to produce gradients
+            loss.backward()
+
+            # step 5. use optimizer to take gradient step
+            optimizer.step()
+
+            # compute the accuracy
+            acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
+
+            running_acc += (acc_t - running_acc) / (batch_index + 1)
+
+            # uncomment to see loss and accuracy measures for every minibatch
+            # print("loss: {0}, running_loss: {1}, acc: {0}, running_acc: {1}".format(loss_t, running_loss,
+            #                                                                       acc_t, running_acc))
+
+        # add loss and accuracy information to the train state
+        train_state["train_loss"].append(running_loss)
+        train_state["train_acc"].append(running_acc)
+
+        avg_f1 = precision_recall_fscore_support(
+            ys_holder, preds_holder, average="weighted"
+        )
+        train_state["train_avg_f1"].append(avg_f1[2])
+        # print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
+        print("Training weighted F-score: " + str(avg_f1))
 
 #
 # def single_dataset_multitask_train_and_predict(

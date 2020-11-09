@@ -40,9 +40,11 @@ random.seed(seed)
 print(os.getcwd())
 # meld_path = "/data/nlp/corpora/MM/MELD_five_dialogues"
 # meld_path = "/data/nlp/corpora/MM/MELD_formatted"
-meld_path = "/work/seongjinpark/tomcat-speech/data"
-meld_data_path = "/work/seongjinpark/tomcat-speech/data/train_test_meld"
-wav_model = "/work/seongjinpark/tomcat-speech/data/wav2vec_large.pt"
+# meld_path = "/work/seongjinpark/tomcat-speech/data"
+meld_path = "data"
+# meld_data_path = "/work/seongjinpark/tomcat-speech/data/train_test_meld"
+meld_data_path = "data/train_test_meld"
+# wav_model = "/work/seongjinpark/tomcat-speech/data/wav2vec_large.pt"
 # meld_path = "../../datasets/multimodal_datasets/MELD_five_utterances"
 # meld_path = "../../datasets/multimodal_datasets/MUStARD"
 
@@ -51,11 +53,13 @@ data_type = "meld"
 # set model name and model type
 model = params.model
 # path to directory where best models are saved
-model_save_path = "/work/seongjinpark/tomcat-speech/output/models/"
+# model_save_path = "/work/seongjinpark/tomcat-speech/output/models/"
+model_save_path = "output/models/"
 # make sure the full save path exists; if not, create it
 os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_save_path))
 # set dir to plot the loss/accuracy curves for training
-model_plot_path = "/work/seongjinpark/tomcat-speech/output/plots/"
+# model_plot_path = "/work/seongjinpark/tomcat-speech/output/plots/"
+model_plot_path = "output/plots/"
 os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(model_plot_path))
 
 if __name__ == "__main__":
@@ -85,14 +89,21 @@ if __name__ == "__main__":
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
             # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
             model_type = (
-                "MELD-W2V"
+                "MELD-W2V-ATTN"
             )
 
             # this uses train-dev-test folds
             # create instance of model
-            acoustic_model = AudioOnlyRNN(
-                params=params
+            encoder = Encoder(params=params)
+            attention_dim = params.acoustic_gru_hidden_dim if not params.bidirectional else 2 * params.acoustic_gru_hidden_dim
+            attention = Attention(attention_dim, attention_dim, attention_dim)
+            acoustic_model = AcousticAttn(
+                encoder=encoder,
+                attention=attention,
+                hidden_dim=attention_dim,
+                num_classes=params.output_dim
             )
+
             optimizer = torch.optim.Adam(
                 lr=lr, params=acoustic_model.parameters(), weight_decay=wd
             )
@@ -143,7 +154,7 @@ if __name__ == "__main__":
             train_state = make_train_state(lr, os.path.join(model_save_path, model_save_file))
 
             # train the model and evaluate on development set
-            train_and_predict_w2v(
+            train_and_predict_attn(
                 acoustic_model,
                 train_state,
                 train_data,
@@ -159,46 +170,46 @@ if __name__ == "__main__":
 
             # plot the loss and accuracy curves
             # set plot titles
-            loss_title = "Training and Dev loss for model {0} with lr {1}".format(
-                model_type, lr
-            )
-            acc_title = "Avg F scores for model {0} with lr {1}".format(model_type, lr)
-
-            # set save names
-            loss_save = "/work/seongjinpark/tomcat-speech/output/plots/{0}_lr{1}_loss.png".format(model_type, lr)
-            acc_save = "/work/seongjinpark/tomcat-speech/output/plots/{0}_lr{1}_avg_f1.png".format(model_type, lr)
-
-            # plot the loss from model
-            plot_train_dev_curve(
-                train_state["train_loss"],
-                train_state["val_loss"],
-                x_label="Epoch",
-                y_label="Loss",
-                title=loss_title,
-                save_name=loss_save,
-                set_axis_boundaries=False,
-            )
-            # plot the accuracy from model
-            plot_train_dev_curve(
-                train_state["train_avg_f1"],
-                train_state["val_avg_f1"],
-                x_label="Epoch",
-                y_label="Weighted AVG F1",
-                title=acc_title,
-                save_name=acc_save,
-                losses=False,
-                set_axis_boundaries=False,
-            )
-
-            # plot_train_dev_curve(train_state['train_acc'], train_state['val_acc'], x_label="Epoch",
-            #                         y_label="Accuracy", title=acc_title, save_name=acc_save, losses=False,
-            #                         set_axis_boundaries=False)
-
-            # add best evaluation losses and accuracy from training to set
-            all_test_losses.append(train_state["early_stopping_best_val"])
-            # all_test_accs.append(train_state['best_val_acc'])
-
-    # print the best model losses and accuracies for each development set in the cross-validation
-    for i, item in enumerate(all_test_losses):
-        print("Losses for model with lr={0}: {1}".format(params.lrs[i], item))
-        # print("Accuracy for model with lr={0}: {1}".format(params.lrs[i], all_test_accs[i]))
+    #         loss_title = "Training and Dev loss for model {0} with lr {1}".format(
+    #             model_type, lr
+    #         )
+    #         acc_title = "Avg F scores for model {0} with lr {1}".format(model_type, lr)
+    #
+    #         # set save names
+    #         loss_save = "/work/seongjinpark/tomcat-speech/output/plots/{0}_lr{1}_loss.png".format(model_type, lr)
+    #         acc_save = "/work/seongjinpark/tomcat-speech/output/plots/{0}_lr{1}_avg_f1.png".format(model_type, lr)
+    #
+    #         # plot the loss from model
+    #         plot_train_dev_curve(
+    #             train_state["train_loss"],
+    #             train_state["val_loss"],
+    #             x_label="Epoch",
+    #             y_label="Loss",
+    #             title=loss_title,
+    #             save_name=loss_save,
+    #             set_axis_boundaries=False,
+    #         )
+    #         # plot the accuracy from model
+    #         plot_train_dev_curve(
+    #             train_state["train_avg_f1"],
+    #             train_state["val_avg_f1"],
+    #             x_label="Epoch",
+    #             y_label="Weighted AVG F1",
+    #             title=acc_title,
+    #             save_name=acc_save,
+    #             losses=False,
+    #             set_axis_boundaries=False,
+    #         )
+    #
+    #         # plot_train_dev_curve(train_state['train_acc'], train_state['val_acc'], x_label="Epoch",
+    #         #                         y_label="Accuracy", title=acc_title, save_name=acc_save, losses=False,
+    #         #                         set_axis_boundaries=False)
+    #
+    #         # add best evaluation losses and accuracy from training to set
+    #         all_test_losses.append(train_state["early_stopping_best_val"])
+    #         # all_test_accs.append(train_state['best_val_acc'])
+    #
+    # # print the best model losses and accuracies for each development set in the cross-validation
+    # for i, item in enumerate(all_test_losses):
+    #     print("Losses for model with lr={0}: {1}".format(params.lrs[i], item))
+    #     # print("Accuracy for model with lr={0}: {1}".format(params.lrs[i], all_test_accs[i]))
