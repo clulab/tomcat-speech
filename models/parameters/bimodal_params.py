@@ -10,7 +10,7 @@ params = Namespace(
     # overall model parameters
     model="BimodalCNN",
     num_splits=4,  # 5  #splits for CV
-    num_epochs=100,
+    num_epochs=300,
     batch_size=16,
     early_stopping_criteria=50,
     # input dimension parameters
@@ -38,10 +38,10 @@ params = Namespace(
     dropout=0.0,  # 0.2
     # optimizer parameters
     # learning_rate=1e-06,  # 1e-06 0.00001  # 0.0001 0.001 tried
-    lrs=[1e-05],  # if using multiple learning rates to test
+    lrs=[1e-03],  # if using multiple learning rates to test
     beta_1=0.9,
     beta_2=0.999,  # beta params for Adam--defaults 0.9 and 0.999
-    weight_decay=[0.01],
+    weight_decay=[0.0001],
     # scheduler parameters (if using)
     use_scheduler=False,
     scheduler_factor=0.5,

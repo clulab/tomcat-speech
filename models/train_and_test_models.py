@@ -884,9 +884,14 @@ def train_and_predict_attn(
                     # print(type(y_pred))
             else:
                 y_pred = torch.round(y_pred)
+            
+            preds_holder.extend(y_pred_class)
+            ys_holder.extend(y_gold.tolist())
 
-            # print(y_pred)
+            # print(y_pred_class)
             # print(y_gold)
+            # print("preds_holder: ", preds_holder)
+            # print("ys_holder: ", ys_holder)
 
             y_pred = y_pred.to(device)
             y_pred_class = y_pred_class.to(device)
@@ -916,6 +921,8 @@ def train_and_predict_attn(
         train_state["train_loss"].append(running_loss)
         train_state["train_acc"].append(running_acc)
 
+        # print(ys_holder)
+        # print(preds_holder)
         avg_f1 = precision_recall_fscore_support(
             ys_holder, preds_holder, average="weighted"
         )
@@ -967,6 +974,9 @@ def train_and_predict_attn(
                     # print(type(y_pred))
             else:
                 y_pred = torch.round(y_pred)
+
+            preds_holder.extend(y_pred_class)
+            ys_holder.extend(y_gold.tolist())
 
             # print(y_pred)
             # print(y_gold)
