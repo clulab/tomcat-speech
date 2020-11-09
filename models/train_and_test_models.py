@@ -864,17 +864,20 @@ def train_and_predict_attn(
             # batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic)
             batch_acoustic_lengths = batch['length']
 
-            y_pred, _ = classifier(batch_acoustic)
+            y_pred, _ = classifier(batch_acoustic, batch_acoustic_lengths)
 
+            # print("pred_size: ", y_pred.size())
+           
             if len(list(y_pred.size())) > 1:
                 if binary:
                     y_pred = torch.tensor([round(item[0]) for item in y_pred.tolist()])
                 else:
                     # if type(y_gold[0]) == list or torch.is_tensor(y_gold[0]):
                     #     y_gold = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
-                    y_pred = torch.tensor(
+                    y_pred_onehot = torch.tensor(
                         [item.index(max(item)) for item in y_pred.tolist()]
                     )
+                    # y_pred = y_pred
                     # print(y_gold)
                     # print(y_pred)
                     # print(type(y_gold))
@@ -882,7 +885,11 @@ def train_and_predict_attn(
             else:
                 y_pred = torch.round(y_pred)
 
+            # print(y_pred)
+            # print(y_gold)
+
             y_pred = y_pred.to(device)
+            y_pred_onehot = y_pred_onehot.to(device)
 
             loss = loss_func(y_pred, y_gold)
             loss_t = loss.item()  # loss for the item
@@ -897,7 +904,7 @@ def train_and_predict_attn(
             optimizer.step()
 
             # compute the accuracy
-            acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
+            acc_t = torch.eq(y_pred_onehot, y_gold).sum().item() / len(y_gold)
 
             running_acc += (acc_t - running_acc) / (batch_index + 1)
 

@@ -15,6 +15,8 @@ from models.input_models import *
 from data_prep.data_prep_helpers import *
 from data_prep.meld_data.meld_w2v_prep import *
 
+from models.parameters.bimodal_params import params
+
 # import parameters for model
 
 # set device
@@ -40,10 +42,10 @@ random.seed(seed)
 print(os.getcwd())
 # meld_path = "/data/nlp/corpora/MM/MELD_five_dialogues"
 # meld_path = "/data/nlp/corpora/MM/MELD_formatted"
-# meld_path = "/work/seongjinpark/tomcat-speech/data"
-meld_path = "data"
-# meld_data_path = "/work/seongjinpark/tomcat-speech/data/train_test_meld"
-meld_data_path = "data/train_test_meld"
+meld_path = "/work/seongjinpark/tomcat-speech/data"
+# meld_path = "data"
+meld_data_path = "/work/seongjinpark/tomcat-speech/data/train_test_meld"
+# meld_data_path = "data/train_test_meld"
 # wav_model = "/work/seongjinpark/tomcat-speech/data/wav2vec_large.pt"
 # meld_path = "../../datasets/multimodal_datasets/MELD_five_utterances"
 # meld_path = "../../datasets/multimodal_datasets/MUStARD"
@@ -94,7 +96,11 @@ if __name__ == "__main__":
 
             # this uses train-dev-test folds
             # create instance of model
-            encoder = Encoder(params=params)
+            encoder = Encoder(input_dim=params.audio_dim, 
+                              hidden_dim=params.acoustic_gru_hidden_dim,
+                              num_gru_layers=params.num_gru_layers,
+                              dropout=params.dropout, 
+                              bidirectional=params.bidirectional)
             attention_dim = params.acoustic_gru_hidden_dim if not params.bidirectional else 2 * params.acoustic_gru_hidden_dim
             attention = Attention(attention_dim, attention_dim, attention_dim)
             acoustic_model = AcousticAttn(

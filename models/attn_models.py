@@ -16,14 +16,15 @@ class Encoder(nn.Module):
         self.num_gru_layers = num_gru_layers
         self.dropout = dropout
         self.bidirectional = bidirectional
-        self.rnn = nn.GRU(self.input_dim,
-                          self.hidden_dim,
-                          self.num_gru_layers,
+        self.rnn = nn.GRU(input_size=self.input_dim,
+                          hidden_size=self.hidden_dim,
+                          num_layers=self.num_gru_layers,
+                          batch_first=True,
                           dropout=self.dropout,
                           bidirectional=self.bidirectional)
 
-    def forward(self, input, hidden=None):
-        return self.rnn(input, hidden)
+    def forward(self, acoustic_input):
+        return self.rnn(acoustic_input)
 
 
 class Attention(nn.Module):
@@ -40,11 +41,15 @@ class Attention(nn.Module):
         # Here we assume q_dim == k_dim (dot product attention)
 
         query = query.unsqueeze(1)  # [BxQ] -> [Bx1xQ]
-        keys = keys.transpose(0, 1).transpose(1, 2)  # [TxBxK] -> [BxKxT]
+        # print("query size (B1Q): ", query.size())
+        keys = keys.transpose(1, 2)  # [TxBxK] -> [BxKxT]
+        # print("key size (BKT): ", keys.size())
         energy = torch.bmm(query, keys)  # [Bx1xQ]x[BxKxT] -> [Bx1xT]
+        # print("energy size (B1T): ", energy.size())
         energy = F.softmax(energy.mul_(self.scale), dim=2)  # scale, normalize
-
-        values = values.transpose(0, 1)  # [TxBxV] -> [BxTxV]
+        # print("energy size after softmax: ", energy.size())
+        # values = values.transpose(0, 1)  # [TxBxV] -> [BxTxV]
+        # print("value size after transpose: ", values.size())
         linear_combination = torch.bmm(energy, values).squeeze(1)  # [Bx1xT]x[BxTxV] -> [BxV]
         return energy, linear_combination
 
@@ -62,10 +67,14 @@ class AcousticAttn(nn.Module):
         print('Total param size: {}'.format(size))
 
     def forward(self, acoustic_input, length_input):
-        packed_input = nn.utils.rnn.pack_padded_sequence(
-            acoustic_input, length_input, batch_first=True, enforce_sorted=False
-        )
-        outputs, hidden = self.encoder(packed_input)
+        # packed_input = nn.utils.rnn.pack_padded_sequence(
+        #     acoustic_input, length_input, batch_first=True, enforce_sorted=False
+        # )
+        # outputs, hidden = self.encoder(packed_input)
+        # acoustic_input = acoustic_input.transpose(1, 2)
+        outputs, hidden = self.encoder(acoustic_input)
+        # print("outputs: ", outputs.size())
+        # print("hidden from encoder: ", hidden.size())
         if isinstance(hidden, tuple):  # LSTM
             hidden = hidden[1]  # take the cell state
 
@@ -78,7 +87,8 @@ class AcousticAttn(nn.Module):
         # Other options (work worse on a few tests):
         # linear_combination, _ = torch.max(outputs, 0)
         # linear_combination = torch.mean(outputs, 0)
-
+        # print("hidden after cat: ", hidden.size())
         energy, linear_combination = self.attention(hidden, outputs, outputs)
+        # print("linear: ", linear_combination.size())
         logits = self.decoder(linear_combination)
         return logits, energy
