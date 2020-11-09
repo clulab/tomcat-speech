@@ -874,7 +874,7 @@ def train_and_predict_attn(
                 else:
                     # if type(y_gold[0]) == list or torch.is_tensor(y_gold[0]):
                     #     y_gold = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
-                    y_pred_onehot = torch.tensor(
+                    y_pred_class = torch.tensor(
                         [item.index(max(item)) for item in y_pred.tolist()]
                     )
                     # y_pred = y_pred
@@ -889,7 +889,7 @@ def train_and_predict_attn(
             # print(y_gold)
 
             y_pred = y_pred.to(device)
-            y_pred_onehot = y_pred_onehot.to(device)
+            y_pred_class = y_pred_class.to(device)
 
             loss = loss_func(y_pred, y_gold)
             loss_t = loss.item()  # loss for the item
@@ -904,7 +904,7 @@ def train_and_predict_attn(
             optimizer.step()
 
             # compute the accuracy
-            acc_t = torch.eq(y_pred_onehot, y_gold).sum().item() / len(y_gold)
+            acc_t = torch.eq(y_pred_class, y_gold).sum().item() / len(y_gold)
 
             running_acc += (acc_t - running_acc) / (batch_index + 1)
 
@@ -922,6 +922,101 @@ def train_and_predict_attn(
         train_state["train_avg_f1"].append(avg_f1[2])
         # print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
         print("Training weighted F-score: " + str(avg_f1))
+
+        # Iterate over validation set--put it in a dataloader
+        val_batches = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
+
+        # reset loss and accuracy to zero
+        running_loss = 0.0
+        running_acc = 0.0
+
+        # set classifier to evaluation mode
+        classifier.eval()
+
+        # set holders to use for error analysis
+        ys_holder = []
+        preds_holder = []
+
+        # for each batch in the dataloader
+        for batch_index, batch in enumerate(val_batches):
+            # compute the output
+            batch_acoustic = batch['audio'].to(device)
+            batch_acoustic = batch_acoustic.transpose(1, 2)
+            # batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic)
+            batch_acoustic_lengths = batch['length']
+
+            y_gold = batch['label'].to(device)
+
+            y_pred, _ = classifier(batch_acoustic, batch_acoustic_lengths)
+
+            # print("pred_size: ", y_pred.size())
+
+            if len(list(y_pred.size())) > 1:
+                if binary:
+                    y_pred = torch.tensor([round(item[0]) for item in y_pred.tolist()])
+                else:
+                    # if type(y_gold[0]) == list or torch.is_tensor(y_gold[0]):
+                    #     y_gold = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
+                    y_pred_class = torch.tensor(
+                        [item.index(max(item)) for item in y_pred.tolist()]
+                    )
+                    # y_pred = y_pred
+                    # print(y_gold)
+                    # print(y_pred)
+                    # print(type(y_gold))
+                    # print(type(y_pred))
+            else:
+                y_pred = torch.round(y_pred)
+
+            # print(y_pred)
+            # print(y_gold)
+
+            y_pred = y_pred.to(device)
+            y_pred_class = y_pred_class.to(device)
+
+            loss = loss_func(y_pred, y_gold)
+            loss_t = loss.item()  # loss for the item
+
+            # calculate running loss
+            running_loss += (loss_t - running_loss) / (batch_index + 1)
+
+            y_pred = y_pred.to(device)
+            # compute the accuracy
+            acc_t = torch.eq(y_pred_class, y_gold).sum().item() / len(y_gold)
+            running_acc += (acc_t - running_acc) / (batch_index + 1)
+
+            # uncomment to see loss and accuracy for each minibatch
+            # print("val_loss: {0}, running_val_loss: {1}, val_acc: {0}, running_val_acc: {1}".format(loss_t, running_loss,
+            #                                                                       acc_t, running_acc))
+
+        # print("Overall val loss: {0}, overall val acc: {1}".format(running_loss, running_acc))
+        avg_f1 = precision_recall_fscore_support(
+            ys_holder, preds_holder, average="weighted"
+        )
+        train_state["val_avg_f1"].append(avg_f1[2])
+        print("Weighted F=score: " + str(avg_f1))
+
+        # get confusion matrix
+        if epoch_index % 5 == 0:
+            print(confusion_matrix(ys_holder, preds_holder))
+            print("Classification report: ")
+            print(classification_report(ys_holder, preds_holder, digits=4))
+
+        # add loss and accuracy to train state
+        train_state["val_loss"].append(running_loss)
+        train_state["val_acc"].append(running_acc)
+
+        # update the train state now that our epoch is complete
+        train_state = update_train_state(model=classifier, train_state=train_state)
+
+        # update scheduler if there is one
+        if scheduler is not None:
+            scheduler.step(train_state["val_loss"][-1])
+
+        # if it's time to stop, end the training process
+        if train_state["stop_early"]:
+            break
+
 
 #
 # def single_dataset_multitask_train_and_predict(
