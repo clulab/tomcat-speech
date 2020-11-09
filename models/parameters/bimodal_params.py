@@ -20,10 +20,12 @@ params = Namespace(
     acoustic_gru_hidden_dim=1024,
     # speaker parameters
     spkr_emb_dim=1,
+    gender_emb_dim=2,
     num_speakers=2,
-    use_speaker=True,
+    use_speaker=False,
+    use_gender=False,
     # number of classes
-    output_dim=1,  # length of output vector
+    output_dim=7,  # length of output vector
     # CNN-specific parameters
     num_layers=3,  # 3  # number of lstm/cnn layers
     out_channels=20,
@@ -31,14 +33,14 @@ params = Namespace(
     padding_idx=0,
     # FC layer parameters
     num_fc_layers=1,
-    hidden_dim=50,
+    fc_hidden_dim=128,
     dropout=0.0,  # 0.2
     # optimizer parameters
     # learning_rate=1e-06,  # 1e-06 0.00001  # 0.0001 0.001 tried
     lrs=[1e-05],  # if using multiple learning rates to test
     beta_1=0.9,
     beta_2=0.999,  # beta params for Adam--defaults 0.9 and 0.999
-    weight_decay=0.01,
+    weight_decay=[0.01],
     # scheduler parameters (if using)
     use_scheduler=False,
     scheduler_factor=0.5,

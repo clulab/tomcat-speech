@@ -14,7 +14,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, RandomSampler
 
 from models.bimodal_models import BimodalCNN
-from models.parameters.earlyfusion_params import *
+from models.parameters.bimodal_params import *
 from models.plot_training import *
 
 from sklearn.metrics import confusion_matrix
@@ -571,6 +571,10 @@ def train_and_predict_w2v(
         binary=False,
         split_point=0.0,
 ):
+    # print(type(train_ds['audio']))
+    # print(train_ds['audio'].size())
+    # train_ds['audio'] = nn.utils.rnn.pad_sequence(train_ds['audio'])
+    # val_ds['audio'] = nn.utils.rnn.pad_sequence(val_ds['audio'])
     for epoch_index in range(num_epochs):
 
         print("Now starting epoch {0}".format(epoch_index))
@@ -611,7 +615,10 @@ def train_and_predict_w2v(
 
             # step 2. compute the output
             batch_acoustic = batch['audio'].to(device)
-            batch_acoustic_lengths = batch['length'].to(device)
+            # print(batch_acoustic.size())
+            batch_acoustic = batch_acoustic.transpose(1, 2)
+            # batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic)
+            batch_acoustic_lengths = batch['length']
 
             y_pred = classifier(
                 acoustic_input=batch_acoustic,
@@ -663,7 +670,8 @@ def train_and_predict_w2v(
                     # print(type(y_pred))
             else:
                 y_pred = torch.round(y_pred)
-
+            
+            y_pred = y_pred.to(device)
             # calculate running loss
             running_loss += (loss_t - running_loss) / (batch_index + 1)
 
@@ -711,7 +719,9 @@ def train_and_predict_w2v(
         for batch_index, batch in enumerate(val_batches):
             # compute the output
             batch_acoustic = batch['audio'].to(device)
-            batch_acoustic_lengths = batch['length'].to(device)
+            batch_acoustic = batch_acoustic.transpose(1, 2)
+            # batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic)
+            batch_acoustic_lengths = batch['length']
 
             y_pred = classifier(
                 acoustic_input=batch_acoustic,
@@ -755,7 +765,7 @@ def train_and_predict_w2v(
                     )
             else:
                 y_pred = torch.round(y_pred)
-
+            y_pred = y_pred.to(device)
             # compute the accuracy
             acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
             running_acc += (acc_t - running_acc) / (batch_index + 1)

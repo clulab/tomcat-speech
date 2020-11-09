@@ -458,7 +458,7 @@ class AudioOnlyRNN(nn.Module):
             hidden_size=params.acoustic_gru_hidden_dim,
             num_layers=params.num_gru_layers,
             batch_first=True,
-            bidirectional=False,
+            bidirectional=False
         )
 
         # acoustic batch normalization

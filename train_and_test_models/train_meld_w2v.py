@@ -64,7 +64,8 @@ if __name__ == "__main__":
 
     data = MeldPrep(
         meld_path=meld_path,
-        meld_data_path=meld_data_path
+        meld_data_path=meld_data_path,
+        rnn=False
     )
 
     # add class weights to device
@@ -93,7 +94,7 @@ if __name__ == "__main__":
                 params=params
             )
             optimizer = torch.optim.Adam(
-                lr=lr, params=params, weight_decay=wd
+                lr=lr, params=acoustic_model.parameters(), weight_decay=wd
             )
 
             # set the classifier(s) to the right device
@@ -111,7 +112,7 @@ if __name__ == "__main__":
             # train_data = data.train_data
 
             # combine train and dev data
-            train_and_dev = data.train_data + data.dev_data
+            train_and_dev = train_data + dev_data
 
             train_data, dev_data = train_test_split(train_and_dev, test_size=0.2)  # .3
 
@@ -139,7 +140,7 @@ if __name__ == "__main__":
             )
 
             # make the train state to keep track of model training/development
-            train_state = make_train_state(lr, model_save_path, model_save_file)
+            train_state = make_train_state(lr, os.path.join(model_save_path, model_save_file))
 
             # train the model and evaluate on development set
             train_and_predict_w2v(

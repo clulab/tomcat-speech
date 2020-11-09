@@ -44,7 +44,7 @@ def sentiment_to_int(sentiment):
 
 
 class MeldPrepData(torch.utils.data.Dataset):
-    def __init__(self, audio_data_path, response_data):
+    def __init__(self, audio_data_path, response_data, rnn=False):
         self.audio_path = audio_data_path
         self.sentiment = {}
 
@@ -69,7 +69,7 @@ class MeldPrepData(torch.utils.data.Dataset):
 
         self.wav_names = [name for name in list(self.label_info.keys())]
 
-        self.audio_dict, self.audio_length = make_w2v_dict(self.audio_path, self.wav_names, rnn=True)
+        self.audio_dict, self.audio_length = make_w2v_dict(self.audio_path, self.wav_names, rnn=rnn)
 
     def __len__(self):
         return len(self.wav_names)
@@ -96,7 +96,7 @@ class MeldPrep:
             self,
             meld_path,
             meld_data_path,
-            wav_model
+            rnn=False
     ):
         self.path = meld_path
         self.audio_path = meld_path + "/meld_data"
@@ -123,19 +123,19 @@ class MeldPrep:
         else:
             print("CREATING DATASET")
             self.train_dataset = MeldPrepData(audio_data_path=self.audio_path,
-                                              response_data=self.train)
+                                              response_data=self.train, rnn=rnn)
 
             with open(os.path.join(self.meld_train_data), "wb") as data_file:
                 torch.save(self.train_dataset, data_file)
 
             self.dev_dataset = MeldPrepData(audio_data_path=self.audio_path,
-                                            response_data=self.dev)
+                                            response_data=self.dev, rnn=rnn)
 
             with open(os.path.join(meld_data_path, "dev.pt"), "wb") as data_file:
                 torch.save(self.dev_dataset, data_file)
 
             self.test_dataset = MeldPrepData(audio_data_path=self.audio_path,
-                                             response_data=self.test)
+                                             response_data=self.test, rnn=rnn)
 
             with open(os.path.join(meld_data_path, "test.pt"), "wb") as data_file:
                 torch.save(self.test_dataset, data_file)
