@@ -31,7 +31,6 @@ extensions_to_exclude = (
 exclusion_regex = (
     "$|".join((f".*\.{ext}" for ext in extensions_to_exclude)) + "$"
 )
-
 run(
     [
         "gsutil",

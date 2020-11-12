@@ -183,7 +183,7 @@ class AsistDataset(Dataset):
             smallest = self.truncate_seq()
 
         # get the longest utterance
-        print(self.acoustic_dict)
+
         longest_utt = get_longest_utterance_asist(
             [
                 item

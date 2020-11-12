@@ -2,7 +2,9 @@
 
 
 import argparse
-
+import json
+import re
+import pandas
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "glove_file",
@@ -68,7 +70,7 @@ if __name__ == "__main__":
     model = params.model
     model_type = "BimodalCNN_k=4"
     # set number of columns to skip in data input files
-    cols_to_skip = 2  # 2 for Zoom, 4 for AWS
+    # cols_to_skip = 2  # 2 for Zoom, 4 for AWS
 
     # decide if you want to use avgd feats
     avgd_acoustic = params.avgd_acoustic or params.add_avging
@@ -114,11 +116,9 @@ if __name__ == "__main__":
         add_avging=params.add_avging,
         transcript_type="zoom"
     )
-
     # get data for testing
     test_data = data.current_split
     test_ds = DatumListDataset(test_data, None)
-    print("Dataset created")
 
     # 6. CREATE NN
     # get set of pretrained embeddings and their shape
@@ -145,4 +145,26 @@ if __name__ == "__main__":
         use_speaker=params.use_speaker,
         use_gender=params.use_gender,
     )
-    print(ordered_predictions)
+
+    df = pandas.DataFrame()
+
+    def printdict(nm, directory):
+        for item, key in directory:
+            file = [str(item)]
+            nm.append(file)
+            y = directory[item, key] #this is a pandas dataframe
+            # y["Filename"] = file
+            sub = y[['speaker', 'utt']].copy(deep=False)
+        return sub
+
+    g = []
+    df = printdict(g, acoustic_dict)
+
+    nm = re.split('\s|/', g[0][0])[-1]
+    w = re.split('".tsv"|_', nm)
+
+    df["model_predictions"] = ordered_predictions
+    output = df.to_json(orient='records')
+    print(output)
+
+    # print(ordered_predictions)
