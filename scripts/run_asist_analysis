@@ -197,9 +197,9 @@ if __name__ == "__main__":
                 },
                 "data":
                         {
-                        "speaker_info": row["speaker"],
-                        "utterance_info": row["utt"],
-                        "model_prediction_info": row["model_prediction"]
+                        "speaker": row["speaker"],
+                        "utterance": row["utt"],
+                        "model_prediction": row["model_prediction"]
                         }
                     }
             f.write(json.dumps(output_dict)+"\n")
