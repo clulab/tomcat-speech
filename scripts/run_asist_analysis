@@ -154,17 +154,53 @@ if __name__ == "__main__":
             nm.append(file)
             y = directory[item, key] #this is a pandas dataframe
             # y["Filename"] = file
-            sub = y[['speaker', 'utt']].copy(deep=False)
+            sub = y[["speaker", "utt"]].copy(deep=False)
         return sub
+
+        # get metadata
+    def metadata(input):
+        nm = re.split('\s|/', input)[-1]
+        w = re.split('(\..+|_)', nm)
+        for e in w:
+            member = re.match("[Mm]em.*", e)
+            version = re.match("[Vv]ers.*", e)
+            if member:
+                p = e
+            elif version:
+                # regex to find version number, based on present data
+                if re.findall(r'[0-9]',e)[0] != None:
+                    q = re.findall(r'[0-9]',e)[0]
+                else:
+                    q = e
+        return p, q
 
     g = []
     df = printdict(g, acoustic_dict)
+    mem, vers = metadata(g[0][0])
+    # add column with predictions to dataframe:
+    df["model_prediction"] = ordered_predictions
+    output_dict = {}
+    with open("asist_output.txt", "w") as f:
+        for index, row in df.iterrows():
+            output_dict = {
+                "header": {
+                    "timestamp": "some_time_stamp",
+                    "message_type": "event",
+                    "version": vers
+                    },
+                "msg": {
+                    "source": "TomcatSpeechAnalyzer",
+                    "experiment_id": mem,
+                    "timestamp": "some_time_stamp",
+                    "sub_type": "Event:speech_feature",
+                    "version": vers
+                },
+                "data":
+                        {
+                        "speaker_info": row["speaker"],
+                        "utterance_info": row["utt"],
+                        "model_prediction_info": row["model_prediction"]
+                        }
+                    }
+            f.write(json.dumps(output_dict)+"\n")
 
-    nm = re.split('\s|/', g[0][0])[-1]
-    w = re.split('".tsv"|_', nm)
-
-    df["model_predictions"] = ordered_predictions
-    output = df.to_json(orient='records')
-    print(output)
-
-    # print(ordered_predictions)
