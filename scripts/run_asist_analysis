@@ -2,9 +2,6 @@
 
 
 import argparse
-import json
-import re
-import pandas
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "glove_file",
@@ -25,9 +22,10 @@ parser.add_argument(
 args = parser.parse_args()
 
 if __name__ == "__main__":
-    import os
     import random
-
+    import json
+    import re
+    import pandas
     import numpy as np
     import torch
 
@@ -40,7 +38,6 @@ if __name__ == "__main__":
     from tomcat_speech.models.input_models import EarlyFusionMultimodalModel
 
     from tomcat_speech.data_prep.data_prep_helpers import (
-        make_acoustic_dict,
         make_glove_dict,
         Glove,
         DatumListDataset,
