@@ -33,8 +33,8 @@ pushd "$ROOTDIR"/external > /dev/null
     if ! tar -xzf "$TAR_GZ_FILE"; then
         echo "Error encountered while extracting ${TAR_GZ_FILE}. This seems to
         not affect the working of the OpenSMILE SMILEExtract binary."
-        mv opensmile-3.0-$DETECTED_OS-x64 opensmile-3.0
     fi
+    mv opensmile-3.0-$DETECTED_OS-x64 opensmile-3.0
 popd > /dev/null
 
 exit 0
