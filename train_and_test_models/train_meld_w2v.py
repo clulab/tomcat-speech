@@ -120,7 +120,9 @@ if __name__ == "__main__":
             print(acoustic_model)
 
             # set loss function, optimization, and scheduler, if using
-            # loss_func = nn.CrossEntropyLoss(reduction="mean", weight=)
+            weights = [4.0, 6.0, 15.0, 1.0, 3.0, 3.0, 15.0]
+            weights = torch.FloatTensor(weights).to(device)
+            loss_func = nn.CrossEntropyLoss(reduction="mean", weight=weights)
             # loss_func = nn.CrossEntropyLoss(data.emotion_weights, reduction='mean')
             # optimizer = torch.optim.SGD(bimodal_trial.parameters(), lr=lr, momentum=0.9)
 
@@ -133,10 +135,6 @@ if __name__ == "__main__":
             train_and_dev = train_data + dev_data
 
             train_data, dev_data = train_test_split(train_and_dev, test_size=0.2)  # .3
-            print(train_data['label'])
-            class_weight = compute_class_weight('balanced', [0, 1, 2, 3, 4, 5, 6], train_data['label'])
-
-            loss_func = nn.CrossEntropyLoss(weight=class_weight, reduction='mean')
 
             # train_ds = DatumListDataset(
             #     train_data, data_type="meld_emotion", class_weights=data.emotion_weights
