@@ -59,7 +59,9 @@ class AcousticAttn(nn.Module):
         super(AcousticAttn, self).__init__()
         self.encoder = encoder
         self.attention = attention
-        self.decoder = nn.Linear(hidden_dim, num_classes)
+        self.decoder_1 = nn.Linear(hidden_dim, 256)
+        self.decoder_2 = nn.Linear(256, 128)
+        self.final_decoder = nn.Linear(128, num_classes)
 
         size = 0
         for p in self.parameters():
@@ -90,5 +92,6 @@ class AcousticAttn(nn.Module):
         # print("hidden after cat: ", hidden.size())
         energy, linear_combination = self.attention(hidden, outputs, outputs)
         # print("linear: ", linear_combination.size())
-        logits = self.decoder(linear_combination)
+        logits = self.final_decoder(self.decoder_2(self.decoder_1(linear_combination)))
+        # logits = self.decoder(linear_combination)
         return logits, energy

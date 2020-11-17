@@ -92,7 +92,7 @@ if __name__ == "__main__":
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
             # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
             model_type = (
-                "MELD-W2V-ATTN-PR"
+                "MELD-W2V-ATTN-PR-3FC"
             )
 
             # this uses train-dev-test folds
