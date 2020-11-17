@@ -566,6 +566,7 @@ def train_and_predict_w2v(
         num_epochs,
         loss_func,
         optimizer,
+        rnn=False,
         device="cpu",
         scheduler=None,
         sampler=None,
@@ -619,12 +620,17 @@ def train_and_predict_w2v(
             # print(batch_acoustic.size())
             batch_acoustic = batch_acoustic.transpose(1, 2)
             # batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic)
-            batch_acoustic_lengths = batch['length']
 
-            y_pred = classifier(
-                acoustic_input=batch_acoustic,
-                acoustic_len_input=batch_acoustic_lengths,
-            )
+            if rnn:
+                batch_acoustic_lengths = batch['length']
+                y_pred = classifier(
+                    acoustic_input=batch_acoustic,
+                    acoustic_len_input=batch_acoustic_lengths,
+                )
+            else:
+                y_pred = classifier(
+                    acoustic_input=batch_acoustic
+                )
 
             if binary:
                 y_pred = y_pred.float()

@@ -569,30 +569,31 @@ class AudioCNN(nn.Module):
         self.conv4 = nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=(3, 3), padding=1)
         self.conv4_bn = nn.BatchNorm2d(1024)
         self.pool4 = nn.MaxPool2d(kernel_size=(4, 3))
-        # self.conv5 = nn.Conv2d(in_channels=1024, out_channels=2048, kernel_size=(3, 3), padding=1)
-        # self.conv5_bn = nn.BatchNorm2d(2048)
-        # self.pool5 = nn.MaxPool2d(kernel_size=(3, 2))
-        self.fc1 = nn.Linear(in_features=1024, out_features=self.output_dim)
+        self.conv5 = nn.Conv2d(in_channels=1024, out_channels=2048, kernel_size=(3, 3), padding=1)
+        self.conv5_bn = nn.BatchNorm2d(2048)
+        self.pool5 = nn.MaxPool2d(kernel_size=(3, 2))
+        self.fc1 = nn.Linear(in_features=2048, out_features=self.output_dim)
 
     def forward(self, acoustic_input):
 
         self.inputs = acoustic_input
         # feed data into convolutional layers
         x = self.conv1(self.inputs)
-        # print("conv1: ", x.size())
+        print("conv1: ", x.size())
         x = self.pool1(F.elu(self.conv1_bn(x)))
-        # print("pool1: ", x.size())
+        print("pool1: ", x.size())
         x = self.pool2(F.elu(self.conv2_bn(self.conv2(x))))
-        # print("conv2/pool2: ", x.size())
+        print("conv2/pool2: ", x.size())
         x = self.pool3(F.elu(self.conv3_bn(self.conv3(x))))
-        # print("conv3/pool3: ", x.size())
+        print("conv3/pool3: ", x.size())
         x = self.pool4(F.elu(self.conv4_bn(self.conv4(x))))
-        # print("conv4/pool4: ", x.size())
-        # x = self.pool5(F.elu(self.conv5_bn(self.conv5(x))))
-        # print("conv5/pool5: ", x.size())
-        x = x.view(-1, 1024)
+        print("conv4/pool4: ", x.size())
+        x = self.pool5(F.elu(self.conv5_bn(self.conv5(x))))
+        print("conv5/pool5: ", x.size())
+        x = x.view(-1, 2048)
         # get predictions
-        output = torch.sigmoid(self.fc1(x))
+        # output = torch.sigmoid(self.fc1(x))
+        output = nn.Softmax(self.fc1(x))
         # output = self.fc1(x)
         return output
 
