@@ -142,9 +142,18 @@ if __name__ == "__main__":
         use_speaker=params.use_speaker,
         use_gender=params.use_gender,
     )
-
+    # dict for printing emotions associated with model predictions:
     df = pandas.DataFrame()
+    emotions = {
+        "0" : "anger",
+        "1" : "disgust",
+        "2" : "fear",
+        "3" : "joy",
+        "4" : "neutral",
+        "5" : "sadness",
+        "6" : "surprise" }
 
+    # subset of the full dataset for the final output:
     def printdict(nm, directory):
         for item, key in directory:
             file = [str(item)]
@@ -174,8 +183,11 @@ if __name__ == "__main__":
     g = []
     df = printdict(g, acoustic_dict)
     mem, vers = metadata(g[0][0])
+
     # add column with predictions to dataframe:
     df["model_prediction"] = ordered_predictions
+
+    # Final output:
     output_dict = {}
     with open("asist_output.txt", "w") as f:
         for index, row in df.iterrows():
@@ -196,8 +208,9 @@ if __name__ == "__main__":
                         {
                         "speaker": row["speaker"],
                         "utterance": row["utt"],
-                        "model_prediction": row["model_prediction"]
+                        "emotion detected": emotions[str(row["model_prediction"])]
                         }
                     }
             f.write(json.dumps(output_dict)+"\n")
 
+# print(emotions[str(df["model_prediction"][2])])
