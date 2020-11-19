@@ -168,7 +168,8 @@ if __name__ == "__main__":
         "5" : "sadness",
         "6" : "surprise" }
 
-    # subset of the full dataset for the final output:
+    # subset of the full dataset for the final output. Here, all rows from all datasets are combined,
+    # just like the dataset with the predictions:
 
     def printdict(nm, directory):
         df1 = pd.DataFrame()
@@ -201,7 +202,7 @@ if __name__ == "__main__":
 
     g = []
     df = printdict(g, acoustic_dict)
-    # add column with predictions to dataframe:
+    # add columns with predictions to dataframe:
     df["model_prediction"] = [i[0] for i in ordered_predictions]
     df["confidence_level"] = [i[1] for i in ordered_predictions]
     # df["timestamp"] = meta_dict["timestart"]
