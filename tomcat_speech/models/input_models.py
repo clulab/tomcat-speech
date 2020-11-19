@@ -165,6 +165,7 @@ class EarlyFusionMultimodalModel(nn.Module):
         length_input=None,
         acoustic_len_input=None,
         gender_input=None,
+        get_prob_dist=False
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
@@ -280,6 +281,9 @@ class EarlyFusionMultimodalModel(nn.Module):
 
         if self.out_dims == 1:
             output = torch.sigmoid(output)
+        elif get_prob_dist:
+            prob = nn.Softmax(dim=1)
+            output = prob(output)
         # return the output
         return output
 
