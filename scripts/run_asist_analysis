@@ -25,7 +25,6 @@ if __name__ == "__main__":
     import random
     import json
     import re
-    import pandas
     import numpy as np
     import torch
 
@@ -97,6 +96,20 @@ if __name__ == "__main__":
 
     print("Acoustic dict created")
 
+    #metadata
+    meta_dict = {
+        (filepath): pd.read_table(
+            filepath,
+            usecols=[
+                "speaker",
+                "utt",
+                "timestart",
+                "pcm_loudness_sma",
+            ],
+        )
+        for filepath in args.input_csvfiles
+    }
+
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
     glove_dict = make_glove_dict(args.glove_file)
     glove = Glove(glove_dict)
@@ -104,6 +117,7 @@ if __name__ == "__main__":
 
     # 3. MAKE DATASET
     data = AsistDataset(
+        # meta_dict,
         acoustic_dict,
         glove,
         splits=1,
@@ -143,7 +157,7 @@ if __name__ == "__main__":
         use_gender=params.use_gender,
     )
     # dict for printing emotions associated with model predictions:
-    df = pandas.DataFrame()
+    df = pd.DataFrame()
     emotions = {
         "0" : "anger",
         "1" : "disgust",
@@ -157,13 +171,14 @@ if __name__ == "__main__":
     def printdict(nm, directory):
         for item, key in directory:
             file = [str(item)]
-            nm.append(file)
+            nm.extend(file)
             y = directory[item, key] #this is a pandas dataframe
             # y["Filename"] = file
             sub = y[["speaker", "utt"]].copy(deep=False)
+            sub.insert(0, "filename", str(item))
         return sub
 
-        # get metadata
+        # get metadata : memberID, version, filename
     def metadata(input):
         nm = re.split('\s|/', input)[-1]
         w = re.split('(\..+|_)', nm)
@@ -178,21 +193,24 @@ if __name__ == "__main__":
                     q = re.findall(r'[0-9]',e)[0]
                 else:
                     q = e
-        return p, q
+        return p, q, nm
 
     g = []
     df = printdict(g, acoustic_dict)
-    mem, vers = metadata(g[0][0])
 
     # add column with predictions to dataframe:
     df["model_prediction"] = ordered_predictions
+    # df["timestamp"] = meta_dict["timestart"]
+    # print(df)
 
     # Final output:
     output_dict = {}
     with open("asist_output.txt", "w") as f:
         for index, row in df.iterrows():
+            mem, vers, filen = metadata(row["filename"])
             output_dict = {
                 "header": {
+                    # "timestamp": row["timestart"],
                     "timestamp": "some_time_stamp",
                     "message_type": "event",
                     "version": vers
@@ -202,13 +220,14 @@ if __name__ == "__main__":
                     "experiment_id": mem,
                     "timestamp": "some_time_stamp",
                     "sub_type": "Event:speech_feature",
-                    "version": vers
+                    "version": vers,
+                    "filename": filen
                 },
                 "data":
                         {
                         "speaker": row["speaker"],
                         "utterance": row["utt"],
-                        "emotion detected": emotions[str(row["model_prediction"])]
+                        "emotion_detected": emotions[str(row["model_prediction"])]
                         }
                     }
             f.write(json.dumps(output_dict)+"\n")
