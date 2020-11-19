@@ -6,12 +6,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "glove_file",
     help="Path to Glove file",
-    default="glove.short.300d.punct.txt",
+    default="data/glove.short.300d.punct.txt",
 )
 parser.add_argument(
     "emotion_model",
     help="Path to saved model you would like to use in testing",
-    default="tomcat_speech/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth",
+    default="data/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth",
 )
 parser.add_argument(
     "input_csvfiles",
@@ -93,7 +93,6 @@ if __name__ == "__main__":
         )
         for filepath in args.input_csvfiles
     }
-
     print("Acoustic dict created")
 
     #metadata
@@ -172,6 +171,7 @@ if __name__ == "__main__":
     # subset of the full dataset for the final output:
 
     def printdict(nm, directory):
+        df1 = pd.DataFrame()
         for item, key in directory:
             file = [str(item)]
             nm.extend(file)
@@ -179,7 +179,8 @@ if __name__ == "__main__":
             # y["Filename"] = file
             sub = y[["speaker", "utt"]].copy(deep=False)
             sub.insert(0, "filename", str(item))
-        return sub
+            df1 = pd.concat([df1, sub])
+        return df1
 
         # get metadata : memberID, version, filename
     def metadata(input):
@@ -199,14 +200,11 @@ if __name__ == "__main__":
         return p, q, nm
 
     g = []
-    df = pd.DataFrame()
     df = printdict(g, acoustic_dict)
-
     # add column with predictions to dataframe:
     df["model_prediction"] = [i[0] for i in ordered_predictions]
     df["confidence_level"] = [i[1] for i in ordered_predictions]
     # df["timestamp"] = meta_dict["timestart"]
-    print(df)
 
     # Final output:
     output_dict = {}
@@ -238,4 +236,3 @@ if __name__ == "__main__":
                     }
             f.write(json.dumps(output_dict)+"\n")
 
-# print(emotions[str(df["model_prediction"][2])])
