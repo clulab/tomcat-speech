@@ -154,6 +154,7 @@ if __name__ == "__main__":
         avgd_acoustic=avgd_acoustic,
         use_speaker=params.use_speaker,
         use_gender=params.use_gender,
+        get_prob_dist=True
     )
 
 
