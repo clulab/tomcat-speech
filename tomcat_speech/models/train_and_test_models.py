@@ -731,7 +731,7 @@ def test_model(
     print("Classification report: ")
     print(classification_report(ys_holder, preds_holder, digits=4))
 
-
+# GENERATES LIST OF LISTS WITH PREDICTION AND CONFIDENCE LEVELS
 def predict_without_gold_labels(
     classifier,
     test_ds,
@@ -790,7 +790,7 @@ def predict_without_gold_labels(
 
         # add ys to holder for error analysis
         preds_holder.extend(
-            [item.index(max(item)) for item in y_pred.tolist()]
+            [[item.index(max(item)), max(item)] for item in y_pred.tolist()]
         )
 
     return preds_holder
