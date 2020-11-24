@@ -5,6 +5,7 @@ import numpy as np
 import pickle
 import torch
 import torchaudio
+import statistics
 import torch.nn.functional as F
 
 import glob
@@ -18,7 +19,15 @@ from fairseq.models.roberta import RobertaModel
 from https://github.com/shamanez/BERT-like-is-All-You-Need/blob/master/SPEECH-BERT-TOKENIZATION/convert_aud_to_token.py
 '''
 
-problem_aud = open('problem_aud.txt', 'w')
+# problem_aud = open('problem_aud.txt', 'w')
+
+
+def print_audio_info(arr):
+    print("Min: ", min(arr))
+    print("Median: ", statistics.median(arr))
+    print("Mean: ", statistics.mean(arr))
+    print("Max: ", max(arr))
+
 
 class EmotionDataPreprocessing():
 
@@ -38,7 +47,7 @@ class EmotionDataPreprocessing():
         num_items = 1e18
         current_num = 0
 
-        # item = {}
+        audio_time = []
         if audio_path:
             audio_files = [audio for audio in os.listdir(audio_path) if audio.endswith(ext)]
             print(len(audio_files), "audio_files found")
@@ -50,6 +59,8 @@ class EmotionDataPreprocessing():
                 # wav2vec
                 z = self.model.feature_extractor(audio_features)
                 aggregated_feat = self.model.feature_aggregator(z)
+                time = aggregated_feat.size()[2]
+                audio_time.append(time)
 
                 output_file = os.path.join(output_path, audio_file.replace(ext, '.pt'))
 
@@ -61,8 +72,8 @@ class EmotionDataPreprocessing():
                 if current_num > num_items:
                     break
 
-            # with open("../data/data_pt/audio_length_dev.pt", "wb") as out_data:
-            #     pickle.dump(item, out_data)
+        print_audio_info(audio_time)
+
 
 if __name__ == "__main__":
 
@@ -79,7 +90,7 @@ if __name__ == "__main__":
     output_path = args.output
     ext = args.extension
 
-    data_processor = EmotionDataPreprocessing(w2v_model, )
+    data_processor = EmotionDataPreprocessing(w2v_model)
 
     data_processor.preprocess_data(audio_path, output_path, ext)
 
