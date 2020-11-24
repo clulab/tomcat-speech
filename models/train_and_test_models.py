@@ -618,7 +618,7 @@ def train_and_predict_w2v(
             # step 2. compute the output
             batch_acoustic = batch['audio'].to(device)
             # print(batch_acoustic.size())
-            batch_acoustic = batch_acoustic.transpose(1, 2)
+            # batch_acoustic = batch_acoustic.transpose(1, 2)
             # batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic)
 
             if rnn:
@@ -628,6 +628,7 @@ def train_and_predict_w2v(
                     acoustic_len_input=batch_acoustic_lengths,
                 )
             else:
+                batch_acoustic = batch_acoustic.unsqueeze(1)
                 y_pred = classifier(
                     acoustic_input=batch_acoustic
                 )
@@ -708,6 +709,8 @@ def train_and_predict_w2v(
         # print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
         print("Training weighted F-score: " + str(avg_f1))
 
+        torch.cuda.empty_cache()
+
         # Iterate over validation set--put it in a dataloader
         val_batches = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
 
@@ -726,14 +729,18 @@ def train_and_predict_w2v(
         for batch_index, batch in enumerate(val_batches):
             # compute the output
             batch_acoustic = batch['audio'].to(device)
-            batch_acoustic = batch_acoustic.transpose(1, 2)
+            # batch_acoustic = batch_acoustic.transpose(1, 2)
             # batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic)
-            batch_acoustic_lengths = batch['length']
+            if rnn:
+                batch_acoustic_lengths = batch['length']
 
-            y_pred = classifier(
-                acoustic_input=batch_acoustic,
-                acoustic_len_input=batch_acoustic_lengths,
-            )
+                y_pred = classifier(
+                    acoustic_input=batch_acoustic,
+                    acoustic_len_input=batch_acoustic_lengths,
+                )
+            else:
+                batch_acoustic = batch_acoustic.unsqueeze(1)
+                y_pred = classifier(acoustic_input=batch_acoustic)
 
             # get the gold labels
             # y_gold = batch[7].to(device)

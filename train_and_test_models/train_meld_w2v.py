@@ -92,27 +92,27 @@ if __name__ == "__main__":
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
             # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
             model_type = (
-                "MELD-W2V-CNN-PR-1FC"
+                "MELD-W2V-ATTN-PR-noWEIGHT-3FC"
             )
 
             # this uses train-dev-test folds
             # create instance of model
             # attn
-            # encoder = Encoder(input_dim=params.audio_dim,
-            #                   hidden_dim=params.acoustic_gru_hidden_dim,
-            #                   num_gru_layers=params.num_gru_layers,
-            #                   dropout=params.dropout,
-            #                   bidirectional=params.bidirectional)
-            # attention_dim = params.acoustic_gru_hidden_dim if not params.bidirectional else 2 * params.acoustic_gru_hidden_dim
-            # attention = Attention(attention_dim, attention_dim, attention_dim)
-            # acoustic_model = AcousticAttn(
-            #     encoder=encoder,
-            #     attention=attention,
-            #     hidden_dim=attention_dim,
-            #     num_classes=params.output_dim
-            # )
+            encoder = Encoder(input_dim=params.audio_dim,
+                              hidden_dim=params.acoustic_gru_hidden_dim,
+                              num_gru_layers=params.num_gru_layers,
+                              dropout=params.dropout,
+                              bidirectional=params.bidirectional)
+            attention_dim = params.acoustic_gru_hidden_dim if not params.bidirectional else 2 * params.acoustic_gru_hidden_dim
+            attention = Attention(attention_dim, attention_dim, attention_dim)
+            acoustic_model = AcousticAttn(
+                encoder=encoder,
+                attention=attention,
+                hidden_dim=attention_dim,
+                num_classes=params.output_dim
+            )
             # cnn
-            acoustic_model = AudioCNN(params=params)
+            # acoustic_model = AudioCNN(params=params)
 
             optimizer = torch.optim.Adam(
                 lr=lr, params=acoustic_model.parameters(), weight_decay=wd
@@ -125,7 +125,7 @@ if __name__ == "__main__":
             # set loss function, optimization, and scheduler, if using
             weights = [4.0, 6.0, 15.0, 1.0, 3.0, 3.0, 15.0]
             weights = torch.FloatTensor(weights).to(device)
-            loss_func = nn.CrossEntropyLoss(reduction="mean", weight=weights)
+            loss_func = nn.CrossEntropyLoss(reduction="mean")
             # loss_func = nn.CrossEntropyLoss(data.emotion_weights, reduction='mean')
             # optimizer = torch.optim.SGD(bimodal_trial.parameters(), lr=lr, momentum=0.9)
 
@@ -166,33 +166,33 @@ if __name__ == "__main__":
             train_state = make_train_state(lr, os.path.join(model_save_path, model_save_file))
 
             # train the model and evaluate on development set
-            # train_and_predict_attn(
-            #     acoustic_model,
-            #     train_state,
-            #     train_data,
-            #     dev_data,
-            #     params.batch_size,
-            #     params.num_epochs,
-            #     loss_func,
-            #     optimizer,
-            #     device,
-            #     scheduler=None,
-            #     sampler=None
-            # )
-            train_and_predict_w2v(
-                    acoustic_model,
-                    train_state,
-                    train_data,
-                    dev_data,
-                    params.batch_size,
-                    params.num_epochs,
-                    loss_func,
-                    optimizer,
-                    rnn=False,
-                    device=device,
-                    scheduler=None,
-                    sampler=None
-                )
+            train_and_predict_attn(
+                acoustic_model,
+                train_state,
+                train_data,
+                dev_data,
+                params.batch_size,
+                params.num_epochs,
+                loss_func,
+                optimizer,
+                device,
+                scheduler=None,
+                sampler=None
+            )
+            # train_and_predict_w2v(
+            #         acoustic_model,
+            #         train_state,
+            #         train_data,
+            #         dev_data,
+            #         params.batch_size,
+            #         params.num_epochs,
+            #         loss_func,
+            #         optimizer,
+            #         rnn=False,
+            #         device=device,
+            #         scheduler=None,
+            #         sampler=None
+            #     )
 
             # plot the loss and accuracy curves
             # set plot titles
