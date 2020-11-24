@@ -708,29 +708,29 @@ def make_w2v_dict(audio_path="", wav_names=[], rnn=False):
         mel_time = aggregated_feat.size()[2]
 
         if rnn:
-            if mel_time > 686:
-                target_tensor = aggregated_feat[:, :, :686]
-                audio_length[wav_name] = 686
+            if mel_time > 1522:
+                target_tensor = aggregated_feat[:, :, :1522]
+                audio_length[wav_name] = 1522
             else:
                 target_tensor = aggregated_feat
                 audio_length[wav_name] = mel_time
 
         else:
-            if mel_time <= 686:
-                target_tensor = torch.zeros(1, 512, 686)
+            if mel_time <= 1522:
+                target_tensor = torch.zeros(1, 512, 1522)
                 target_tensor[:,:,:mel_time] = aggregated_feat
                 audio_length[wav_name] = mel_time
             else:
                 # target_tensor = torch.zeros(1, 512, 686)
 
-                diff = mel_time - 686
+                diff = mel_time - 1522
 
                 random_start = np.random.randint(0, diff + 1)
                 end = mel_time - diff + random_start
 
                 target_tensor = aggregated_feat[:, :, random_start:end]
                 
-                audio_length[wav_name] = 686
+                audio_length[wav_name] = 1522
 
         audio_dict[wav_name] = target_tensor.squeeze(0)
 

@@ -26,7 +26,7 @@ params = Namespace(
     use_speaker=False,
     use_gender=False,
     # number of classes
-    output_dim=7,  # length of output vector
+    output_dim=2,  # length of output vector
     # CNN-specific parameters
     num_layers=3,  # 3  # number of lstm/cnn layers
     out_channels=20,
