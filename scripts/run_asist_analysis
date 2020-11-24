@@ -1,0 +1,148 @@
+#!/usr/bin/env python
+
+
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "glove_file",
+    help="Path to Glove file",
+    default="glove.short.300d.punct.txt",
+)
+parser.add_argument(
+    "emotion_model",
+    help="Path to saved model you would like to use in testing",
+    default="tomcat_speech/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth",
+)
+parser.add_argument(
+    "input_csvfiles",
+    help="Input CSV files for training and testing the model.",
+    nargs="+"
+)
+
+args = parser.parse_args()
+
+if __name__ == "__main__":
+    import os
+    import random
+
+    import numpy as np
+    import torch
+
+    from tomcat_speech.data_prep.asist_data.asist_dataset_creation import (
+        AsistDataset,
+    )
+    from tomcat_speech.models.train_and_test_models import (
+        predict_without_gold_labels,
+    )
+    from tomcat_speech.models.input_models import EarlyFusionMultimodalModel
+
+    from tomcat_speech.data_prep.data_prep_helpers import (
+        make_acoustic_dict,
+        make_glove_dict,
+        Glove,
+        DatumListDataset,
+    )
+
+    # Import parameters for model
+    from tomcat_speech.models.parameters.multitask_params import params
+    import pandas as pd
+
+
+
+    # Set device, checking CUDA
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # set random seed
+    seed = params.seed
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+    # set number of splits
+    num_splits = 1
+
+    # set model name and model type
+    model = params.model
+    model_type = "BimodalCNN_k=4"
+    # set number of columns to skip in data input files
+    cols_to_skip = 2  # 2 for Zoom, 4 for AWS
+
+    # decide if you want to use avgd feats
+    avgd_acoustic = params.avgd_acoustic or params.add_avging
+
+    # set the path to the trained model
+
+    acoustic_dict = {
+        (filepath, 0): pd.read_table(
+            filepath,
+            usecols=[
+                "speaker",
+                "utt",
+                "pcm_loudness_sma",
+                "F0finEnv_sma",
+                "voicingFinalUnclipped_sma",
+                "jitterLocal_sma",
+                "shimmerLocal_sma",
+                "pcm_loudness_sma_de",
+                "F0finEnv_sma_de",
+                "voicingFinalUnclipped_sma_de",
+                "jitterLocal_sma_de",
+                "shimmerLocal_sma_de",
+            ],
+        )
+        for filepath in args.input_csvfiles
+    }
+
+    print("Acoustic dict created")
+
+    # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
+    glove_dict = make_glove_dict(args.glove_file)
+    glove = Glove(glove_dict)
+    print("Glove object created")
+
+    # 3. MAKE DATASET
+    data = AsistDataset(
+        acoustic_dict,
+        glove,
+        splits=1,
+        sequence_prep="pad",
+        truncate_from="start",
+        norm=None,
+        add_avging=params.add_avging,
+        transcript_type="zoom"
+    )
+
+    # get data for testing
+    test_data = data.current_split
+    test_ds = DatumListDataset(test_data, None)
+    print("Dataset created")
+
+    # 6. CREATE NN
+    # get set of pretrained embeddings and their shape
+    pretrained_embeddings = glove.data
+    num_embeddings = pretrained_embeddings.size()[0]
+    print(f"shape of pretrained embeddings is: {data.glove.data.size()}")
+
+    # create test model
+    classifier = EarlyFusionMultimodalModel(
+        params=params,
+        num_embeddings=num_embeddings,
+        pretrained_embeddings=pretrained_embeddings,
+    )
+    # get saved parameters
+    classifier.load_state_dict(torch.load(args.emotion_model))
+    classifier.to(device)
+    # test the model
+    ordered_predictions = predict_without_gold_labels(
+        classifier,
+        test_ds,
+        params.batch_size,
+        device,
+        avgd_acoustic=avgd_acoustic,
+        use_speaker=params.use_speaker,
+        use_gender=params.use_gender,
+    )
+    print(ordered_predictions)
