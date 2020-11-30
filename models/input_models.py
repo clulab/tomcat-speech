@@ -559,20 +559,23 @@ class AudioCNN(nn.Module):
 
         self.conv1 = nn.Conv2d(self.in_channels, out_channels=128, kernel_size=(3, 3), padding=1)
         self.conv1_bn = nn.BatchNorm2d(128)
-        self.pool1 = nn.MaxPool2d(kernel_size=(3, 3))
+        self.pool1 = nn.MaxPool2d(kernel_size=(5, 5))
         self.conv2 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(3, 3), padding=1)
         self.conv2_bn = nn.BatchNorm2d(256)
-        self.pool2 = nn.MaxPool2d(kernel_size=(3, 3))
+        self.pool2 = nn.MaxPool2d(kernel_size=(5, 5))
         self.conv3 = nn.Conv2d(in_channels=256, out_channels=512, kernel_size=(3, 3), padding=1)
         self.conv3_bn = nn.BatchNorm2d(512)
-        self.pool3 = nn.MaxPool2d(kernel_size=(3, 3))
+        self.pool3 = nn.MaxPool2d(kernel_size=(5, 6))
         self.conv4 = nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=(3, 3), padding=1)
         self.conv4_bn = nn.BatchNorm2d(1024)
-        self.pool4 = nn.MaxPool2d(kernel_size=(4, 3))
-        self.conv5 = nn.Conv2d(in_channels=1024, out_channels=2048, kernel_size=(3, 3), padding=1)
-        self.conv5_bn = nn.BatchNorm2d(2048)
-        self.pool5 = nn.MaxPool2d(kernel_size=(4, 5))
-        self.fc1 = nn.Linear(in_features=2048, out_features=self.output_dim)
+        self.pool4 = nn.MaxPool2d(kernel_size=(4, 6))
+        # self.conv5 = nn.Conv2d(in_channels=1024, out_channels=2048, kernel_size=(3, 3), padding=1)
+        # self.conv5_bn = nn.BatchNorm2d(2048)
+        # self.pool5 = nn.MaxPool2d(kernel_size=(4, 4))
+        # self.fc1 = nn.Linear(in_features=1024, out_features=self.output_dim)
+        self.fc1 = nn.Linear(in_features=1024, out_features=512)
+        self.fc2 = nn.Linear(in_features=512, out_features=256)
+        self.fc3 = nn.Linear(in_features=256, out_features=self.output_dim)
 
     def forward(self, acoustic_input):
 
@@ -588,13 +591,13 @@ class AudioCNN(nn.Module):
         # print("conv3/pool3: ", x.size())
         x = self.pool4(F.elu(self.conv4_bn(self.conv4(x))))
         # print("conv4/pool4: ", x.size())
-        x = self.pool5(F.elu(self.conv5_bn(self.conv5(x))))
+        # x = self.pool5(F.elu(self.conv5_bn(self.conv5(x))))
         # print("conv5/pool5: ", x.size())
-        x = x.view(-1, 2048)
+        x = x.view(-1, 1024)
         # get predictions
         # output = torch.sigmoid(self.fc1(x))
         # output = nn.Softmax(self.fc1(x))
-        output = self.fc1(x)
+        output = self.fc3(F.relu(self.fc2(F.relu(self.fc1(x)))))
         return output
 
 

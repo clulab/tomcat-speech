@@ -50,7 +50,7 @@ class MustardPrepData(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         try:
-            emotion_label = self.label_info[self.wav_names[idx]]["emot"]
+            emotion_label = self.label_info[self.wav_names[idx]]["sarc"]
             audio_info = self.audio_dict[self.wav_names[idx]]
             audio_length = self.audio_length[self.wav_names[idx]]
             item = {'audio': audio_info, 'length': audio_length, 'label': emotion_label}
