@@ -39,7 +39,7 @@ params = Namespace(
     dropout=0.0,  # 0.2
     # optimizer parameters
     # learning_rate=1e-06,  # 1e-06 0.00001  # 0.0001 0.001 tried
-    lrs=[1e-03],  # if using multiple learning rates to test
+    lrs=[1e-06],  # if using multiple learning rates to test
     beta_1=0.9,
     beta_2=0.999,  # beta params for Adam--defaults 0.9 and 0.999
     weight_decay=[0.0001],

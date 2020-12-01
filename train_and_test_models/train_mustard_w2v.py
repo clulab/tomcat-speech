@@ -27,7 +27,7 @@ cuda = True
 # if not torch.cuda.is_available():
 #     cuda = False
 
-device = torch.device("cuda:1" if cuda else "cpu")
+device = torch.device("cuda:0" if cuda else "cpu")
 
 # set random seed
 seed = params.seed
@@ -89,7 +89,7 @@ if __name__ == "__main__":
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
             # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
             model_type = (
-                "MUSTARD-W2V-CNN-PR-1FC"
+                "MUSTARD-W2V-CNN-PR-3FC"
             )
 
             # this uses train-dev-test folds
@@ -152,18 +152,18 @@ if __name__ == "__main__":
             #     sampler=None
             # )
             train_and_predict_w2v(
-                    acoustic_model,
-                    train_state,
-                    train_data,
-                    dev_data,
-                    params.batch_size,
-                    params.num_epochs,
-                    loss_func,
-                    optimizer,
-                    rnn=False,
-                    device=device,
-                    scheduler=None,
-                    sampler=None
+                     acoustic_model,
+                     train_state,
+                     train_data,
+                     dev_data,
+                     params.batch_size,
+                     params.num_epochs,
+                     loss_func,
+                     optimizer,
+                     rnn=False,
+                     device=device,
+                     scheduler=None,
+                     sampler=None
                 )
 
             # plot the loss and accuracy curves
