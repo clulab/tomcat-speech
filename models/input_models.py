@@ -573,6 +573,7 @@ class AudioCNN(nn.Module):
         # self.conv5_bn = nn.BatchNorm2d(2048)
         # self.pool5 = nn.MaxPool2d(kernel_size=(4, 4))
         # self.fc1 = nn.Linear(in_features=1024, out_features=self.output_dim)
+        self.dropout = nn.Dropout(0.3)
         self.fc1 = nn.Linear(in_features=1024, out_features=512)
         self.fc2 = nn.Linear(in_features=512, out_features=256)
         self.fc3 = nn.Linear(in_features=256, out_features=self.output_dim)
@@ -597,7 +598,12 @@ class AudioCNN(nn.Module):
         # get predictions
         # output = torch.sigmoid(self.fc1(x))
         # output = nn.Softmax(self.fc1(x))
-        output = self.fc3(F.relu(self.fc2(F.relu(self.fc1(x)))))
+        x = self.dropout(x)
+        output = F.relu(self.fc1(x))
+        output = self.dropout(output)
+        output = F.relu(self.fc2(output))
+        output = self.dropout(output)
+        output = F.relu(self.fc3(output))
         return output
 
 
