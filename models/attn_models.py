@@ -62,7 +62,7 @@ class AcousticAttn(nn.Module):
         self.decoder_1 = nn.Linear(hidden_dim, 256)
         self.decoder_2 = nn.Linear(256, 128)
         self.final_decoder = nn.Linear(128, num_classes)
-
+        self.dropout = nn.Dropout(0.3)
         size = 0
         for p in self.parameters():
             size += p.nelement()
@@ -74,6 +74,7 @@ class AcousticAttn(nn.Module):
         # )
         # outputs, hidden = self.encoder(packed_input)
         # acoustic_input = acoustic_input.transpose(1, 2)
+        acoustic_input = self.dropout(acoustic_input)
         outputs, hidden = self.encoder(acoustic_input)
         # print("outputs: ", outputs.size())
         # print("hidden from encoder: ", hidden.size())
