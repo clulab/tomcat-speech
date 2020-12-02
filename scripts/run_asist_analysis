@@ -4,6 +4,12 @@
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument(
+    "output_filepath",
+    help="Path to output file",
+    default="asist_output.txt",
+)
+
+parser.add_argument(
     "glove_file",
     help="Path to Glove file",
     default="data/glove.short.300d.punct.txt",
@@ -210,7 +216,7 @@ if __name__ == "__main__":
 
     # Final output:
     output_dict = {}
-    with open("asist_output.txt", "w") as f:
+    with open(args.output_filepath, "w") as f:
         for index, row in df.iterrows():
             mem, vers, filen = metadata(row["filename"])
             output_dict = {
@@ -237,4 +243,3 @@ if __name__ == "__main__":
                         }
                     }
             f.write(json.dumps(output_dict)+"\n")
-
