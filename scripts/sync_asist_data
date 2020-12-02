@@ -1,16 +1,47 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python
 
-set -euo pipefail
+import os
+from subprocess import run
+from pathlib import Path
 
-# Script to download/sync ASIST data
+# Get the path to the data directory, assuming that the repo directory
+# structure is mirrored.
+gcs_dir = "study-1_2020.08"
+data_dir = (
+    Path(os.path.dirname(os.path.realpath(__file__))).parent / "data" / gcs_dir
+)
 
-# Set the ROOTDIR environment variable, assuming that the directory structure
-# mirrors that of the git repository.
-ROOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../" >/dev/null 2>&1 && pwd)"
-export ROOTDIR
 
-GCS_DIR=study-1_2020.08
-DATA_DIR="$ROOTDIR"/data/$GCS_DIR
+os.makedirs(data_dir, exist_ok=True)
 
-mkdir -p $DATA_DIR
-gsutil -m rsync -r -x ".*\.mp4$|.*\.metadata$|.*\.png$|.*\.zip$|.*\.PNG$|.*\.csv$|.*\.tsv$" gs://studies.aptima.com/$GCS_DIR $DATA_DIR
+extensions_to_exclude = (
+    "mp4",
+    "metadata",
+    "tsv",
+    "png",
+    "PNG",
+    "xlsx",
+    "zip",
+    "csv",
+    "fov",
+    "docx",
+)
+
+# Construct a regex for gsutil rsync exclusion
+exclusion_regex = (
+    "$|".join((f".*\.{ext}" for ext in extensions_to_exclude)) + "$"
+)
+
+run(
+    [
+        "gsutil",
+        "-m",
+        "rsync",
+        "-r",
+        "-x",
+        exclusion_regex,
+        f"gs://studies.aptima.com/{gcs_dir}",
+        data_dir,
+    ],
+    cwd=data_dir,
+)
