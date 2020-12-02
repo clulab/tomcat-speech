@@ -1,6 +1,6 @@
 # This Makefile is a work in progress - it has not been tested yet!
 
-all: asist_output.txt
+all: build/asist_output.txt
 
 DATA_DIR = data/study-1_2020.08
 OPENSMILE_DIR = external/opensmile-3.0
