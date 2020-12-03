@@ -49,6 +49,10 @@ Python package requirements
 
         Install the SpeechRecognition package: pip install SpeechRecognition
 
+    If you enable publishing to an MQTT message bus (with the --use_mqtt
+    option), you'll need to install the Eclipse Paho Python client library:
+        pip install paho-mqtt
+
 To use the Google Cloud Speech Recognition engine, you will need to point the
 environment variable GOOGLE_APPLICATION_CREDENTIALS to point to your Google
 Cloud credentials file.
