@@ -69,7 +69,6 @@ class MicrophoneStream(object):
 
     def _fill_buffer(self, in_data, frame_count, time_info, status_flags):
         """Continuously collect data from the audio stream, into the buffer."""
-        print(in_data, frame_count, time_info, status_flags)
         self._buff.put(in_data)
         return None, pyaudio.paContinue
 
@@ -168,6 +167,11 @@ def listen_print_loop(responses):
             # mqtt_client.publish("agents/asr_agent", transcript)
 
 
+def callback(recognizer, audio):
+    transcription = recognizer.recognize_sphinx(audio)
+    print(transcription)
+    return transcription
+
 if __name__ == "__main__":
     import argparse
 
@@ -196,16 +200,28 @@ if __name__ == "__main__":
     # mqtt_client = MQTTClient()
     # mqtt_client.connect("localhost", 1883, 60)
 
-    with MicrophoneStream(rate, chunk) as stream:
-        audio_generator = stream.generator()
-        requests = (
-            speech.StreamingRecognizeRequest(audio_content=content)
-            for content in audio_generator
-        )
+    import speech_recognition as sr
+    r = sr.Recognizer()
+    source = sr.Microphone()
+    stop_listening = r.listen_in_background(source, callback)
+    import time
+    while True: time.sleep(0.1)
+    stop_listening(wait_for_stop=False)
 
-        responses = speech_client.streaming_recognize(
-            streaming_config, requests
-        )
+    # with MicrophoneStream(rate, chunk) as stream:
+        # audio_generator = stream.generator()
+        # for content in audio_generator:
+            # audio_data = sr.AudioData(content, 16000, 1)
+            # t = r.recognize_sphinx(audio_data)
+            # print(t)
+        # requests = (
+            # speech.StreamingRecognizeRequest(audio_content=content)
+            # for content in audio_generator
+        # )
 
-        # Now, put the transcription responses to use.
-        listen_print_loop(responses)
+        # responses = speech_client.streaming_recognize(
+            # streaming_config, requests
+        # )
+
+        # # Now, put the transcription responses to use.
+        # listen_print_loop(responses)
