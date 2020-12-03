@@ -69,6 +69,7 @@ class MicrophoneStream(object):
 
     def _fill_buffer(self, in_data, frame_count, time_info, status_flags):
         """Continuously collect data from the audio stream, into the buffer."""
+        print(in_data, frame_count, time_info, status_flags)
         self._buff.put(in_data)
         return None, pyaudio.paContinue
 
@@ -110,8 +111,6 @@ class TA3Msg(object):
     version: str = "0.1"
     source: str = "tomcat_asr_agent"
     sub_type: str = "asr"
-    replay_root_id: str = None
-    replay_id: str = None
 
 @dataclass(frozen=True)
 class TA3Data(object):
@@ -162,6 +161,10 @@ def listen_print_loop(responses):
         if result.is_final:
             ta3_data = TA3Data(transcript, "Google")
             print(json.dumps(asdict(TA3Message(ta3_data))))
+
+            # We call sys.stdout.flush() to make this program work with piping,
+            # for example, through the jq program.
+            sys.stdout.flush()
             # mqtt_client.publish("agents/asr_agent", transcript)
 
 
