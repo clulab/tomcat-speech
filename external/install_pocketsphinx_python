@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+
+# Script to install pocketsphinx-python
+# Author: Adarsh Pyarelal (adarsh@arizona.edu)
+
+set -euo pipefail
+
+echo "Checking if pocketsphinx-python is already installed."
+if [[ ! $(pip list | grep pocketsphinx) == "" ]]; then
+    echo "pocketsphinx-python is already installed."
+    echo "Found: " $(pip list | grep pocketsphinx)
+    exit 0
+else
+    echo "pocketsphinx-python is not installed. We will install it now."
+
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "macOS detected. We will now clone the pocketsphinx-python"\
+            "repository, patch it (see"\
+            "https://github.com/bambocher/pocketsphinx-python/issues/28#issuecomment-334493324),"\
+            "and install it. "
+
+        echo "Checking for MacPorts package manager."
+        CHECK_MACPORTS=$([ -x "$(command -v port)" ]; echo $?)
+        if [[ $CHECK_MACPORTS -eq 0 ]]; then
+            echo "Found MacPorts package manager. We assume this is the default"\
+                 "package manager you are using."
+            if [[ $(port installed | grep swig-python) == "" ]]; then
+                echo "Installing swig-python port using MacPorts."
+                sudo port install swig-python
+            else
+                echo "swig-python port is already installed."
+            fi
+        else
+            echo "MacPorts package manager not found."
+            echo "Checking existence of SWIG"
+            CHECK_SWIG=$([ -x "$(command -v swig)" ]; echo $?)
+            if [[ $CHECK_SWIG -eq 0 ]]; then
+                echo "SWIG found"
+            else
+                CHECK_HOMEBREW=$([ -x "$(command -v brew)" ]; echo $?)
+                if [[ $CHECK_HOMEBREW -eq 0 ]]; then
+                    echo "Detected the Homebrew package manager."
+                    echo "We will now use it to install swig."
+                    brew install swig
+                else
+                    echo "We could detect neither the swig executable, nor a package manager (MacPorts/Homebrew)."
+                    echo "Please install SWIG and try running this script again."
+                    exit 1
+                fi
+            fi
+
+        fi
+
+
+        echo "Cloning pocketsphinx-python repository."
+        git clone --recursive https://github.com/bambocher/pocketsphinx-python
+
+        echo "Patching pocketsphinx-python to make it compile on macOS"
+        patch -ruN pocketsphinx-python/deps/sphinxbase/src/libsphinxad/ad_openal.c < al_header_fix.patch
+
+        pushd pocketsphinx-python > /dev/null
+            echo "Installing pocketsphinx-python from source."
+            pip install .
+        popd > /dev/null
+
+        echo "pocketsphinx-python installation successful."
+        echo "Removing pocketsphinx-python directory."
+        rm -rf pocketsphinx-python
+    else
+        # This should theoretically work on Linux/Windows, but I have not tried it
+        # out. This comment should be removed if the command below succeeds on
+        # Linux/Windows. - Adarsh
+        pip install pocketsphinx
+    fi
+fi
+exit 0
