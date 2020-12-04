@@ -1,0 +1,3 @@
+# Script to install patch for pocketsphinx-python to make it work on macOS.
+
+patch -ruN pocketsphinx-python/deps/sphinxbase/src/libsphinxad/ad_openal.c < al_header_fix.patch

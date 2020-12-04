@@ -1,0 +1,13 @@
+--- pocketsphinx-python-2/deps/sphinxbase/src/libsphinxad/ad_openal.c	2020-12-04 09:48:52.000000000 -0700
++++ pocketsphinx-python/deps/sphinxbase/src/libsphinxad/ad_openal.c	2020-12-04 09:53:31.000000000 -0700
+@@ -40,8 +40,8 @@
+ 
+ #include "ad.h"
+ 
+-#include <al.h>
+-#include <alc.h>
++#include <OpenAL/al.h>
++#include <OpenAL/alc.h>
+ 
+ struct ad_rec_s {
+     ALCdevice * device;
