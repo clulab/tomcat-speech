@@ -14,48 +14,6 @@ Example usage:
 
 To see all available options, run:
     ./tomcat_asr_agent -h
-
-Python package requirements
-    - pip install pyaudio (to access the microphone)
-
-    If you are using the Google Cloud speech recognition engine:
-        - pip install google-cloud-speech
-
-    If you are using the PocketSphinx engine
-        Install pocketsphinx-python:
-            - On macOS, use the following steps to install pocketsphinx
-              (instructions taken
-              from
-              https://github.com/bambocher/pocketsphinx-python/issues/28#issuecomment-334493324):
-                - Clone the repository:
-                    git clone --recursive https://github.com/bambocher/pocketsphinx-python
-                    cd pocketsphinx-python
-
-                - Change the following two lines in the file
-                'pocketsphinx-python/deps/sphinxbase/src/libsphinxad/ad_openal.c':
-
-                    #include <al.h>
-                    #include <alc.h>
-
-                to
-
-                    #include <OpenAL/al.h>
-                    #include <OpenAL/alc.h>
-
-                - Then run the following command:
-                    python setup.py install
-
-            - On non-macOS machines, you can do 'pip install pocketsphinx'.
-
-        Install the SpeechRecognition package: pip install SpeechRecognition
-
-    If you enable publishing to an MQTT message bus (with the --use_mqtt
-    option), you'll need to install the Eclipse Paho Python client library:
-        pip install paho-mqtt
-
-To use the Google Cloud Speech Recognition engine, you will need to point the
-environment variable GOOGLE_APPLICATION_CREDENTIALS to point to your Google
-Cloud credentials file.
 """
 
 from __future__ import division
