@@ -182,7 +182,7 @@ if __name__ == "__main__":
             nm.extend(file)
             y = directory[item, key] #this is a pandas dataframe
             # y["Filename"] = file
-            sub = y[["speaker", "utt"]].copy(deep=False)
+            sub = y[["speaker", "utt", "timestart"]].copy(deep=False)
             sub.insert(0, "filename", str(item))
             df1 = pd.concat([df1, sub])
         return df1
@@ -209,8 +209,6 @@ if __name__ == "__main__":
     # add columns with predictions to dataframe:
     df["model_prediction"] = [i[0] for i in ordered_predictions]
     df["confidence_level"] = [i[1] for i in ordered_predictions]
-    # df["timestamp"] = meta_dict["timestart"]
-
     # Final output:
     output_dict = {}
     with open(args.output_filepath, "w") as f:
@@ -218,15 +216,15 @@ if __name__ == "__main__":
             mem, vers, filen = metadata(row["filename"])
             output_dict = {
                 "header": {
-                    # "timestamp": row["timestart"],
-                    "timestamp": "some_time_stamp",
+                    "timestamp": row["timestart"],
+                    # "timestamp": "some_time_stamp",
                     "message_type": "event",
                     "version": vers
                     },
                 "msg": {
                     "source": "TomcatSpeechAnalyzer",
                     "experiment_id": mem,
-                    "timestamp": "some_time_stamp",
+                    "timestamp": row["timestart"],
                     "sub_type": "Event:speech_feature",
                     "version": vers,
                     "filename": filen

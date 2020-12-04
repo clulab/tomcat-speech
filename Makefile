@@ -86,8 +86,8 @@ opensmile_csv_files: $(OPENSMILE_CSV_FILES)
 averaged_tsv_files: $(firstword $(AVERAGED_TSV_FILES))
 
 build/test_asist_output.txt: scripts/run_asist_analysis\
-						tomcat_speech/data_prep/data_prep_helpers.py\
-						tomcat_speech/data_prep/asist_data/asist_dataset_creation.py\
+ 						tomcat_speech/data_prep/data_prep_helpers.py\
+ 						tomcat_speech/data_prep/asist_data/asist_dataset_creation.py\
 						$(GLOVE_FILE)\
 						$(EMOTION_MODEL)\
 						$(GENDER_CLASSIFIER_MODEL)\
@@ -97,8 +97,8 @@ build/test_asist_output.txt: scripts/run_asist_analysis\
 test: build/test_asist_output.txt
 
 build/asist_output.txt: scripts/run_asist_analysis\
-					tomcat_speech/data_prep/data_prep_helpers.py\
-					tomcat_speech/data_prep/asist_data/asist_dataset_creation.py\
+ 					tomcat_speech/data_prep/data_prep_helpers.py\
+ 					tomcat_speech/data_prep/asist_data/asist_dataset_creation.py\
 					$(GLOVE_FILE)\
 					$(EMOTION_MODEL)\
 					$(GENDER_CLASSIFIER_MODEL)\
