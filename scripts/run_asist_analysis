@@ -33,7 +33,7 @@ if __name__ == "__main__":
     import re
     import numpy as np
     import torch
-
+    import sys
     from tomcat_speech.data_prep.asist_data.asist_dataset_creation import (
         AsistDataset,
     )
@@ -95,24 +95,16 @@ if __name__ == "__main__":
                 "voicingFinalUnclipped_sma_de",
                 "jitterLocal_sma_de",
                 "shimmerLocal_sma_de",
+                "timestart"
             ],
         )
         for filepath in args.input_csvfiles
     }
     print("Acoustic dict created")
-
     #metadata
     meta_dict = {
-        (filepath): pd.read_table(
-            filepath,
-            usecols=[
-                "speaker",
-                "utt",
-                "timestart",
-                "pcm_loudness_sma",
-            ],
-        )
-        for filepath in args.input_csvfiles
+        filepath_tuple[0]: dataframe["timestart"]
+        for filepath_tuple, dataframe in acoustic_dict.items()
     }
 
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
@@ -131,7 +123,12 @@ if __name__ == "__main__":
         norm=None,
         add_avging=params.add_avging,
         transcript_type="zoom"
-    )
+
+)
+    # sys.exit(0) #this stops the code
+
+
+
     # get data for testing
     test_data = data.current_split
     test_ds = DatumListDataset(test_data, None)
