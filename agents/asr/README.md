@@ -1,10 +1,24 @@
 ToMCAT ASR Agent
 ================
 
-Python package requirements
----------------------------
+Agent that listens to the microphone and outputs messages corresponding to
+real-time ASR transcriptions. The transcriptions are printed to standard output
+by default, but can optionally be published to an MQTT message bus instead.
 
-To access the microphone, you'll need the `pyaudio` package:
+Example usage:
+
+    ./tomcat_asr_agent
+
+To see all available options, run:
+
+    ./tomcat_asr_agent -h
+
+
+Prerequisites
+-------------
+
+- You'll need Python 3.6 or newer.
+- To access the microphone, you'll need the `pyaudio` package:
 
     pip install pyaudio
 
@@ -23,7 +37,6 @@ Cloud credentials file.
 If you are using the PocketSphinx engine:
 
     ./install_pocketsphinx_python
-    
     
 ### MQTT message bus publishing
 If you enable publishing to an MQTT message bus (with the --use_mqtt
