@@ -10,16 +10,16 @@ params = Namespace(
     # overall model parameters
     model="BimodalCNN",
     num_splits=4,  # 5  #splits for CV
-    num_epochs=300,
+    num_epochs=1000,
     batch_size=4,
-    early_stopping_criteria=1500,
+    early_stopping_criteria=350,
     # input dimension parameters
     text_dim=300,  # text vector length
-    # audio_dim=512, # 10 # audio_train vector length
-    audio_dim=[1,512,1522],
+    audio_dim=512, # 10 # audio_train vector length
+    # audio_dim=[1,512,1522],
     num_gru_layers=2,
     acoustic_gru_hidden_dim=1024,
-    bidirectional=True,
+    bidirectional=False,
     # speaker parameters
     spkr_emb_dim=1,
     gender_emb_dim=2,

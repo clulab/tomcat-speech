@@ -93,6 +93,8 @@ class AcousticAttn(nn.Module):
         # print("hidden after cat: ", hidden.size())
         energy, linear_combination = self.attention(hidden, outputs, outputs)
         # print("linear: ", linear_combination.size())
-        logits = self.final_decoder(self.decoder_2(self.decoder_1(linear_combination)))
+        logits = F.relu(self.decoder_1(linear_combination))
+        logits = F.relu(self.decoder_2(logits))
+        logits = self.final_decoder(logits)
         # logits = self.decoder(linear_combination)
         return logits, energy

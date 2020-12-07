@@ -883,10 +883,10 @@ def train_and_predict_attn(
            
             if len(list(y_pred.size())) > 1:
                 if binary:
-                    y_pred = torch.tensor([round(item[0]) for item in y_pred.tolist()])
+                    y_pred = torch.tensor([item[0] for item in y_pred.tolist()])
                 else:
-                    # if type(y_gold[0]) == list or torch.is_tensor(y_gold[0]):
-                    #     y_gold = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
+                  # if type(y_gold[0]) == list or torch.is_tensor(y_gold[0]):
+                    # y_gold = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
                     y_pred_class = torch.tensor(
                         [item.index(max(item)) for item in y_pred.tolist()]
                     )
@@ -897,8 +897,12 @@ def train_and_predict_attn(
                     # print(type(y_pred))
             else:
                 y_pred = torch.round(y_pred)
-            
-            preds_holder.extend(y_pred_class)
+                # y_pred = y_pred.to(device)
+            if binary:
+                preds_holder.extend(y_pred)
+            else:
+                preds_holder.extend(y_pred_class)
+                y_pred_class = y_pred_class.to(device)
             ys_holder.extend(y_gold.tolist())
 
             # print(y_pred_class)
@@ -906,9 +910,11 @@ def train_and_predict_attn(
             # print("preds_holder: ", preds_holder)
             # print("ys_holder: ", ys_holder)
 
-            y_pred = y_pred.to(device)
-            y_pred_class = y_pred_class.to(device)
-
+            # y_pred = y_pred.squeeze(1).to(device)
+            # y_pred_class = y_pred_class.to(device)
+            # print(y_pred.size(), y_gold.size())
+            # print(y_pred)
+            # print(y_gold)
             loss = loss_func(y_pred, y_gold)
             loss_t = loss.item()  # loss for the item
 
@@ -928,8 +934,7 @@ def train_and_predict_attn(
 
             # uncomment to see loss and accuracy measures for every minibatch
             # print("loss: {0}, running_loss: {1}, acc: {0}, running_acc: {1}".format(loss_t, running_loss,
-            #                                                                       acc_t, running_acc))
-
+            
         # add loss and accuracy information to the train state
         train_state["train_loss"].append(running_loss)
         train_state["train_acc"].append(running_acc)
@@ -973,7 +978,7 @@ def train_and_predict_attn(
 
             if len(list(y_pred.size())) > 1:
                 if binary:
-                    y_pred = torch.tensor([round(item[0]) for item in y_pred.tolist()])
+                    y_pred = torch.tensor([item[0] for item in y_pred.tolist()])
                 else:
                     # if type(y_gold[0]) == list or torch.is_tensor(y_gold[0]):
                     #     y_gold = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
@@ -985,17 +990,21 @@ def train_and_predict_attn(
                     # print(y_pred)
                     # print(type(y_gold))
                     # print(type(y_pred))
-            else:
-                y_pred = torch.round(y_pred)
+            # else:
+            #     y_pred = torch.round(y_pred)
 
-            preds_holder.extend(y_pred_class)
+            if binary:
+                preds_holder.extend(y_pred)
+            else:
+                preds_holder.extend(y_pred_class)
+                y_pred_class = y_pred_class.to(device)
             ys_holder.extend(y_gold.tolist())
 
             # print(y_pred)
             # print(y_gold)
 
-            y_pred = y_pred.to(device)
-            y_pred_class = y_pred_class.to(device)
+            # y_pred = y_pred.squeeze(1).to(device)
+            # y_pred_class = y_pred_class.to(device)
 
             loss = loss_func(y_pred, y_gold)
             loss_t = loss.item()  # loss for the item
@@ -1006,6 +1015,7 @@ def train_and_predict_attn(
             y_pred = y_pred.to(device)
             # compute the accuracy
             acc_t = torch.eq(y_pred_class, y_gold).sum().item() / len(y_gold)
+            # acc_t = torch.eq(torch.round(y_pred), y_gold).sum().item() / len(y_gold)
             running_acc += (acc_t - running_acc) / (batch_index + 1)
 
             # uncomment to see loss and accuracy for each minibatch
