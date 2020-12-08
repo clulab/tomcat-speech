@@ -94,7 +94,10 @@ class MustardPrep:
             self.dataset = torch.load(self.mustard_data)
         else:
             print("CREATING DATASET")
-            self.dataset = MustardPrepData(audio_data_path=self.audio_path, response_data=self.data, rnn=rnn)
+            self.dataset = MustardPrepData(audio_data_path=self.audio_path,
+                                           acoustic_data_path=self.acoustic_path,
+                                           response_data=self.data,
+                                           rnn=rnn)
 
             with open(self.mustard_data, "wb") as data_file:
                 torch.save(self.dataset, data_file)
