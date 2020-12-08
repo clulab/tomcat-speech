@@ -330,7 +330,7 @@ class MultiAcousticModelLate(nn.Module):
         audio_prediction = torch.tanh(F.dropout(self.fc1_audio(audio_prediction), 0.3))
 
         inputs = torch.cat((attn_prediction, audio_prediction), 1)
-
+        print("cat size: ", inputs.size())
         output = torch.tanh(F.dropout(self.fc1(inputs), 0.3))
         output = torch.tanh(F.dropout(self.fc2(output), 0.3))
 
