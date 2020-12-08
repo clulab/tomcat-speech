@@ -1215,7 +1215,7 @@ def train_and_predict_multi(
 
             y_gold = batch['label'].to(device)
 
-            y_pred, _ = classifier(
+            y_pred = classifier(
                 audio_input=batch_audio,
                 audio_length=batch_length,
                 acoustic_input=batch_acoustic,
