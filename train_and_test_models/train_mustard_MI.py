@@ -122,7 +122,7 @@ if __name__ == "__main__":
             train_state = make_train_state(lr, os.path.join(model_save_path, model_save_file))
 
             # train the model and evaluate on development set
-            train_and_predict_multi(
+            train_and_predict_mtl(
                 multi_model,
                 train_state,
                 train_data,
