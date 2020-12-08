@@ -203,8 +203,8 @@ class MultiAcousticModel(nn.Module):
         )
 
         if params.bidirectional:
-            self.audio_hidden_dim = params.acoustic_gru_hidden_dim * 2
-            self.attn_hidden_dim = params.acoustic_gru_hidden_dim * 4
+            self.audio_hidden_dim = params.acoustic_gru_hidden_dim
+            self.attn_hidden_dim = params.acoustic_gru_hidden_dim * 2
             self.fc_input_dim = self.audio_hidden_dim + self.attn_hidden_dim
         else:
             self.fc_input_dim = 2 * params.acoustic_gru_hidden_dim
