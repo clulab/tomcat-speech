@@ -14,7 +14,7 @@ from models.input_models_sjp import *
 from data_prep.data_prep_helpers import *
 from data_prep.mustard_data.mustard_w2v_prep import *
 
-from models.parameters.bimodal_params import params
+from models.parameters.mtl_params import params
 
 # import parameters for model
 
