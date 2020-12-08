@@ -40,7 +40,7 @@ data_type = "multitask"
 fusion_type = "early"
 
 #set type of predictions to make for chalearn
-chalearn_predtype = "max_class"  # high-low # high-med-low # max_class
+chalearn_predtype = "high-low" #"max_class" # high-med-low # max_class
 
 # small set
 # acoustic_columns = ['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
@@ -116,7 +116,7 @@ model_params = Namespace(
     final_hidden_dim=50, # the out size of dset-specific fc1 and input of fc2
     dropout=[0.4],  # 0.2
     # optimizer parameters
-    lrs=[1e-3, 1e-4],
+    lrs=[1e-4],
     beta_1=0.9,
     beta_2=0.999,
     weight_decay=0.0001,
