@@ -84,7 +84,7 @@ class MustardPrep:
     ):
         self.path = mustard_path
         self.audio_path = os.path.join(mustard_path, "utterances_final_w2v")
-        self.acoustic_path = os.path.join(mustard_path, "utterance_final_mp3")
+        self.acoustic_path = os.path.join(mustard_path, "utterances_final_mp3")
         self.data = os.path.join(mustard_path, "mustard_utts.tsv")
 
         self.mustard_data = os.path.join(mustard_data_path, "data.pt")
