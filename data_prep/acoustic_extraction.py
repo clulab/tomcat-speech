@@ -25,8 +25,8 @@ def read_audio(audio_path="", rnn=True):
 
     audio_length = {}
     for audio in audio_files:
-        if (".mp3") in audio:
-            audio_name = audio.replace(".mp3", "")
+        if (".wav") in audio:
+            audio_name = audio.replace(".wav", "")
             filename = os.path.join(audio_path, audio)
 
             waveform, sample_rate = torchaudio.load(filename, normalization=True)
