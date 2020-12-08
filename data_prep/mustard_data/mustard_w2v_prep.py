@@ -47,7 +47,7 @@ class MustardPrepData(torch.utils.data.Dataset):
         self.wav_names = [name for name in list(self.label_info.keys())]
 
         self.audio_dict, self.audio_length = make_w2v_dict(self.audio_path, self.wav_names, rnn=rnn)
-        self.acoustic, self.acoustic_length = read_audio(self.acoustic_path, rnn=True)
+        self.acoustic, self.acoustic_length = read_audio(self.acoustic_path, rnn=rnn)
 
     def __len__(self):
         return len(self.wav_names)
