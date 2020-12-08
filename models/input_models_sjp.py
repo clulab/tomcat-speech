@@ -406,12 +406,12 @@ class MultiAcousticModelEarlyMTL(nn.Module):
         inputs = torch.cat((attn_output, rnn_output), 1)
         # print("cat. input size: ", inputs.size())
 
-        sarc_output = nn.ReLU(F.dropout(self.fc1(inputs), 0.3))
-        sarc_output = nn.ReLU(F.dropout(self.fc2(sarc_output), 0.3))
+        sarc_output = torch.tanh(F.dropout(self.fc1(inputs), 0.3))
+        sarc_output = torch.tanh(F.dropout(self.fc2(sarc_output), 0.3))
         sarc_output = self.fc3_spk(sarc_output)
 
-        spk_output = nn.ReLU(F.dropout(self.fc1_spk(inputs), 0.3))
-        spk_output = nn.ReLU(F.dropout(self.fc2_spk(spk_output), 0.3))
+        spk_output = torch.tanh(F.dropout(self.fc1_spk(inputs), 0.3))
+        spk_output = torch.tanh(F.dropout(self.fc2_spk(spk_output), 0.3))
         spk_output = self.fc3_spk(spk_output)
 
         return sarc_output, spk_output
