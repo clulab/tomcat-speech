@@ -52,9 +52,10 @@ def read_audio(audio_path="", rnn=True):
             if rnn:
                 ### For RNN, clip the audio_train if it's longer than 596
                 ### Else, just use it as it is
-                mel_time = mel_spectrogram.size()[2]
+                mel_time = concat_feature.size()[2]
+                feat_size = concat_feature.size()[1]
                 if mel_time > 1000:
-                    target_tensor = concat_feature[:1, :39, :1000]
+                    target_tensor = concat_feature[:1, :feat_size, :1000]
                     audio_length[audio_name] = 1000
                 else:
                     target_tensor = concat_feature
@@ -65,12 +66,12 @@ def read_audio(audio_path="", rnn=True):
                 ### For CNN, clip the audio_train if it's longer than 596
                 ### Else, zero-padding
                 mel_time = mel_spectrogram.size()[2]
-                # audio_length.append(mel_time)
+                feat_size = concat_feature.size()[1]
 
-                target_tensor = torch.zeros(1, 90, 1000)
+                target_tensor = torch.zeros(1, feat_size, 1000)
 
                 if mel_time > 1000:
-                    target_tensor = concat_feature[:1, :90, :1000]
+                    target_tensor = concat_feature[:1, :feat_size, :1000]
                     audio_length[audio_name] = 1000
                 else:
                     target_tensor[:, :, :mel_time] = concat_feature
