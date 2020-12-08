@@ -25,7 +25,7 @@ cuda = True
 # if not torch.cuda.is_available():
 #     cuda = False
 
-device = torch.device("cuda:1" if cuda else "cpu")
+device = torch.device("cuda:0" if cuda else "cpu")
 
 # set random seed
 seed = params.seed
