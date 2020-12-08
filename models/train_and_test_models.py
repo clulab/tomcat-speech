@@ -1110,7 +1110,8 @@ def train_and_predict_multi(
 
             batch_acoustic = batch['acoustic'].to(device)
             batch_acoustic_length = batch['acoustic_length'].to(device)
-            batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic)
+            batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic.squeeze(0)).to(device)
+            print(batch_acoustic.size())
 
             y_pred, _ = classifier(
                 audio_input=batch_audio,
@@ -1203,15 +1204,22 @@ def train_and_predict_multi(
 
         # for each batch in the dataloader
         for batch_index, batch in enumerate(val_batches):
-            # compute the output
-            batch_acoustic = batch['audio'].to(device)
-            batch_acoustic = batch_acoustic.transpose(1, 2)
-            # batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic)
-            batch_acoustic_lengths = batch['length']
+            # step 2. compute the output
+            batch_audio = batch['audio'].to(device)
+            batch_length = batch['length']
+
+            batch_acoustic = batch['acoustic'].to(device)
+            batch_acoustic_length = batch['acoustic_length'].to(device)
+            batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic.squeeze(0)).to(device)
+            # print(batch_acoustic.size())
 
             y_gold = batch['label'].to(device)
 
-            y_pred, _ = classifier(batch_acoustic, batch_acoustic_lengths)
+            y_pred, _ = classifier(
+                audio_input=batch_audio,
+                audio_length=batch_length,
+                acoustic_input=batch_acoustic,
+                acoustic_length=batch_acoustic_length)
 
             # print("pred_size: ", y_pred.size())
 
