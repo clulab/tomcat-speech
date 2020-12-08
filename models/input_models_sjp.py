@@ -290,7 +290,7 @@ class MultiAcousticModelLate(nn.Module):
 
         self.fc1_audio = nn.Linear(self.audio_hidden_dim, params.fc_hidden_dim)
         self.fc2_audio = nn.Linear(params.fc_hidden_dim, 64)
-        self.fc3_attn = nn.Linear(64, params.output_dim)
+        self.fc3_audio = nn.Linear(64, params.output_dim)
 
         self.fc_input_size = params.output_dim * 2
 
