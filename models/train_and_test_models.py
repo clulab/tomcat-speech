@@ -1109,7 +1109,7 @@ def train_and_predict_multi(
             batch_length = batch['length']
 
             batch_acoustic = batch['acoustic'].to(device)
-            batch_acoustic_length = batch['acoustic_length'].to(device)
+            batch_acoustic_length = batch['acoustic_length']
             # batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic.squeeze(0)).to(device)
             print(batch_acoustic.size())
 
@@ -1209,8 +1209,8 @@ def train_and_predict_multi(
             batch_length = batch['length']
 
             batch_acoustic = batch['acoustic'].to(device)
-            batch_acoustic_length = batch['acoustic_length'].to(device)
-            batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic.squeeze(0)).to(device)
+            batch_acoustic_length = batch['acoustic_length']
+            # batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic.squeeze(0)).to(device)
             # print(batch_acoustic.size())
 
             y_gold = batch['label'].to(device)
