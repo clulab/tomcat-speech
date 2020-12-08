@@ -1113,7 +1113,7 @@ def train_and_predict_multi(
             # batch_acoustic = nn.utils.rnn.pad_sequence(batch_acoustic.squeeze(0)).to(device)
             # print(batch_acoustic.size())
 
-            y_pred, _ = classifier(
+            y_pred = classifier(
                 audio_input=batch_audio,
                 audio_length=batch_length,
                 acoustic_input=batch_acoustic,
