@@ -15,8 +15,8 @@ params = Namespace(
     early_stopping_criteria=350,
     # input dimension parameters
     text_dim=300,  # text vector length
-    audio_dim=512, # 10 # audio_train vector length
-    # audio_dim=[1,512,1522],
+    attn_dim=512,  # 10 # audio_train vector length
+    audio_dim=[1, 39, 1000],
     num_gru_layers=2,
     acoustic_gru_hidden_dim=1024,
     bidirectional=False,
@@ -35,7 +35,7 @@ params = Namespace(
     padding_idx=0,
     # FC layer parameters
     num_fc_layers=1,
-    fc_hidden_dim=128,
+    fc_hidden_dim=512,
     dropout=0.0,  # 0.2
     # optimizer parameters
     # learning_rate=1e-06,  # 1e-06 0.00001  # 0.0001 0.001 tried

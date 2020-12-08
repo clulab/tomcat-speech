@@ -23,7 +23,7 @@ def read_audio(audio_path="", rnn=True):
     # if wave_time > max_time:
     #     max_time = wave_time
 
-    audio_length = []
+    audio_length = {}
     for audio in audio_files:
         if (".mp3") in audio:
             audio_name = audio.replace(".mp3", "")
@@ -53,26 +53,28 @@ def read_audio(audio_path="", rnn=True):
                 ### For RNN, clip the audio_train if it's longer than 596
                 ### Else, just use it as it is
                 mel_time = mel_spectrogram.size()[2]
-                if mel_time > 596:
-                    target_tensor = concat_feature[:1, :39, :596]
-                    audio_length.append(596)
+                if mel_time > 1000:
+                    target_tensor = concat_feature[:1, :39, :1000]
+                    audio_length[audio_name] = 1000
                 else:
                     target_tensor = concat_feature
-                    audio_length.append(mel_time)
+                    audio_length[audio_name] = mel_time
 
                 audio_dict[audio_name] = target_tensor
             else:
                 ### For CNN, clip the audio_train if it's longer than 596
                 ### Else, zero-padding
                 mel_time = mel_spectrogram.size()[2]
-                audio_length.append(mel_time)
+                # audio_length.append(mel_time)
 
-                target_tensor = torch.zeros(1, 90, 596)
+                target_tensor = torch.zeros(1, 90, 1000)
 
-                if mel_time > 596:
-                    target_tensor = concat_feature[:1, :90, :596]
+                if mel_time > 1000:
+                    target_tensor = concat_feature[:1, :90, :1000]
+                    audio_length[audio_name] = 1000
                 else:
                     target_tensor[:, :, :mel_time] = concat_feature
+                    audio_length[audio_name] = mel_time
 
                 audio_dict[audio_name] = target_tensor
     # print("num. audio_train: ", len(audio_length))
@@ -81,4 +83,4 @@ def read_audio(audio_path="", rnn=True):
     # print("mean: ", np.mean(audio_length))
     # print("max: ", max(audio_length))
     # exit()
-    return audio_dict
+    return audio_dict, audio_length
