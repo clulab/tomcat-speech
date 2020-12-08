@@ -833,7 +833,6 @@ def multitask_train_and_predict(
         for batch_index, batch in enumerate(batches):
             # find the task for this batch
             batch_task = tasks[batch_index]
-            # print(f"BATCH TASK IS: {batch_task}")
 
             # step 1. zero the gradients
             # zero all optimizers
@@ -844,7 +843,6 @@ def multitask_train_and_predict(
 
             y_gold = batch[4].to(device)
             #
-            # print(y_gold)
             # print(y_gold.dtype)
 
             batch_acoustic = batch[0].to(device)

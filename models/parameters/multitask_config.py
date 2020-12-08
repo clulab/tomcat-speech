@@ -12,19 +12,19 @@ save_dataset = False
 load_dataset = False
 
 
-EXPERIMENT_ID = 5
+EXPERIMENT_ID = 1
 # during training: enter a brief description that will make the experiment easy to identify
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
 # EXPERIMENT_DESCRIPTION = "meld-mustard-chalearn_singleOptimizer_IS10-76feats_finalFC-dropout-removed_2lyr-in-dset-specific-output_"
 # EXPERIMENT_DESCRIPTION = "GRADNORM_MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_"
-EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_4lyrAcRNN_"
+EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
 
-model_type = "MULTITASK"
+model_type = "ACOUSTIC_MULTITASK"
 
 # set parameters for data prep
 # glove_file = "/work/bsharp/glove.short.300d.punct.txt"
@@ -47,7 +47,7 @@ else:
     # ravdess_path = "../../datasets/multimodal_datasets/RAVDESS_speech"
 
 # set dir to save full experiments
-exp_save_path = "output/multitask/experiments"
+exp_save_path = "output/multitask/acoustic_multitask"
 
 data_type = "multitask"
 fusion_type = "early"
@@ -111,7 +111,7 @@ model_params = Namespace(
     text_gru_hidden_dim=[100],  # 30,  # 50,  # 20
     # acoustic NN
     avgd_acoustic=False,  # set true to use avgd acoustic feat vectors without RNN
-    add_avging=False,  # set to true if you want to avg acoustic feature vecs upon input
+    add_avging=True,  # set to true if you want to avg acoustic feature vecs upon input
     acoustic_gru_hidden_dim=100,
     # speaker embeddings
     use_speaker=False,

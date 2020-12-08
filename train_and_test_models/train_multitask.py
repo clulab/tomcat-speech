@@ -275,11 +275,18 @@ if __name__ == "__main__":
 
                                     # this uses train-dev-test folds
                                     # create instance of model
-                                    multitask_model = MultitaskModel(
-                                        params=this_model_params,
-                                        num_embeddings=num_embeddings,
-                                        pretrained_embeddings=pretrained_embeddings,
-                                    )
+                                    if config.model_type.lower() == "multitask":
+                                        multitask_model = MultitaskModel(
+                                            params=this_model_params,
+                                            num_embeddings=num_embeddings,
+                                            pretrained_embeddings=pretrained_embeddings,
+                                        )
+                                    elif config.model_type.lower() == "acoustic_multitask":
+                                        multitask_model = MultitaskAcousticShared(
+                                            params=this_model_params,
+                                            num_embeddings=num_embeddings,
+                                            pretrained_embeddings=pretrained_embeddings
+                                        )
 
                                     optimizer = torch.optim.Adam(
                                         lr=lr,

@@ -198,12 +198,6 @@ class ChalearnPrep:
             self.train_ys = torch.tensor([item.index(max(item)) for item in all_train_ys])
             self.trait_weights = get_class_weights(self.train_ys)
 
-        # get the weights for chalearn personality traits
-        if pred_type == "max_class":
-            all_train_ys = [[self.train_y_consc[i], self.train_y_openn[i], self.train_y_agree[i],
-                             self.train_y_neur[i], self.train_y_extr[i]] for i in range(len(self.train_y_consc))]
-            self.train_ys = torch.tensor([item.index(max(item)) for item in all_train_ys])
-            self.trait_weights = get_class_weights(self.train_ys)
         elif pred_type == "high-low" or pred_type == "binary" or pred_type == "high-med-low" or pred_type == "ternary":
             self.train_y_consc = convert_ys(self.train_y_consc, pred_type)
             self.train_y_openn = convert_ys(self.train_y_consc, pred_type)
@@ -273,8 +267,8 @@ class ChalearnPrep:
                     self.train_utts[i],
                     0,
                     self.train_genders[i],
-                    self.train_ethnicities[i],
                     torch.tensor(item_y),
+                    self.train_ethnicities[i],
                     self.train_utt_lengths[i],
                     self.train_acoustic_lengths[i]
                     )
@@ -318,8 +312,8 @@ class ChalearnPrep:
                         self.dev_utts[i],
                         0,  # todo: eventually add speaker ?
                         self.dev_genders[i],
-                        self.dev_ethnicities[i],
                         torch.tensor(item_y),
+                        self.dev_ethnicities[i],
                         self.dev_utt_lengths[i],
                         self.dev_acoustic_lengths[i],
                     )
