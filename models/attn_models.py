@@ -55,7 +55,7 @@ class Attention(nn.Module):
 
 
 class AcousticAttn(nn.Module):
-    def __init__(self, encoder, attention, hidden_dim, num_classes):
+    def __init__(self, encoder, attention):
         super(AcousticAttn, self).__init__()
         self.encoder = encoder
         self.attention = attention

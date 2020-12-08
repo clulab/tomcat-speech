@@ -363,9 +363,7 @@ class MultiAcousticModelEarlyMTL(nn.Module):
 
         self.acoustic_model = AcousticAttn(
             encoder=encoder,
-            attention=attention,
-            hidden_dim=attention_dim,
-            num_classes=params.output_dim
+            attention=attention
         )
 
         if params.bidirectional:
