@@ -46,7 +46,7 @@ class MustardPrepData(torch.utils.data.Dataset):
 
         self.wav_names = [name for name in list(self.label_info.keys())]
 
-        self.audio_dict, self.audio_length = make_w2v_dict(self.audio_path, self.wav_names, rnn=False)
+        self.audio_dict, self.audio_length = make_w2v_dict(self.audio_path, self.wav_names, rnn=rnn)
         self.acoustic, self.acoustic_length = read_audio(self.acoustic_path, rnn=True)
 
     def __len__(self):
@@ -54,6 +54,7 @@ class MustardPrepData(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         try:
+            print(self.wav_names[idx])
             emotion_label = self.label_info[self.wav_names[idx]]["sarc"]
             audio_info = self.audio_dict[self.wav_names[idx]]
             acoustic_info = self.acoustic[self.wav_names[idx]]
@@ -64,7 +65,7 @@ class MustardPrepData(torch.utils.data.Dataset):
                     'acoustic': acoustic_info,
                     'acoustic_length': acoustic_length,
                     'label': emotion_label}
-
+            print(item)
             return item
 
         except KeyError:
