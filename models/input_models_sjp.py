@@ -335,3 +335,85 @@ class MultiAcousticModelLate(nn.Module):
         output = torch.tanh(F.dropout(self.fc2(output), 0.3))
 
         return output
+
+class MultiAcousticModelEarlyMTL(nn.Module):
+    def __init__(self, params):
+        super(MultiAcousticModelEarlyMTL, self).__init__()
+        # input dimensions
+        self.attn_dim = params.attn_dim
+
+        self.audio_dim = params.audio_dim
+
+        self.acoustic_rnn = nn.LSTM(
+            input_size=params.audio_dim,
+            hidden_size=params.acoustic_gru_hidden_dim,
+            num_layers=params.num_gru_layers,
+            batch_first=True,
+            bidirectional=params.bidirectional
+        )
+
+        encoder = Encoder(input_dim=params.attn_dim,
+                          hidden_dim=params.acoustic_gru_hidden_dim,
+                          num_gru_layers=params.num_gru_layers,
+                          dropout=params.dropout,
+                          bidirectional=params.bidirectional)
+
+        attention_dim = params.acoustic_gru_hidden_dim if not params.bidirectional else 2 * params.acoustic_gru_hidden_dim
+        attention = Attention(attention_dim, attention_dim, attention_dim)
+
+        self.acoustic_model = AcousticAttn(
+            encoder=encoder,
+            attention=attention,
+            hidden_dim=attention_dim,
+            num_classes=params.output_dim
+        )
+
+        if params.bidirectional:
+            self.audio_hidden_dim = params.acoustic_gru_hidden_dim
+            self.attn_hidden_dim = params.acoustic_gru_hidden_dim * 2
+            self.fc_input_dim = self.audio_hidden_dim + self.attn_hidden_dim
+        else:
+            self.fc_input_dim = 2 * params.acoustic_gru_hidden_dim
+
+        self.fc1_spk = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
+        self.fc2_spk = nn.Linear(params.fc_hidden_dim, 64)
+        self.fc3_spk = nn.Linear(64, params.speaker_output_dim)
+
+        self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
+        self.fc2 = nn.Linear(params.fc_hidden_dim, 64)
+        self.fc3 = nn.Linear(64, params.sarc_output_dim)
+
+    def forward(self,
+                audio_input,
+                audio_length,
+                acoustic_input,
+                acoustic_length):
+
+        audio_input = audio_input.transpose(1, 2)
+        attn_output, _ = self.acoustic_model(audio_input, audio_length)
+        # print("before: ", acoustic_input.size())
+        acoustic_input = torch.squeeze(acoustic_input, 1).transpose(1, 2)
+        # print("after: ", acoustic_input.size())
+        packed = nn.utils.rnn.pack_padded_sequence(
+            acoustic_input, acoustic_length, batch_first=True, enforce_sorted=False
+        )
+
+        packed_output, (hidden, cell) = self.acoustic_rnn(packed)
+
+        rnn_output = F.dropout(hidden[-1], 0.3)
+
+        # print("attn size: ", attn_output.size())
+        # print("rnn size: ", rnn_output.size())
+
+        inputs = torch.cat((attn_output, rnn_output), 1)
+        # print("cat. input size: ", inputs.size())
+
+        sarc_output = nn.ReLU(F.dropout(self.fc1(inputs), 0.3))
+        sarc_output = nn.ReLU(F.dropout(self.fc2(sarc_output), 0.3))
+        sarc_output = self.fc3_spk(sarc_output)
+
+        spk_output = nn.ReLU(F.dropout(self.fc1_spk(inputs), 0.3))
+        spk_output = nn.ReLU(F.dropout(self.fc2_spk(spk_output), 0.3))
+        spk_output = self.fc3_spk(spk_output)
+
+        return sarc_output, spk_output

@@ -88,11 +88,11 @@ if __name__ == "__main__":
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
             # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
             model_type = (
-                "MUSTARD-W2V-BD-LATE-ATTN-LSTM"
+                "MUSTARD-W2V-BD-EARLY-MTL-ATTN-LSTM"
             )
 
             # this uses train-dev-test folds
-            multi_model = MultiAcousticModelLate(params=params)
+            multi_model = MultiAcousticModelEarlyMTL(params=params)
 
             optimizer = torch.optim.Adam(
                 lr=lr, params=multi_model.parameters(), weight_decay=wd

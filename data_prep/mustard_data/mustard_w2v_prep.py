@@ -15,6 +15,7 @@ from data_prep.data_prep_helpers import (
 from data_prep.acoustic_extraction import *
 
 from sklearn.model_selection import train_test_split
+from sklearn import preprocessing
 
 from collections import OrderedDict, defaultdict
 
@@ -27,20 +28,25 @@ class MustardPrepData(torch.utils.data.Dataset):
         self.acoustic_path = acoustic_data_path
         self.sentiment = {}
 
+        self.speaker_encoder = preprocessing.LabelEncoder()
+
         with open(response_data, "r") as f:
             data = f.readlines()
 
         self.label_info = defaultdict(dict)
-
+        self.speakers = []
         for i in range(1, len(data)):
             items = data[i].rstrip().split("\t")
             file_id = items[0]
             utt = items[1]
             speaker = items[2]
+            self.speakers.append(speaker)
             sarc = int(items[3])
             self.label_info[file_id]["spk"] = speaker
             self.label_info[file_id]["utt"] = utt
             self.label_info[file_id]["sarc"] = sarc
+
+        self.speaker_encoder.fit(speaker)
 
         self.wav_names = []
 
@@ -56,6 +62,8 @@ class MustardPrepData(torch.utils.data.Dataset):
         try:
             # print(self.wav_names[idx])
             emotion_label = self.label_info[self.wav_names[idx]]["sarc"]
+            speaker = self.label_info[self.wav_names[idx]]["spk"]
+            speaker_label = self.speaker_encoder.transform([speaker])[0]
             audio_info = self.audio_dict[self.wav_names[idx]]
             acoustic_info = self.acoustic[self.wav_names[idx]]
             audio_length = self.audio_length[self.wav_names[idx]]
@@ -65,7 +73,8 @@ class MustardPrepData(torch.utils.data.Dataset):
                     'length': audio_length,
                     'acoustic': acoustic_info,
                     'acoustic_length': acoustic_length,
-                    'label': emotion_label}
+                    'label': emotion_label,
+                    'speaker': speaker_label}
             return item
 
         except KeyError:

@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader, RandomSampler
 
 from models.bimodal_models import BimodalCNN
 from models.attn_models import *
-from models.parameters.bimodal_params import *
+from models.parameters.mtl_params import *
 from models.plot_training import *
 
 from sklearn.metrics import confusion_matrix
@@ -678,7 +678,7 @@ def train_and_predict_w2v(
                     # print(type(y_pred))
             else:
                 y_pred = torch.round(y_pred)
-            
+
             y_pred = y_pred.to(device)
             # calculate running loss
             running_loss += (loss_t - running_loss) / (batch_index + 1)
@@ -880,12 +880,12 @@ def train_and_predict_attn(
             y_pred, _ = classifier(batch_acoustic, batch_acoustic_lengths)
 
             # print("pred_size: ", y_pred.size())
-           
+
             if len(list(y_pred.size())) > 1:
                 if binary:
                     y_pred = torch.tensor([item[0] for item in y_pred.tolist()])
                 else:
-                  # if type(y_gold[0]) == list or torch.is_tensor(y_gold[0]):
+                    # if type(y_gold[0]) == list or torch.is_tensor(y_gold[0]):
                     # y_gold = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
                     y_pred_class = torch.tensor(
                         [item.index(max(item)) for item in y_pred.tolist()]
@@ -934,7 +934,7 @@ def train_and_predict_attn(
 
             # uncomment to see loss and accuracy measures for every minibatch
             # print("loss: {0}, running_loss: {1}, acc: {0}, running_acc: {1}".format(loss_t, running_loss,
-            
+
         # add loss and accuracy information to the train state
         train_state["train_loss"].append(running_loss)
         train_state["train_acc"].append(running_acc)
@@ -1296,6 +1296,281 @@ def train_and_predict_multi(
         # if it's time to stop, end the training process
         if train_state["stop_early"]:
             break
+
+
+def train_and_predict_mtl(
+        classifier,
+        train_state,
+        train_ds,
+        val_ds,
+        batch_size,
+        num_epochs,
+        loss_func,
+        optimizer,
+        device="cpu",
+        scheduler=None,
+        sampler=None,
+        binary=False,
+        split_point=0.0,
+):
+    for epoch_index in range(num_epochs):
+
+        print("Now starting epoch {0}".format(epoch_index))
+
+        train_state["epoch_index"] = epoch_index
+
+        # Iterate over training dataset
+        running_loss = 0.0
+        running_acc = 0.0
+
+        # set classifier(s) to training mode
+        classifier.train()
+
+        batches = DataLoader(
+            train_ds, batch_size=batch_size, shuffle=True, sampler=sampler
+        )
+
+        # set holders to use for error analysis
+        ys_sarc_holder = []
+        preds_sarc_holder = []
+        ys_spk_holder = []
+        preds_spk_holder = []
+
+        # for each batch in the list of batches created by the dataloader
+        for batch_index, batch in enumerate(batches):
+            # get the gold labels
+            y_gold_sarc = batch['label'].to(device)
+            y_gold_spk = batch['speaker'].to(device)
+
+            if split_point > 0:
+                y_gold = torch.tensor(
+                    [
+                        1.0 if y_gold[i] > split_point else 0.0
+                        for i in range(len(y_gold))
+                    ]
+                )
+
+            # step 1. zero the gradients
+            optimizer.zero_grad()
+
+            # step 2. compute the output
+            batch_audio = batch['audio'].to(device)
+            batch_length = batch['length']
+
+            batch_acoustic = batch['acoustic'].to(device)
+            batch_acoustic_length = batch['acoustic_length']
+
+            y_pred_sarc, y_pred_spk = classifier(
+                audio_input=batch_audio,
+                audio_length=batch_length,
+                acoustic_input=batch_acoustic,
+                acoustic_length=batch_acoustic_length)
+
+            # print("pred_size: ", y_pred.size())
+            # For first prediction
+            if len(list(y_pred_sarc.size())) > 1:
+                if binary:
+                    y_pred_sarc = torch.tensor([item[0] for item in y_pred_sarc.tolist()])
+                else:
+                    y_pred_sarc_class = torch.tensor(
+                        [item.index(max(item)) for item in y_pred_sarc.tolist()]
+                    )
+            else:
+                y_pred_sarc = torch.round(y_pred_sarc)
+            if binary:
+                preds_sarc_holder.extend(y_pred_sarc)
+            else:
+                preds_sarc_holder.extend(y_pred_sarc_class)
+                y_pred_sarc_class = y_pred_sarc_class.to(device)
+            ys_sarc_holder.extend(y_gold_sarc.tolist())
+
+            # For second prediction
+            if len(list(y_pred_spk.size())) > 1:
+                if binary:
+                    y_pred_spk = torch.tensor([item[0] for item in y_pred_spk.tolist()])
+                else:
+                    y_pred_spk_class = torch.tensor(
+                        [item.index(max(item)) for item in y_pred_spk.tolist()]
+                    )
+            else:
+                y_pred_spk = torch.round(y_pred_spk)
+            if binary:
+                preds_spk_holder.extend(y_pred_spk)
+            else:
+                preds_spk_holder.extend(y_pred_spk_class)
+                y_pred_spk_class = y_pred_spk_class.to(device)
+            ys_spk_holder.extend(y_gold_spk.tolist())
+
+            loss1 = loss_func(y_pred_sarc, y_gold_sarc)
+            loss2 = loss_func(y_pred_spk, y_gold_spk)
+            loss = loss1 + loss2
+            loss_t1 = loss1.item()  # loss for the item
+            loss_t2 = loss2.item()  # loss for the item
+            loss_t = (loss_t1 + loss_t2) / 2
+
+            # calculate running loss
+            running_loss += (loss_t - running_loss) / (batch_index + 1)
+
+            # step 4. use loss to produce gradients
+            loss.backward()
+
+            # step 5. use optimizer to take gradient step
+            optimizer.step()
+
+            # compute the accuracy
+            acc_t = torch.eq(y_pred_sarc_class, y_gold_sarc).sum().item() / len(y_gold_sarc)
+
+            running_acc += (acc_t - running_acc) / (batch_index + 1)
+
+            # uncomment to see loss and accuracy measures for every minibatch
+            # print("loss: {0}, running_loss: {1}, acc: {0}, running_acc: {1}".format(loss_t, running_loss,
+
+        # add loss and accuracy information to the train state
+        train_state["train_loss"].append(running_loss)
+        train_state["train_acc"].append(running_acc)
+
+        # print(ys_holder)
+        # print(preds_holder)
+        avg_f1 = precision_recall_fscore_support(
+            ys_sarc_holder, preds_sarc_holder, average="weighted"
+        )
+        train_state["train_avg_f1"].append(avg_f1[2])
+        # print("Training loss: {0}, training acc: {1}".format(running_loss, running_acc))
+        print("Training weighted F-score: " + str(avg_f1))
+
+        # Iterate over validation set--put it in a dataloader
+        val_batches = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
+
+        # reset loss and accuracy to zero
+        running_loss = 0.0
+        running_acc = 0.0
+
+        # set classifier to evaluation mode
+        classifier.eval()
+
+        # set holders to use for error analysis
+        ys_sarc_holder = []
+        preds_sarc_holder = []
+        ys_spk_holder = []
+        preds_spk_holder = []
+
+        # for each batch in the list of batches created by the dataloader
+        for batch_index, batch in enumerate(batches):
+            # get the gold labels
+            y_gold_sarc = batch['label'].to(device)
+            y_gold_spk = batch['speaker'].to(device)
+
+            if split_point > 0:
+                y_gold = torch.tensor(
+                    [
+                        1.0 if y_gold[i] > split_point else 0.0
+                        for i in range(len(y_gold))
+                    ]
+                )
+
+            # step 1. zero the gradients
+            optimizer.zero_grad()
+
+            # step 2. compute the output
+            batch_audio = batch['audio'].to(device)
+            batch_length = batch['length']
+
+            batch_acoustic = batch['acoustic'].to(device)
+            batch_acoustic_length = batch['acoustic_length']
+
+            y_pred_sarc, y_pred_spk = classifier(
+                audio_input=batch_audio,
+                audio_length=batch_length,
+                acoustic_input=batch_acoustic,
+                acoustic_length=batch_acoustic_length)
+
+            # print("pred_size: ", y_pred.size())
+            # For first prediction
+            if len(list(y_pred_sarc.size())) > 1:
+                if binary:
+                    y_pred_sarc = torch.tensor([item[0] for item in y_pred_sarc.tolist()])
+                else:
+                    y_pred_sarc_class = torch.tensor(
+                        [item.index(max(item)) for item in y_pred_sarc.tolist()]
+                    )
+            else:
+                y_pred_sarc = torch.round(y_pred_sarc)
+            if binary:
+                preds_sarc_holder.extend(y_pred_sarc)
+            else:
+                preds_sarc_holder.extend(y_pred_sarc_class)
+                y_pred_sarc_class = y_pred_sarc_class.to(device)
+            ys_sarc_holder.extend(y_gold_sarc.tolist())
+
+            # For second prediction
+            if len(list(y_pred_spk.size())) > 1:
+                if binary:
+                    y_pred_spk = torch.tensor([item[0] for item in y_pred_spk.tolist()])
+                else:
+                    y_pred_spk_class = torch.tensor(
+                        [item.index(max(item)) for item in y_pred_spk.tolist()]
+                    )
+            else:
+                y_pred_spk = torch.round(y_pred_spk)
+            if binary:
+                preds_spk_holder.extend(y_pred_spk)
+            else:
+                preds_spk_holder.extend(y_pred_spk_class)
+                y_pred_spk_class = y_pred_spk_class.to(device)
+            ys_spk_holder.extend(y_gold_spk.tolist())
+
+            loss1 = loss_func(y_pred_sarc, y_gold_sarc)
+            loss2 = loss_func(y_pred_spk, y_gold_spk)
+            loss = loss1 + loss2
+            loss_t1 = loss1.item()  # loss for the item
+            loss_t2 = loss2.item()  # loss for the item
+            loss_t = (loss_t1 + loss_t2) / 2
+
+            # calculate running loss
+            running_loss += (loss_t - running_loss) / (batch_index + 1)
+
+            # step 4. use loss to produce gradients
+            loss.backward()
+
+            # step 5. use optimizer to take gradient step
+            optimizer.step()
+
+            # compute the accuracy
+            acc_t = torch.eq(y_pred_sarc_class, y_gold_sarc).sum().item() / len(y_gold_sarc)
+
+            running_acc += (acc_t - running_acc) / (batch_index + 1)
+
+            # uncomment to see loss and accuracy measures for every minibatch
+            # print("loss: {0}, running_loss: {1}, acc: {0}, running_acc: {1}".format(loss_t, running_loss,
+
+        # print("Overall val loss: {0}, overall val acc: {1}".format(running_loss, running_acc))
+        avg_f1 = precision_recall_fscore_support(
+            ys_sarc_holder, preds_sarc_holder, average="weighted"
+        )
+        train_state["val_avg_f1"].append(avg_f1[2])
+        print("Weighted F=score: " + str(avg_f1))
+
+        # get confusion matrix
+        if epoch_index % 5 == 0:
+            print(confusion_matrix(ys_sarc_holder, preds_sarc_holder))
+            print("Classification report: ")
+            print(classification_report(ys_sarc_holder, preds_sarc_holder, digits=4))
+
+        # add loss and accuracy to train state
+        train_state["val_loss"].append(running_loss)
+        train_state["val_acc"].append(running_acc)
+
+        # update the train state now that our epoch is complete
+        train_state = update_train_state(model=classifier, train_state=train_state)
+
+        # update scheduler if there is one
+        if scheduler is not None:
+            scheduler.step(train_state["val_loss"][-1])
+
+        # if it's time to stop, end the training process
+        if train_state["stop_early"]:
+            break
+
 
 #
 # def single_dataset_multitask_train_and_predict(
