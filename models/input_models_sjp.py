@@ -219,9 +219,9 @@ class MultiAcousticModel(nn.Module):
 
         audio_input = audio_input.transpose(1, 2)
         attn_output, _ = self.acoustic_model(audio_input, audio_length)
-        print("before: ", acoustic_input.size())
+        # print("before: ", acoustic_input.size())
         acoustic_input = torch.squeeze(acoustic_input, 1).transpose(1, 2)
-        print("after: ", acoustic_input.size())
+        # print("after: ", acoustic_input.size())
         packed = nn.utils.rnn.pack_padded_sequence(
             acoustic_input, acoustic_length, batch_first=True, enforce_sorted=False
         )
@@ -230,7 +230,11 @@ class MultiAcousticModel(nn.Module):
 
         rnn_output = F.dropout(hidden[-1], 0.3)
 
+        print("attn size: ", attn_output.size())
+        print("rnn size: ", rnn_output.size())
+
         inputs = torch.cat((attn_output, rnn_output), 1)
+        print("cat. input size: ", inputs.size())
 
         output = torch.tanh(F.dropout(self.fc1(inputs), 0.3))
         output = torch.tanh(F.dropout(self.fc2(output), 0.3))
