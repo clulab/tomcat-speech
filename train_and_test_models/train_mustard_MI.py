@@ -88,7 +88,7 @@ if __name__ == "__main__":
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
             # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
             model_type = (
-                "MUSTARD-W2V-ATTN-LSTM"
+                "MUSTARD-W2V-BD-ATTN-LSTM"
             )
 
             # this uses train-dev-test folds

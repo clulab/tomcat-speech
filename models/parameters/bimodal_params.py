@@ -19,7 +19,7 @@ params = Namespace(
     audio_dim=39,
     num_gru_layers=2,
     acoustic_gru_hidden_dim=1024,
-    bidirectional=False,
+    bidirectional=True,
     # speaker parameters
     spkr_emb_dim=1,
     gender_emb_dim=2,
