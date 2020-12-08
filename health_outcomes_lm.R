@@ -3,7 +3,7 @@
 # required library
 require(dplyr)
 
-# set wroking directory
+# set working directory
 setwd("/Volumes/LIvES/323_files/")
 
 # read in file with all results
