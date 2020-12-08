@@ -59,9 +59,9 @@ class AcousticAttn(nn.Module):
         super(AcousticAttn, self).__init__()
         self.encoder = encoder
         self.attention = attention
-        self.decoder_1 = nn.Linear(hidden_dim, 256)
-        self.decoder_2 = nn.Linear(256, 128)
-        self.final_decoder = nn.Linear(128, num_classes)
+        # self.decoder_1 = nn.Linear(hidden_dim, 256)
+        # self.decoder_2 = nn.Linear(256, 128)
+        # self.final_decoder = nn.Linear(128, num_classes)
         self.dropout = nn.Dropout(0.3)
         size = 0
         for p in self.parameters():

@@ -206,7 +206,7 @@ class MultiAcousticModel(nn.Module):
             self.audio_hidden_dim = params.acoustic_gru_hidden_dim * 2
             self.attn_hidden_dim = params.acoustic_gru_hidden_dim * 2
 
-        self.fc_input_dim = self.attn_dim + self.audio_dim
+        self.fc_input_dim = self.attn_hidden_dim + self.audio_hidden_dim
 
         self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
         self.fc2 = nn.Linear(params.fc_hidden_dim, 64)
