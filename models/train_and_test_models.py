@@ -1529,12 +1529,6 @@ def train_and_predict_mtl(
             # calculate running loss
             running_loss += (loss_t - running_loss) / (batch_index + 1)
 
-            # step 4. use loss to produce gradients
-            loss.backward()
-
-            # step 5. use optimizer to take gradient step
-            optimizer.step()
-
             # compute the accuracy
             acc_t = torch.eq(y_pred_sarc_class, y_gold_sarc).sum().item() / len(y_gold_sarc)
 
