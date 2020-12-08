@@ -46,7 +46,7 @@ class MustardPrepData(torch.utils.data.Dataset):
             self.label_info[file_id]["utt"] = utt
             self.label_info[file_id]["sarc"] = sarc
 
-        self.speaker_encoder.fit(speaker)
+        self.speaker_encoder.fit(self.speakers)
 
         self.wav_names = []
 
