@@ -219,8 +219,9 @@ class MultiAcousticModel(nn.Module):
 
         audio_input = audio_input.transpose(1, 2)
         attn_output, _ = self.acoustic_model(audio_input, audio_length)
-
+        print("before: ", acoustic_input.size())
         acoustic_input = acoustic_input.squeeze(0).transpose(1, 2)
+        print("after: ", acoustic_input.size())
         packed = nn.utils.rnn.pack_padded_sequence(
             acoustic_input, acoustic_length, batch_first=True, enforce_sorted=False
         )
