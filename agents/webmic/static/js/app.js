@@ -23,7 +23,6 @@ if (navigator.mediaDevices) {
             recorder.ondataavailable =
                 function(event) {
                     // event.data is a Blob object that contains the media data.
-                    //socket.send("message from browser");
                     socket.send(event.data);
                 }
 
