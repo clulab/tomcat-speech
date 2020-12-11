@@ -2,26 +2,21 @@
 
 import asyncio
 import websockets
-from logging import debug
+import logging
+from logging import debug, info
 
-f = open("audio.raw", "wb")
-n = 0
 
-async def consume(message):
-    global n
-    n = n+1
-    if n >= 100:
-        debug("finshed recording")
-        f.close()
-    else:
-        debug("writing chunk")
-        f.write(message)
+async def process_audio(message):
+    info(f"Received {len(message)} bytes from browser.")
 
-async def consumer_handler(websocket, path):
+
+async def message_handler(websocket, path):
     async for message in websocket:
-        await consume(message)
+        await process_audio(message)
 
-start_server = websockets.serve(consumer_handler, "127.0.0.1", 9000)
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    start_server = websockets.serve(message_handler, "127.0.0.1", 9000)
+    asyncio.get_event_loop().run_until_complete(start_server)
+    asyncio.get_event_loop().run_forever()
