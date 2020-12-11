@@ -1,35 +1,30 @@
 
 // Create WebSocket connection
 const socket = new WebSocket('ws://localhost:9000')
-socket.addEventListener('open',
-    function(event) { socket.send("Message from browser"); });
+socket.onopen= function(event) { console.log("Socket opened."); };
 
 // Listen for messages
-socket.addEventListener(
-    "message",
-    function(event) { console.log("message from server ", event.data); });
+socket.onmessage = function(event) { console.log("message from server ", event.data); };
+socket.onclose = function(event) { console.log("message from server ", event.data); };
+
 // navigator.mediaDevices is a singleton object of type MediaDevices.
 if (navigator.mediaDevices) {
     navigator.mediaDevices
-        .getUserMedia({video : true, audio : false})
+        .getUserMedia({video : false, audio : true})
         .then(function onSuccess(stream) {
             // stream is an object of type MediaStream
-            const video = document.getElementById('webcam');
-            video.autoplay = true;
-            video.srcObject = stream;
 
             // The MediaRecorder interface takes the data from a MediaStream
             // delivers it to you for processing.
             // https://developer.mozilla.org/en-US/docs/Web/API/MediaStream_Recording_API
             const recorder = new MediaRecorder(stream);
-            const data = [];
 
             // Register a function to handle data.
             recorder.ondataavailable =
                 function(event) {
-                    // e.data is a Blob object that contains the media data.
-                    console.log("data is available!")
-                    socket.send(event.data)
+                    // event.data is a Blob object that contains the media data.
+                    //socket.send("message from browser");
+                    socket.send(event.data);
                 }
 
             // Register a function to handle errors.
