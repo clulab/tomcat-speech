@@ -1,4 +1,3 @@
-
 // Create WebSocket connection
 const socket = new WebSocket('ws://localhost:9000')
 socket.onopen= function(event) { console.log("Socket opened."); };
