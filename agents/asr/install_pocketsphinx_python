@@ -76,7 +76,10 @@ else
             echo "SWIG not found, installing it now."
             sudo apt-get install swig
         fi
-        pip install pocketsphinx
+	sudo apt-get install libpulse-dev   # test for existing install first?
+	sudo apt-get install libasound2-dev # test for existing install first?
+
+        pip install pocketsphinx 
 
     else
         # This should theoretically work on Windows, but I have not tried it
