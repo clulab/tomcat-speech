@@ -66,10 +66,22 @@ else
         echo "pocketsphinx-python installation successful."
         echo "Removing pocketsphinx-python directory."
         rm -rf pocketsphinx-python
+
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        echo "Linux detected.  Checking existence of SWIG"
+        CHECK_SWIG=$([ -x "$(command -v swig)" ]; echo $?)
+        if [[ $CHECK_SWIG -eq 0 ]]; then
+            echo "SWIG found"
+        else
+            echo "SWIG not found, installing it now."
+            sudo apt-get install swig
+        fi
+        pip install pocketsphinx
+
     else
-        # This should theoretically work on Linux/Windows, but I have not tried it
+        # This should theoretically work on Windows, but I have not tried it
         # out. This comment should be removed if the command below succeeds on
-        # Linux/Windows. - Adarsh
+        # Windows. - Adarsh
         pip install pocketsphinx
     fi
 fi
