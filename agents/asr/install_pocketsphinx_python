@@ -94,6 +94,9 @@ else
 	        echo "Installing libasound2"
                sudo apt-get install libasound2-dev
 	    fi
+	else
+            echo "Application 'apt' not found"
+	    exit 0
 	fi    
 
 	echo "installing pocketsphinx"
