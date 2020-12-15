@@ -77,6 +77,7 @@ class MicrophoneStream(object):
             # data, and stop iteration if the chunk is None, indicating the
             # end of the audio stream.
             chunk = self._buff.get()
+            print(f"Size of chunk is {len(chunk)}")
             if chunk is None:
                 return
             data = [chunk]

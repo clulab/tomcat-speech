@@ -1,45 +1,49 @@
-// Create WebSocket connection
-const socket = new WebSocket('ws://localhost:9000')
-socket.onopen= function(event) { console.log("Socket opened."); };
+"use strict"
+    // Code adapted from
+    // https://github.com/vin-ni/Google-Cloud-Speech-Node-Socket-Playground
 
-// Listen for messages
-socket.onmessage = function(event) { console.log("message from server ", event.data); };
-socket.onclose = function(event) { console.log("message from server ", event.data); };
+class AudioStreamer {
+    constructor() {
+        this.bufferSize = 2048;
+        this.constraints = {audio : true, video : false};
+        // We may want to add || window.webkitAudioContext to support older
+        // browsers?
+        this.context = new window.AudioContext({latencyHint : "interactive"});
+        this.processor =
+            this.context.createScriptProcessor(this.bufferSize, 1, 1);
+        this.processor.connect(this.context.destination);
+        this.context.resume();
+        this.makeSocket();
 
-// navigator.mediaDevices is a singleton object of type MediaDevices.
-if (navigator.mediaDevices) {
-    navigator.mediaDevices
-        .getUserMedia({video : false, audio : true})
-        .then(function onSuccess(stream) {
-            // stream is an object of type MediaStream
+        navigator.mediaDevices.getUserMedia(this.constraints)
+            .then(function(stream) {
+                this.input = this.context.createMediaStreamSource(stream);
+                this.input.connect(this.processor);
+                this.processor.onaudioprocess = function(e) {
+                    this.microphoneProcess(e);
+                };
+            });
+    }
 
-            // The MediaRecorder interface takes the data from a MediaStream
-            // delivers it to you for processing.
-            // https://developer.mozilla.org/en-US/docs/Web/API/MediaStream_Recording_API
-            const recorder = new MediaRecorder(stream);
+    // Create WebSocket connection
+    makeSocket() {
+        this.socket = new WebSocket("ws://localhost:9000");
+        this.socket.onopen = function(event) { console.log("Socket opened."); };
+        // Listen for messages
+        this.socket.onmessage = function(event) {
+            console.log("Message received from server", event.data);
+        };
+        this.socket.onclose = function(event) {
+            console.log("Socket closed", event.data);
+        };
+    }
 
-            // Register a function to handle data.
-            recorder.ondataavailable =
-                function(event) {
-                    // event.data is a Blob object that contains the media data.
-                    socket.send(event.data);
-                }
-
-            // Register a function to handle errors.
-            recorder.onerror =
-                function(event) {
-                    // e.name is FF non-spec
-                    throw event.error || new Error(event.name); 
-                }
-
-            // Specify 100ms time slices
-            recorder.start(timeslice=100);
-        })
-        .catch(function onError() {
-            alert(
-                'There has been a problem retreiving the streams - are you running on file:/// or did you disallow access?');
-        });
+    microphoneProcess(e) {
+        var left = e.inputBuffer.getChannelData(0);
+        this.socket.send(e.data);
+    }
 }
-else {
-    alert('getUserMedia is not supported in this browser.');
-}
+
+var startButton = document.getElementById("startRecButton");
+startButton.addEventListener(
+    "click", function() { const streamer = new AudioStreamer(); });
