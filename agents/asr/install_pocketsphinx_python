@@ -96,7 +96,7 @@ else
 	    fi
 	else
             echo "Application 'apt' not found"
-	    exit 0
+	    exit 1
 	fi    
 
 	echo "installing pocketsphinx"
