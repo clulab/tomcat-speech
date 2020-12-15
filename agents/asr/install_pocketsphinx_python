@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 # Script to install pocketsphinx-python
-# Author: Adarsh Pyarelal (adarsh@arizona.edu)
 
 set -euo pipefail
 
@@ -67,7 +66,8 @@ else
         rm -rf pocketsphinx-python
 
     elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        echo "Linux detected.  Checking existence of apt"
+        echo "Linux detected. Checking existence of the apt package manager."
+
         CHECK_APT=$([ -x "$(command -v apt)" ]; echo $?)
         if [[ $CHECK_APT -eq 0 ]]; then
             echo "apt found"
@@ -79,33 +79,40 @@ else
                 sudo apt-get install swig
             fi
 
-	    INSTALLED_LIBS=$(ldconfig -p)
-	    echo "Checking existence of libpulse"
-	    if [[ "$INSTALLED_LIBS" == *"libpulse"* ]]; then
-	        echo "libpulse found"
-            else 
-	        echo "Installing libpulse."
-                sudo apt-get install libpulse-dev
-	    fi
-	    echo "Checking existence of libasound2"
-	    if [[ "$INSTALLED_LIBS" == *"libasound.so.2"* ]]; then
-	        echo "Found libasound2"
-            else 
-	        echo "Installing libasound2"
-               sudo apt-get install libasound2-dev
-	    fi
-	else
-            echo "Application 'apt' not found"
-	    exit 1
-	fi    
+            INSTALLED_LIBS=$(ldconfig -p)
 
-	echo "installing pocketsphinx"
-        pip install pocketsphinx 
+            echo "Checking existence of libpulse"
+            if [[ "$INSTALLED_LIBS" == *"libpulse"* ]]; then
+                echo "libpulse found"
+            else
+                echo "Installing libpulse."
+                    sudo apt-get install libpulse-dev
+            fi
+
+            echo "Checking existence of libasound2"
+            if [[ "$INSTALLED_LIBS" == *"libasound.so.2"* ]]; then
+                echo "Found libasound2"
+            else 
+                echo "Installing libasound2"
+                sudo apt-get install libasound2-dev
+            fi
+        else
+            echo "Application 'apt' not found - this script"\
+                "cannot automatically install pocketsphinx-python."\
+                "Please install SWIG and the headers and libraries"\
+                "for PulseAudio and ALSA using your operating system's"\
+                "package manager, followed by running"\
+                "'pip install pocketsphinx'"
+            exit 1
+        fi
+
+        echo "Installing pocketsphinx-python using pip."
+            pip install pocketsphinx
 
     else
-        # This should theoretically work on Windows, but I have not tried it
-        # out. This comment should be removed if the command below succeeds on
-        # Windows. - Adarsh
+        # This should theoretically work on Windows, but it has not been
+        # tested. This comment should be removed if the command below succeeds
+        # on Windows.
         pip install pocketsphinx
     fi
 fi
