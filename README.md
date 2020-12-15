@@ -22,7 +22,7 @@ your OS package manager (e.g. MacPorts/Homebrew/apt-get/yum)
 
 End-users:
 
-    pip install .`
+    pip install .
 
 For developers, we recommend running the following invocation in a virtual
 environment to install the project as an editable package.
