@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
+import sys
 import asyncio
+import datetime
+import struct
 import threading
 import websockets
 import logging
@@ -97,13 +100,19 @@ class TA3Message(object):
 
 
 class ASRClient(object):
-    def __init__(self, args):
-        self.use_mqtt = args.use_mqtt
+    def __init__(
+        self,
+        use_mqtt=False,
+        mqtt_host="localhost",
+        mqtt_port=1883,
+        publish_topic="agents/asr",
+    ):
+        self.use_mqtt = use_mqtt
         if self.use_mqtt:
             # Set up the Paho MQTT client.
             self.mqtt_client = MQTTClient()
-            self.mqtt_client.connect(args.host, args.port)
-            self.publish_topic = args.publish_topic
+            self.mqtt_client.connect(mqtt_host, mqtt_port)
+            self.publish_topic = publish_topic
 
     def publish_transcript(self, transcript, asr_system):
         ta3_data = TA3Data(transcript, asr_system)
@@ -119,6 +128,7 @@ class ASRClient(object):
 
 class GoogleASRClient(ASRClient):
     def __init__(self, audiostream):
+        super().__init__()
         self.rate = 16000
         self.chunk_size = 1600
         self.language_code = "en_US"
@@ -216,6 +226,11 @@ def downsample(input_buffer, input_sample_rate, output_sample_rate):
         return output_buffer
 
 
+def convert_float32_to_int16(array):
+    array = array * 32767
+    return array
+
+
 async def message_handler(websocket, path):
     audio_stream = AudioStream()
     asr_client = GoogleASRClient(audio_stream)
@@ -228,12 +243,12 @@ async def message_handler(websocket, path):
             # The data received from the server is an array of 32-bit floating
             # point numbers. We decode them into a numpy array.
             input_buffer = np.frombuffer(data, dtype=np.float32)
+
             chunk = (
-                downsample(input_buffer, 44100, 16000)
+                np.rint(32767 * downsample(input_buffer, 44100, 16000))
                 .astype(np.int16)
                 .tobytes()
             )
-            # info(f"Downsampled chunk to size {len(chunk)} bytes")
             audio_stream._fill_buffer(chunk)
         except websockets.ConnectionClosed:
             info("Connection closed")
@@ -244,7 +259,7 @@ async def message_handler(websocket, path):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     info("Starting server")
     asyncio.gather(
         websockets.serve(message_handler, "127.0.0.1", 9000),
