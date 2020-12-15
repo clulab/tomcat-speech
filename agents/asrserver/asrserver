@@ -43,9 +43,7 @@ class AudioStream(object):
             # end of the audio stream.
             chunk = self._buff.get()
             if chunk is None:
-                debug("Chunk is None")
                 return
-            debug("Chunk is not None")
             data = [chunk]
 
             # Now consume whatever other data's still buffered.
@@ -55,8 +53,6 @@ class AudioStream(object):
                     if chunk is None:
                         return
                     data.append(chunk)
-                    if sum([len(chunk) for chunk in data]) < 1600:
-                        return
                 except queue.Empty:
                     break
 
@@ -157,17 +153,11 @@ class GoogleASRClient(ASRClient):
                 for content in audio_generator
             )
 
-            for response in self.speech_client.streaming_recognize(
+            responses = self.speech_client.streaming_recognize(
                 self.streaming_recognition_config, requests
-            ):
-                print('response')
-                print(response)
+            )
 
-            # responses = self.speech_client.streaming_recognize(
-                # self.streaming_recognition_config, requests
-            # )
-
-            # self.listen_print_loop(responses)
+            self.listen_print_loop(responses)
 
     def listen_print_loop(self, responses):
         """Iterates through server responses and prints them.
@@ -204,28 +194,57 @@ class GoogleASRClient(ASRClient):
 
 
 import struct
+import numpy as np
+
+
+def downsample(input_buffer, input_sample_rate, output_sample_rate):
+    if input_sample_rate == output_sample_rate:
+        return input_buffer
+    elif input_sample_rate < output_sample_rate:
+        raise ValueError(
+            "input_sample_rate must be greater than output_sample_rate"
+        )
+    else:
+        # Compute size (number of elements in array) of downsampled buffer.
+        sample_rate_ratio = input_sample_rate / output_sample_rate
+        input_buffer_length = len(input_buffer)
+        output_buffer_length = round(input_buffer_length / sample_rate_ratio)
+        indices = np.round(
+            np.linspace(0, input_buffer_length - 1, output_buffer_length)
+        ).astype(int)
+        output_buffer = input_buffer[indices]
+        return output_buffer
+
+
 async def message_handler(websocket, path):
     audio_stream = AudioStream()
-    # asr_client = GoogleASRClient(audio_stream)
-    # asr_client.start()
+    asr_client = GoogleASRClient(audio_stream)
+    asr_client.start()
 
     while True:
         try:
             data = await websocket.recv()
-            info(f"Received chunk of size {len(data)} bytes from browser.")
-            print("printing bytes")
-            print(list(struct.iter_unpack("f", data)))
-            audio_stream._fill_buffer(data)
+            # info(f"Received chunk of size {len(data)} bytes from browser.")
+            # The data received from the server is an array of 32-bit floating
+            # point numbers. We decode them into a numpy array.
+            input_buffer = np.frombuffer(data, dtype=np.float32)
+            chunk = (
+                downsample(input_buffer, 44100, 16000)
+                .astype(np.int16)
+                .tobytes()
+            )
+            # info(f"Downsampled chunk to size {len(chunk)} bytes")
+            audio_stream._fill_buffer(chunk)
         except websockets.ConnectionClosed:
             info("Connection closed")
 
     # async for chunk in websocket:
-        # info(f"Received chunk of size {len(chunk)} bytes from browser.")
-        # audio_stream._fill_buffer(chunk)
+    # info(f"Received chunk of size {len(chunk)} bytes from browser.")
+    # audio_stream._fill_buffer(chunk)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     info("Starting server")
     asyncio.gather(
         websockets.serve(message_handler, "127.0.0.1", 9000),

@@ -1,49 +1,115 @@
-"use strict"
-    // Code adapted from
-    // https://github.com/vin-ni/Google-Cloud-Speech-Node-Socket-Playground
+// Code adapted from
+// https://github.com/vin-ni/Google-Cloud-Speech-Node-Socket-Playground
 
-class AudioStreamer {
-    constructor() {
-        this.bufferSize = 2048;
-        this.constraints = {audio : true, video : false};
-        // We may want to add || window.webkitAudioContext to support older
-        // browsers?
-        this.context = new window.AudioContext({latencyHint : "interactive"});
-        this.processor =
-            this.context.createScriptProcessor(this.bufferSize, 1, 1);
-        this.processor.connect(this.context.destination);
-        this.context.resume();
-        this.makeSocket();
+'use strict'
 
-        navigator.mediaDevices.getUserMedia(this.constraints)
-            .then(function(stream) {
-                this.input = this.context.createMediaStreamSource(stream);
-                this.input.connect(this.processor);
-                this.processor.onaudioprocess = function(e) {
-                    this.microphoneProcess(e);
-                };
-            });
-    }
+let socket = new WebSocket("ws://localhost:9000");
 
-    // Create WebSocket connection
-    makeSocket() {
-        this.socket = new WebSocket("ws://localhost:9000");
-        this.socket.onopen = function(event) { console.log("Socket opened."); };
-        // Listen for messages
-        this.socket.onmessage = function(event) {
-            console.log("Message received from server", event.data);
-        };
-        this.socket.onclose = function(event) {
-            console.log("Socket closed", event.data);
-        };
-    }
+// Listen for messages
+socket.onmessage = function(event) {
+    console.log("Message received from server", event.data);
+};
 
-    microphoneProcess(e) {
-        var left = e.inputBuffer.getChannelData(0);
-        this.socket.send(e.data);
-    }
+socket.onclose = function(event) {
+    console.log("Socket closed", event.data);
+};
+
+
+//================= CONFIG =================
+// Stream Audio
+let bufferSize = 2048,
+	AudioContext,
+	context,
+	processor,
+	input,
+	globalStream;
+
+//vars
+let audioElement = document.querySelector('audio'),
+	finalWord = false,
+	resultText = document.getElementById('ResultText'),
+	removeLastSentence = true,
+	streamStreaming = false;
+
+
+//audioStream constraints
+const constraints = {
+	audio: true,
+	video: false
+};
+
+//================= RECORDING =================
+
+
+
+function initRecording() {
+	streamStreaming = true;
+	AudioContext = window.AudioContext || window.webkitAudioContext;
+	context = new AudioContext({
+        // if Non-interactive, use 'playback' or 'balanced'
+        // https://developer.mozilla.org/en-US/docs/Web/API/AudioContextLatencyCategory
+		latencyHint: 'interactive',
+	});
+	processor = context.createScriptProcessor(bufferSize, 1, 1);
+	processor.connect(context.destination);
+	context.resume();
+
+	var handleSuccess = function (stream) {
+		globalStream = stream;
+		input = context.createMediaStreamSource(stream);
+		input.connect(processor);
+
+		processor.onaudioprocess = function (e) {
+			microphoneProcess(e);
+		};
+	};
+
+	navigator.mediaDevices.getUserMedia(constraints)
+		.then(handleSuccess);
+
 }
 
+function microphoneProcess(e) {
+	var channelData = e.inputBuffer.getChannelData(0);
+    socket.send(channelData);
+}
+
+
+//================= INTERFACE =================
 var startButton = document.getElementById("startRecButton");
-startButton.addEventListener(
-    "click", function() { const streamer = new AudioStreamer(); });
+startButton.addEventListener("click", startRecording);
+
+var endButton = document.getElementById("stopRecButton");
+endButton.addEventListener("click", stopRecording);
+endButton.disabled = true;
+
+var recordingStatus = document.getElementById("recordingStatus");
+
+function startRecording() {
+	startButton.disabled = true;
+	endButton.disabled = false;
+	//recordingStatus.style.visibility = "visible";
+	initRecording();
+}
+
+function stopRecording() {
+	// waited for FinalWord
+	startButton.disabled = false;
+	endButton.disabled = true;
+	recordingStatus.style.visibility = "hidden";
+	streamStreaming = false;
+
+
+	let track = globalStream.getTracks()[0];
+	track.stop();
+
+	input.disconnect(processor);
+	processor.disconnect(context.destination);
+	context.close().then(function () {
+		input = null;
+		processor = null;
+		context = null;
+		AudioContext = null;
+		startButton.disabled = false;
+	});
+}
