@@ -1,6 +1,14 @@
 <!--<video id="webcam" width="480" height="360"></video>-->
 <h1>Browser Microphone Streamer</h1>
-<p>This prototype webapp streams audio from your microphone to localhost:9000</p>
+<p>This prototype webapp streams audio from your microphone to a server for
+processing.</p>
+<form>
+    <label for="host">Host</label>
+    <input type="text" name="host" id="host_input"/>
+    <label for="port">Port</label>
+    <input type="text" name="port" id="port_input"/>
+    <input type="submit">
+</form>
 <button id="startRecButton" type="button">Start</button>
 <button id="stopRecButton" type="button">Stop</button>
 <div id="recordingStatus">&nbsp;</div>

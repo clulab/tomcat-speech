@@ -3,16 +3,30 @@
 
 'use strict'
 
-let socket = new WebSocket("ws://localhost:9000");
+function makeSocket(destination) {
+    let socket = new WebSocket(destination);
 
-// Listen for messages
-socket.onmessage = function(event) {
-    console.log("Message received from server", event.data);
-};
+    // Listen for messages
+    socket.onmessage = function(event) {
+        console.log("Message received from server", event.data);
+    };
 
-socket.onclose = function(event) {
-    console.log("Socket closed", event.data);
-};
+    socket.onclose = function(event) {
+        console.log("Socket closed", event.data);
+    };
+
+    return socket;
+}
+
+let socket;
+
+document.querySelector("form").addEventListener("submit", (e) => {
+    const formData = new FormData(e.target);
+    var host=formData.get("host");
+    var port=formData.get("port");
+    socket=makeSocket("ws://"+host+":"+port);
+    e.preventDefault();
+});
 
 
 //================= CONFIG =================
