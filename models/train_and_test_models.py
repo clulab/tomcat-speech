@@ -1455,7 +1455,7 @@ def train_and_predict_mtl(
         preds_spk_holder = []
 
         # for each batch in the list of batches created by the dataloader
-        for batch_index, batch in enumerate(batches):
+        for batch_index, batch in enumerate(val_batches):
             # get the gold labels
             y_gold_sarc = batch['label'].to(device)
             y_gold_spk = batch['speaker'].to(device)
