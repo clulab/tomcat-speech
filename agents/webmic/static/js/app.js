@@ -3,19 +3,25 @@
 
 'use strict'
 
-function makeSocket(destination) {
-    let socket = new WebSocket(destination);
+class PersistentSocket {
+    constructor(destination){
+        this.ws = new WebSocket(destination); 
+        // Listen for messages
+        this.ws.onmessage = function(event) {
+            console.log("Message received from server", event.data);
+        };
 
-    // Listen for messages
-    socket.onmessage = function(event) {
-        console.log("Message received from server", event.data);
-    };
+        this.ws.onclose = function(event) {
+            console.log("Socket closed, trying again in 1 second.", event.data);
+            setTimeout(function(){
+                this.ws = new WebSocket(destination);
+            }, 1000)
+        };
+    }
 
-    socket.onclose = function(event) {
-        console.log("Socket closed", event.data);
-    };
-
-    return socket;
+    send(data) {
+        this.ws.send(data);
+    }
 }
 
 let socket;
@@ -24,7 +30,7 @@ document.querySelector("form").addEventListener("submit", (e) => {
     const formData = new FormData(e.target);
     var host=formData.get("host");
     var port=formData.get("port");
-    socket=makeSocket("ws://"+host+":"+port);
+    socket=new PersistentSocket("ws://"+host+":"+port);
     e.preventDefault();
 });
 

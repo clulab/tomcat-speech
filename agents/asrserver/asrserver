@@ -245,13 +245,16 @@ async def message_handler(websocket, path):
     asr_client.start()
 
     async for data in websocket:
-        debug(f"Received chunk of size {len(data)} bytes from browser")
+        info(
+            f"Received chunk of size {len(data)} bytes from browser at "
+            f"{datetime.datetime.utcnow().isoformat()}Z"
+        )
         chunk = convert_audio_buffer(data)
         audio_stream._fill_buffer(chunk)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARNING)
     info("Starting server")
     asyncio.gather(
         websockets.serve(message_handler, "127.0.0.1", 9000),
