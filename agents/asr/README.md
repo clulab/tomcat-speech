@@ -19,8 +19,12 @@ Prerequisites
 
 - You'll need Python 3.6 or newer.
 - To access the microphone, you'll need the `pyaudio` package:
+ 
+      pip install pyaudio
 
-    pip install pyaudio
+    On Ubuntu, you'll need to install portaudio before installing pyaudio. You can do so with the following command:
+
+      sudo apt-get install portaudio19-dev 
 
 ### Google Cloud engine
 
