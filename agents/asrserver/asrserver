@@ -226,9 +226,17 @@ def downsample(input_buffer, input_sample_rate, output_sample_rate):
         return output_buffer
 
 
-def convert_float32_to_int16(array):
-    array = array * 32767
-    return array
+def convert_audio_buffer(data):
+    # The data received from the server is an array of 32-bit floating
+    # point numbers. We decode them into a numpy array.
+    input_buffer = np.frombuffer(data, dtype=np.float32)
+
+    chunk = (
+        np.rint(32767 * downsample(input_buffer, 44100, 16000))
+        .astype(np.int16)
+        .tobytes()
+    )
+    return chunk
 
 
 async def message_handler(websocket, path):
@@ -236,26 +244,10 @@ async def message_handler(websocket, path):
     asr_client = GoogleASRClient(audio_stream)
     asr_client.start()
 
-    while True:
-        try:
-            data = await websocket.recv()
-            # info(f"Received chunk of size {len(data)} bytes from browser.")
-            # The data received from the server is an array of 32-bit floating
-            # point numbers. We decode them into a numpy array.
-            input_buffer = np.frombuffer(data, dtype=np.float32)
-
-            chunk = (
-                np.rint(32767 * downsample(input_buffer, 44100, 16000))
-                .astype(np.int16)
-                .tobytes()
-            )
-            audio_stream._fill_buffer(chunk)
-        except websockets.ConnectionClosed:
-            info("Connection closed")
-
-    # async for chunk in websocket:
-    # info(f"Received chunk of size {len(chunk)} bytes from browser.")
-    # audio_stream._fill_buffer(chunk)
+    async for data in websocket:
+        debug(f"Received chunk of size {len(data)} bytes from browser")
+        chunk = convert_audio_buffer(data)
+        audio_stream._fill_buffer(chunk)
 
 
 if __name__ == "__main__":
