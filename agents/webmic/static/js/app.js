@@ -3,23 +3,45 @@
 
 'use strict'
 
+
+function makeSocket(destination) {
+    var ws = new WebSocket(destination); 
+
+    // Listen for messages
+    ws.onopen = function(event) {
+        document.getElementById("connectedIndicator").innerHTML="Connected";
+        console.log("Websocket connected!")
+    }
+
+    ws.onmessage = function(event) {
+        console.log("Message received from server", event.data);
+    };
+
+    ws.onerror = (error) => {
+        console.error("Error in creating websocket. Trying again in 5 seconds.");
+        ws.close();
+    };
+
+    ws.onclose = function(event) {
+        document.getElementById("connectedIndicator").innerHTML="Not connected";
+        setTimeout(function() {
+            ws = makeSocket(destination);
+        }, 5000);
+    };
+
+    return ws;
+}
+
 class PersistentSocket {
     constructor(destination){
-        this.ws = new WebSocket(destination); 
-        // Listen for messages
-        this.ws.onmessage = function(event) {
-            console.log("Message received from server", event.data);
-        };
-
-        this.ws.onclose = function(event) {
-            console.log("Socket closed, trying again in 1 second.", event.data);
-            setTimeout(function(){
-                this.ws = new WebSocket(destination);
-            }, 1000)
-        };
+        this.destination = destination
+        this.ws = makeSocket(this.destination);
     }
 
     send(data) {
+        if (this.socket.ws == 3) {
+            this.ws = makeSocket(this.destination);
+        }
         this.ws.send(data);
     }
 }
@@ -103,12 +125,9 @@ var endButton = document.getElementById("stopRecButton");
 endButton.addEventListener("click", stopRecording);
 endButton.disabled = true;
 
-var recordingStatus = document.getElementById("recordingStatus");
-
 function startRecording() {
 	startButton.disabled = true;
 	endButton.disabled = false;
-	//recordingStatus.style.visibility = "visible";
 	initRecording();
 }
 
@@ -116,7 +135,6 @@ function stopRecording() {
 	// waited for FinalWord
 	startButton.disabled = false;
 	endButton.disabled = true;
-	recordingStatus.style.visibility = "hidden";
 	streamStreaming = false;
 
 

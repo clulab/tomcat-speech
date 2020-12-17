@@ -4,12 +4,13 @@
 processing.</p>
 <form>
     <label for="host">Host</label>
-    <input type="text" name="host" id="host_input"/>
+    <input type="text" name="host" id="host_input" value="localhost"/>
     <label for="port">Port</label>
-    <input type="text" name="port" id="port_input"/>
-    <input type="submit">
+    <input type="number" name="port" id="port_input" 
+                                     min=1 max=65535 value=9000 />
+    <input type="submit" value="Connect">
 </form>
 <button id="startRecButton" type="button">Start</button>
 <button id="stopRecButton" type="button">Stop</button>
-<div id="recordingStatus">&nbsp;</div>
+<div id="connectedIndicator">Not connected</div>
 <script src="static/js/app.js"></script>
