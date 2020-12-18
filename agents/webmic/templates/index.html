@@ -3,12 +3,14 @@
 <p>This prototype webapp streams audio from your microphone to a server for
 processing.</p>
 <form>
-    <label for="host">Host</label>
-    <input type="text" name="host" id="host_input" value="localhost"/>
-    <label for="port">Port</label>
-    <input type="number" name="port" id="port_input" 
-                                     min=1 max=65535 value=9000 />
-    <input type="submit" value="Connect">
+    <label for="participant_id">Participant ID</label>
+    <select id="participant_id" name = "participant_id">
+        <option value="participant_1">Participant 1</option>
+        <option value="participant_2">Participant 2</option>
+        <option value="participant_3">Participant 3</option>
+        <option value="experimenter">Experimenter</option>
+    </select>
+    <input type="submit" id="connectButton" value="Connect" >
 </form>
 <button id="startRecButton" type="button">Start</button>
 <button id="stopRecButton" type="button">Stop</button>

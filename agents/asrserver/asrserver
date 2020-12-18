@@ -239,24 +239,47 @@ def convert_audio_buffer(data):
     return chunk
 
 
+# This mutable global variable should be encapsulated in a class in the future.
+# It can be set by listening for a message on the message bus, in order to
+# synchronize recording start and stop timestamps.
+
+RECORDING_IN_PROGRESS = True
+
 async def message_handler(websocket, path):
     audio_stream = AudioStream()
-    asr_client = GoogleASRClient(audio_stream)
-    asr_client.start()
+    # asr_client = GoogleASRClient(audio_stream)
+    # asr_client.start()
 
-    async for data in websocket:
-        info(
-            f"Received chunk of size {len(data)} bytes from browser at "
-            f"{datetime.datetime.utcnow().isoformat()}Z"
-        )
-        chunk = convert_audio_buffer(data)
-        audio_stream._fill_buffer(chunk)
+    participant_id = websocket.request_headers["Sec-WebSocket-Protocol"]
+
+    info(f"Participant {participant_id} is now connected.")
+
+    with open(f"{participant_id}.raw", "wb") as f:
+        async for data in websocket:
+            debug(
+                f"Received chunk of size {len(data)} bytes from browser at "
+                f"{datetime.datetime.utcnow().isoformat()}Z"
+            )
+            if RECORDING_IN_PROGRESS:
+                f.write(data)
+        # chunk = convert_audio_buffer(data)
+        # audio_stream._fill_buffer(chunk)
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.WARNING)
+    logging.basicConfig(level=logging.INFO)
     info("Starting server")
     asyncio.gather(
-        websockets.serve(message_handler, "127.0.0.1", 9000),
+        websockets.serve(
+            message_handler,
+            "127.0.0.1",
+            9000,
+            subprotocols=[
+                "participant_1",
+                "participant_2",
+                "participant_3",
+                "experimenter",
+            ],
+        ),
     )
     asyncio.get_event_loop().run_forever()

@@ -3,13 +3,15 @@
 
 'use strict'
 
-
-function makeSocket(destination) {
-    var ws = new WebSocket(destination); 
+function makeSocket(destination, subprotocol) {
+    var ws = new WebSocket(destination, subprotocol); 
 
     // Listen for messages
     ws.onopen = function(event) {
         document.getElementById("connectedIndicator").innerHTML="Connected";
+
+        var connectButton = document.getElementById("connectButton");
+        connectButton.disabled = true;
         console.log("Websocket connected!")
     }
 
@@ -25,7 +27,7 @@ function makeSocket(destination) {
     ws.onclose = function(event) {
         document.getElementById("connectedIndicator").innerHTML="Not connected";
         setTimeout(function() {
-            ws = makeSocket(destination);
+            ws = makeSocket(destination, subprotocol);
         }, 5000);
     };
 
@@ -33,16 +35,16 @@ function makeSocket(destination) {
 }
 
 class PersistentSocket {
-    constructor(destination){
+    constructor(destination, subprotocol){
         this.destination = destination
-        this.ws = makeSocket(this.destination);
+        this.subprotocol = subprotocol
+        this.ws = makeSocket(this.destination, this.subprotocol);
     }
 
     send(data) {
-        if (this.socket.ws == 3) {
-            this.ws = makeSocket(this.destination);
+        if (this.ws.readyState == 1) {
+            this.ws.send(data);
         }
-        this.ws.send(data);
     }
 }
 
@@ -50,9 +52,9 @@ let socket;
 
 document.querySelector("form").addEventListener("submit", (e) => {
     const formData = new FormData(e.target);
-    var host=formData.get("host");
-    var port=formData.get("port");
-    socket=new PersistentSocket("ws://"+host+":"+port);
+    var subprotocol=formData.get("participant_id");
+    var destination = "ws://localhost:9000";
+    socket=new PersistentSocket(destination, subprotocol);
     e.preventDefault();
 });
 
