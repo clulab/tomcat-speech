@@ -3,6 +3,11 @@
 
 'use strict'
 
+// Get parameters from URL query string
+const params = new URLSearchParams(window.location.search);
+const participantId = params.get("id");
+document.getElementById("participantId").innerHTML="Participant ID: " + participantId;
+
 function makeSocket(destination, subprotocol) {
     var ws = new WebSocket(destination, subprotocol); 
 
@@ -50,14 +55,11 @@ class PersistentSocket {
 
 let socket;
 
-document.querySelector("form").addEventListener("submit", (e) => {
-    const formData = new FormData(e.target);
-    var subprotocol=formData.get("participant_id");
+document.getElementById("connectButton").onclick = function() {
+    var subprotocol=participantId;
     var destination = "ws://localhost:8000";
     socket=new PersistentSocket(destination, subprotocol);
-    e.preventDefault();
-});
-
+};
 
 //================= CONFIG =================
 // Stream Audio
