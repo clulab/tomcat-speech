@@ -53,7 +53,7 @@ let socket;
 document.querySelector("form").addEventListener("submit", (e) => {
     const formData = new FormData(e.target);
     var subprotocol=formData.get("participant_id");
-    var destination = "ws://localhost:9000";
+    var destination = "ws://localhost:8000";
     socket=new PersistentSocket(destination, subprotocol);
     e.preventDefault();
 });

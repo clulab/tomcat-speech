@@ -1,19 +1,18 @@
 #!/usr/bin/env python
 
+import os
 import sys
 import asyncio
 import datetime
-import struct
 import threading
 import websockets
 import logging
 from logging import debug, info
 from six.moves import queue
 import google.cloud.speech
-from dataclasses import dataclass, asdict, field, InitVar
+from dataclasses import asdict, dataclass, field
 import json
 from paho.mqtt.client import Client as MQTTClient
-from functools import partial
 
 
 class AudioStream(object):
@@ -203,7 +202,6 @@ class GoogleASRClient(ASRClient):
                 self.publish_transcript(transcript, "Google")
 
 
-import struct
 import numpy as np
 
 
@@ -246,8 +244,7 @@ def convert_audio_buffer(data):
 RECORDING_IN_PROGRESS = True
 
 async def message_handler(websocket, path):
-    audio_stream = AudioStream()
-    # asr_client = GoogleASRClient(audio_stream)
+    # asr_client = GoogleASRClient(AudioStream())
     # asr_client.start()
 
     participant_id = websocket.request_headers["Sec-WebSocket-Protocol"]
@@ -267,13 +264,14 @@ async def message_handler(websocket, path):
 
 
 if __name__ == "__main__":
+    host = os.getenv("HOST", "127.0.0.1")
     logging.basicConfig(level=logging.INFO)
     info("Starting server")
     asyncio.gather(
         websockets.serve(
             message_handler,
-            "127.0.0.1",
-            9000,
+            host,
+            8000,
             subprotocols=[
                 "participant_1",
                 "participant_2",
