@@ -57,6 +57,7 @@ let socket;
 document.getElementById("connectButton").onclick = function() {
     var destination = "ws://localhost:8000?id="+participantId;
     socket=new PersistentSocket(destination);
+    initRecording();
 };
 
 //================= CONFIG =================
@@ -116,40 +117,4 @@ function initRecording() {
 function microphoneProcess(e) {
 	var channelData = e.inputBuffer.getChannelData(0);
     socket.send(channelData);
-}
-
-
-//================= INTERFACE =================
-var startButton = document.getElementById("startRecButton");
-startButton.addEventListener("click", startRecording);
-
-var endButton = document.getElementById("stopRecButton");
-endButton.addEventListener("click", stopRecording);
-endButton.disabled = true;
-
-function startRecording() {
-	startButton.disabled = true;
-	endButton.disabled = false;
-	initRecording();
-}
-
-function stopRecording() {
-	// waited for FinalWord
-	startButton.disabled = false;
-	endButton.disabled = true;
-	streamStreaming = false;
-
-
-	let track = globalStream.getTracks()[0];
-	track.stop();
-
-	input.disconnect(processor);
-	processor.disconnect(context.destination);
-	context.close().then(function () {
-		input = null;
-		processor = null;
-		context = null;
-		AudioContext = null;
-		startButton.disabled = false;
-	});
 }
