@@ -2,22 +2,24 @@
 
 import os
 import sys
+import json
 import asyncio
+import logging
 import datetime
 import threading
 import websockets
-import logging
 from logging import debug, info
+from urllib.parse import urlparse, parse_qs
+from dataclasses import asdict, dataclass, field
+
+import numpy as np
 from six.moves import queue
 import google.cloud.speech
-from dataclasses import asdict, dataclass, field
-import json
 from paho.mqtt.client import Client as MQTTClient
-from urllib.parse import urlparse, parse_qs
 
 
 class AudioStream(object):
-    """Opens a stream as a generator yielding the audio chunks."""
+    """Opens a stream as a generator that yields audio chunks."""
 
     def __init__(self):
         # Create a thread-safe buffer of audio data
@@ -203,7 +205,6 @@ class GoogleASRClient(ASRClient):
                 self.publish_transcript(transcript, "Google")
 
 
-import numpy as np
 
 
 def downsample(input_buffer, input_sample_rate, output_sample_rate):
@@ -268,7 +269,7 @@ async def message_handler(websocket, path):
 if __name__ == "__main__":
     host = os.getenv("HOST", "127.0.0.1")
     logging.basicConfig(level=logging.INFO)
-    info("Starting server")
+    info("Starting ASR server.")
     asyncio.gather(
         websockets.serve(
             message_handler,
