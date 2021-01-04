@@ -39,7 +39,6 @@ class AudioStream(object):
     def _fill_buffer(self, in_data):
         """Continuously collect data from the audio stream, into the buffer."""
         self._buff.put(in_data)
-        # return None
 
     def generator(self):
         while not self.closed:
