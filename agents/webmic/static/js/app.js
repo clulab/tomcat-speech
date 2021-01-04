@@ -62,8 +62,7 @@ document.getElementById("connectButton").onclick = function() {
 
 //================= CONFIG =================
 // Stream Audio
-let bufferSize = 2048,
-	AudioContext,
+let AudioContext,
 	context,
 	processor,
 	input,
@@ -95,7 +94,7 @@ function initRecording() {
         // https://developer.mozilla.org/en-US/docs/Web/API/AudioContextLatencyCategory
 		latencyHint: 'interactive',
 	});
-	processor = context.createScriptProcessor(bufferSize, 1, 1);
+	processor = context.createScriptProcessor(0, 1, 1);
 	processor.connect(context.destination);
 	context.resume();
 
