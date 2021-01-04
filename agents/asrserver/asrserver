@@ -245,8 +245,9 @@ def convert_audio_buffer(data):
 RECORDING_IN_PROGRESS = True
 
 async def message_handler(websocket, path):
-    # asr_client = GoogleASRClient(AudioStream())
-    # asr_client.start()
+    audio_stream = AudioStream()
+    asr_client = GoogleASRClient(audio_stream)
+    asr_client.start()
 
     participant_id = parse_qs(urlparse(websocket.path).query)["id"][0]
 
@@ -260,8 +261,8 @@ async def message_handler(websocket, path):
             if RECORDING_IN_PROGRESS:
                 f.write(data)
 
-        # chunk = convert_audio_buffer(data)
-        # audio_stream._fill_buffer(chunk)
+            chunk = convert_audio_buffer(data)
+            audio_stream._fill_buffer(chunk)
 
 
 if __name__ == "__main__":
