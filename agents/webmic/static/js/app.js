@@ -8,8 +8,8 @@ const params = new URLSearchParams(window.location.search);
 const participantId = params.get("id");
 document.getElementById("participantId").innerHTML="Participant ID: " + participantId;
 
-function makeSocket(destination, subprotocol) {
-    var ws = new WebSocket(destination, subprotocol); 
+function makeSocket(destination) {
+    var ws = new WebSocket(destination); 
 
     // Listen for messages
     ws.onopen = function(event) {
@@ -32,7 +32,7 @@ function makeSocket(destination, subprotocol) {
     ws.onclose = function(event) {
         document.getElementById("connectedIndicator").innerHTML="Not connected";
         setTimeout(function() {
-            ws = makeSocket(destination, subprotocol);
+            ws = makeSocket(destination);
         }, 5000);
     };
 
@@ -40,10 +40,9 @@ function makeSocket(destination, subprotocol) {
 }
 
 class PersistentSocket {
-    constructor(destination, subprotocol){
+    constructor(destination){
         this.destination = destination
-        this.subprotocol = subprotocol
-        this.ws = makeSocket(this.destination, this.subprotocol);
+        this.ws = makeSocket(this.destination);
     }
 
     send(data) {
@@ -56,9 +55,8 @@ class PersistentSocket {
 let socket;
 
 document.getElementById("connectButton").onclick = function() {
-    var subprotocol=participantId;
-    var destination = "ws://localhost:8000";
-    socket=new PersistentSocket(destination, subprotocol);
+    var destination = "ws://localhost:8000?id="+participantId;
+    socket=new PersistentSocket(destination);
 };
 
 //================= CONFIG =================

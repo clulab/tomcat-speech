@@ -13,6 +13,7 @@ import google.cloud.speech
 from dataclasses import asdict, dataclass, field
 import json
 from paho.mqtt.client import Client as MQTTClient
+from urllib.parse import urlparse, parse_qs
 
 
 class AudioStream(object):
@@ -243,26 +244,21 @@ def convert_audio_buffer(data):
 
 RECORDING_IN_PROGRESS = True
 
-# List of acceptable subprotocol strings.
-SUBPROTOCOLS = list(map(str, range(10)))
-
-
 async def message_handler(websocket, path):
     # asr_client = GoogleASRClient(AudioStream())
     # asr_client.start()
 
-    participant_id = websocket.request_headers["Sec-WebSocket-Protocol"]
+    participant_id = parse_qs(urlparse(websocket.path).query)["id"][0]
 
-    if participant_id in SUBPROTOCOLS:
-        info(f"Participant {participant_id} is now connected.")
-        with open(f"{participant_id}.raw", "wb") as f:
-            async for data in websocket:
-                debug(
-                    f"Received chunk of size {len(data)} bytes from browser at "
-                    f"{datetime.datetime.utcnow().isoformat()}Z"
-                )
-                if RECORDING_IN_PROGRESS:
-                    f.write(data)
+    info(f"Participant {participant_id} is now connected.")
+    with open(f"participant_{participant_id}.raw", "wb") as f:
+        async for data in websocket:
+            debug(
+                f"Received chunk of size {len(data)} bytes from browser at "
+                f"{datetime.datetime.utcnow().isoformat()}Z"
+            )
+            if RECORDING_IN_PROGRESS:
+                f.write(data)
 
         # chunk = convert_audio_buffer(data)
         # audio_stream._fill_buffer(chunk)
@@ -277,7 +273,6 @@ if __name__ == "__main__":
             message_handler,
             host,
             8000,
-            subprotocols=SUBPROTOCOLS,
         ),
     )
     asyncio.get_event_loop().run_forever()
