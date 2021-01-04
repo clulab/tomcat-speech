@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 import json
 import asyncio
 import logging
@@ -18,6 +19,15 @@ import google.cloud.speech
 from paho.mqtt.client import Client as MQTTClient
 
 
+STREAMING_LIMIT = 240000  # 4 minutes
+
+
+def get_current_time():
+    """Return Current Time in MS."""
+
+    return int(round(time.time() * 1000))
+
+
 class AudioStream(object):
     """Opens a stream as a generator that yields audio chunks."""
 
@@ -25,6 +35,16 @@ class AudioStream(object):
         # Create a thread-safe buffer of audio data
         self._buff = queue.Queue()
         self.closed = True
+        self.start_time = get_current_time()
+        self.audio_input = []
+        self.last_audio_input = []
+        self.result_end_time = 0
+        self.is_final_end_time = 0
+        self.final_request_end_time = 0
+        self.bridging_offset = 0
+        self.last_transcript_was_final = False
+        self.new_stream = True
+        self.restart_counter = 0
 
     def __enter__(self):
         self.closed = False
@@ -36,27 +56,62 @@ class AudioStream(object):
         # streaming_recognize method will not block the process termination.
         self._buff.put(None)
 
-    def _fill_buffer(self, in_data):
+    def fill_buffer(self, in_data):
         """Continuously collect data from the audio stream, into the buffer."""
         self._buff.put(in_data)
 
     def generator(self):
         while not self.closed:
+
+            data = []
+
+            if self.new_stream and self.last_audio_input:
+                chunk_time = STREAMING_LIMIT / len(self.last_audio_input)
+
+                if chunk_time != 0:
+                    if self.bridging_offset < 0:
+                        self.bridging_offset = 0
+
+                    if self.bridging_offset > self.final_request_end_time:
+                        self.bridging_offset = self.final_request_end_time
+
+                    chunks_from_ms = round(
+                        (self.final_request_end_time - self.bridging_offset)
+                        / chunk_time
+                    )
+
+                    self.bridging_offset = round(
+                        (len(self.last_audio_input) - chunks_from_ms)
+                        * chunk_time
+                    )
+
+                    for i in range(chunks_from_ms, len(self.last_audio_input)):
+                        data.append(self.last_audio_input[i])
+
+                self.new_stream = False
+
             # Use a blocking get() to ensure there's at least one chunk of
             # data, and stop iteration if the chunk is None, indicating the
             # end of the audio stream.
             chunk = self._buff.get()
+            self.audio_input.append(chunk)
+
             if chunk is None:
                 return
-            data = [chunk]
+
+            data.append(chunk)
 
             # Now consume whatever other data's still buffered.
             while True:
                 try:
                     chunk = self._buff.get(block=False)
+
                     if chunk is None:
                         return
+
                     data.append(chunk)
+                    self.audio_input.append(chunk)
+
                 except queue.Empty:
                     break
 
@@ -134,7 +189,7 @@ class GoogleASRClient(ASRClient):
         self.chunk_size = 4410
         self.language_code = "en_US"
         self.speech_client = google.cloud.speech.SpeechClient()
-        self.audiostream = audiostream
+        self.stream = audiostream
 
         recognition_config = google.cloud.speech.RecognitionConfig(
             audio_channel_count=1,
@@ -154,21 +209,34 @@ class GoogleASRClient(ASRClient):
 
     def run(self):
         info("Running google asr client")
-        with self.audiostream as audio_stream:
-            audio_generator = audio_stream.generator()
+        with self.stream as stream:
+            while not stream.closed:
+                print("Stream restart counter: ", stream.restart_counter)
 
-            requests = (
-                google.cloud.speech.StreamingRecognizeRequest(
-                    audio_content=content
+                stream.audio_input = []
+
+                audio_generator = stream.generator()
+
+                requests = (
+                    google.cloud.speech.StreamingRecognizeRequest(
+                        audio_content=content
+                    )
+                    for content in audio_generator
                 )
-                for content in audio_generator
-            )
 
-            responses = self.speech_client.streaming_recognize(
-                self.streaming_recognition_config, requests
-            )
+                responses = self.speech_client.streaming_recognize(
+                    self.streaming_recognition_config, requests
+                )
 
-            self.listen_print_loop(responses)
+                self.listen_print_loop(responses)
+
+                if stream.result_end_time > 0:
+                    stream.final_request_end_time = stream.is_final_end_time
+                stream.result_end_time = 0
+                stream.last_audio_input = []
+                stream.audio_input = []
+                stream.restart_counter = stream.restart_counter + 1
+                stream.new_stream = True
 
     def listen_print_loop(self, responses):
         """Iterates through server responses and prints them.
@@ -187,6 +255,14 @@ class GoogleASRClient(ASRClient):
         """
         info("Entered listen_print_loop")
         for response in responses:
+
+            if (
+                get_current_time() - self.stream.start_time
+                > STREAMING_LIMIT
+            ):
+                self.stream.start_time = get_current_time()
+                break
+
             if not response.results:
                 continue
 
@@ -200,20 +276,43 @@ class GoogleASRClient(ASRClient):
             # Display the transcription of the top alternative.
             transcript = result.alternatives[0].transcript
 
+            result_seconds = 0
+            result_micros = 0
+
+            if result.result_end_time.seconds:
+                result_seconds = result.result_end_time.seconds
+
+            if result.result_end_time.microseconds:
+                result_micros = result.result_end_time.microseconds
+
+            self.stream.result_end_time = int(
+                (result_seconds * 1000) + (result_micros / 1000)
+            )
+
+            corrected_time = (
+                self.stream.result_end_time
+                - self.stream.bridging_offset
+                + (STREAMING_LIMIT * self.stream.restart_counter)
+            )
+
             if result.is_final:
                 self.publish_transcript(transcript, "Google")
+                self.stream.is_final_end_time = (
+                    self.stream.result_end_time
+                )
+                self.stream.last_transcript_was_final = True
+            else:
+                self.stream.last_transcript_was_final = False
 
 
-def convert_audio_buffer(data):
+def convert_float32_to_int16(data):
     # The data received from the server is an array of 32-bit floating
     # point numbers. We decode them into a numpy array.
     input_buffer = np.frombuffer(data, dtype=np.float32)
 
-    chunk = (
-        np.rint(32767 * input_buffer)
-        .astype(np.int16)
-        .tobytes()
-    )
+    # Convert 32-bit floats to 16-bit integers for compatibility with Google
+    # STT API
+    chunk = np.rint(32767 * input_buffer).astype(np.int16).tobytes()
     return chunk
 
 
@@ -222,6 +321,7 @@ def convert_audio_buffer(data):
 # synchronize recording start and stop timestamps.
 
 RECORDING_IN_PROGRESS = True
+
 
 async def message_handler(websocket, path):
     audio_stream = AudioStream()
@@ -241,13 +341,13 @@ async def message_handler(websocket, path):
             if RECORDING_IN_PROGRESS:
                 f.write(data)
 
-            chunk = convert_audio_buffer(data)
-            audio_stream._fill_buffer(chunk)
+            chunk = convert_float32_to_int16(data)
+            audio_stream.fill_buffer(chunk)
 
 
 if __name__ == "__main__":
     host = os.getenv("HOST", "127.0.0.1")
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARNING)
     info("Starting ASR server.")
     asyncio.gather(
         websockets.serve(
