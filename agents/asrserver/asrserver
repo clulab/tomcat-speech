@@ -42,7 +42,6 @@ class AudioStream(object):
         self.is_final_end_time = 0
         self.final_request_end_time = 0
         self.bridging_offset = 0
-        self.last_transcript_was_final = False
         self.new_stream = True
         self.restart_counter = 0
 
@@ -65,21 +64,30 @@ class AudioStream(object):
 
             data = []
 
+            # If the time limit was reached in the previous iteration of this
+            # loop, then the new_stream property will be true. In this case, we
+            # try to prepend the audio chunks that were missed in between the
+            # requests to the list of chunks for the new request.
             if self.new_stream and self.last_audio_input:
+
                 chunk_time = STREAMING_LIMIT / len(self.last_audio_input)
 
                 if chunk_time != 0:
-                    if self.bridging_offset < 0:
-                        self.bridging_offset = 0
+                    # We constrain the bridging offset to be between 0 and
+                    # self.final_request_end_time.
+                    self.bridging_offset = min(
+                        self.final_request_end_time,
+                        max(0, self.bridging_offset),
+                    )
 
-                    if self.bridging_offset > self.final_request_end_time:
-                        self.bridging_offset = self.final_request_end_time
-
+                    # Calculate the number of chunks (to use as a starting
+                    # index offset)
                     chunks_from_ms = round(
                         (self.final_request_end_time - self.bridging_offset)
                         / chunk_time
                     )
 
+                    # Set the new bridging offset
                     self.bridging_offset = round(
                         (len(self.last_audio_input) - chunks_from_ms)
                         * chunk_time
@@ -208,10 +216,9 @@ class GoogleASRClient(ASRClient):
         threading.Thread(target=self.run).start()
 
     def run(self):
-        info("Running google asr client")
+        info("Running google ASR client")
         with self.stream as stream:
             while not stream.closed:
-                print("Stream restart counter: ", stream.restart_counter)
 
                 stream.audio_input = []
 
@@ -232,8 +239,9 @@ class GoogleASRClient(ASRClient):
 
                 if stream.result_end_time > 0:
                     stream.final_request_end_time = stream.is_final_end_time
+
                 stream.result_end_time = 0
-                stream.last_audio_input = []
+                stream.last_audio_input = stream.audio_input
                 stream.audio_input = []
                 stream.restart_counter = stream.restart_counter + 1
                 stream.new_stream = True
@@ -256,10 +264,7 @@ class GoogleASRClient(ASRClient):
         info("Entered listen_print_loop")
         for response in responses:
 
-            if (
-                get_current_time() - self.stream.start_time
-                > STREAMING_LIMIT
-            ):
+            if get_current_time() - self.stream.start_time > STREAMING_LIMIT:
                 self.stream.start_time = get_current_time()
                 break
 
@@ -297,9 +302,7 @@ class GoogleASRClient(ASRClient):
 
             if result.is_final:
                 self.publish_transcript(transcript, "Google")
-                self.stream.is_final_end_time = (
-                    self.stream.result_end_time
-                )
+                self.stream.is_final_end_time = self.stream.result_end_time
                 self.stream.last_transcript_was_final = True
             else:
                 self.stream.last_transcript_was_final = False
