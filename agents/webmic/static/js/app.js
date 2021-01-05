@@ -52,12 +52,14 @@ class PersistentSocket {
     }
 }
 
-let socket;
+let socket,
+    sampleRate;
 
 document.getElementById("connectButton").onclick = function() {
-    var destination = "ws://localhost:8000?id="+participantId;
+    var context = getAudioContext();
+    var destination = "ws://localhost:8000?id="+participantId + "&sampleRate=" + context.sampleRate;
     socket=new PersistentSocket(destination);
-    initRecording();
+    initRecording(context);
 };
 
 //================= CONFIG =================
@@ -86,14 +88,18 @@ const constraints = {
 
 
 
-function initRecording() {
-	streamStreaming = true;
+function getAudioContext() {
 	AudioContext = window.AudioContext || window.webkitAudioContext;
 	context = new AudioContext({
         // if Non-interactive, use 'playback' or 'balanced'
         // https://developer.mozilla.org/en-US/docs/Web/API/AudioContextLatencyCategory
 		latencyHint: 'interactive',
 	});
+    return context;
+}
+
+function initRecording(context) {
+    streamStreaming = true;
 	processor = context.createScriptProcessor(0, 1, 1);
 	processor.connect(context.destination);
 	context.resume();

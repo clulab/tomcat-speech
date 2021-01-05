@@ -36,6 +36,7 @@ def get_current_time() -> int:
 
     return int(round(time.time() * 1000))
 
+
 def float32_array_to_int16_array(array: bytes):
     """This function takes as input a (binary) array of 32-bit floating point
     numbers, decodes them into a numpy array, and converts the floats to 16-bit
@@ -49,6 +50,7 @@ def float32_array_to_int16_array(array: bytes):
     # Convert 32-bit floats to 16-bit integers.
     chunk = np.rint(32767 * input_buffer).astype(np.int16).tobytes()
     return chunk
+
 
 @dataclass(frozen=True)
 class TA3Header(object):
@@ -215,10 +217,10 @@ class ASRClient(object):
 
 
 class GoogleASRClient(ASRClient):
-    def __init__(self, audiostream):
+    def __init__(self, audiostream, rate):
         super().__init__()
-        self.rate = 44100
-        self.chunk_size = 4410
+        self.rate = rate
+        self.chunk_size = int(rate / 10)
         self.language_code = "en_US"
         self.speech_client = google.cloud.speech.SpeechClient()
         self.stream = audiostream
@@ -334,15 +336,18 @@ class GoogleASRClient(ASRClient):
             else:
                 self.stream.last_transcript_was_final = False
 
+
 async def message_handler(websocket, path):
-    query = urlparse(websocket.path).query
-    participant_id = parse_qs(query).get("id", ("null"))[0]
+    query_params = parse_qs(urlparse(websocket.path).query)
+
+    participant_id = query_params["id"][0]
+    sample_rate = int(query_params["sampleRate"][0])
 
     info(f"Participant {participant_id} is now connected.")
 
     # Start the audio stream and ASR client.
     audio_stream = AudioStream()
-    asr_client = GoogleASRClient(audio_stream)
+    asr_client = GoogleASRClient(audio_stream, sample_rate)
     asr_client.start()
 
     with open(f"participant_{participant_id}.raw", "wb") as f:
@@ -360,6 +365,7 @@ async def message_handler(websocket, path):
 
 def pyaudio_method():
     import pyaudio
+
     audio_stream = AudioStream()
 
     def callback(in_data, frame_count, time_info, status):
@@ -367,15 +373,17 @@ def pyaudio_method():
         return None, pyaudio.paContinue
 
     p = pyaudio.PyAudio()
+
+    sample_rate = 44100
     pa_stream = p.open(
-            format=pyaudio.paInt16,
-            channels=1,
-            rate = 44100,
-            input=True,
-            frames_per_buffer = 4410,
-            stream_callback=callback,
+        format=pyaudio.paInt16,
+        channels=1,
+        rate=sample_rate,
+        input=True,
+        frames_per_buffer=int(rate / 10),
+        stream_callback=callback,
     )
-    asr_client = GoogleASRClient(audio_stream)
+    asr_client = GoogleASRClient(audio_stream, rate)
     asr_client.start()
 
     pa_stream.start_stream()
@@ -386,6 +394,7 @@ def pyaudio_method():
     pa_stream.close()
     p.terminate()
 
+
 if __name__ == "__main__":
     from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
@@ -395,10 +404,10 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "input",
+        "--input",
         type=str,
         help="Input source",
-        choices=("websocket", "microphone"),
+        choices=("websockets", "microphone"),
         default="microphone",
     )
 
