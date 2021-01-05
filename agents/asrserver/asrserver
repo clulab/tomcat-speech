@@ -31,10 +31,60 @@ RECORDING_IN_PROGRESS = True
 GOOGLE_STREAMING_LIMIT = 240000
 
 
-def get_current_time():
-    """Return Current Time in milliseconds"""
+def get_current_time() -> int:
+    """Returns current time in milliseconds."""
 
     return int(round(time.time() * 1000))
+
+def float32_array_to_int16_array(array: bytes):
+    """This function takes as input a (binary) array of 32-bit floating point
+    numbers, decodes them into a numpy array, and converts the floats to 16-bit
+    integers. This is done in order to preserve compatibility with the Google
+    Cloud Speech API, which accepts a limited set of encodings. Specifically,
+    we opt for the LINEAR16 encoding."""
+
+    # Decode bytes to numpy array.
+    input_buffer = np.frombuffer(array, dtype=np.float32)
+
+    # Convert 32-bit floats to 16-bit integers.
+    chunk = np.rint(32767 * input_buffer).astype(np.int16).tobytes()
+    return chunk
+
+@dataclass(frozen=True)
+class TA3Header(object):
+    timestamp: str
+    message_type: str = "observation"
+    version: str = "0.1"
+
+
+@dataclass(frozen=True)
+class TA3Msg(object):
+    timestamp: str
+    experiment_id: str = None
+    trial_id: str = None
+    version: str = "0.1"
+    source: str = "tomcat_asr_agent"
+    sub_type: str = "asr"
+
+
+@dataclass(frozen=True)
+class TA3Data(object):
+    text: str
+    asr_system: str
+
+
+@dataclass
+class TA3Message(object):
+    """Class to represent a TA3 testbed message."""
+
+    data: TA3Data
+    header: TA3Header = field(init=False)
+    msg: TA3Msg = field(init=False)
+
+    def __post_init__(self):
+        timestamp: str = datetime.datetime.utcnow().isoformat() + "Z"
+        self.header = TA3Header(timestamp)
+        self.msg = TA3Msg(timestamp)
 
 
 class AudioStream(object):
@@ -137,43 +187,6 @@ class AudioStream(object):
             yield b"".join(data)
 
 
-@dataclass(frozen=True)
-class TA3Header(object):
-    timestamp: str
-    message_type: str = "observation"
-    version: str = "0.1"
-
-
-@dataclass(frozen=True)
-class TA3Msg(object):
-    timestamp: str
-    experiment_id: str = None
-    trial_id: str = None
-    version: str = "0.1"
-    source: str = "tomcat_asr_agent"
-    sub_type: str = "asr"
-
-
-@dataclass(frozen=True)
-class TA3Data(object):
-    text: str
-    asr_system: str
-
-
-@dataclass
-class TA3Message(object):
-    """Class to represent a TA3 testbed message."""
-
-    data: TA3Data
-    header: TA3Header = field(init=False)
-    msg: TA3Msg = field(init=False)
-
-    def __post_init__(self):
-        timestamp: str = datetime.datetime.utcnow().isoformat() + "Z"
-        self.header = TA3Header(timestamp)
-        self.msg = TA3Msg(timestamp)
-
-
 class ASRClient(object):
     def __init__(
         self,
@@ -224,10 +237,10 @@ class GoogleASRClient(ASRClient):
         )
 
     def start(self):
-        threading.Thread(target=self.run).start()
+        threading.Thread(target=self.run, daemon=True).start()
 
     def run(self):
-        info("Running google ASR client")
+        info("Running Google ASR client")
         with self.stream as stream:
             while not stream.closed:
 
@@ -321,31 +334,17 @@ class GoogleASRClient(ASRClient):
             else:
                 self.stream.last_transcript_was_final = False
 
-
-def float32_array_to_int16_array(array: bytes):
-    """This function takes as input a (binary) array of 32-bit floating point
-    numbers, decodes them into a numpy array, and converts the floats to 16-bit
-    integers. This is done in order to preserve compatibility with the Google
-    Cloud Speech API, which accepts a limited set of encodings. Specifically,
-    we opt for the LINEAR16 encoding."""
-
-    # Decode bytes to numpy array.
-    input_buffer = np.frombuffer(array, dtype=np.float32)
-
-    # Convert 32-bit floats to 16-bit integers.
-    chunk = np.rint(32767 * input_buffer).astype(np.int16).tobytes()
-    return chunk
-
-
 async def message_handler(websocket, path):
-    audio_stream = AudioStream()
-    asr_client = GoogleASRClient(audio_stream)
-    asr_client.start()
-
     query = urlparse(websocket.path).query
     participant_id = parse_qs(query).get("id", ("null"))[0]
 
     info(f"Participant {participant_id} is now connected.")
+
+    # Start the audio stream and ASR client.
+    audio_stream = AudioStream()
+    asr_client = GoogleASRClient(audio_stream)
+    asr_client.start()
+
     with open(f"participant_{participant_id}.raw", "wb") as f:
         async for data in websocket:
             debug(
@@ -359,15 +358,63 @@ async def message_handler(websocket, path):
             audio_stream.fill_buffer(chunk)
 
 
-if __name__ == "__main__":
-    host = os.getenv("HOST", "127.0.0.1")
-    logging.basicConfig(level=logging.WARNING)
-    info("Starting ASR server.")
-    asyncio.gather(
-        websockets.serve(
-            message_handler,
-            host,
-            8000,
-        ),
+def pyaudio_method():
+    import pyaudio
+    audio_stream = AudioStream()
+
+    def callback(in_data, frame_count, time_info, status):
+        audio_stream.fill_buffer(in_data)
+        return None, pyaudio.paContinue
+
+    p = pyaudio.PyAudio()
+    pa_stream = p.open(
+            format=pyaudio.paInt16,
+            channels=1,
+            rate = 44100,
+            input=True,
+            frames_per_buffer = 4410,
+            stream_callback=callback,
     )
-    asyncio.get_event_loop().run_forever()
+    asr_client = GoogleASRClient(audio_stream)
+    asr_client.start()
+
+    pa_stream.start_stream()
+    while pa_stream.is_active():
+        time.sleep(0.1)
+
+    pa_stream.stop_stream()
+    pa_stream.close()
+    p.terminate()
+
+if __name__ == "__main__":
+    from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+
+    parser = ArgumentParser(
+        description="ToMCAT ASR Agent",
+        formatter_class=ArgumentDefaultsHelpFormatter,
+    )
+
+    parser.add_argument(
+        "input",
+        type=str,
+        help="Input source",
+        choices=("websocket", "microphone"),
+        default="microphone",
+    )
+
+    args = parser.parse_args()
+
+    host = os.getenv("HOST", "127.0.0.1")
+    logging.basicConfig(level=logging.INFO)
+    if args.input == "microphone":
+        pyaudio_method()
+    else:
+        info("Starting ASR server.")
+        asyncio.gather(
+            websockets.serve(
+                message_handler,
+                host,
+                8000,
+            ),
+        )
+        asyncio.get_event_loop().run_forever()
