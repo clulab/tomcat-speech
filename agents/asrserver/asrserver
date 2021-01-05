@@ -13,6 +13,7 @@ from logging import debug, info
 from urllib.parse import urlparse, parse_qs
 from dataclasses import asdict, dataclass, field
 
+import pyaudio
 import numpy as np
 from six.moves import queue
 import google.cloud.speech
@@ -22,7 +23,6 @@ from paho.mqtt.client import Client as MQTTClient
 # This mutable global variable should be encapsulated in a class in the future.
 # It can be set by listening for a message on the message bus, in order to
 # synchronize recording start and stop timestamps.
-
 RECORDING_IN_PROGRESS = True
 
 # Google Cloud Speech has a limit of 5 minutes for streaming recognition
@@ -189,6 +189,40 @@ class AudioStream(object):
             yield b"".join(data)
 
 
+class MicrophoneStream(AudioStream):
+    def __init__(self, sample_rate: int = 44100):
+        super().__init__()
+        self._rate = sample_rate
+        self.chunk_size = int(self._rate / 10)
+        self._audio_interface = pyaudio.PyAudio()
+        self._audio_stream = self._audio_interface.open(
+            format=pyaudio.paInt16,
+            channels=1,
+            rate=self._rate,
+            input=True,
+            frames_per_buffer=self.chunk_size,
+            # Run the audio stream asynchronously to fill the buffer object.
+            # This is necessary so that the input device's buffer doesn't
+            # overflow while the calling thread makes network requests, etc.
+            stream_callback=self._fill_buffer,
+        )
+
+    def __exit__(self, type, value, traceback):
+        self._audio_stream.stop_stream()
+        self._audio_stream.close()
+        self.closed = True
+
+        # Signal the generator to terminate so that the client's
+        # streaming_recognize method will not block the process termination.
+        self._buff.put(None)
+        self._audio_interface.terminate()
+
+    def _fill_buffer(self, in_data, *args, **kwargs):
+        """Continuously collect data from the audio stream, into the buffer."""
+
+        self._buff.put(in_data)
+        return None, pyaudio.paContinue
+
 class ASRClient(object):
     def __init__(
         self,
@@ -217,10 +251,10 @@ class ASRClient(object):
 
 
 class GoogleASRClient(ASRClient):
-    def __init__(self, audiostream, rate):
+    def __init__(self, audiostream, rate, chunk_size = None):
         super().__init__()
         self.rate = rate
-        self.chunk_size = int(rate / 10)
+        self.chunk_size = int(self.rate / 10) if chunk_size is None else chunk_size
         self.language_code = "en_US"
         self.speech_client = google.cloud.speech.SpeechClient()
         self.stream = audiostream
@@ -238,11 +272,8 @@ class GoogleASRClient(ASRClient):
             )
         )
 
-    def start(self):
-        threading.Thread(target=self.run, daemon=True).start()
-
     def run(self):
-        info("Running Google ASR client")
+        info("Running Google ASR client.")
         with self.stream as stream:
             while not stream.closed:
 
@@ -262,6 +293,7 @@ class GoogleASRClient(ASRClient):
                 )
 
                 self.listen_print_loop(responses)
+                info("Finished listen print loop")
 
                 if stream.result_end_time > 0:
                     stream.final_request_end_time = stream.is_final_end_time
@@ -348,7 +380,7 @@ async def message_handler(websocket, path):
     # Start the audio stream and ASR client.
     audio_stream = AudioStream()
     asr_client = GoogleASRClient(audio_stream, sample_rate)
-    asr_client.start()
+    threading.Thread(target=asr_client.run).start()
 
     with open(f"participant_{participant_id}.raw", "wb") as f:
         async for data in websocket:
@@ -364,35 +396,32 @@ async def message_handler(websocket, path):
 
 
 def pyaudio_method():
-    import pyaudio
-
-    audio_stream = AudioStream()
-
-    def callback(in_data, frame_count, time_info, status):
-        audio_stream.fill_buffer(in_data)
-        return None, pyaudio.paContinue
-
-    p = pyaudio.PyAudio()
 
     sample_rate = 44100
-    pa_stream = p.open(
-        format=pyaudio.paInt16,
-        channels=1,
-        rate=sample_rate,
-        input=True,
-        frames_per_buffer=int(rate / 10),
-        stream_callback=callback,
-    )
-    asr_client = GoogleASRClient(audio_stream, rate)
-    asr_client.start()
+    audio_stream = MicrophoneStream(sample_rate)
 
-    pa_stream.start_stream()
-    while pa_stream.is_active():
-        time.sleep(0.1)
+    with audio_stream as stream:
+        asr_client = GoogleASRClient(stream, sample_rate)
+        asr_client.run()
 
-    pa_stream.stop_stream()
-    pa_stream.close()
-    p.terminate()
+
+
+def stdin_method(chunk_size: int = 3200, sample_rate: int = 44100):
+    audio_stream = AudioStream()
+    asr_client = GoogleASRClient(audio_stream, sample_rate, chunk_size)
+    asr_thread = threading.Thread(target=asr_client.run, daemon=True)
+    asr_thread.start()
+
+    while True:
+        data = sys.stdin.buffer.read(chunk_size)
+        if not data:
+            time.sleep(1)
+            audio_stream.closed=True
+            asr_thread.join(timeout=1)
+            break
+        else:
+            chunk = float32_array_to_int16_array(data)
+            audio_stream.fill_buffer(chunk)
 
 
 if __name__ == "__main__":
@@ -404,18 +433,21 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--input",
+        "input",
         type=str,
         help="Input source",
-        choices=("websockets", "microphone"),
-        default="microphone",
+        choices=("stdin", "websockets", "microphone"),
+        default="stdin",
+        nargs='?'
     )
 
     args = parser.parse_args()
 
     host = os.getenv("HOST", "127.0.0.1")
     logging.basicConfig(level=logging.INFO)
-    if args.input == "microphone":
+    if args.input == "stdin":
+        stdin_method()
+    elif args.input == "microphone":
         pyaudio_method()
     else:
         info("Starting ASR server.")
