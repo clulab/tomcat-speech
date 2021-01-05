@@ -19,11 +19,20 @@ import google.cloud.speech
 from paho.mqtt.client import Client as MQTTClient
 
 
-STREAMING_LIMIT = 240000  # 4 minutes
+# This mutable global variable should be encapsulated in a class in the future.
+# It can be set by listening for a message on the message bus, in order to
+# synchronize recording start and stop timestamps.
+
+RECORDING_IN_PROGRESS = True
+
+# Google Cloud Speech has a limit of 5 minutes for streaming recognition
+# requests (https://cloud.google.com/speech-to-text/quotas)
+# We set a streaming limit of 4 minutes just to be on the safe side.
+GOOGLE_STREAMING_LIMIT = 240000
 
 
 def get_current_time():
-    """Return Current Time in MS."""
+    """Return Current Time in milliseconds"""
 
     return int(round(time.time() * 1000))
 
@@ -70,7 +79,9 @@ class AudioStream(object):
             # requests to the list of chunks for the new request.
             if self.new_stream and self.last_audio_input:
 
-                chunk_time = STREAMING_LIMIT / len(self.last_audio_input)
+                chunk_time = GOOGLE_STREAMING_LIMIT / len(
+                    self.last_audio_input
+                )
 
                 if chunk_time != 0:
                     # We constrain the bridging offset to be between 0 and
@@ -264,7 +275,10 @@ class GoogleASRClient(ASRClient):
         info("Entered listen_print_loop")
         for response in responses:
 
-            if get_current_time() - self.stream.start_time > STREAMING_LIMIT:
+            if (
+                get_current_time() - self.stream.start_time
+                > GOOGLE_STREAMING_LIMIT
+            ):
                 self.stream.start_time = get_current_time()
                 break
 
@@ -297,7 +311,7 @@ class GoogleASRClient(ASRClient):
             corrected_time = (
                 self.stream.result_end_time
                 - self.stream.bridging_offset
-                + (STREAMING_LIMIT * self.stream.restart_counter)
+                + (GOOGLE_STREAMING_LIMIT * self.stream.restart_counter)
             )
 
             if result.is_final:
@@ -308,22 +322,19 @@ class GoogleASRClient(ASRClient):
                 self.stream.last_transcript_was_final = False
 
 
-def convert_float32_to_int16(data):
-    # The data received from the server is an array of 32-bit floating
-    # point numbers. We decode them into a numpy array.
-    input_buffer = np.frombuffer(data, dtype=np.float32)
+def float32_array_to_int16_array(array: bytes):
+    """This function takes as input a (binary) array of 32-bit floating point
+    numbers, decodes them into a numpy array, and converts the floats to 16-bit
+    integers. This is done in order to preserve compatibility with the Google
+    Cloud Speech API, which accepts a limited set of encodings. Specifically,
+    we opt for the LINEAR16 encoding."""
 
-    # Convert 32-bit floats to 16-bit integers for compatibility with Google
-    # STT API
+    # Decode bytes to numpy array.
+    input_buffer = np.frombuffer(array, dtype=np.float32)
+
+    # Convert 32-bit floats to 16-bit integers.
     chunk = np.rint(32767 * input_buffer).astype(np.int16).tobytes()
     return chunk
-
-
-# This mutable global variable should be encapsulated in a class in the future.
-# It can be set by listening for a message on the message bus, in order to
-# synchronize recording start and stop timestamps.
-
-RECORDING_IN_PROGRESS = True
 
 
 async def message_handler(websocket, path):
@@ -344,7 +355,7 @@ async def message_handler(websocket, path):
             if RECORDING_IN_PROGRESS:
                 f.write(data)
 
-            chunk = convert_float32_to_int16(data)
+            chunk = float32_array_to_int16_array(data)
             audio_stream.fill_buffer(chunk)
 
 
