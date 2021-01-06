@@ -176,42 +176,45 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.WARNING)
 
-    if args.mode == "stdin":
-        audio_stream = AudioStream()
-        asr_client = GoogleASRClient(
-            audio_stream, args.sample_rate, args.chunk_size
-        )
-        asr_thread = threading.Thread(target=asr_client.run, daemon=True)
-        asr_thread.start()
+    try:
+        if args.mode == "stdin":
+            audio_stream = AudioStream()
+            asr_client = GoogleASRClient(
+                audio_stream, args.sample_rate, args.chunk_size
+            )
+            asr_thread = threading.Thread(target=asr_client.run, daemon=True)
+            asr_thread.start()
 
-        while True:
-            data = sys.stdin.buffer.read(args.chunk_size)
-            if not data:
-                time.sleep(1)
-                audio_stream.closed = True
-                asr_thread.join(timeout=1)
-                break
-            else:
-                chunk = float32_array_to_int16_array(data)
-                audio_stream.fill_buffer(chunk)
+            while True:
+                data = sys.stdin.buffer.read(args.chunk_size)
+                if not data:
+                    time.sleep(1)
+                    audio_stream.closed = True
+                    asr_thread.join(timeout=1)
+                    break
+                else:
+                    chunk = float32_array_to_int16_array(data)
+                    audio_stream.fill_buffer(chunk)
 
-    elif args.mode == "microphone":
-        from microphone_stream import MicrophoneStream
+        elif args.mode == "microphone":
+            from microphone_stream import MicrophoneStream
 
-        audio_stream = MicrophoneStream(args.sample_rate)
+            audio_stream = MicrophoneStream(args.sample_rate)
 
-        with audio_stream as stream:
-            asr_client = GoogleASRClient(stream, args.sample_rate)
-            asr_client.run()
+            with audio_stream as stream:
+                asr_client = GoogleASRClient(stream, args.sample_rate)
+                asr_client.run()
 
-    else:
-        import websockets
+        else:
+            import websockets
 
-        asyncio.gather(
-            websockets.serve(
-                message_handler,
-                args.ws_host,
-                args.ws_port,
-            ),
-        )
-        asyncio.get_event_loop().run_forever()
+            asyncio.gather(
+                websockets.serve(
+                    message_handler,
+                    args.ws_host,
+                    args.ws_port,
+                ),
+            )
+            asyncio.get_event_loop().run_forever()
+    except KeyboardInterrupt:
+        sys.stderr.write("Keyboard interrupt (Ctrl-C) detected. Exiting now.")
