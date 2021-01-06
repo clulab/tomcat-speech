@@ -324,7 +324,7 @@ if __name__ == "__main__":
                                         meld_dev_ds,
                                         meld_test_ds,
                                         meld_loss_func,
-                                        task_num=1,
+                                        task_num=2,
                                     )
 
                                     # add loss function for chalearn
@@ -338,7 +338,7 @@ if __name__ == "__main__":
                                         chalearn_dev_ds,
                                         chalearn_test_ds,
                                         chalearn_loss_func,
-                                        task_num=2,
+                                        task_num=1,
                                     )
 
                                     # calculate lengths of train sets and use this to determine multipliers for the loss functions
@@ -376,11 +376,16 @@ if __name__ == "__main__":
                                         chalearn_multiplier
                                     )
 
-                                    # set all data list
+                                    # # set all data list
+                                    # all_data_list = [
+                                    #     mustard_obj,
+                                    #     meld_obj,
+                                    #     chalearn_obj,
+                                    # ]
+
                                     all_data_list = [
                                         mustard_obj,
-                                        meld_obj,
-                                        chalearn_obj,
+                                        chalearn_obj
                                     ]
 
                                     print(
