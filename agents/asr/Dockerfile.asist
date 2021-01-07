@@ -1,0 +1,10 @@
+from python:3.7
+run pip install\
+    six\
+    websockets\
+    numpy\
+    paho-mqtt\
+    google-cloud-speech
+expose 8000
+env HOST=0.0.0.0
+entrypoint ["./tomcat_asr_agent", "--use_mqtt", "websockets"]
