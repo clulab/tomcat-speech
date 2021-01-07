@@ -1,3 +1,9 @@
+"""Module containing the GoogleASRClient class.
+
+Parts of this code are taken from the example provided by Google at
+https://github.com/googleapis/python-speech/blob/master/samples/microphone/transcribe_streaming_infinite.py
+"""
+
 from typing import Optional
 from logging import info
 from utils import get_current_time
