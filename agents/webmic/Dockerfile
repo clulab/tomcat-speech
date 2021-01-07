@@ -1,4 +1,4 @@
 from python:3-alpine
 expose 8000
-copy . /
+copy * /
 entrypoint ["python", "-m", "http.server"]

@@ -1,6 +1,12 @@
 version: '3'
 services:
-  asrserver:
-    build: .
+  tomcat_asr_agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.asist
     ports:
-      - 8000:8000
+      - 8888:8888
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/google_application_credentials.json
+    volumes:
+      - $GOOGLE_APPLICATION_CREDENTIALS:/google_application_credentials.json

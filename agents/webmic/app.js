@@ -3,6 +3,11 @@
 
 'use strict'
 
+var config = {
+    "destination_host": "localhost",
+    "destination_port": 8888
+}
+
 // Get parameters from URL query string
 const params = new URLSearchParams(window.location.search);
 const participantId = params.get("id");
@@ -57,7 +62,8 @@ let socket,
 
 document.getElementById("connectButton").onclick = function() {
     var context = getAudioContext();
-    var destination = "ws://localhost:8000?id="+participantId + "&sampleRate=" + context.sampleRate;
+    var destination = "ws://"+config["destination_host"]+":"+config["destination_port"].toString()
+                        + "?id="+participantId + "&sampleRate=" + context.sampleRate;
     socket=new PersistentSocket(destination);
     initRecording(context);
 };

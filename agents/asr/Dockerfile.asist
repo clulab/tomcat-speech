@@ -5,6 +5,6 @@ run pip install\
     numpy\
     paho-mqtt\
     google-cloud-speech
-expose 8000
-env HOST=0.0.0.0
-entrypoint ["./tomcat_asr_agent", "--use_mqtt", "websockets"]
+copy . .
+expose 8888
+entrypoint ["./tomcat_asr_agent", "websockets", "--ws_host", "0.0.0.0", "--ws_port", "8888"]

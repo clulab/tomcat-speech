@@ -172,13 +172,13 @@ if __name__ == "__main__":
     parser_websockets.add_argument(
         "--ws_port",
         type=int,
-        default=8000,
+        default=8888,
         help="Port to run the websocket server on.",
     )
 
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.WARNING)
+    logging.basicConfig(level=logging.INFO)
 
     try:
         if args.mode == "stdin":
