@@ -10,3 +10,4 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/google_application_credentials.json
     volumes:
       - $GOOGLE_APPLICATION_CREDENTIALS:/google_application_credentials.json
+      - .:/asr
