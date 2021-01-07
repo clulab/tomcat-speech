@@ -19,3 +19,6 @@ services:
     build: ./webmic
     ports:
       - 8000:8000
+    depends_on:    
+    - tomcat_asr_agent
+

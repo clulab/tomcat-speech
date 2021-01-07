@@ -11,7 +11,6 @@ var config = {
 // Get parameters from URL query string
 const params = new URLSearchParams(window.location.search);
 const participantId = params.get("id");
-document.getElementById("participantId").innerHTML="Participant ID: " + participantId;
 
 function makeSocket(destination) {
     var ws = new WebSocket(destination); 
@@ -26,7 +25,7 @@ function makeSocket(destination) {
     }
 
     ws.onmessage = function(event) {
-        console.log("Message received from server", event.data);
+        document.getElementById("participantId").innerHTML="Participant ID: " + event.data;
     };
 
     ws.onerror = (error) => {
