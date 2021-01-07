@@ -16,12 +16,6 @@ Then navigate to http://localhost:8000 in your browser.
 Docker instructions
 -------------------
 
-We also provide a Dockerfile for easy deployment.
+To run the webmic agent in a Docker container, run
 
-To build the container, do:
-
-    docker build -t webmic .
-    
-To run the container, do:
-
-    docker run -p 8000:8000 webmic
+    docker-compose up --build

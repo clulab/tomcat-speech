@@ -7,5 +7,3 @@ run pip install\
     google-cloud-speech
 workdir asr
 copy * /asr/
-expose 8888
-entrypoint ["./tomcat_asr_agent", "websockets", "--use_mqtt", "--ws_host", "0.0.0.0", "--ws_port", "8888", "--mqtt_host", "host.docker.internal"]
