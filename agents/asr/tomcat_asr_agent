@@ -14,6 +14,7 @@ To see all available options, run:
 import os
 import sys
 import time
+import json
 import asyncio
 import logging
 import datetime
@@ -44,6 +45,7 @@ async def message_handler(
     participant_id = query_params["id"][0]
     if participant_id == "null":
         participant_id = str(uuid4())
+
     sample_rate = int(query_params["sampleRate"][0])
 
     await websocket.send(participant_id)
@@ -60,7 +62,15 @@ async def message_handler(
         mqtt_host=mqtt_host,
         mqtt_port=mqtt_port,
     )
-    threading.Thread(target=asr_client.run).start()
+    threading.Thread(target=asr_client.run, daemon=True).start()
+
+    # We save the start time of the recording in a JSON metadata file.
+    with open(f"participant_{participant_id}_metadata.json", "w") as f:
+        f.write(json.dumps({
+            "recording_start_timestamp":
+            datetime.datetime.utcnow().isoformat()+"Z",
+            "sample_rate": sample_rate,
+        }))
 
     with open(f"participant_{participant_id}.raw", "wb") as f:
         async for data in websocket:
