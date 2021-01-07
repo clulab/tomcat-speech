@@ -3,6 +3,8 @@
 
 'use strict'
 
+// Edit the 'config' object below if you want to set a different destination
+// host/port.
 var config = {
     "destination_host": "localhost",
     "destination_port": 8888
