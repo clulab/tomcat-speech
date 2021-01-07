@@ -67,13 +67,6 @@ if __name__ == "__main__":
         formatter_class=ArgumentDefaultsHelpFormatter,
     )
 
-    parser.add_argument(
-        "--engine",
-        type=str,
-        help="ASR engine to use",
-        choices=("google", "pocketsphinx"),
-        default="google",
-    )
 
     mqtt_options = parser.add_argument_group("MQTT-related options")
     mqtt_options.add_argument(
@@ -143,6 +136,14 @@ if __name__ == "__main__":
         "microphone",
         help="Run the agent using your computer's microphone.",
         formatter_class=ArgumentDefaultsHelpFormatter,
+    )
+
+    parser_microphone.add_argument(
+        "--engine",
+        type=str,
+        help="ASR engine to use",
+        choices=("google", "pocketsphinx"),
+        default="google",
     )
 
     parser_microphone.add_argument(
