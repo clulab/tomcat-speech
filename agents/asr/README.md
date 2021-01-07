@@ -49,3 +49,10 @@ option), you'll need to install the Eclipse Paho Python client library:
 
 To run the agent in the websocket server mode, you'll need the `websockets`
 Python package (`pip install websockets`)
+
+Docker instructions
+-------------------
+
+You can launch a containerized version of the agent using Docker Compose:
+
+    docker-compose up --build

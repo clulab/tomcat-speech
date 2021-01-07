@@ -31,7 +31,13 @@ from google_asr_client import GoogleASRClient
 RECORDING_IN_PROGRESS = True
 
 
-async def message_handler(websocket, path):
+async def message_handler(
+    websocket,
+    path,
+    use_mqtt: bool = False,
+    mqtt_host: str = "localhost",
+    mqtt_port: int = 1883,
+):
     query_params = parse_qs(urlparse(websocket.path).query)
 
     participant_id = query_params["id"][0]
@@ -42,7 +48,12 @@ async def message_handler(websocket, path):
     # Start the audio stream and ASR client.
     audio_stream = AudioStream()
     asr_client = GoogleASRClient(
-        audio_stream, sample_rate, participant_id=participant_id
+        audio_stream,
+        sample_rate,
+        participant_id=participant_id,
+        use_mqtt=use_mqtt,
+        mqtt_host=mqtt_host,
+        mqtt_port=mqtt_port,
     )
     threading.Thread(target=asr_client.run).start()
 
@@ -67,8 +78,8 @@ if __name__ == "__main__":
         formatter_class=ArgumentDefaultsHelpFormatter,
     )
 
-
-    mqtt_options = parser.add_argument_group("MQTT-related options")
+    parent_parser = ArgumentParser(add_help=False)
+    mqtt_options = parent_parser.add_argument_group("MQTT-related options")
     mqtt_options.add_argument(
         "--use_mqtt",
         action="store_true",
@@ -112,6 +123,7 @@ if __name__ == "__main__":
             "from standard input."
         ),
         formatter_class=ArgumentDefaultsHelpFormatter,
+        parents=[parent_parser],
     )
 
     parser_stdin.add_argument(
@@ -119,7 +131,7 @@ if __name__ == "__main__":
         type=int,
         default=44100,
         help="Sample rate in Hertz of the raw input audio stream.",
-        nargs='?'
+        nargs="?",
     )
 
     parser_stdin.add_argument(
@@ -129,13 +141,14 @@ if __name__ == "__main__":
         help=(
             "Number of bytes to read at a time from the input audio stream."
         ),
-        nargs='?'
+        nargs="?",
     )
 
     parser_microphone = subparsers.add_parser(
         "microphone",
         help="Run the agent using your computer's microphone.",
         formatter_class=ArgumentDefaultsHelpFormatter,
+        parents=[parent_parser],
     )
 
     parser_microphone.add_argument(
@@ -160,6 +173,7 @@ if __name__ == "__main__":
             "server that can process multiple audio streams simultaneously."
         ),
         formatter_class=ArgumentDefaultsHelpFormatter,
+        parents=[parent_parser],
     )
 
     parser_websockets.add_argument(
@@ -184,7 +198,12 @@ if __name__ == "__main__":
         if args.mode == "stdin":
             audio_stream = AudioStream()
             asr_client = GoogleASRClient(
-                audio_stream, args.sample_rate, args.chunk_size
+                audio_stream,
+                args.sample_rate,
+                args.chunk_size,
+                use_mqtt=args.use_mqtt,
+                mqtt_host=args.mqtt_host,
+                mqtt_port=args.mqtt_port,
             )
             asr_thread = threading.Thread(target=asr_client.run, daemon=True)
             asr_thread.start()
@@ -207,19 +226,34 @@ if __name__ == "__main__":
                 audio_stream = MicrophoneStream(args.sample_rate)
 
                 with audio_stream as stream:
-                    asr_client = GoogleASRClient(stream, args.sample_rate)
+                    asr_client = GoogleASRClient(
+                        stream,
+                        args.sample_rate,
+                        use_mqtt=args.use_mqtt,
+                        mqtt_host=args.mqtt_host,
+                        mqtt_port=args.mqtt_port,
+                    )
                     asr_client.run()
             else:
                 from pocketsphinx_asr_client import PocketSphinxASRClient
-                asr_client = PocketSphinxASRClient(args.sample_rate, round(args.sample_rate/10))
+
+                asr_client = PocketSphinxASRClient(
+                    args.sample_rate, round(args.sample_rate / 10)
+                )
                 asr_client.run()
 
         else:
             import websockets
+            from functools import partial
 
             asyncio.gather(
                 websockets.serve(
-                    message_handler,
+                    partial(
+                        message_handler,
+                        use_mqtt=args.use_mqtt,
+                        mqtt_host=args.mqtt_host,
+                        mqtt_port=args.mqtt_port,
+                    ),
                     args.ws_host,
                     args.ws_port,
                 ),

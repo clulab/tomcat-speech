@@ -7,7 +7,7 @@ from messages import Data, Message
 class ASRClient(object):
     def __init__(
         self,
-        use_mqtt=False,
+        use_mqtt: bool=False,
         mqtt_host="localhost",
         mqtt_port=1883,
         publish_topic="agents/asr",

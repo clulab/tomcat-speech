@@ -10,6 +10,7 @@ from utils import get_current_time
 from asr_client import ASRClient
 import google.cloud.speech
 
+
 class GoogleASRClient(ASRClient):
     def __init__(
         self,
@@ -17,8 +18,16 @@ class GoogleASRClient(ASRClient):
         rate: int,
         chunk_size: Optional[int] = None,
         participant_id=None,
+        use_mqtt: bool = False,
+        mqtt_host: str = "localhost",
+        mqtt_port: int = 1883,
     ):
-        super().__init__()
+        print('use_mqtt', use_mqtt)
+        super().__init__(
+            use_mqtt=use_mqtt,
+            mqtt_host=mqtt_host,
+            mqtt_port=mqtt_port,
+        )
         self.rate = rate
         self.chunk_size = (
             int(self.rate / 10) if chunk_size is None else chunk_size
