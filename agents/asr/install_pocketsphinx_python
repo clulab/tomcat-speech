@@ -4,6 +4,12 @@
 
 set -euo pipefail
 
+# Set the ROOT environment variable, assuming that the directory structure
+# mirrors that of the git repository.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../" >/dev/null 2>&1 && pwd)"
+export ROOT
+
+
 echo "Checking if pocketsphinx-python is already installed."
 if [[ ! $(pip list | grep pocketsphinx) == "" ]]; then
     echo "pocketsphinx-python is already installed."
@@ -54,7 +60,9 @@ else
         git clone --recursive https://github.com/bambocher/pocketsphinx-python
 
         echo "Patching pocketsphinx-python to make it compile on macOS"
-        patch -ruN pocketsphinx-python/deps/sphinxbase/src/libsphinxad/ad_openal.c < al_header_fix.patch
+        PATCHFILE="$ROOT"/external/al_header_fix.patch
+        patch -ruN \
+            pocketsphinx-python/deps/sphinxbase/src/libsphinxad/ad_openal.c < "$PATCHFILE"
 
         pushd pocketsphinx-python > /dev/null
             echo "Installing pocketsphinx-python from source."

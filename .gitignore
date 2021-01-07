@@ -28,6 +28,9 @@ smile.log
 *.m4a
 *.json
 
+# Ignore raw audio files
+*.raw
+
 
 ./output
 ./classifier_R/extra/ 

@@ -41,9 +41,22 @@ Cloud credentials file.
 If you are using the PocketSphinx engine:
 
     ./install_pocketsphinx_python
-    
+
 ### MQTT message bus publishing
+
 If you enable publishing to an MQTT message bus (with the --use_mqtt
 option), you'll need to install the Eclipse Paho Python client library:
 
     pip install paho-mqtt
+
+### Websocket server mode
+
+To run the agent in the websocket server mode, you'll need the `websockets`
+Python package (`pip install websockets`)
+
+Docker instructions
+-------------------
+
+You can launch a containerized version of the agent using Docker Compose:
+
+    docker-compose up --build
