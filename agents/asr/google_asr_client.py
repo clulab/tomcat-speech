@@ -22,11 +22,11 @@ class GoogleASRClient(ASRClient):
         mqtt_host: str = "localhost",
         mqtt_port: int = 1883,
     ):
-        print('use_mqtt', use_mqtt)
         super().__init__(
             use_mqtt=use_mqtt,
             mqtt_host=mqtt_host,
             mqtt_port=mqtt_port,
+            participant_id=participant_id,
         )
         self.rate = rate
         self.chunk_size = (

@@ -4,14 +4,14 @@ from typing import Optional
 
 @dataclass(frozen=True)
 class Header(object):
-    timestamp: str
+    timestamp: Optional[str] = datetime.datetime.utcnow().isoformat() + "Z"
     message_type: str = "observation"
     version: str = "0.1"
 
 
 @dataclass(frozen=True)
 class Msg(object):
-    timestamp: str
+    timestamp: Optional[str] = datetime.datetime.utcnow().isoformat() + "Z"
     experiment_id: Optional[str] = None
     participant_id: Optional[str] = None
     trial_id: Optional[str] = None
@@ -28,13 +28,8 @@ class Data(object):
 
 @dataclass
 class Message(object):
-    """Class to represent a  testbed message."""
+    """Class to represent a testbed message."""
 
     data: Data
-    header: Header = field(init=False)
-    msg: Msg = field(init=False)
-
-    def __post_init__(self):
-        timestamp: str = datetime.datetime.utcnow().isoformat() + "Z"
-        self.header = Header(timestamp)
-        self.msg = Msg(timestamp)
+    header: Header = Header()
+    msg: Msg = Msg()

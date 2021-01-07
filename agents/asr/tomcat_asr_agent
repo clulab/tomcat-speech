@@ -18,6 +18,7 @@ import asyncio
 import logging
 import datetime
 import threading
+from uuid import uuid4
 from logging import debug, info
 from urllib.parse import urlparse, parse_qs
 from utils import float32_array_to_int16_array
@@ -41,7 +42,11 @@ async def message_handler(
     query_params = parse_qs(urlparse(websocket.path).query)
 
     participant_id = query_params["id"][0]
+    if participant_id == "null":
+        participant_id = str(uuid4())
     sample_rate = int(query_params["sampleRate"][0])
+
+    await websocket.send(participant_id)
 
     info(f"Participant {participant_id} is now connected.")
 
