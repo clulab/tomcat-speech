@@ -72,6 +72,14 @@ if __name__ == "__main__":
         formatter_class=ArgumentDefaultsHelpFormatter,
     )
 
+    parser.add_argument(
+        "--engine",
+        type=str,
+        help="ASR engine to use",
+        choices=("google", "pocketsphinx"),
+        default="google",
+    )
+
     mqtt_options = parser.add_argument_group("MQTT-related options")
     mqtt_options.add_argument(
         "--use_mqtt",
@@ -197,12 +205,17 @@ if __name__ == "__main__":
                     audio_stream.fill_buffer(chunk)
 
         elif args.mode == "microphone":
-            from microphone_stream import MicrophoneStream
+            if args.engine == "google":
+                from microphone_stream import MicrophoneStream
 
-            audio_stream = MicrophoneStream(args.sample_rate)
+                audio_stream = MicrophoneStream(args.sample_rate)
 
-            with audio_stream as stream:
-                asr_client = GoogleASRClient(stream, args.sample_rate)
+                with audio_stream as stream:
+                    asr_client = GoogleASRClient(stream, args.sample_rate)
+                    asr_client.run()
+            else:
+                from pocketsphinx_asr_client import PocketSphinxASRClient
+                asr_client = PocketSphinxASRClient(args.sample_rate, round(args.sample_rate/10))
                 asr_client.run()
 
         else:
