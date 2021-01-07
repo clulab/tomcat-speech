@@ -4,7 +4,7 @@ services:
     image: tomcat_asr_agent:latest
     container_name: tomcat_asr_agent
     build:
-      context: .
+      context: ./asr
       dockerfile: Dockerfile.asist
     ports:
       - 8888:8888
@@ -12,4 +12,10 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/google_application_credentials.json
     volumes:
       - $GOOGLE_APPLICATION_CREDENTIALS:/google_application_credentials.json
-      - .:/asr
+      - ./asr:/asr
+  webmic:
+    image: webmic:latest
+    container_name: webmic
+    build: ./webmic
+    ports:
+      - 8000:8000
