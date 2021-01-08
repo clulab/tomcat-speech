@@ -11,6 +11,11 @@ var config = {"destination_host" : "localhost", "destination_port" : 8888}
 const params = new URLSearchParams(window.location.search);
 const participantId = params.get("id");
 
+var processWebSocketMessage = function(event) {
+    document.getElementById("participantId").innerHTML =
+        "Participant ID: " + event.data;
+};
+
 function makeSocket(destination) {
     var ws = new WebSocket(destination);
 
@@ -23,10 +28,7 @@ function makeSocket(destination) {
         console.log("Websocket connected!")
     }
 
-    ws.onmessage = function(event) {
-        document.getElementById("participantId").innerHTML =
-            "Participant ID: " + event.data;
-    };
+    ws.onmessage = processWebSocketMessage;
 
     ws.onerror = (error) => {
         console.error(
