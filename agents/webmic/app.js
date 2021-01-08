@@ -3,9 +3,9 @@
 
 'use strict'
 
-    // Edit the 'config' object below if you want to set a different destination
-    // host/port.
-    var config = {"destination_host" : "localhost", "destination_port" : 8888}
+// Edit the 'config' object below if you want to set a different destination
+// host/port.
+var config = {"destination_host" : "localhost", "destination_port" : 8888}
 
 // Get parameters from URL query string
 const params = new URLSearchParams(window.location.search);
@@ -28,7 +28,7 @@ function makeSocket(destination) {
             "Participant ID: " + event.data;
     };
 
-    ws.onerror = (error) = > {
+    ws.onerror = (error) => {
         console.error(
             "Error in creating websocket. Trying again in 5 seconds.");
         ws.close();
@@ -46,7 +46,8 @@ function makeSocket(destination) {
 
 class PersistentSocket {
     constructor(destination) {
-        this.destination = destination this.ws = makeSocket(this.destination);
+        this.destination = destination;
+        this.ws = makeSocket(this.destination);
     }
 
     send(data) {
