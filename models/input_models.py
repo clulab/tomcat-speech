@@ -524,7 +524,7 @@ class TextOnlyCNN(nn.Module):
         # self.conv6 = nn.Conv1d(self.out_channels * 2, self.out_channels, self.k3_size)
 
         # fully connected layers
-        self.fc1 = nn.Linear(self.out_channels, params.text_cnn_hidden_dim)
+        self.fc1 = nn.Linear(self.out_channels * 3, params.text_cnn_hidden_dim)
         # self.fc1 = nn.Linear(self.out_channels, params.text_cnn_hidden_dim)
         self.fc2 = nn.Linear(params.text_cnn_hidden_dim, self.output_dim)
 
@@ -587,6 +587,116 @@ class TextOnlyCNN(nn.Module):
         return output.squeeze(dim=1)
 
 
+class TextOnlyRNN(nn.Module):
+    """
+    An RNN used with only text modality.
+    """
+
+    def __init__(self, params, num_embeddings, pretrained_embeddings=None):
+        super(TextOnlyRNN, self).__init__()
+        # input dimensions
+        self.text_dim = params.text_dim
+
+        # number of classes
+        self.output_dim = params.output_dim
+
+        # self.num_cnn_layers = params.num_cnn_layers
+        self.dropout = params.dropout
+
+        # word embeddings
+        if pretrained_embeddings is None:
+            self.embedding = nn.Embedding(
+                num_embeddings, self.text_dim, padding_idx=0, max_norm=1.0
+            )
+            self.pretrained_embeddings = False
+        else:
+            self.embedding = nn.Embedding(
+                num_embeddings,
+                self.text_dim,
+                padding_idx=0,
+                _weight=pretrained_embeddings,
+                max_norm=1.0,
+            )
+            self.pretrained_embeddings = True
+
+        self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
+
+        # initialize speaker embeddings
+        self.speaker_embedding = nn.Embedding(
+            params.num_speakers, params.speaker_emb_dim
+        )
+
+        self.gender_embedding = nn.Embedding(3, params.gender_emb_dim)
+
+        # if we feed text through additional layer(s)
+        self.text_rnn = nn.LSTM(
+            input_size=params.text_dim + params.short_emb_dim,
+            hidden_size=params.text_gru_hidden_dim,
+            num_layers=params.num_gru_layers,
+            batch_first=True,
+            bidirectional=True,
+        )
+        # input into fc layers
+        self.fc_input_dim = params.text_gru_hidden_dim
+
+        if params.use_speaker:
+            self.fc_input_dim = self.fc_input_dim + params.speaker_emb_dim
+        elif params.use_gender:
+            self.fc_input_dim = self.fc_input_dim + params.gender_emb_dim
+
+        # fully connected layers
+        self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
+        self.fc2 = nn.Linear(params.fc_hidden_dim, params.final_hidden_dim)
+
+        self.out_dims = params.final_hidden_dim
+
+    def forward(
+        self,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        gender_input=None,
+    ):
+        # using pretrained embeddings, so detach to not update weights
+        # embs: (batch_size, seq_len, emb_dim)
+        embs = F.dropout(self.embedding(text_input), 0.1).detach()
+
+        short_embs = F.dropout(self.short_embedding(text_input), 0.1)
+
+        all_embs = torch.cat((embs, short_embs), dim=2)
+
+        # get speaker embeddings, if needed
+        if speaker_input is not None:
+            speaker_embs = self.speaker_embedding(speaker_input).squeeze(dim=1)
+        if gender_input is not None:
+            gender_embs = self.gender_embedding(gender_input)
+
+        packed = nn.utils.rnn.pack_padded_sequence(
+            all_embs, length_input, batch_first=True, enforce_sorted=False
+        )
+
+        # feed embeddings through GRU
+        packed_output, (hidden, cell) = self.text_rnn(packed)
+        encoded_text = F.dropout(hidden[-1], 0.3)
+
+        # combine modalities as required by architecture
+        if speaker_input is not None:
+            inputs = torch.cat((encoded_text, speaker_embs), 1)
+        elif gender_input is not None:
+            inputs = torch.cat((encoded_text, gender_embs), 1)
+        else:
+            inputs = encoded_text
+
+        # use pooled, squeezed feats as input into fc layers
+        output = torch.tanh(F.dropout(self.fc1(inputs), 0.5))
+
+        if self.out_dims == 1:
+            output = torch.sigmoid(output)
+
+        # return the output
+        return output
+
+
 class PredictionLayer(nn.Module):
     """
     A final layer for predictions
@@ -629,11 +739,19 @@ class MultitaskModel(nn.Module):
         # if so, assumes each dataset has its own task
         self.multi_dataset = multi_dataset
 
+        # let the network know if it's only using text features
+        self.text_only = params.text_only
+
         # # set base of model
         # comment this out and uncomment the below to try late fusion model
-        self.base = EarlyFusionMultimodalModel(
-            params, num_embeddings, pretrained_embeddings
-        )
+        if params.text_only is False:
+            self.base = EarlyFusionMultimodalModel(
+                params, num_embeddings, pretrained_embeddings
+            )
+        else:
+            self.base = TextOnlyRNN(
+                params, num_embeddings, pretrained_embeddings
+            )
 
         # uncomment this and comment the above to try the late fusion model
         # self.base = LateFusionMultimodalModel(
@@ -657,14 +775,22 @@ class MultitaskModel(nn.Module):
         task_num=0
     ):
         # call forward on base model
-        final_base_layer = self.base(
-            acoustic_input,
-            text_input,
-            speaker_input=speaker_input,
-            length_input=length_input,
-            acoustic_len_input=acoustic_len_input,
-            gender_input=gender_input,
-        )
+        if self.text_only:
+            final_base_layer = self.base(
+                text_input,
+                speaker_input=speaker_input,
+                length_input=length_input,
+                gender_input=gender_input,
+            )
+        else:
+            final_base_layer = self.base(
+                acoustic_input,
+                text_input,
+                speaker_input=speaker_input,
+                length_input=length_input,
+                acoustic_len_input=acoustic_len_input,
+                gender_input=gender_input,
+            )
 
         task_0_out = None
         task_1_out = None

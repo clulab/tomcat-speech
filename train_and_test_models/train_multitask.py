@@ -99,6 +99,7 @@ if __name__ == "__main__":
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
+                utts_file_name="mustard_sphinx.tsv"
             )
 
             meld_data = MeldPrep(
@@ -384,8 +385,7 @@ if __name__ == "__main__":
                                     # ]
 
                                     all_data_list = [
-                                        mustard_obj,
-                                        chalearn_obj
+                                        mustard_obj
                                     ]
 
                                     print(

@@ -18,14 +18,14 @@ EXPERIMENT_ID = 1
 # EXPERIMENT_DESCRIPTION = "meld-mustard-chalearn_singleOptimizer_IS10-76feats_finalFC-dropout-removed_2lyr-in-dset-specific-output_"
 # EXPERIMENT_DESCRIPTION = "GRADNORM_MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_"
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
-EXPERIMENT_DESCRIPTION = "MUStARD_25perc-cutoff_15secMax_AudioOnly_IS1076_"
+EXPERIMENT_DESCRIPTION = "MUSTARD_SPHINX_TEXTONLYRNN_25perc-cutoff_15secMax_noClassWeights_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
 
-model_type = "ACOUSTIC_MULTITASK"
+model_type = "MULTITASK"
 
 # set parameters for data prep
 # glove_file = "/work/bsharp/glove.short.300d.punct.txt"
@@ -48,7 +48,7 @@ else:
     # ravdess_path = "../../datasets/multimodal_datasets/RAVDESS_speech"
 
 # set dir to save full experiments
-exp_save_path = "output/multitask/mustard-chalearn-experiments"
+exp_save_path = "output/multitask/sphinx_comparisons"
 
 data_type = "multitask"
 fusion_type = "early"
@@ -57,31 +57,31 @@ fusion_type = "early"
 chalearn_predtype = "max_class"
 
 # small set
-# acoustic_columns = ['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
-#                               'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
-#                               'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de']
+acoustic_columns = ['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
+                              'shimmerLocal_sma', 'pcm_loudness_sma_de', 'F0finEnv_sma_de',
+                              'voicingFinalUnclipped_sma_de', 'jitterLocal_sma_de', 'shimmerLocal_sma_de']
 # large set
-acoustic_columns = ['pcm_loudness_sma', 'mfcc_sma[0]', 'mfcc_sma[1]', 'mfcc_sma[2]', 'mfcc_sma[3]',
-                    'mfcc_sma[4]', 'mfcc_sma[5]', 'mfcc_sma[6]', 'mfcc_sma[7]', 'mfcc_sma[8]',
-                    'mfcc_sma[9]', 'mfcc_sma[10]', 'mfcc_sma[11]', 'mfcc_sma[12]', 'mfcc_sma[13]',
-                    'mfcc_sma[14]', 'logMelFreqBand_sma[0]', 'logMelFreqBand_sma[1]',
-                    'logMelFreqBand_sma[2]', 'logMelFreqBand_sma[3]', 'logMelFreqBand_sma[4]',
-                    'logMelFreqBand_sma[5]', 'logMelFreqBand_sma[6]', 'logMelFreqBand_sma[7]',
-                    'lspFreq_sma[0]', 'lspFreq_sma[1]', 'lspFreq_sma[2]', 'lspFreq_sma[3]',
-                    'lspFreq_sma[4]', 'lspFreq_sma[5]', 'lspFreq_sma[6]', 'lspFreq_sma[7]',
-                    'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'F0final_sma', 'jitterLocal_sma',
-                    'jitterDDP_sma', 'shimmerLocal_sma', 'pcm_loudness_sma_de', 'mfcc_sma_de[0]',
-                    'mfcc_sma_de[1]', 'mfcc_sma_de[2]', 'mfcc_sma_de[3]', 'mfcc_sma_de[4]',
-                    'mfcc_sma_de[5]', 'mfcc_sma_de[6]', 'mfcc_sma_de[7]', 'mfcc_sma_de[8]',
-                    'mfcc_sma_de[9]', 'mfcc_sma_de[10]', 'mfcc_sma_de[11]', 'mfcc_sma_de[12]',
-                    'mfcc_sma_de[13]', 'mfcc_sma_de[14]', 'logMelFreqBand_sma_de[0]',
-                    'logMelFreqBand_sma_de[1]', 'logMelFreqBand_sma_de[2]', 'logMelFreqBand_sma_de[3]',
-                    'logMelFreqBand_sma_de[4]', 'logMelFreqBand_sma_de[5]', 'logMelFreqBand_sma_de[6]',
-                    'logMelFreqBand_sma_de[7]', 'lspFreq_sma_de[0]', 'lspFreq_sma_de[1]',
-                    'lspFreq_sma_de[2]', 'lspFreq_sma_de[3]', 'lspFreq_sma_de[4]', 'lspFreq_sma_de[5]',
-                    'lspFreq_sma_de[6]', 'lspFreq_sma_de[7]', 'F0finEnv_sma_de',
-                    'voicingFinalUnclipped_sma_de', 'F0final_sma_de', 'jitterLocal_sma_de',
-                    'jitterDDP_sma_de', 'shimmerLocal_sma_de']
+# acoustic_columns = ['pcm_loudness_sma', 'mfcc_sma[0]', 'mfcc_sma[1]', 'mfcc_sma[2]', 'mfcc_sma[3]',
+#                     'mfcc_sma[4]', 'mfcc_sma[5]', 'mfcc_sma[6]', 'mfcc_sma[7]', 'mfcc_sma[8]',
+#                     'mfcc_sma[9]', 'mfcc_sma[10]', 'mfcc_sma[11]', 'mfcc_sma[12]', 'mfcc_sma[13]',
+#                     'mfcc_sma[14]', 'logMelFreqBand_sma[0]', 'logMelFreqBand_sma[1]',
+#                     'logMelFreqBand_sma[2]', 'logMelFreqBand_sma[3]', 'logMelFreqBand_sma[4]',
+#                     'logMelFreqBand_sma[5]', 'logMelFreqBand_sma[6]', 'logMelFreqBand_sma[7]',
+#                     'lspFreq_sma[0]', 'lspFreq_sma[1]', 'lspFreq_sma[2]', 'lspFreq_sma[3]',
+#                     'lspFreq_sma[4]', 'lspFreq_sma[5]', 'lspFreq_sma[6]', 'lspFreq_sma[7]',
+#                     'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'F0final_sma', 'jitterLocal_sma',
+#                     'jitterDDP_sma', 'shimmerLocal_sma', 'pcm_loudness_sma_de', 'mfcc_sma_de[0]',
+#                     'mfcc_sma_de[1]', 'mfcc_sma_de[2]', 'mfcc_sma_de[3]', 'mfcc_sma_de[4]',
+#                     'mfcc_sma_de[5]', 'mfcc_sma_de[6]', 'mfcc_sma_de[7]', 'mfcc_sma_de[8]',
+#                     'mfcc_sma_de[9]', 'mfcc_sma_de[10]', 'mfcc_sma_de[11]', 'mfcc_sma_de[12]',
+#                     'mfcc_sma_de[13]', 'mfcc_sma_de[14]', 'logMelFreqBand_sma_de[0]',
+#                     'logMelFreqBand_sma_de[1]', 'logMelFreqBand_sma_de[2]', 'logMelFreqBand_sma_de[3]',
+#                     'logMelFreqBand_sma_de[4]', 'logMelFreqBand_sma_de[5]', 'logMelFreqBand_sma_de[6]',
+#                     'logMelFreqBand_sma_de[7]', 'lspFreq_sma_de[0]', 'lspFreq_sma_de[1]',
+#                     'lspFreq_sma_de[2]', 'lspFreq_sma_de[3]', 'lspFreq_sma_de[4]', 'lspFreq_sma_de[5]',
+#                     'lspFreq_sma_de[6]', 'lspFreq_sma_de[7]', 'F0finEnv_sma_de',
+#                     'voicingFinalUnclipped_sma_de', 'F0final_sma_de', 'jitterLocal_sma_de',
+#                     'jitterDDP_sma_de', 'shimmerLocal_sma_de']
 
 model_params = Namespace(
     # use gradnorm for loss normalization
@@ -89,7 +89,7 @@ model_params = Namespace(
     # consistency parameters
     seed=88,  # 1007
     # trying text only model or not
-    text_only=False,
+    text_only=True,
     # overall model parameters
     model="Multitask-mustard",
     num_epochs=100,
