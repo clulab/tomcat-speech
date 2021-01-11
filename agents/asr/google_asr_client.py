@@ -18,14 +18,8 @@ class GoogleASRClient(ASRClient):
         rate: int,
         chunk_size: Optional[int] = None,
         participant_id=None,
-        use_mqtt: bool = False,
-        mqtt_host: str = "localhost",
-        mqtt_port: int = 1883,
     ):
         super().__init__(
-            use_mqtt=use_mqtt,
-            mqtt_host=mqtt_host,
-            mqtt_port=mqtt_port,
             participant_id=participant_id,
         )
         self.rate = rate

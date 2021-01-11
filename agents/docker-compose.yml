@@ -13,14 +13,6 @@ services:
     volumes:
       - $GOOGLE_APPLICATION_CREDENTIALS:/google_application_credentials.json
       - ./asr:/asr
-    entrypoint: [
-      "./tomcat_asr_agent",
-      "websockets",
-      "--use_mqtt",
-      "--ws_host", "0.0.0.0",
-      "--ws_port", "8888",
-      "--mqtt_host", "host.docker.internal"
-    ]
   webmic:
     image: webmic:latest
     container_name: webmic

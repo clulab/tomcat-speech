@@ -1,9 +1,12 @@
-from python:3.7
+from python:3
+run apt update
+run apt -y install mosquitto-clients
 run pip install\
     six\
     websockets\
     numpy\
-    paho-mqtt\
     google-cloud-speech
 workdir asr
 copy * /asr/
+cmd ./tomcat_asr_agent websockets --ws_host 0.0.0.0 --ws_port 8888\
+    | mosquitto_pub -t agents/asr -l -h host.docker.internal
