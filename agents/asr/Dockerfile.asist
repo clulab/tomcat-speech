@@ -2,7 +2,6 @@ from python:3
 run apt update
 run apt -y install mosquitto-clients
 run pip install\
-    six\
     websockets\
     numpy\
     google-cloud-speech

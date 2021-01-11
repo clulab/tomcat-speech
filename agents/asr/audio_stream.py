@@ -1,4 +1,4 @@
-from six.moves import queue
+import queue
 from utils import get_current_time
 
 class AudioStream(object):
