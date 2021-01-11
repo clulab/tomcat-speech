@@ -106,21 +106,17 @@ if __name__ == "__main__":
     )
 
     parser_stdin.add_argument(
-        "--sample_rate",
+        "sample_rate",
         type=int,
-        default=44100,
         help="Sample rate in Hertz of the raw input audio stream.",
-        nargs="?",
     )
 
     parser_stdin.add_argument(
-        "--chunk_size",
+        "chunk_size",
         type=int,
-        default=3200,
         help=(
             "Number of bytes to read at a time from the input audio stream."
         ),
-        nargs="?",
     )
 
     parser_microphone = subparsers.add_parser(
@@ -171,29 +167,29 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARNING)
 
     try:
         if args.mode == "stdin":
-            audio_stream = AudioStream()
-            asr_client = GoogleASRClient(
-                audio_stream,
-                args.sample_rate,
-                args.chunk_size,
-            )
-            asr_thread = threading.Thread(target=asr_client.run, daemon=True)
-            asr_thread.start()
+            with AudioStream() as audio_stream:
+                asr_client = GoogleASRClient(
+                    audio_stream,
+                    args.sample_rate,
+                    args.chunk_size,
+                )
+                asr_thread = threading.Thread(target=asr_client.run)
+                asr_thread.start()
 
-            while True:
-                data = sys.stdin.buffer.read(args.chunk_size)
-                if not data:
-                    time.sleep(1)
-                    audio_stream.closed = True
-                    asr_thread.join(timeout=1)
-                    break
-                else:
-                    chunk = float32_array_to_int16_array(data)
-                    audio_stream.fill_buffer(chunk)
+                while True:
+                    data = sys.stdin.buffer.read(args.chunk_size)
+                    if not data:
+                        break
+                    else:
+                        chunk = float32_array_to_int16_array(data)
+                        audio_stream.fill_buffer(chunk)
+
+                time.sleep(1)
+
 
         elif args.mode == "microphone":
             if args.engine == "google":
