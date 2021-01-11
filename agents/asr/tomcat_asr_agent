@@ -175,7 +175,8 @@ if __name__ == "__main__":
                 asr_client = GoogleASRClient(
                     audio_stream,
                     args.sample_rate,
-                    args.chunk_size,
+                    # We divide by 2 since we assume 32 bit floats converted to 16 bit ints
+                    args.chunk_size/2,
                 )
                 asr_thread = threading.Thread(target=asr_client.run)
                 asr_thread.start()
@@ -187,6 +188,7 @@ if __name__ == "__main__":
                     else:
                         chunk = float32_array_to_int16_array(data)
                         audio_stream.fill_buffer(chunk)
+
 
                 time.sleep(1)
 
