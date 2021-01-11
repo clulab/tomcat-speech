@@ -142,7 +142,7 @@ if __name__ == "__main__":
     )
 
     parser_stdin.add_argument(
-        "sample_rate",
+        "--sample_rate",
         type=int,
         default=44100,
         help="Sample rate in Hertz of the raw input audio stream.",
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     )
 
     parser_stdin.add_argument(
-        "chunk_size",
+        "--chunk_size",
         type=int,
         default=3200,
         help=(
