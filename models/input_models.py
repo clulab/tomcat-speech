@@ -78,7 +78,6 @@ class EarlyFusionMultimodalModel(nn.Module):
         self.out_dims = params.output_dim
 
         # if we feed text through additional layer(s)
-        # self.text_output_dim = params.text_output_dim
         self.text_rnn = nn.LSTM(
             input_size=params.text_dim + params.short_emb_dim,
             hidden_size=params.text_gru_hidden_dim,
@@ -90,7 +89,7 @@ class EarlyFusionMultimodalModel(nn.Module):
         self.acoustic_rnn = nn.LSTM(
             input_size=params.audio_dim,
             hidden_size=params.acoustic_gru_hidden_dim,
-            num_layers=params.num_gru_layers,
+            num_layers=4,
             batch_first=True,
             bidirectional=True,
         )
@@ -98,28 +97,17 @@ class EarlyFusionMultimodalModel(nn.Module):
         # set the size of the input into the fc layers
         # if params.avgd_acoustic or params.add_avging:
         self.fc_input_dim = params.text_gru_hidden_dim + params.audio_dim
-            # self.fc_input_dim = params.text_gru_hidden_dim + 20
-
-        # else:
-        #     self.fc_input_dim = (
-        #         params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
-        #     )
 
         if params.add_avging is False and params.avgd_acoustic is False:
-            # self.acoustic_fc_1 = nn.Linear(params.audio_dim, 100)
             self.acoustic_fc_1 = nn.Linear(params.fc_hidden_dim, 100)
         else:
             self.acoustic_fc_1 = nn.Linear(params.audio_dim, 100)
-        # self.acoustic_fc_2 = nn.Linear(100, 20)
         self.acoustic_fc_2 = nn.Linear(100, params.audio_dim)
 
         if params.use_speaker:
             self.fc_input_dim = self.fc_input_dim + params.speaker_emb_dim
         elif params.use_gender:
             self.fc_input_dim = self.fc_input_dim + params.gender_emb_dim
-
-        # print(self.fc_input_dim)
-        # self.fc_input_dim = params.text_output_dim
 
         # set number of classes
         self.output_dim = params.output_dim
@@ -132,7 +120,6 @@ class EarlyFusionMultimodalModel(nn.Module):
             num_embeddings, self.text_dim, _weight=pretrained_embeddings
         )
         self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
-        # self.embedding = nn.Embedding(num_embeddings, self.text_dim)
         # self.text_batch_norm = nn.BatchNorm1d(self.text_dim + params.short_emb_dim)
 
         # initialize speaker embeddings
@@ -151,7 +138,6 @@ class EarlyFusionMultimodalModel(nn.Module):
         # self.acoustic_male_norm = nn.BatchNorm1d(params.audio_dim)
 
         # initialize fully connected layers
-        # self.fc1 = nn.Linear(self.fc_input_dim, params.output_dim)
         self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
 
         # self.interfc_batch_norm = nn.BatchNorm1d(params.fc_hidden_dim)
@@ -178,7 +164,6 @@ class EarlyFusionMultimodalModel(nn.Module):
         # get speaker embeddings, if needed
         if speaker_input is not None:
             speaker_embs = self.speaker_embedding(speaker_input).squeeze(dim=1)
-            # speaker_embs = self.speaker_batch_norm(speaker_embs)
         if gender_input is not None:
             gender_embs = self.gender_embedding(gender_input)
 
@@ -191,13 +176,8 @@ class EarlyFusionMultimodalModel(nn.Module):
         encoded_text = F.dropout(hidden[-1], 0.3)
 
         if acoustic_len_input is not None:
-            # print(acoustic_input.shape)
-            # acoustic_input = self.acoustic_batch_norm(acoustic_input.permute(0, 2, 1))
-            # print(acoustic_input.shape)
-            # acoustic_input = acoustic_input.permute(0, 2, 1)
             packed_acoustic = nn.utils.rnn.pack_padded_sequence(
                 acoustic_input,
-                # acoustic_len_input,
                 acoustic_len_input.clamp(max=1500),
                 batch_first=True,
                 enforce_sorted=False,
@@ -207,10 +187,8 @@ class EarlyFusionMultimodalModel(nn.Module):
                 (acoustic_hidden, acoustic_cell),
             ) = self.acoustic_rnn(packed_acoustic)
             encoded_acoustic = F.dropout(acoustic_hidden[-1], self.dropout)
-            # encoded_acoustic = acoustic_hidden[-1]
 
         else:
-            # print(acoustic_input.shape)
             if len(acoustic_input.shape) > 2:
                 encoded_acoustic = acoustic_input.squeeze()
             else:
@@ -222,14 +200,8 @@ class EarlyFusionMultimodalModel(nn.Module):
         encoded_acoustic = torch.tanh(
             F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout)
         )
-        # print(encoded_acoustic.shape)
-        # encoded_acoustic = self.acoustic_batch_norm(encoded_acoustic)
-
-        # inputs = encoded_text
-        # print(encoded_acoustic.shape)
 
         # combine modalities as required by architecture
-        # inputs = torch.cat((acoustic_input, encoded_text), 1)
         if speaker_input is not None:
             inputs = torch.cat((encoded_acoustic, encoded_text, speaker_embs), 1)
         elif gender_input is not None:
@@ -239,17 +211,11 @@ class EarlyFusionMultimodalModel(nn.Module):
 
         # use pooled, squeezed feats as input into fc layers
         output = torch.tanh(F.dropout(self.fc1(inputs), 0.5))
-        # output = torch.tanh(self.fc1(inputs))
-        # output = self.interfc_batch_norm(output)
-        # todo: abstract this so it's only calculated if not multitask
-        # output = torch.relu(self.fc2(output))
-        # output = F.softmax(output, dim=1)
-        # output = torch.tanh(self.fc1(inputs))
 
         if self.out_dims == 1:
             output = torch.sigmoid(output)
+
         # return the output
-        # print(f"The output of sub-network is:\n{output}")
         return output
 
 
@@ -392,17 +358,8 @@ class LateFusionMultimodalModel(nn.Module):
         # combine predictions to get results
         # text_predictions = torch.mul(text_predictions, 4)
         # acoustic_predictions = torch.mul(acoustic_predictions, 2)
-
         predictions = torch.add(text_predictions, acoustic_predictions)
         # predictions = torch.mul(text_predictions, acoustic_predictions)
-
-        # # combine modalities as required by architecture
-        # if speaker_input is not None:
-        #     inputs = torch.cat((encoded_acoustic, encoded_text, speaker_embs), 1)
-        # elif gender_input is not None:
-        #     inputs = torch.cat((encoded_acoustic, encoded_text, gender_embs), 1)
-        # else:
-        #     inputs = torch.cat((encoded_acoustic, encoded_text), 1)
 
         if self.out_dims == 1:
             predictions = torch.sigmoid(predictions)
@@ -567,7 +524,7 @@ class TextOnlyCNN(nn.Module):
         # self.conv6 = nn.Conv1d(self.out_channels * 2, self.out_channels, self.k3_size)
 
         # fully connected layers
-        self.fc1 = nn.Linear(self.out_channels, params.text_cnn_hidden_dim)
+        self.fc1 = nn.Linear(self.out_channels * 3, params.text_cnn_hidden_dim)
         # self.fc1 = nn.Linear(self.out_channels, params.text_cnn_hidden_dim)
         self.fc2 = nn.Linear(params.text_cnn_hidden_dim, self.output_dim)
 
@@ -630,6 +587,116 @@ class TextOnlyCNN(nn.Module):
         return output.squeeze(dim=1)
 
 
+class TextOnlyRNN(nn.Module):
+    """
+    An RNN used with only text modality.
+    """
+
+    def __init__(self, params, num_embeddings, pretrained_embeddings=None):
+        super(TextOnlyRNN, self).__init__()
+        # input dimensions
+        self.text_dim = params.text_dim
+
+        # number of classes
+        self.output_dim = params.output_dim
+
+        # self.num_cnn_layers = params.num_cnn_layers
+        self.dropout = params.dropout
+
+        # word embeddings
+        if pretrained_embeddings is None:
+            self.embedding = nn.Embedding(
+                num_embeddings, self.text_dim, padding_idx=0, max_norm=1.0
+            )
+            self.pretrained_embeddings = False
+        else:
+            self.embedding = nn.Embedding(
+                num_embeddings,
+                self.text_dim,
+                padding_idx=0,
+                _weight=pretrained_embeddings,
+                max_norm=1.0,
+            )
+            self.pretrained_embeddings = True
+
+        self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
+
+        # initialize speaker embeddings
+        self.speaker_embedding = nn.Embedding(
+            params.num_speakers, params.speaker_emb_dim
+        )
+
+        self.gender_embedding = nn.Embedding(3, params.gender_emb_dim)
+
+        # if we feed text through additional layer(s)
+        self.text_rnn = nn.LSTM(
+            input_size=params.text_dim + params.short_emb_dim,
+            hidden_size=params.text_gru_hidden_dim,
+            num_layers=params.num_gru_layers,
+            batch_first=True,
+            bidirectional=True,
+        )
+        # input into fc layers
+        self.fc_input_dim = params.text_gru_hidden_dim
+
+        if params.use_speaker:
+            self.fc_input_dim = self.fc_input_dim + params.speaker_emb_dim
+        elif params.use_gender:
+            self.fc_input_dim = self.fc_input_dim + params.gender_emb_dim
+
+        # fully connected layers
+        self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
+        self.fc2 = nn.Linear(params.fc_hidden_dim, params.final_hidden_dim)
+
+        self.out_dims = params.final_hidden_dim
+
+    def forward(
+        self,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        gender_input=None,
+    ):
+        # using pretrained embeddings, so detach to not update weights
+        # embs: (batch_size, seq_len, emb_dim)
+        embs = F.dropout(self.embedding(text_input), 0.1).detach()
+
+        short_embs = F.dropout(self.short_embedding(text_input), 0.1)
+
+        all_embs = torch.cat((embs, short_embs), dim=2)
+
+        # get speaker embeddings, if needed
+        if speaker_input is not None:
+            speaker_embs = self.speaker_embedding(speaker_input).squeeze(dim=1)
+        if gender_input is not None:
+            gender_embs = self.gender_embedding(gender_input)
+
+        packed = nn.utils.rnn.pack_padded_sequence(
+            all_embs, length_input, batch_first=True, enforce_sorted=False
+        )
+
+        # feed embeddings through GRU
+        packed_output, (hidden, cell) = self.text_rnn(packed)
+        encoded_text = F.dropout(hidden[-1], 0.3)
+
+        # combine modalities as required by architecture
+        if speaker_input is not None:
+            inputs = torch.cat((encoded_text, speaker_embs), 1)
+        elif gender_input is not None:
+            inputs = torch.cat((encoded_text, gender_embs), 1)
+        else:
+            inputs = encoded_text
+
+        # use pooled, squeezed feats as input into fc layers
+        output = torch.tanh(F.dropout(self.fc1(inputs), 0.5))
+
+        if self.out_dims == 1:
+            output = torch.sigmoid(output)
+
+        # return the output
+        return output
+
+
 class PredictionLayer(nn.Module):
     """
     A final layer for predictions
@@ -672,11 +739,19 @@ class MultitaskModel(nn.Module):
         # if so, assumes each dataset has its own task
         self.multi_dataset = multi_dataset
 
+        # let the network know if it's only using text features
+        self.text_only = params.text_only
+
         # # set base of model
         # comment this out and uncomment the below to try late fusion model
-        self.base = EarlyFusionMultimodalModel(
-            params, num_embeddings, pretrained_embeddings
-        )
+        if params.text_only is False:
+            self.base = EarlyFusionMultimodalModel(
+                params, num_embeddings, pretrained_embeddings
+            )
+        else:
+            self.base = TextOnlyRNN(
+                params, num_embeddings, pretrained_embeddings
+            )
 
         # uncomment this and comment the above to try the late fusion model
         # self.base = LateFusionMultimodalModel(
@@ -700,14 +775,22 @@ class MultitaskModel(nn.Module):
         task_num=0
     ):
         # call forward on base model
-        final_base_layer = self.base(
-            acoustic_input,
-            text_input,
-            speaker_input=speaker_input,
-            length_input=length_input,
-            acoustic_len_input=acoustic_len_input,
-            gender_input=gender_input,
-        )
+        if self.text_only:
+            final_base_layer = self.base(
+                text_input,
+                speaker_input=speaker_input,
+                length_input=length_input,
+                gender_input=gender_input,
+            )
+        else:
+            final_base_layer = self.base(
+                acoustic_input,
+                text_input,
+                speaker_input=speaker_input,
+                length_input=length_input,
+                acoustic_len_input=acoustic_len_input,
+                gender_input=gender_input,
+            )
 
         task_0_out = None
         task_1_out = None
@@ -728,6 +811,251 @@ class MultitaskModel(nn.Module):
                 task_2_out = self.task_2_predictor(final_base_layer)
             elif task_num == 3:
                 task_3_out = self.task_3_predictor(final_base_layer)
+            else:
+                sys.exit(f"Task {task_num} not defined")
+
+        return task_0_out, task_1_out, task_2_out, task_3_out
+
+
+class AcousticOnlyForMultitask(nn.Module):
+    """
+    A model using only acoustic features
+    """
+    def __init__(self, params, multi_dataset=True, use_rnn=False):
+        super(AcousticOnlyForMultitask, self).__init__()
+
+        # determine whether multiple datasets are used
+        self.multi_dataset = multi_dataset
+        self.use_rnn = use_rnn
+
+        # set dropout
+        self.dropout = params.dropout
+
+        if use_rnn:
+            # instantiate RNN if using
+            self.acoustic_rnn = nn.LSTM(
+                input_size=params.audio_dim,
+                hidden_size=params.acoustic_gru_hidden_dim,
+                num_layers=4,
+                batch_first=True,
+                bidirectional=True,
+            )
+        else:
+            self.acoustic_fc1 = nn.Linear(params.audio_dim, params.acoustic_gru_hidden_dim)
+            self.acoustic_fc2 = nn.Linear(params.acoustic_gru_hidden_dim, params.output_dim)
+
+        # acoustic batch normalization
+        self.acoustic_batch_norm = nn.BatchNorm1d(params.audio_dim)
+
+    def forward(self, acoustic_input, length_input=None):
+        # put acoustic features through batch normalization
+        # acoustic_input = self.acoustic_batch_norm(acoustic_input)
+
+        acoustic_input = torch.normal(acoustic_input)
+
+        # noise = torch.ones(acoustic_input.shape)
+        # noise = noise.normal_()
+        #
+        # noise = torch.normal(0, 0.2, size=acoustic_input.shape[1])
+
+        # acoustic_input = torch.add(acoustic_input, noise[:, None])
+
+        if self.use_rnn:
+            # pack the data
+            packed_feats = nn.utils.rnn.pack_padded_sequence(
+            acoustic_input, length_input, batch_first=True, enforce_sorted=False
+            )
+
+            packed_output, (hidden, cell) = self.acoustic_rnn(packed_feats)
+
+            encoded_acoustic = F.dropout(hidden[-1], self.dropout)
+        else:
+            feats = torch.relu(F.dropout(self.acoustic_fc1(acoustic_input), self.dropout))
+            encoded_acoustic = torch.relu(F.dropout(self.acoustic_fc2(feats), self.dropout))
+
+        return encoded_acoustic
+
+
+class TextPlusPredictionLayer(nn.Module):
+    """
+    Contains text processing + a prediction layer
+    Needs the output of an acoustic only layer
+    """
+    def __init__(self, params, out_dim, num_embeddings=None, pretrained_embeddings=None, multi_dataset=True):
+        super(TextPlusPredictionLayer, self).__init__()
+
+        # specify out_dim explicity so we can do multiple tasks at once
+        self.output_dim = out_dim
+
+        # save whether there are multiple datasets
+        self.multi_dataset = multi_dataset
+
+        # if we feed text through additional layer(s)
+        self.text_rnn = nn.LSTM(
+            input_size=params.text_dim + params.short_emb_dim,
+            hidden_size=params.text_gru_hidden_dim,
+            num_layers=params.num_gru_layers,
+            batch_first=True,
+            bidirectional=True,
+        )
+
+        # input text + acoustic + speaker
+        self.text_dim = params.text_dim
+        self.num_embeddings = num_embeddings
+        self.text_gru_hidden_dim = params.text_gru_hidden_dim
+
+        # get number of output dims
+        self.acoustic_input_dim = params.output_dim
+
+        # set the size of the input into the fc layers
+        # if params.use_speaker:
+        #     self.fc_input_dim = self.acoustic_input_dim + params.text_gru_hidden_dim + params.speaker_emb_dim
+        # elif params.use_gender:
+        #     self.fc_input_dim = self.acoustic_input_dim + params.text_gru_hidden_dim + params.gender_emb_dim
+
+        self.fc_input_dim = self.acoustic_input_dim
+
+        # set number of layers and dropout
+        self.dropout = params.dropout
+
+        # initialize word embeddings
+        self.embedding = nn.Embedding(
+            num_embeddings, self.text_dim, _weight=pretrained_embeddings
+        )
+        self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
+        # self.text_batch_norm = nn.BatchNorm1d(self.text_dim + params.short_emb_dim)
+
+        # initialize speaker embeddings
+        self.speaker_embedding = nn.Embedding(
+            params.num_speakers, params.speaker_emb_dim
+        )
+
+        self.gender_embedding = nn.Embedding(3, params.gender_emb_dim)
+
+        # initialize fully connected layers
+        self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
+        self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
+
+    def forward(
+        self,
+        acoustic_input,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        gender_input=None,
+        ):
+        # here, acoustic_input is the output of the acoustic layers
+
+        # # using pretrained embeddings, so detach to not update weights
+        # # embs: (batch_size, seq_len, emb_dim)
+        # embs = F.dropout(self.embedding(text_input), 0.1).detach()
+        # short_embs = F.dropout(self.short_embedding(text_input), 0.1)
+        #
+        # all_embs = torch.cat((embs, short_embs), dim=2)
+        #
+        # packed = nn.utils.rnn.pack_padded_sequence(
+        #     all_embs, length_input, batch_first=True, enforce_sorted=False
+        # )
+        #
+        # # feed embeddings through GRU
+        # packed_output, (hidden, cell) = self.text_rnn(packed)
+        # encoded_text = F.dropout(hidden[-1], 0.3)
+        #
+        # # get speaker embeddings, if needed
+        # if speaker_input is not None:
+        #     speaker_embs = self.speaker_embedding(speaker_input).squeeze(dim=1)
+        #     encoded_text = torch.cat((encoded_text, speaker_embs), dim=1)
+        # elif gender_input is not None:
+        #     gend_embs = self.gender_embedding(gender_input)
+        #     encoded_text = torch.cat((encoded_text, gend_embs), dim=1)
+        #
+        # # combine all
+        # encoded_data = torch.cat((encoded_text, acoustic_input), dim=1)
+        #
+        encoded_data = acoustic_input
+
+        intermediate = torch.tanh(F.dropout(self.fc1(encoded_data), self.dropout))
+        predictions = torch.relu(self.fc2(intermediate))
+
+        if self.output_dim == 1:
+            predictions = torch.sigmoid(predictions)
+
+        # return the output
+        return predictions
+
+
+class MultitaskAcousticShared(nn.Module):
+    """
+    A model combining base + output layers for multitask learning
+    """
+
+    def __init__(
+        self, params, num_embeddings=None, pretrained_embeddings=None, multi_dataset=True
+    ):
+        super(MultitaskAcousticShared, self).__init__()
+        # save whether there are multiple datasets
+        # if so, assumes each dataset has its own task
+        self.multi_dataset = multi_dataset
+
+        # # set base of model
+        # comment this out and uncomment the below to try late fusion model
+        self.acoustic_base = AcousticOnlyForMultitask(
+            params, multi_dataset, use_rnn=(not (params.avgd_acoustic or params.add_avging))
+        )
+
+        # set output layers
+        self.task_0_predictor = TextPlusPredictionLayer(params, params.output_0_dim,
+                                                        num_embeddings=num_embeddings,
+                                                        pretrained_embeddings=pretrained_embeddings,
+                                                        multi_dataset=multi_dataset)
+        self.task_1_predictor = TextPlusPredictionLayer(params, params.output_1_dim,
+                                                        num_embeddings=num_embeddings,
+                                                        pretrained_embeddings=pretrained_embeddings,
+                                                        multi_dataset=multi_dataset)
+        self.task_2_predictor = TextPlusPredictionLayer(params, params.output_2_dim,
+                                                        num_embeddings=num_embeddings,
+                                                        pretrained_embeddings=pretrained_embeddings,
+                                                        multi_dataset=multi_dataset)
+        self.task_3_predictor = TextPlusPredictionLayer(params, params.output_3_dim,
+                                                        num_embeddings=num_embeddings,
+                                                        pretrained_embeddings=pretrained_embeddings,
+                                                        multi_dataset=multi_dataset)
+
+    def forward(
+        self,
+        acoustic_input,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        acoustic_len_input=None,
+        gender_input=None,
+        task_num=0
+    ):
+        # call forward on base model
+        final_base_layer = self.acoustic_base(
+            acoustic_input,
+            length_input=acoustic_len_input,
+        )
+
+        task_0_out = None
+        task_1_out = None
+        task_2_out = None
+        task_3_out = None
+
+        if not self.multi_dataset:
+            task_0_out = self.task_0_predictor(final_base_layer, text_input, speaker_input, length_input, gender_input)
+            task_1_out = self.task_1_predictor(final_base_layer, text_input, speaker_input, length_input, gender_input)
+            task_2_out = self.task_2_predictor(final_base_layer, text_input, speaker_input, length_input, gender_input)
+            task_3_out = self.task_3_predictor(final_base_layer, text_input, speaker_input, length_input, gender_input)
+        else:
+            if task_num == 0:
+                task_0_out = self.task_0_predictor(final_base_layer, text_input, speaker_input, length_input, gender_input)
+            elif task_num == 1:
+                task_1_out = self.task_1_predictor(final_base_layer, text_input, speaker_input, length_input, gender_input)
+            elif task_num == 2:
+                task_2_out = self.task_2_predictor(final_base_layer, text_input, speaker_input, length_input, gender_input)
+            elif task_num == 3:
+                task_3_out = self.task_3_predictor(final_base_layer, text_input, speaker_input, length_input, gender_input)
             else:
                 sys.exit(f"Task {task_num} not defined")
 

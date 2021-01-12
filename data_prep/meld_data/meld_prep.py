@@ -40,19 +40,30 @@ class MeldPrep:
         use_cols=None,
         add_avging=True,
         avgd=False,
+        utts_file_name=None
     ):
         self.path = meld_path
         self.train_path = meld_path + "/train"
         self.dev_path = meld_path + "/dev"
         self.test_path = meld_path + "/test"
-        self.train = "{0}/train_sent_emo.csv".format(self.train_path)
-        self.dev = "{0}/dev_sent_emo.csv".format(self.dev_path)
-        self.test = "{0}/test_sent_emo.csv".format(self.test_path)
+        if utts_file_name is None:
+            self.train = "{0}/train_sent_emo.csv".format(self.train_path)
+            self.dev = "{0}/dev_sent_emo.csv".format(self.dev_path)
+            self.test = "{0}/test_sent_emo.csv".format(self.test_path)
 
-        # get files containing gold labels/data
-        self.train_data_file = pd.read_csv(self.train)
-        self.dev_data_file = pd.read_csv(self.dev)
-        self.test_data_file = pd.read_csv(self.test)
+            # get files containing gold labels/data
+            self.train_data_file = pd.read_csv(self.train)
+            self.dev_data_file = pd.read_csv(self.dev)
+            self.test_data_file = pd.read_csv(self.test)
+        else:
+            self.train = f"{self.train_path}/{utts_file_name}"
+            self.dev = f"{self.dev_path}/{utts_file_name}"
+            self.test = f"{self.test_path}/{utts_file_name}"
+
+            # get files containing gold labels/data
+            self.train_data_file = pd.read_csv(self.train, sep="\t")
+            self.dev_data_file = pd.read_csv(self.dev, sep="\t")
+            self.test_data_file = pd.read_csv(self.test, sep="\t")
 
         # get tokenizer
         self.tokenizer = get_tokenizer("basic_english")
@@ -118,7 +129,7 @@ class MeldPrep:
         print("Finalizing acoustic organization for meld")
 
         self.train_acoustic, self.train_usable_utts = make_acoustic_set(
-            self.train,
+            self.train_data_file,
             self.train_dict,
             data_type="meld",
             acoustic_length=acoustic_length,
@@ -127,7 +138,7 @@ class MeldPrep:
             avgd=avgd,
         )
         self.dev_acoustic, self.dev_usable_utts = make_acoustic_set(
-            self.dev,
+            self.dev_data_file,
             self.dev_dict,
             data_type="meld",
             acoustic_length=acoustic_length,
@@ -136,7 +147,7 @@ class MeldPrep:
             avgd=avgd,
         )
         self.test_acoustic, self.test_usable_utts = make_acoustic_set(
-            self.test,
+            self.test_data_file,
             self.test_dict,
             data_type="meld",
             acoustic_length=acoustic_length,
@@ -310,10 +321,13 @@ class MeldPrep:
 
         # concatenate them and put utterances in array
         all_utts_df = pd.concat([train_utts_df, dev_utts_df, test_utts_df], axis=0)
-        all_utts = all_utts_df["Utterance"].tolist()
+        try:
+            all_utts = all_utts_df["Utterance"].tolist()
+        except KeyError:
+            all_utts = all_utts_df["utterance"].tolist()
 
         for i, item in enumerate(all_utts):
-            item = clean_up_word(item)
+            item = clean_up_word(str(item))
             item = self.tokenizer(item)
             if len(item) > longest:
                 longest = len(item)
@@ -351,7 +365,10 @@ class MeldPrep:
                 utts = [0] * self.longest_utt
 
                 # get values from row
-                utt = clean_up_word(row["Utterance"])
+                try:
+                    utt = clean_up_word(str(row["Utterance"]))
+                except KeyError:
+                    utt = clean_up_word(str(row["utterance"]))
                 utt = self.tokenizer(utt)
                 utt_lengths.append(len(utt))
 

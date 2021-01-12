@@ -250,7 +250,7 @@ class MustardPrep:
             # utt = clean_up_word(row["utterance"])
             # utt = self.tokenizer(utt)
             utt = row["utterance"]
-            utt = [clean_up_word(wd) for wd in utt.strip().split(" ")]
+            utt = [clean_up_word(wd) for wd in str(utt).strip().split(" ")]
             utt_lengths.append(len(utt))
 
             spk_id = row["speaker"]

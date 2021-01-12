@@ -99,6 +99,7 @@ if __name__ == "__main__":
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
+                utts_file_name="mustard_sphinx.tsv"
             )
 
             meld_data = MeldPrep(
@@ -108,6 +109,7 @@ if __name__ == "__main__":
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
+                utts_file_name="meld_sphinx.tsv"
             )
 
             chalearn_data = ChalearnPrep(
@@ -118,6 +120,8 @@ if __name__ == "__main__":
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
                 pred_type=config.chalearn_predtype,
+                utts_file_name="chalearn_sphinx.tsv"
+
             )
 
             # ravdess_data = RavdessPrep(ravdess_path=config.ravdess_path, acoustic_length=params.audio_dim, glove=glove,
@@ -167,25 +171,29 @@ if __name__ == "__main__":
             if config.save_dataset:
                 # save all data for faster loading
                 # save meld dataset
-                pickle.dump(meld_train_ds, open("data/meld_IS10RNN10feat_15sec_train.pickle", "wb"))
-                pickle.dump(meld_dev_ds, open("data/meld_IS10RNN10feat_15sec_dev.pickle", "wb"))
-                pickle.dump(meld_test_ds, open("data/meld_IS10RNN10feat_15sec_test.pickle", "wb"))
+                pickle.dump(meld_train_ds, open("data/meld_IS10RNN76feat_15sec_train.pickle", "wb"))
+                pickle.dump(meld_dev_ds, open("data/meld_IS10RNN76feat_15sec_dev.pickle", "wb"))
+                pickle.dump(meld_test_ds, open("data/meld_IS10RNN76feat_15sec_test.pickle", "wb"))
 
                 # save mustard
-                pickle.dump(mustard_train_ds, open("data/mustard_IS10RNN10feat_15sec_train.pickle", "wb"))
-                pickle.dump(mustard_dev_ds, open("data/mustard_IS10RNN10feat_15sec_dev.pickle", "wb"))
-                pickle.dump(mustard_test_ds, open("data/mustard_IS10RNN10feat_15sec_test.pickle", "wb"))
+                pickle.dump(mustard_train_ds, open("data/mustard_IS10RNN76feat_15sec_train.pickle", "wb"))
+                pickle.dump(mustard_dev_ds, open("data/mustard_IS10RNN76feat_15sec_dev.pickle", "wb"))
+                pickle.dump(mustard_test_ds, open("data/mustard_IS10RNN76feat_15sec_test.pickle", "wb"))
                 #
                 # # save chalearn
-                pickle.dump(chalearn_train_ds, open("data/chalearn_IS10RNN10feat_15sec_train.pickle", "wb"))
-                pickle.dump(chalearn_dev_ds, open("data/chalearn_IS10RNN10feat_15sec_dev.pickle", "wb"))
+                pickle.dump(chalearn_train_ds, open("data/chalearn_IS10RNN76feat_15sec_train.pickle", "wb"))
+                pickle.dump(chalearn_dev_ds, open("data/chalearn_IS10RNN76feat_15sec_dev.pickle", "wb"))
                 # pickle.dump(chalearn_test_ds, open('data/chalearn_IS10RNN10feat_15sec_test.pickle', 'wb'))
+
+                sys.exit()
 
                 pickle.dump(
                     glove, open("data/glove.pickle", "wb")
                 )  # todo: get different glove names
 
             print("Datasets created")
+
+
 
         else:
             # 1. Load datasets + glove object
@@ -271,11 +279,18 @@ if __name__ == "__main__":
 
                                     # this uses train-dev-test folds
                                     # create instance of model
-                                    multitask_model = MultitaskModel(
-                                        params=this_model_params,
-                                        num_embeddings=num_embeddings,
-                                        pretrained_embeddings=pretrained_embeddings,
-                                    )
+                                    if config.model_type.lower() == "multitask":
+                                        multitask_model = MultitaskModel(
+                                            params=this_model_params,
+                                            num_embeddings=num_embeddings,
+                                            pretrained_embeddings=pretrained_embeddings,
+                                        )
+                                    elif config.model_type.lower() == "acoustic_multitask":
+                                        multitask_model = MultitaskAcousticShared(
+                                            params=this_model_params,
+                                            num_embeddings=num_embeddings,
+                                            pretrained_embeddings=pretrained_embeddings
+                                        )
 
                                     optimizer = torch.optim.Adam(
                                         lr=lr,
@@ -290,7 +305,7 @@ if __name__ == "__main__":
                                     # add loss function for mustard
                                     # NOTE: multitask training doesn't work with BCELoss for mustard
                                     mustard_loss_func = nn.CrossEntropyLoss(
-                                        #weight=mustard_train_ds.class_weights,
+                                        # weight=mustard_train_ds.class_weights,
                                         reduction="mean"
                                     )
                                     # create multitask object
@@ -304,7 +319,7 @@ if __name__ == "__main__":
 
                                     # add loss function for meld
                                     meld_loss_func = nn.CrossEntropyLoss(
-                                        #weight=meld_test_ds.class_weights,
+                                        # weight=meld_train_ds.class_weights,
                                         reduction="mean"
                                     )
                                     # create multitask object
@@ -318,7 +333,7 @@ if __name__ == "__main__":
 
                                     # add loss function for chalearn
                                     chalearn_loss_func = nn.CrossEntropyLoss(
-                                        #weight=chalearn_train_ds.class_weights,
+                                        # weight=chalearn_train_ds.class_weights,
                                         reduction="mean"
                                     )
                                     # create multitask object
@@ -371,6 +386,10 @@ if __name__ == "__main__":
                                         meld_obj,
                                         chalearn_obj,
                                     ]
+
+                                    # all_data_list = [
+                                    #     mustard_obj
+                                    # ]
 
                                     print(
                                         "Model, loss function, and optimization created"

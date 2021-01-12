@@ -440,10 +440,14 @@ def get_longest_utt(utts_list):
     longest = 0
 
     for utt in utts_list:
-        split_utt = utt.strip().split(" ")
-        utt_len = len(split_utt)
-        if utt_len > longest:
-            longest = utt_len
+        try:
+            split_utt = utt.strip().split(" ")
+            utt_len = len(split_utt)
+            if utt_len > longest:
+                longest = utt_len
+        except AttributeError:
+            # if utterance is empty may be read as float
+            continue
 
     return longest
 
