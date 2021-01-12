@@ -36,15 +36,16 @@ class ChalearnPrep:
         use_cols=None,
         add_avging=True,
         avgd=False,
-        pred_type="max_class"
+        pred_type="max_class",
+        utts_file_name="gold_and_utts.tsv"
     ):
         self.path = chalearn_path
         self.train_path = chalearn_path + "/train"
         self.dev_path = chalearn_path + "/val"
         self.test_path = chalearn_path + "/test"
-        self.train = "{0}/gold_and_utts.tsv".format(self.train_path)
-        self.dev = "{0}/gold_and_utts.tsv".format(self.dev_path)
-        # self.test = "{0}/gold_and_utts.tsv".format(self.test_path)
+        self.train = f"{self.train_path}/{utts_file_name}"
+        self.dev = f"{self.dev_path}/{utts_file_name}"
+        # self.test = f"{self.test_path}/{utts_file_name}"
 
         # get files containing gold labels/data
         self.train_data_file = pd.read_csv(self.train, sep="\t")
