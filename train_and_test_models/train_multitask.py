@@ -109,6 +109,7 @@ if __name__ == "__main__":
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
+                # utts_file_name="meld_sphinx.tsv"
             )
 
             chalearn_data = ChalearnPrep(
@@ -302,7 +303,7 @@ if __name__ == "__main__":
                                     # add loss function for mustard
                                     # NOTE: multitask training doesn't work with BCELoss for mustard
                                     mustard_loss_func = nn.CrossEntropyLoss(
-                                        #weight=mustard_train_ds.class_weights,
+                                        # weight=mustard_train_ds.class_weights,
                                         reduction="mean"
                                     )
                                     # create multitask object
@@ -311,12 +312,12 @@ if __name__ == "__main__":
                                         mustard_dev_ds,
                                         mustard_test_ds,
                                         mustard_loss_func,
-                                        task_num=0,
+                                        task_num=2,
                                     )
 
                                     # add loss function for meld
                                     meld_loss_func = nn.CrossEntropyLoss(
-                                        #weight=meld_test_ds.class_weights,
+                                        # weight=meld_train_ds.class_weights,
                                         reduction="mean"
                                     )
                                     # create multitask object
@@ -325,12 +326,12 @@ if __name__ == "__main__":
                                         meld_dev_ds,
                                         meld_test_ds,
                                         meld_loss_func,
-                                        task_num=2,
+                                        task_num=0,
                                     )
 
                                     # add loss function for chalearn
                                     chalearn_loss_func = nn.CrossEntropyLoss(
-                                        #weight=chalearn_train_ds.class_weights,
+                                        # weight=chalearn_train_ds.class_weights,
                                         reduction="mean"
                                     )
                                     # create multitask object
@@ -385,7 +386,7 @@ if __name__ == "__main__":
                                     # ]
 
                                     all_data_list = [
-                                        mustard_obj
+                                        meld_obj
                                     ]
 
                                     print(

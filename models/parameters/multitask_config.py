@@ -18,7 +18,7 @@ EXPERIMENT_ID = 1
 # EXPERIMENT_DESCRIPTION = "meld-mustard-chalearn_singleOptimizer_IS10-76feats_finalFC-dropout-removed_2lyr-in-dset-specific-output_"
 # EXPERIMENT_DESCRIPTION = "GRADNORM_MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_"
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
-EXPERIMENT_DESCRIPTION = "MUSTARD_SPHINX_TEXTONLYRNN_25perc-cutoff_15secMax_noClassWeights_"
+EXPERIMENT_DESCRIPTION = "MELD_GOLDTRANS_25perc-cutoff_15secMax_noClassWeights_IS1010_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 
@@ -89,7 +89,7 @@ model_params = Namespace(
     # consistency parameters
     seed=88,  # 1007
     # trying text only model or not
-    text_only=True,
+    text_only=False,
     # overall model parameters
     model="Multitask-mustard",
     num_epochs=100,
@@ -123,9 +123,9 @@ model_params = Namespace(
     gender_emb_dim=4,
     # outputs
     output_dim=[100],  # output dimensions from last layer of base model
-    output_0_dim=2,  # output vec for first task
+    output_0_dim=7,  # output vec for first task
     output_1_dim=5,  # 7,  # output vec for second task
-    output_2_dim=7,  # 3,    # output vec for third task
+    output_2_dim=2,  # 3,    # output vec for third task
     output_3_dim=0,
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,
