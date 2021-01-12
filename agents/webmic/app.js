@@ -7,13 +7,29 @@
 // host/port.
 var config = {"destination_host" : "localhost", "destination_port" : 8888}
 
+let connectedAtLeastOnce = false;
+
 // Get parameters from URL query string
 const params = new URLSearchParams(window.location.search);
 const participantId = params.get("id");
 
 var processWebSocketMessage = function(event) {
-    document.getElementById("participantId").innerHTML =
-        "Participant ID: " + event.data;
+    var data = JSON.parse(event.data);
+    console.log(data);
+    if ("participantId" in data) {
+        document.getElementById("participantId").innerHTML = data["participantId"];
+    }
+
+    if ("transcript" in data) {
+        let transcriptDiv = document.getElementById("transcript")
+        transcriptDiv.innerHTML = data["transcript"];
+        if (data["is_final"]) {
+            transcriptDiv.style="color:black;";
+        }
+        else {
+            transcriptDiv.style="color:gray;"
+        }
+    }
 };
 
 function makeSocket(destination) {
@@ -21,7 +37,8 @@ function makeSocket(destination) {
 
     // Listen for messages
     ws.onopen = function(event) {
-        document.getElementById("connectedIndicator").innerHTML = "Connected";
+        connectedAtLeastOnce=true;
+        document.getElementById("connectedIndicator").innerHTML = "Yes";
 
         var connectButton = document.getElementById("connectButton");
         connectButton.disabled = true;
@@ -38,9 +55,10 @@ function makeSocket(destination) {
 
     ws.onclose = function(event) {
         document.getElementById("connectedIndicator").innerHTML =
-            "Not connected";
-        setTimeout(
-            function() { ws = makeSocket(destination); }, 5000);
+            "No";
+        if (!connectedAtLeastOnce) {
+            setTimeout(function() { ws = makeSocket(destination); }, 5000);
+        }
     };
 
     return ws;

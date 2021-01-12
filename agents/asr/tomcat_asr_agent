@@ -45,7 +45,7 @@ async def message_handler(
 
     sample_rate = int(query_params["sampleRate"][0])
 
-    await websocket.send(participant_id)
+    await websocket.send(json.dumps({"participantId": participant_id}))
 
     info(f"Participant {participant_id} is now connected.")
 
@@ -55,16 +55,21 @@ async def message_handler(
         audio_stream,
         sample_rate,
         participant_id=participant_id,
+        websocket=websocket,
     )
     threading.Thread(target=asr_client.run, daemon=True).start()
 
     # We save the start time of the recording in a JSON metadata file.
     with open(f"participant_{participant_id}_metadata.json", "w") as f:
-        f.write(json.dumps({
-            "recording_start_timestamp":
-            datetime.datetime.utcnow().isoformat()+"Z",
-            "sample_rate": sample_rate,
-        }))
+        f.write(
+            json.dumps(
+                {
+                    "recording_start_timestamp": datetime.datetime.utcnow().isoformat()
+                    + "Z",
+                    "sample_rate": sample_rate,
+                }
+            )
+        )
 
     with open(f"participant_{participant_id}.raw", "wb") as f:
         async for data in websocket:
@@ -176,7 +181,7 @@ if __name__ == "__main__":
                     audio_stream,
                     args.sample_rate,
                     # We divide by 2 since we assume 32 bit floats converted to 16 bit ints
-                    args.chunk_size/2,
+                    args.chunk_size / 2,
                 )
                 asr_thread = threading.Thread(target=asr_client.run)
                 asr_thread.start()
@@ -189,9 +194,7 @@ if __name__ == "__main__":
                         chunk = float32_array_to_int16_array(data)
                         audio_stream.fill_buffer(chunk)
 
-
                 time.sleep(1)
-
 
         elif args.mode == "microphone":
             if args.engine == "google":
