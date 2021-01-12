@@ -1,5 +1,7 @@
-from six.moves import queue
+import queue
 from utils import get_current_time
+
+GOOGLE_STREAMING_LIMIT = 240000  # 4 minutes
 
 class AudioStream(object):
     """Opens a stream as a generator that yields audio chunks."""

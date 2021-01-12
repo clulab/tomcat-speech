@@ -36,9 +36,6 @@ RECORDING_IN_PROGRESS = True
 async def message_handler(
     websocket,
     path,
-    use_mqtt: bool = False,
-    mqtt_host: str = "localhost",
-    mqtt_port: int = 1883,
 ):
     query_params = parse_qs(urlparse(websocket.path).query)
 
@@ -58,9 +55,6 @@ async def message_handler(
         audio_stream,
         sample_rate,
         participant_id=participant_id,
-        use_mqtt=use_mqtt,
-        mqtt_host=mqtt_host,
-        mqtt_port=mqtt_port,
     )
     threading.Thread(target=asr_client.run, daemon=True).start()
 
@@ -94,36 +88,6 @@ if __name__ == "__main__":
     )
 
     parent_parser = ArgumentParser(add_help=False)
-    mqtt_options = parent_parser.add_argument_group("MQTT-related options")
-    mqtt_options.add_argument(
-        "--use_mqtt",
-        action="store_true",
-        help=(
-            "Publish messages to an MQTT message broker instead of printing "
-            "to standard output."
-        ),
-    )
-
-    mqtt_options.add_argument(
-        "--mqtt_host",
-        type=str,
-        default="localhost",
-        help="Host that the MQTT broker is running on.",
-    )
-
-    mqtt_options.add_argument(
-        "--mqtt_port",
-        type=int,
-        default=1883,
-        help="Port that the MQTT broker is running on.",
-    )
-
-    mqtt_options.add_argument(
-        "--publish_topic",
-        type=str,
-        help="Message bus topic to publish to.",
-        default="agents/asr_agent",
-    )
 
     # ==========================================
     # Adding subparsers for the different modes.
@@ -144,19 +108,15 @@ if __name__ == "__main__":
     parser_stdin.add_argument(
         "sample_rate",
         type=int,
-        default=44100,
         help="Sample rate in Hertz of the raw input audio stream.",
-        nargs="?",
     )
 
     parser_stdin.add_argument(
         "chunk_size",
         type=int,
-        default=3200,
         help=(
             "Number of bytes to read at a time from the input audio stream."
         ),
-        nargs="?",
     )
 
     parser_microphone = subparsers.add_parser(
@@ -207,32 +167,31 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARNING)
 
     try:
         if args.mode == "stdin":
-            audio_stream = AudioStream()
-            asr_client = GoogleASRClient(
-                audio_stream,
-                args.sample_rate,
-                args.chunk_size,
-                use_mqtt=args.use_mqtt,
-                mqtt_host=args.mqtt_host,
-                mqtt_port=args.mqtt_port,
-            )
-            asr_thread = threading.Thread(target=asr_client.run, daemon=True)
-            asr_thread.start()
+            with AudioStream() as audio_stream:
+                asr_client = GoogleASRClient(
+                    audio_stream,
+                    args.sample_rate,
+                    # We divide by 2 since we assume 32 bit floats converted to 16 bit ints
+                    args.chunk_size/2,
+                )
+                asr_thread = threading.Thread(target=asr_client.run)
+                asr_thread.start()
 
-            while True:
-                data = sys.stdin.buffer.read(args.chunk_size)
-                if not data:
-                    time.sleep(1)
-                    audio_stream.closed = True
-                    asr_thread.join(timeout=1)
-                    break
-                else:
-                    chunk = float32_array_to_int16_array(data)
-                    audio_stream.fill_buffer(chunk)
+                while True:
+                    data = sys.stdin.buffer.read(args.chunk_size)
+                    if not data:
+                        break
+                    else:
+                        chunk = float32_array_to_int16_array(data)
+                        audio_stream.fill_buffer(chunk)
+
+
+                time.sleep(1)
+
 
         elif args.mode == "microphone":
             if args.engine == "google":
@@ -244,9 +203,6 @@ if __name__ == "__main__":
                     asr_client = GoogleASRClient(
                         stream,
                         args.sample_rate,
-                        use_mqtt=args.use_mqtt,
-                        mqtt_host=args.mqtt_host,
-                        mqtt_port=args.mqtt_port,
                     )
                     asr_client.run()
             else:
@@ -263,12 +219,7 @@ if __name__ == "__main__":
 
             asyncio.gather(
                 websockets.serve(
-                    partial(
-                        message_handler,
-                        use_mqtt=args.use_mqtt,
-                        mqtt_host=args.mqtt_host,
-                        mqtt_port=args.mqtt_port,
-                    ),
+                    message_handler,
                     args.ws_host,
                     args.ws_port,
                 ),

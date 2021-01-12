@@ -18,19 +18,12 @@ class GoogleASRClient(ASRClient):
         rate: int,
         chunk_size: Optional[int] = None,
         participant_id=None,
-        use_mqtt: bool = False,
-        mqtt_host: str = "localhost",
-        mqtt_port: int = 1883,
     ):
         super().__init__(
-            use_mqtt=use_mqtt,
-            mqtt_host=mqtt_host,
-            mqtt_port=mqtt_port,
             participant_id=participant_id,
         )
-        self.rate = rate
         self.chunk_size = (
-            int(self.rate / 10) if chunk_size is None else chunk_size
+            int(rate / 10) if chunk_size is None else chunk_size
         )
         self.language_code = "en_US"
         self.speech_client = google.cloud.speech.SpeechClient()
@@ -44,8 +37,9 @@ class GoogleASRClient(ASRClient):
         recognition_config = google.cloud.speech.RecognitionConfig(
             audio_channel_count=1,
             encoding=google.cloud.speech.RecognitionConfig.AudioEncoding.LINEAR16,
-            sample_rate_hertz=self.rate,
+            sample_rate_hertz=rate,
             language_code=self.language_code,
+            enable_automatic_punctuation=True,
         )
 
         self.streaming_recognition_config = (
@@ -77,7 +71,6 @@ class GoogleASRClient(ASRClient):
                 )
 
                 self.listen_print_loop(responses)
-                info("Finished listen print loop")
 
                 if stream.result_end_time > 0:
                     stream.final_request_end_time = stream.is_final_end_time
