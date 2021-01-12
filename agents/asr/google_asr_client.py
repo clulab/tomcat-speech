@@ -4,6 +4,8 @@ Parts of this code are taken from the example provided by Google at
 https://github.com/googleapis/python-speech/blob/master/samples/microphone/transcribe_streaming_infinite.py
 """
 
+import json
+import asyncio
 from typing import Optional
 from logging import info
 from utils import get_current_time
@@ -18,16 +20,19 @@ class GoogleASRClient(ASRClient):
         rate: int,
         chunk_size: Optional[int] = None,
         participant_id=None,
+        websocket=None,
     ):
         super().__init__(
             participant_id=participant_id,
         )
-        self.chunk_size = (
-            int(rate / 10) if chunk_size is None else chunk_size
-        )
+        self.chunk_size = int(rate / 10) if chunk_size is None else chunk_size
         self.language_code = "en_US"
         self.speech_client = google.cloud.speech.SpeechClient()
         self.stream = audiostream
+
+        # Enable publishing to websocket.
+        self.websocket = websocket
+
         # Google Cloud Speech has a limit of 5 minutes for streaming recognition
         # requests (https://cloud.google.com/speech-to-text/quotas)
         # We set a streaming limit of 4 minutes just to be on the safe side.
@@ -80,6 +85,9 @@ class GoogleASRClient(ASRClient):
                 stream.audio_input = []
                 stream.restart_counter = stream.restart_counter + 1
                 stream.new_stream = True
+
+    async def publish_to_websocket(self, message: str):
+        await self.websocket.send(message)
 
     def listen_print_loop(self, responses):
         """Iterates through server responses and prints them.
@@ -137,6 +145,12 @@ class GoogleASRClient(ASRClient):
                 - self.stream.bridging_offset
                 + (self.streaming_limit * self.stream.restart_counter)
             )
+
+            if self.websocket is not None:
+                message = json.dumps(
+                    {"transcript": transcript, "is_final": result.is_final}
+                )
+                asyncio.run(self.publish_to_websocket(message))
 
             if result.is_final:
                 self.publish_transcript(transcript, "Google")
