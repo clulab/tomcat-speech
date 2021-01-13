@@ -519,7 +519,9 @@ def preprocess_chalearn_data(
     """
     path_to_train = os.path.join(base_path, "train")
     path_to_dev = os.path.join(base_path, "val")
-    paths = [path_to_train, path_to_dev]
+    path_to_test = os.path.join(base_path, "test")
+    # paths = [path_to_train, path_to_dev, path_to_test]
+    paths = [path_to_test]
 
     for p in paths:
         # set path to audio files
@@ -555,7 +557,7 @@ def create_gold_tsv_chalearn(gold_file, utts_file, gender_file, save_name):
     with open(utts_file, "r") as j2file:
         utts_dict = json.load(j2file)
 
-    genders = pd.read_csv(gender_file)
+    genders = pd.read_csv(gender_file, sep=";")
     genders_dict = dict(zip(genders["VideoName"], genders["Gender"]))
     ethnicity_dict = dict(zip(genders["VideoName"], genders["Ethnicity"]))
 
@@ -760,22 +762,24 @@ def reorganize_gender_annotations_chalearn(path, genderfile, transcriptfile):
 if __name__ == "__main__":
     # path to data
     path = "../../datasets/multimodal_datasets/Chalearn/"
-    train_path = os.path.join(path, "train/mp4")
-    val_path = os.path.join(path, "val/mp4")
-    paths = [train_path, val_path]
+    # train_path = os.path.join(path, "train/mp4")
+    # val_path = os.path.join(path, "val/mp4")
+    test_path = os.path.join(path, "test/mp4")
+    # pathd = [train_path, val_path]
+    paths = [test_path]
     # path to opensmile
-    smile_path = "~/opensmile-2.3.0"
+    smile_path = "../../opensmile-2.3.0"
     # acoustic set to extract
     acoustic_set = "IS10"
 
-    # # 1. convert pickle to json
-    # file_1 = "annotation_validation.pkl"
-    # file_2 = "transcription_validation.pkl"
-    #
-    # convert_chalearn_pickle_to_json(path, file_1)
-    # convert_chalearn_pickle_to_json(path, file_2)
+    # 1. convert pickle to json
+    file_1 = "test/annotation_test.pkl"
+    file_2 = "test/transcription_test.pkl"
 
-    # # 2. convert mp4 to wav
+    convert_chalearn_pickle_to_json(path, file_1)
+    convert_chalearn_pickle_to_json(path, file_2)
+
+    # 2. convert mp4 to wav
     # for p in paths:
     #     print(p)
     #     print("====================================")
@@ -788,11 +792,19 @@ if __name__ == "__main__":
     # preprocess_chalearn_data(path, "IS10", smile_path, acoustic_set)
 
     # 3.1 reorganize gender annotations file
-    # gender_file = os.path.join(path, "val/gender_anntoations_val.csv")
-    # anno_file = os.path.join(path, "val/transcription_validation.json")
-    # reorganize_gender_annotations_chalearn(path, gender_file, anno_file)
+    gender_file = os.path.join(path, "test/gender_anntoations_test.csv")
+    anno_file = os.path.join(path, "test/transcription_test.json")
+    reorganize_gender_annotations_chalearn(path, gender_file, anno_file)
 
     # 4. create a gold CSV to examine data more closely by hand
+    test_gold_json_path = os.path.join(path, "test/annotation_test.json")
+    test_utts_json_path = os.path.join(path, "test/transcription_test.json")
+    test_gender_file = os.path.join(path, "test/gender_anntoations_test.csv")
+    test_save_name = os.path.join(path, "test/gold_and_utts.tsv")
+    create_gold_tsv_chalearn(
+        test_gold_json_path, test_utts_json_path, test_gender_file, test_save_name
+    )
+    #
     # dev_gold_json_path = os.path.join(path, "val/annotation_validation.json")
     # dev_utts_json_path = os.path.join(path, "val/transcription_validation.json")
     # dev_gender_file = os.path.join(path, "val/gender_annotations_val.csv")
