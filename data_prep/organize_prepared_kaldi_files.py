@@ -119,6 +119,30 @@ class OrganizeKaldiTranscriptions:
                                 sep="\t")
 
 
+def combine_google_partial_transcripts(google_file, new_save_file):
+    """
+    Combine sequential partial transcripts produced by google
+    Google splits anything large into multiple parts
+    This just takes the first confidence value
+        so data with multiple will not be correct
+    todo: adjust confidence values
+    """
+    google_holder = {}
+    print(f"preparing {google_file}")
+    with open(google_file, 'r') as gfile:
+        for line in gfile:
+            line = line.strip().split("\t")
+            if line[0] not in google_holder:
+                google_holder[line[0]] = line[1:]
+            else:
+                google_holder[line[0]][0] += line[1]
+
+    with open(new_save_file, 'w') as nfile:
+        for k, v in google_holder.items():
+            nfile.write(f"{k}\t{v[0]}\t{v[1]}\n")
+    print(f"new file saved at: {new_save_file}")
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "mustard":
         # assumes that datasets are in the untracked 'data' directory
@@ -214,7 +238,7 @@ if __name__ == "__main__":
         mustard_location = "/Users/jculnan/datasets/multimodal_datasets/MUStARD"
         mustard_extensions = ""
         current_file_path = f"{mustard_location}/mustard_utts.tsv"
-        transcribed_file = "google_transcriptions.txt"
+        transcribed_file = "google_transcriptions_combined.txt"
 
         mustard_organizer = OrganizeKaldiTranscriptions("MUStARD", mustard_location, mustard_extensions,
                                                         transcribed_file)
@@ -236,7 +260,7 @@ if __name__ == "__main__":
         meld_dev_extensions = "dev"
         meld_test_extensions = "test"
 
-        transcribed_name = "google_transcriptions.txt"
+        transcribed_name = "google_transcriptions_combined.txt"
 
         current_train_path = f"{meld_location}/train/train_sent_emo.csv"
         current_dev_path = f"{meld_location}/dev/dev_sent_emo.csv"
@@ -272,7 +296,7 @@ if __name__ == "__main__":
         chalearn_dev_extension = "val"
         chalearn_test_extension = "test"
 
-        transcribed_name = "google_transcriptions.txt"
+        transcribed_name = "google_transcriptions_combined.txt"
 
         current_train_path = f"{chalearn_location}/train/gold_and_utts.tsv"
         current_dev_path = f"{chalearn_location}/val/gold_and_utts.tsv"
@@ -301,3 +325,52 @@ if __name__ == "__main__":
 
         # save transcriptions
         chalearn_test_organizer.save_transcriptions(test_transcripts, current_test_file, "test/chalearn_google.tsv")
+
+    elif sys.argv[1] == "combine_google":
+        # mustard
+        # assumes that datasets are in the untracked 'data' directory
+        mustard_location = "/Users/jculnan/datasets/multimodal_datasets/MUStARD"
+        mustard_extensions = ""
+        current_file_path = f"{mustard_location}/mustard_utts.tsv"
+        transcribed_file = "google_transcriptions.txt"
+
+        combine_google_partial_transcripts(f"{mustard_location}/{transcribed_file}",
+                                           f"{mustard_location}/google_transcriptions_combined.txt")
+
+        # meld
+        meld_location = "/Users/jculnan/datasets/multimodal_datasets/MELD_formatted"
+
+        meld_train_extensions = "train"
+        meld_dev_extensions = "dev"
+        meld_test_extensions = "test"
+
+        transcribed_name = "google_transcriptions.txt"
+
+        combine_google_partial_transcripts(f"{meld_location}/{meld_train_extensions}/{transcribed_name}",
+                                           f"{meld_location}/{meld_train_extensions}/google_transcriptions_combined.txt")
+
+        combine_google_partial_transcripts(f"{meld_location}/{meld_dev_extensions}/{transcribed_name}",
+                                           f"{meld_location}/{meld_dev_extensions}/google_transcriptions_combined.txt")
+
+        combine_google_partial_transcripts(f"{meld_location}/{meld_test_extensions}/{transcribed_name}",
+                                           f"{meld_location}/{meld_test_extensions}/google_transcriptions_combined.txt")
+
+
+        # chalearn
+        # assumes that datasets are in the untracked 'data' directory
+        chalearn_location = "/Users/jculnan/datasets/multimodal_datasets/Chalearn"
+
+        chalearn_train_extension = "train"
+        chalearn_dev_extension = "val"
+        chalearn_test_extension = "test"
+
+        transcribed_name = "google_transcriptions.txt"
+
+        combine_google_partial_transcripts(f"{chalearn_location}/{chalearn_train_extension}/{transcribed_name}",
+                                           f"{chalearn_location}/{chalearn_train_extension}/google_transcriptions_combined.txt")
+
+        combine_google_partial_transcripts(f"{chalearn_location}/{chalearn_dev_extension}/{transcribed_name}",
+                                           f"{chalearn_location}/{chalearn_dev_extension}/google_transcriptions_combined.txt")
+
+        combine_google_partial_transcripts(f"{chalearn_location}/{chalearn_test_extension}/{transcribed_name}",
+                                           f"{chalearn_location}/{chalearn_test_extension}/google_transcriptions_combined.txt")
