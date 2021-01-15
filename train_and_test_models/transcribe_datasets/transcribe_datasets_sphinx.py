@@ -59,37 +59,6 @@ class DatasetTranscriber:
             all_utts = pd.read_csv(current_file_location, sep='\t')
 
         return all_utts
-        #
-        # all_utts.to_dict('records', into=data_dict)
-        #
-        # return data_dict
-
-    # def save_transcriptions(self, transcriptions, save_name):
-    #     """
-    #     Saves the transcriptions as they come out
-    #     Saved as a tsv file with name save_name
-    #     To location self.location
-    #     Does not consider dataset structure
-    #     """
-    #     sname = ""
-    #     if save_name.endswith(".tsv"):
-    #         sname = save_name
-    #     elif save_name.endswith(".csv"):
-    #         sname = save_name.split(".csv")[0]
-    #     else:
-    #         sname = f"{save_name}.tsv"
-    #     # convert transcriptions if in dict
-    #     if type(transcriptions) == dict:
-    #         transcriptions = [(k, v) for k, v in transcriptions.items()]
-    #     # save transcriptions
-    #     if type(transcriptions) == pd.DataFrame:
-    #         transcriptions.to_csv(f"{self.location}/{sname}", index=False,
-    #                               sep="\t")
-    #     elif type(transcriptions) == list:
-    #         with open(f"{self.location}/{sname}", 'w') as wfile:
-    #             wfile.write("id\tutterance\n")
-    #             for item in transcriptions:
-    #                 wfile.write(f"{item[0]}\t{item[1]}\n")
 
     def save_transcriptions(self, transcriptions_dict, current_files, save_name):
         """
@@ -157,35 +126,6 @@ class DatasetTranscriber:
         # return completed dict
         return transcript_dict
 
-    # def transcribe(self):
-    #     """
-    #     transcribe all available files in the specified location
-    #     """
-    #     # save wavname -> transcription dict
-    #     transcript_dict = {}
-    #
-    #     if self.extensions is not None:
-    #         for ext in self.extensions:
-    #             # get the location of each dir with files
-    #             location = f"{self.location}/{ext}"
-    #             # find wav files
-    #             for wavfile in os.listdir(location):
-    #                 if wavfile.endswith(".wav"):
-    #                     wavname = wavfile.split('.wav')[0]
-    #                     print(f"Now transcribing {wavname}")
-    #                     # transcribe wav files
-    #                     full_path = os.path.join(location, wavfile)
-    #                     transcription = sphinx_sr.transcribe_file(full_path)
-    #                     print(transcription)
-    #                     # add wavname, transcription pairs to transcript_dict
-    #                     if wavname not in transcript_dict:
-    #                         transcript_dict[wavname] = transcription
-    #                     else:
-    #                         warnings.warn(f"{wavname} already in transcript_dict. Not replacing transcription")
-    #
-    #     # return completed dict
-    #     return transcript_dict
-
 
 if __name__ == "__main__":
     if sys.argv[1] == "mustard":
@@ -240,15 +180,15 @@ if __name__ == "__main__":
 
     elif sys.argv[1] == "chalearn":
         # assumes that datasets are in the untracked 'data' directory
-        chalearn_location = "../../data/multimodal_datasets/Chalearn"
+        chalearn_location = "/Users/jculnan/datasets/multimodal_datasets/Chalearn"
 
         chalearn_train_extension = "train/mp4"
         chalearn_dev_extension = "val/mp4"
-        # chalearn_test_extension = "test/mp4
+        chalearn_test_extension = "test/wav"
 
         current_train_path = f"{chalearn_location}/train/gold_and_utts.tsv"
         current_dev_path = f"{chalearn_location}/val/gold_and_utts.tsv"
-        # current_test_path = f"{chalearn_location}/test/gold_and_utts.tsv"
+        current_test_path = f"{chalearn_location}/test/gold_and_utts.tsv"
 
         chalearn_train_transcriber = DatasetTranscriber("Chalearn", chalearn_location, chalearn_train_extension)
         current_train_file = chalearn_train_transcriber.read_in_current_files(current_train_path)
@@ -263,3 +203,10 @@ if __name__ == "__main__":
 
         # save transcriptions
         chalearn_dev_transcriber.save_transcriptions(dev_transcripts, current_dev_file, "val/chalearn_sphinx.tsv")
+
+        chalearn_test_transcriber = DatasetTranscriber("Chalearn", chalearn_location, chalearn_test_extension)
+        current_test_file = chalearn_test_transcriber.read_in_current_files(current_test_path)
+        test_transcripts = chalearn_test_transcriber.transcribe()
+
+        # save transcriptions
+        chalearn_test_transcriber.save_transcriptions(test_transcripts, current_test_file, "test/chalearn_sphinx.tsv")
