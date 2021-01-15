@@ -1566,3 +1566,95 @@ def multitask_train_and_predict_with_gradnorm(
         # if it's time to stop, end the training process
         if train_state["stop_early"]:
             break
+
+
+def multitask_predict(
+    classifier,
+    train_state,
+    datasets_list,
+    batch_size,
+    device="cpu",
+    avgd_acoustic=True,
+    use_speaker=True,
+    use_gender=False,
+):
+    """
+    Train_ds_list and val_ds_list are lists of MultTaskObject objects!
+    Length of the list is the number of datasets used
+    """
+    num_tasks = len(datasets_list)
+    # get a list of the tasks by number
+    for dset in datasets_list:
+        train_state["tasks"].append(dset.task_num)
+        train_state["test_avg_f1"][dset.task_num] = []
+
+    # Iterate over validation set--put it in a dataloader
+    batches, tasks = get_all_batches(datasets_list, batch_size=batch_size, shuffle=True, partition="test")
+
+    # set classifier to evaluation mode
+    classifier.eval()
+
+    # set holders to use for error analysis
+    ys_holder = {}
+    for i in range(num_tasks):
+        ys_holder[i] = []
+    preds_holder = {}
+    for i in range(num_tasks):
+        preds_holder[i] = []
+
+    # for each batch in the list of batches created by the dataloader
+    for batch_index, batch in enumerate(batches):
+        # get the task for this batch
+        batch_task = tasks[batch_index]
+
+        y_gold = batch[4].to(device)
+
+        batch_acoustic = batch[0].to(device)
+        batch_text = batch[1].to(device)
+        if use_speaker:
+            batch_speakers = batch[2].to(device)
+        else:
+            batch_speakers = None
+
+        if use_gender:
+            batch_genders = batch[3].to(device)
+        else:
+            batch_genders = None
+        batch_lengths = batch[-2].to(device)
+        batch_acoustic_lengths = batch[-1].to(device)
+
+        # compute the output
+        if avgd_acoustic:
+            y_pred = classifier(
+                acoustic_input=batch_acoustic,
+                text_input=batch_text,
+                speaker_input=batch_speakers,
+                length_input=batch_lengths,
+                gender_input=batch_genders,
+                task_num=tasks[batch_index]
+            )
+        else:
+            y_pred = classifier(
+                acoustic_input=batch_acoustic,
+                text_input=batch_text,
+                speaker_input=batch_speakers,
+                length_input=batch_lengths,
+                acoustic_len_input=batch_acoustic_lengths,
+                gender_input=batch_genders,
+                task_num=tasks[batch_index]
+            )
+
+        batch_pred = y_pred[batch_task]
+
+        if datasets_list[batch_task].binary:
+            batch_pred = batch_pred.float()
+            y_gold = y_gold.float()
+
+        # add ys to holder for error analysis
+        preds_holder[batch_task].extend([item.index(max(item)) for item in batch_pred.tolist()])
+        ys_holder[batch_task].extend(y_gold.tolist())
+
+    for task in preds_holder.keys():
+        task_avg_f1 = precision_recall_fscore_support(ys_holder[task], preds_holder[task], average="weighted")
+        print(f"Test weighted f-score for task {task}: {task_avg_f1}")
+        train_state["test_avg_f1"][task].append(task_avg_f1[2])
