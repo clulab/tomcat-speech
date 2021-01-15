@@ -45,12 +45,12 @@ class ChalearnPrep:
         self.test_path = chalearn_path + "/test"
         self.train = f"{self.train_path}/{utts_file_name}"
         self.dev = f"{self.dev_path}/{utts_file_name}"
-        # self.test = f"{self.test_path}/{utts_file_name}"
+        self.test = f"{self.test_path}/{utts_file_name}"
 
         # get files containing gold labels/data
         self.train_data_file = pd.read_csv(self.train, sep="\t")
         self.dev_data_file = pd.read_csv(self.dev, sep="\t")
-        # self.test_data_file = pd.read_csv(self.test)
+        self.test_data_file = pd.read_csv(self.test, sep="\t")
         # get the type of prediction
         self.pred_type = pred_type
 
@@ -84,13 +84,13 @@ class ChalearnPrep:
             avgd=avgd,
         )
         self.dev_dict = OrderedDict(self.dev_dict)
-        # self.test_dict, self.test_acoustic_lengths = make_acoustic_dict_chalearn(
-        #     "{0}/{1}".format(self.test_path, self.test_dir),
-        #     f_end,
-        #     use_cols=use_cols,
-        #     avgd=avgd,
-        # )
-        # self.test_dict = OrderedDict(self.test_dict)
+        self.test_dict, self.test_acoustic_lengths = make_acoustic_dict_chalearn(
+            "{0}/{1}".format(self.test_path, self.test_dir),
+            f_end,
+            use_cols=use_cols,
+            avgd=avgd,
+        )
+        self.test_dict = OrderedDict(self.test_dict)
 
         # utterance-level dict
         self.longest_utt = self.get_longest_utt_chalearn()
@@ -121,14 +121,14 @@ class ChalearnPrep:
             add_avging=add_avging,
             avgd=avgd,
         )
-        # self.test_acoustic, self.test_usable_utts = make_acoustic_set_chalearn(
-        #     self.test,
-        #     self.test_dict,
-        #     acoustic_length=acoustic_length,
-        #     longest_acoustic=self.longest_acoustic,
-        #     add_avging=add_avging,
-        #     avgd=avgd,
-        # )
+        self.test_acoustic, self.test_usable_utts = make_acoustic_set_chalearn(
+            self.test,
+            self.test_dict,
+            acoustic_length=acoustic_length,
+            longest_acoustic=self.longest_acoustic,
+            add_avging=add_avging,
+            avgd=avgd,
+        )
 
         # get utterance, speaker, y matrices for train, dev, and test sets
         (
@@ -157,20 +157,20 @@ class ChalearnPrep:
             self.dev_utt_lengths,
         ) = self.make_data_tensors(self.dev_data_file, self.dev_usable_utts, glove)
 
-        # (
-        #     self.test_utts,
-        #     self.test_genders,
-        #     self.test_ethnicities,
-        #     self.test_y_extr,
-        #     self.test_y_neur,
-        #     self.test_y_agree,
-        #     self.test_y_openn,
-        #     self.test_y_consc,
-        #     self.test_y_inter,
-        #     self.test_utt_lengths,
-        # ) = self.make_data_tensors(
-        #     self.test_data_file, self.test_usable_utts, glove
-        # )
+        (
+            self.test_utts,
+            self.test_genders,
+            self.test_ethnicities,
+            self.test_y_extr,
+            self.test_y_neur,
+            self.test_y_agree,
+            self.test_y_openn,
+            self.test_y_consc,
+            self.test_y_inter,
+            self.test_utt_lengths,
+        ) = self.make_data_tensors(
+            self.test_data_file, self.test_usable_utts, glove
+        )
 
         # set trait weights
         # todo: determine how we're binning and get class weights
@@ -220,7 +220,7 @@ class ChalearnPrep:
 
         # get the data organized for input into the NNs
         # self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
-        self.train_data, self.dev_data = self.combine_xs_and_ys()
+        self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
 
     def combine_xs_and_ys(self):
         """
@@ -320,35 +320,52 @@ class ChalearnPrep:
                     )
                 )
 
+        for i, item in enumerate(self.test_acoustic):
+            if self.train_genders[i] == 2:
+                item_transformed = transform_acoustic_item(
+                    item, self.female_acoustic_means, self.female_deviations
+                )
+            else:
+                item_transformed = transform_acoustic_item(
+                    item, self.male_acoustic_means, self.male_deviations
+                )
+            if self.pred_type is not "max_class":
+                test_data.append(
+                    (
+                        item_transformed,
+                        self.test_utts[i],
+                        0,  # todo: eventually add speaker ?
+                        self.test_genders[i],
+                        self.test_ethnicities[i],
+                        self.test_y_extr[i],
+                        self.test_y_neur[i],
+                        self.test_y_agree[i],
+                        self.test_y_openn[i],
+                        self.test_y_consc[i],
+                        self.test_y_inter[i],
+                        self.test_utt_lengths[i],
+                        self.test_acoustic_lengths[i],
+                    )
+                )
+            else:
+                ys = [self.test_y_extr[i], self.test_y_neur[i],
+                      self.test_y_agree[i], self.test_y_openn[i],
+                      self.test_y_consc[i]]
+                item_y = ys.index(max(ys))
+                test_data.append(
+                    (
+                        item_transformed,
+                        self.test_utts[i],
+                        0,  # todo: eventually add speaker ?
+                        self.test_genders[i],
+                        torch.tensor(item_y),
+                        self.test_ethnicities[i],
+                        self.test_utt_lengths[i],
+                        self.test_acoustic_lengths[i],
+                    )
+                )
 
-        # for i, item in enumerate(self.test_acoustic):
-        #     if self.train_genders[i] == 2:
-        #         item_transformed = transform_acoustic_item(
-        #             item, self.female_acoustic_means, self.female_deviations
-        #         )
-        #     else:
-        #         item_transformed = transform_acoustic_item(
-        #             item, self.male_acoustic_means, self.male_deviations
-        #         )
-        #     test_data.append(
-        #         (
-        #             item_transformed,
-        #             self.test_utts[i],
-        #             0,  # todo: eventually add speaker ?
-        #             self.test_genders[i],
-        #             self.test_ethnicities[i],
-        #             self.test_y_extr[i],
-        #             self.test_y_neur[i],
-        #             self.test_y_agree[i],
-        #             self.test_y_openn[i],
-        #             self.test_y_consc[i],
-        #             self.test_y_inter[i],
-        #             self.test_utt_lengths[i],
-        #             self.test_acoustic_lengths[i],
-        #         )
-        #     )
-
-        return train_data, dev_data  # , test_data
+        return train_data, dev_data, test_data
 
     def get_longest_utt_chalearn(self):
         """
