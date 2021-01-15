@@ -276,7 +276,7 @@ class ChalearnPrep:
                 )
 
         for i, item in enumerate(self.dev_acoustic):
-            if self.train_genders[i] == 2:
+            if self.dev_genders[i] == 2:
                 item_transformed = transform_acoustic_item(
                     item, self.female_acoustic_means, self.female_deviations
                 )
@@ -321,7 +321,7 @@ class ChalearnPrep:
                 )
 
         for i, item in enumerate(self.test_acoustic):
-            if self.train_genders[i] == 2:
+            if self.test_genders[i] == 2:
                 item_transformed = transform_acoustic_item(
                     item, self.female_acoustic_means, self.female_deviations
                 )

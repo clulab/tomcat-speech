@@ -99,7 +99,7 @@ if __name__ == "__main__":
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
-                utts_file_name="mustard_sphinx.tsv"
+                utts_file_name="mustard_google.tsv"
             )
 
             meld_data = MeldPrep(
@@ -109,7 +109,7 @@ if __name__ == "__main__":
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
-                utts_file_name="meld_sphinx.tsv"
+                utts_file_name="meld_google.tsv"
             )
 
             chalearn_data = ChalearnPrep(
@@ -120,7 +120,7 @@ if __name__ == "__main__":
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
                 pred_type=config.chalearn_predtype,
-                utts_file_name="chalearn_sphinx.tsv"
+                utts_file_name="chalearn_google.tsv"
 
             )
 
@@ -136,7 +136,7 @@ if __name__ == "__main__":
             # ravdess_data.emotion_weights = ravdess_data.emotion_weights.to(device)
 
             # get train, dev, test partitions
-            # mustard_train_ds = DatumListDataset(mustard_data.train_data * 10, "mustard", mustard_data.sarcasm_weights)
+            mustard_train_ds = DatumListDataset(mustard_data.train_data * 10, "mustard", mustard_data.sarcasm_weights)
             mustard_train_ds = DatumListDataset(
                 mustard_data.train_data, "mustard", mustard_data.sarcasm_weights
             )
@@ -166,24 +166,26 @@ if __name__ == "__main__":
             chalearn_dev_ds = DatumListDataset(
                 chalearn_data.dev_data, "chalearn_traits", chalearn_data.trait_weights
             )
-            chalearn_test_ds = None
+            chalearn_test_ds = DatumListDataset(
+                chalearn_data.test_data, "chalearn_traits", chalearn_data.trait_weights
+            )
 
             if config.save_dataset:
                 # save all data for faster loading
                 # save meld dataset
-                pickle.dump(meld_train_ds, open("data/meld_IS10RNN76feat_15sec_train.pickle", "wb"))
-                pickle.dump(meld_dev_ds, open("data/meld_IS10RNN76feat_15sec_dev.pickle", "wb"))
-                pickle.dump(meld_test_ds, open("data/meld_IS10RNN76feat_15sec_test.pickle", "wb"))
+                pickle.dump(meld_train_ds, open("data/IS1076-avgd_google/meld_IS1076feat_15sec_train.pickle", "wb"))
+                pickle.dump(meld_dev_ds, open("data/IS1076-avgd_google/meld_IS1076feat_15sec_dev.pickle", "wb"))
+                pickle.dump(meld_test_ds, open("data/IS1076-avgd_google/meld_IS1076feat_15sec_test.pickle", "wb"))
 
                 # save mustard
-                pickle.dump(mustard_train_ds, open("data/mustard_IS10RNN76feat_15sec_train.pickle", "wb"))
-                pickle.dump(mustard_dev_ds, open("data/mustard_IS10RNN76feat_15sec_dev.pickle", "wb"))
-                pickle.dump(mustard_test_ds, open("data/mustard_IS10RNN76feat_15sec_test.pickle", "wb"))
+                pickle.dump(mustard_train_ds, open("data/IS1076-avgd_google/mustard_IS1076feat_15sec_train.pickle", "wb"))
+                pickle.dump(mustard_dev_ds, open("data/IS1076-avgd_google/mustard_IS1076feat_15sec_dev.pickle", "wb"))
+                pickle.dump(mustard_test_ds, open("data/IS1076-avgd_google/mustard_IS1076feat_15sec_test.pickle", "wb"))
                 #
-                # # save chalearn
-                pickle.dump(chalearn_train_ds, open("data/chalearn_IS10RNN76feat_15sec_train.pickle", "wb"))
-                pickle.dump(chalearn_dev_ds, open("data/chalearn_IS10RNN76feat_15sec_dev.pickle", "wb"))
-                # pickle.dump(chalearn_test_ds, open('data/chalearn_IS10RNN10feat_15sec_test.pickle', 'wb'))
+                # save chalearn
+                pickle.dump(chalearn_train_ds, open("data/IS1076-avgd_google/chalearn_IS1076feat_15sec_train.pickle", "wb"))
+                pickle.dump(chalearn_dev_ds, open("data/IS1076-avgd_google/chalearn_IS1076feat_15sec_dev.pickle", "wb"))
+                pickle.dump(chalearn_test_ds, open('data/IS1076-avgd_google/chalearn_IS1076feat_15sec_test.pickle', 'wb'))
 
                 sys.exit()
 

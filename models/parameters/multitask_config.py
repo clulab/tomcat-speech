@@ -6,7 +6,7 @@ import os
 # DEBUG = True # no saving of files; output in the terminal; first random seed from the list
 
 # do you want to save dataset files?
-save_dataset = False
+save_dataset = True
 
 # do you want to load pre-saved dataset files?
 load_dataset = False
@@ -18,7 +18,8 @@ EXPERIMENT_ID = 1
 # EXPERIMENT_DESCRIPTION = "meld-mustard-chalearn_singleOptimizer_IS10-76feats_finalFC-dropout-removed_2lyr-in-dset-specific-output_"
 # EXPERIMENT_DESCRIPTION = "GRADNORM_MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_"
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
-EXPERIMENT_DESCRIPTION = "MMC_SPHINX_25perc-cutoff_15secMax_noClassWeights_IS1076_"
+# EXPERIMENT_DESCRIPTION = "MMC_SPHINX_25perc-cutoff_15secMax_noClassWeights_IS1076_"
+EXPERIMENT_DESCRIPTION = "NONE"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 

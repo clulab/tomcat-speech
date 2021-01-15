@@ -21,30 +21,33 @@ from data_prep.data_prep_helpers import *
 from data_prep.meld_data.meld_prep import *
 from data_prep.mustard_data.mustard_prep import *
 
-# import parameters for model
-import models.parameters.multitask_config as config
-# load config file
-
-# from models.parameters.multitask_params import model_params
-
-# set device
-cuda = False
-
-# # Check CUDA
-if torch.cuda.is_available():
-    cuda = True
-
-device = torch.device("cuda" if cuda else "cpu")
-
-# set random seed
-
-torch.manual_seed(config.model_params.seed)
-np.random.seed(config.model_params.seed)
-random.seed(config.model_params.seed)
-if cuda:
-    torch.cuda.manual_seed_all(config.model_params.seed)
 
 if __name__ == "__main__":
+    # get path to saved mode
+    saved_model = sys.argv[1]
+
+    # load config file
+    # config_path = sys.argv[2]
+
+    # copy config file to testing parameters
+    # shutil.copyfile(config_path, "train_and_test_models/testing_parameters/config.py")
+    import train_and_test_models.testing_parameters.config as config
+
+    # set device
+    cuda = False
+
+    # # Check CUDA
+    if torch.cuda.is_available():
+        cuda = True
+
+    device = torch.device("cuda" if cuda else "cpu")
+
+    # set random seed
+    torch.manual_seed(config.model_params.seed)
+    np.random.seed(config.model_params.seed)
+    random.seed(config.model_params.seed)
+    if cuda:
+        torch.cuda.manual_seed_all(config.model_params.seed)
     # check if cuda
     print(cuda)
 
@@ -58,7 +61,8 @@ if __name__ == "__main__":
     # create save location
     output_path = os.path.join(
         config.exp_save_path,
-        str(config.EXPERIMENT_ID)
+        "TEST"
+        + str(config.EXPERIMENT_ID)
         + "_"
         + config.EXPERIMENT_DESCRIPTION
         + str(date.today()),
@@ -133,35 +137,14 @@ if __name__ == "__main__":
 
             # get train, dev, test partitions
             # mustard_train_ds = DatumListDataset(mustard_data.train_data * 10, "mustard", mustard_data.sarcasm_weights)
-            mustard_train_ds = DatumListDataset(
-                mustard_data.train_data, "mustard", mustard_data.sarcasm_weights
-            )
-            mustard_dev_ds = DatumListDataset(
-                mustard_data.dev_data, "mustard", mustard_data.sarcasm_weights
-            )
             mustard_test_ds = DatumListDataset(
                 mustard_data.test_data, "mustard", mustard_data.sarcasm_weights
             )
 
-            meld_train_ds = DatumListDataset(
-                meld_data.train_data, "meld_emotion", meld_data.emotion_weights
-            )
-
-            meld_dev_ds = DatumListDataset(
-                meld_data.dev_data, "meld_emotion", meld_data.emotion_weights
-            )
             meld_test_ds = DatumListDataset(
                 meld_data.test_data, "meld_emotion", meld_data.emotion_weights
             )
 
-            # create chalearn train, dev, _ data
-            # todo: we need to properly extract test set
-            chalearn_train_ds = DatumListDataset(
-                chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights
-            )
-            chalearn_dev_ds = DatumListDataset(
-                chalearn_data.dev_data, "chalearn_traits", chalearn_data.trait_weights
-            )
             chalearn_test_ds = DatumListDataset(
                 chalearn_data.test_data, "chalearn_traits", chalearn_data.trait_weights
             )
@@ -169,30 +152,21 @@ if __name__ == "__main__":
         else:
             # 1. Load datasets + glove object
             # uncomment if loading saved data
-            meld_train_ds = pickle.load(open("data/meld_IS10RNN10feat_15sec_train.pickle", "rb"))
-            meld_dev_ds = pickle.load(open("data/meld_IS10RNN10feat_15sec_dev.pickle", "rb"))
             meld_test_ds = pickle.load(open("data/meld_IS10RNN10feat_15sec_test.pickle", "rb"))
 
             print("MELD data loaded")
 
             # save mustard
-            mustard_train_ds = pickle.load(open("data/mustard_IS10RNN10feat_15sec_train.pickle", "rb"))
-            mustard_dev_ds = pickle.load(open("data/mustard_IS10RNN10feat_15sec_dev.pickle", "rb"))
             mustard_test_ds = pickle.load(open("data/mustard_IS10RNN10feat_15sec_test.pickle", "rb"))
 
             print("MUSTARD data loaded")
 
             # save chalearn
-            chalearn_train_ds = pickle.load(open("data/chalearn_IS10RNN10feat_15sec_train.pickle", "rb"))
-            chalearn_dev_ds = pickle.load(open("data/chalearn_IS10RNN10feat_15sec_dev.pickle", "rb"))
-            # chalearn_test_ds = pickle.load(open('data/chalearn_test.pickle', 'rb'))
-            chalearn_test_ds = None
-
+            chalearn_test_ds = pickle.load(open('data/chalearn_IS10RNN10feat_15sec_test.pickle', 'rb'))
             print("ChaLearn data loaded")
 
             # load glove
             glove = pickle.load(open("data/glove.pickle", "rb"))
-
             print("GloVe object loaded")
 
         # 3. CREATE NN
@@ -281,9 +255,7 @@ if __name__ == "__main__":
                                         reduction="mean"
                                     )
                                     # create multitask object
-                                    mustard_obj = MultitaskObject(
-                                        mustard_train_ds,
-                                        mustard_dev_ds,
+                                    mustard_obj = MultitaskTestObject(
                                         mustard_test_ds,
                                         mustard_loss_func,
                                         task_num=0,
@@ -295,9 +267,7 @@ if __name__ == "__main__":
                                         reduction="mean"
                                     )
                                     # create multitask object
-                                    meld_obj = MultitaskObject(
-                                        meld_train_ds,
-                                        meld_dev_ds,
+                                    meld_obj = MultitaskTestObject(
                                         meld_test_ds,
                                         meld_loss_func,
                                         task_num=1,
@@ -309,48 +279,41 @@ if __name__ == "__main__":
                                         reduction="mean"
                                     )
                                     # create multitask object
-                                    chalearn_obj = MultitaskObject(
-                                        chalearn_train_ds,
-                                        chalearn_dev_ds,
+                                    chalearn_obj = MultitaskTestObject(
                                         chalearn_test_ds,
                                         chalearn_loss_func,
                                         task_num=2,
                                     )
 
                                     # set all data list
-                                    all_data_list = [
-                                        mustard_obj,
-                                        meld_obj,
-                                        chalearn_obj,
-                                    ]
-
                                     # all_data_list = [
-                                    #     mustard_obj
+                                    #     mustard_obj,
+                                    #     meld_obj,
+                                    #     chalearn_obj,
                                     # ]
+
+                                    all_data_list = [
+                                        mustard_obj
+                                    ]
 
                                     print(
                                         "Model, loss function, and optimization created"
                                     )
 
+                                    # make the train state to keep track of model training/development
+                                    train_state = make_train_state(lr, None)
+
                                     # train the model and evaluate on development set
                                     multitask_predict(
-                                        multitask_model,
-
-                                    )
-
-                                    multitask_train_and_predict(
                                         multitask_model,
                                         train_state,
                                         all_data_list,
                                         this_model_params.batch_size,
-                                        this_model_params.num_epochs,
-                                        optimizer,
                                         device,
-                                        scheduler=None,
-                                        sampler=sampler,
                                         avgd_acoustic=avgd_acoustic_in_network,
                                         use_speaker=this_model_params.use_speaker,
                                         use_gender=this_model_params.use_gender,
+
                                     )
 
                                     # plot the loss and accuracy curves
@@ -358,22 +321,10 @@ if __name__ == "__main__":
                                     loss_title = f"Training and Dev loss for model {config.model_type} with lr {lr}"
                                     loss_save = f"{item_output_path}/loss.png"
 
-                                    # plot the loss from model
-                                    plot_train_dev_curve(
-                                        train_state["train_loss"],
-                                        train_state["val_loss"],
-                                        x_label="Epoch",
-                                        y_label="Loss",
-                                        title=loss_title,
-                                        save_name=loss_save,
-                                        set_axis_boundaries=False,
-                                    )
-
                                     # plot the avg f1 curves for each dataset
                                     for item in train_state["tasks"]:
                                         plot_train_dev_curve(
-                                            train_state["train_avg_f1"][item],
-                                            train_state["val_avg_f1"][item],
+                                            train_state["test_avg_f1"][item],
                                             x_label="Epoch",
                                             y_label="Weighted AVG F1",
                                             title=f"Average f-scores for task {item} for model {config.model_type} with lr {lr}",
