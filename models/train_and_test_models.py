@@ -2,6 +2,8 @@
 import sys
 from collections import OrderedDict
 import random
+import statistics
+from scipy import stats
 
 import torch
 import torch.nn as nn
@@ -12,7 +14,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, RandomSampler
 
 from models.bimodal_models import BimodalCNN
-from models.parameters.earlyfusion_params import *
+# from models.parameters.earlyfusion_params import *
+from models.parameters.multitask_config import model_params as params
 from models.plot_training import *
 
 from sklearn.metrics import confusion_matrix
@@ -20,6 +23,7 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import accuracy_score
+from sklearn.utils import resample
 
 
 # adapted from https://github.com/joosthub/PyTorchNLPBook/blob/master/chapters/chapter_6/classifying-surnames/Chapter-6-Surname-Classification-with-RNNs.ipynb
@@ -28,7 +32,8 @@ def make_train_state(learning_rate, model_save_file):
     return {
         "stop_early": False,
         "early_stopping_step": 0,
-        "early_stopping_best_val": 1e8,
+        "early_stopping_best_vav": 0.0,
+        # "early_stopping_best_val": 1e8,
         "learning_rate": learning_rate,
         "epoch_index": 0,
         "tasks": [],
@@ -40,6 +45,7 @@ def make_train_state(learning_rate, model_save_file):
         "val_avg_f1": {},
         "best_val_loss": [],
         "best_val_acc": [],
+        "test_avg_f1": {},
         "best_loss": 100,
         "test_loss": -1,
         "test_acc": -1,
@@ -66,28 +72,52 @@ def update_train_state(model, train_state):
         torch.save(model.state_dict(), train_state["model_filename"])
         train_state["stop_early"] = False
 
+        # use val f1 instead of val_loss
+        avg_f1_t = 0
+        for item in train_state['val_avg_f1'].values():
+            avg_f1_t += item[-1]
+        avg_f1_t = avg_f1_t / len(train_state['tasks'])
+
         # use best validation accuracy for early stopping
-        train_state["early_stopping_best_val"] = train_state["val_loss"][-1]
+        train_state['early_stopping_best_val'] = avg_f1_t
+        # train_state["early_stopping_best_val"] = train_state["val_loss"][-1]
         # train_state['best_val_acc'] = train_state['val_acc'][-1]
 
     # Save model if performance improved
     elif train_state["epoch_index"] >= 1:
-        loss_t = train_state["val_loss"][-1]
+        # use val f1 instead of val_loss
+        avg_f1_t = 0
+        for item in train_state['val_avg_f1'].values():
+            avg_f1_t += item[-1]
+        avg_f1_t = avg_f1_t / len(train_state['tasks'])
 
-        # If loss worsened relative to BEST
-        if loss_t >= train_state["early_stopping_best_val"]:
-            # Update step
-            train_state["early_stopping_step"] += 1
-        # Loss decreased
+        # if avg f1 is higher
+        if avg_f1_t >= train_state['early_stopping_best_val']:
+            # save this as best model
+            torch.save(model.state_dict(), train_state['model_filename'])
+            print("updating model")
+            train_state['early_stopping_best_val'] = avg_f1_t
+            train_state['early_stopping_step'] = 0
         else:
-            # Save the best model
-            if loss_t < train_state["early_stopping_best_val"]:
-                torch.save(model.state_dict(), train_state["model_filename"])
-                train_state["early_stopping_best_val"] = loss_t
-                # train_state['best_val_acc'] = train_state['val_acc'][-1]
+            train_state['early_stopping_step'] += 1
 
-            # Reset early stopping step
-            train_state["early_stopping_step"] = 0
+
+        # loss_t = train_state["val_loss"][-1]
+
+        # # If loss worsened relative to BEST
+        # if loss_t >= train_state["early_stopping_best_val"]:
+        #     # Update step
+        #     train_state["early_stopping_step"] += 1
+        # # Loss decreased
+        # else:
+        #     # Save the best model
+        #     if loss_t < train_state["early_stopping_best_val"]:
+        #         torch.save(model.state_dict(), train_state["model_filename"])
+        #         train_state["early_stopping_best_val"] = loss_t
+        #         # train_state['best_val_acc'] = train_state['val_acc'][-1]
+        #
+        #     # Reset early stopping step
+        #     train_state["early_stopping_step"] = 0
 
         # Stop early ?
         train_state["stop_early"] = (
@@ -1658,3 +1688,57 @@ def multitask_predict(
         task_avg_f1 = precision_recall_fscore_support(ys_holder[task], preds_holder[task], average="weighted")
         print(f"Test weighted f-score for task {task}: {task_avg_f1}")
         train_state["test_avg_f1"][task].append(task_avg_f1[2])
+
+    for task in preds_holder.keys():
+        print(f"Classification report and confusion matrix for task {task}:")
+        print(confusion_matrix(ys_holder[task], preds_holder[task]))
+        print("======================================================")
+        print(classification_report(ys_holder[task], preds_holder[task], digits=4))
+
+    for task in preds_holder.keys():
+        gold_and_preds = list(zip(ys_holder[task], preds_holder[task]))
+        minscore, maxscore, meanscore, stdevscore = run_bootstrap_resampling(gold_and_preds)
+        print(f"Bootstrap resampling results for task {task}:")
+        print(f"95% range: {minscore}-{maxscore}")
+        print(f"mean score: {meanscore}")
+        print(f"standard deviation of score: {stdevscore}")
+
+
+def run_bootstrap_resampling(gold_pred_list, n=1000, p=.05):
+    """
+    Run bootstrap resampling on results of network
+    gold_pred_list : a list with (gold, prediction) doubles
+    n : the number of iterations to run through
+    p : the p-value (default p = .05)
+    """
+    all_scores = []
+    num_samples = len(gold_pred_list)
+
+    # for each time
+    for i in range(n):
+        # resample
+        sample_set = resample(gold_pred_list, n_samples=num_samples)
+
+        # calculate avg f1
+        golds = [item[0] for item in sample_set]
+        preds = [item[1] for item in sample_set]
+        task_avg_f1 = precision_recall_fscore_support(golds, preds, average="weighted")
+        # add avg f1 to all_scores
+        all_scores.append(task_avg_f1[2])
+
+    # print all scores sorted
+    print(sorted(all_scores))
+
+    # calculate statistics on all_scores
+    mean_score = statistics.mean(all_scores)
+    stdev_score = statistics.stdev(all_scores, xbar=mean_score)
+
+    # calculate percentile scores
+    # todo: could use scipy.stats scoreatpercentile -- scipy not required for the project yet
+    min_percentile = (p / 2.0) * 100
+    print(min_percentile)
+    max_percentile = (1 - (p / 2.0)) * 100
+    print(max_percentile)
+    min_score, max_score = stats.scoreatpercentile(all_scores, per=[min_percentile, max_percentile])
+
+    return min_score, max_score, mean_score, stdev_score

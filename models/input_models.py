@@ -101,8 +101,8 @@ class EarlyFusionMultimodalModel(nn.Module):
         if params.add_avging is False and params.avgd_acoustic is False:
             self.acoustic_fc_1 = nn.Linear(params.fc_hidden_dim, 100)
         else:
-            self.acoustic_fc_1 = nn.Linear(params.audio_dim, 100)
-        self.acoustic_fc_2 = nn.Linear(100, params.audio_dim)
+            self.acoustic_fc_1 = nn.Linear(params.audio_dim, 50)
+        self.acoustic_fc_2 = nn.Linear(50, params.audio_dim)
 
         if params.use_speaker:
             self.fc_input_dim = self.fc_input_dim + params.speaker_emb_dim

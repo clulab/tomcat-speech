@@ -19,7 +19,7 @@ EXPERIMENT_ID = 1
 # during training: enter a brief description that will make the experiment easy to identify
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
-EXPERIMENT_DESCRIPTION = "MELD_GOLD_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_BaseOutpt20_"
+EXPERIMENT_DESCRIPTION = "CHALEARN_AcousticOnly_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_BaseOutpt20_"
 # EXPERIMENT_DESCRIPTION = "NONE"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
@@ -27,7 +27,7 @@ USE_SERVER = False
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
 
-model_type = "MULTITASK"
+model_type = "ACOUSTIC_MULTITASK"
 
 # set parameters for data prep
 # glove_file = "/work/bsharp/glove.short.300d.punct.txt"
@@ -50,9 +50,9 @@ else:
     # ravdess_path = "../../datasets/multimodal_datasets/RAVDESS_speech"
 
 # set dir to save full experiments
-exp_save_path = "output/multitask/sphinx_comparisons"
+exp_save_path = "output/EACL_21/CHALEARN/CHALEARN_ACOUSTICONLY"
 
-data_type = "multitask"
+data_type = "acoustic_multitask"
 fusion_type = "early"
 
 #set type of predictions to make for chalearn
@@ -94,9 +94,9 @@ model_params = Namespace(
     text_only=False,
     # overall model parameters
     model="Multitask-mustard",
-    num_epochs=100,
+    num_epochs=300,
     batch_size=[100],  # 128,  # 32
-    early_stopping_criteria=20,
+    early_stopping_criteria=300,
     num_gru_layers=[2],  # 1,  # 3,  # 1,  # 4, 2,
     bidirectional=False,
     # input dimension parameters
@@ -111,7 +111,7 @@ model_params = Namespace(
     out_channels=20,
     text_cnn_hidden_dim=100,
     # text_output_dim=30,   # 100,   # 50, 300,
-    text_gru_hidden_dim=[100, 200, 400],  # 30,  # 50,  # 20
+    text_gru_hidden_dim=[100],  # 30,  # 50,  # 20
     # acoustic NN
     avgd_acoustic=False,  # set true to use avgd acoustic feat vectors without RNN
     add_avging=True,  # set to true if you want to avg acoustic feature vecs upon input
@@ -125,8 +125,8 @@ model_params = Namespace(
     gender_emb_dim=4,
     # outputs
     output_dim=[100],  # output dimensions from last layer of base model
-    output_0_dim=7,  # output vec for first task
-    output_1_dim=5,  # 7,  # output vec for second task
+    output_0_dim=5,  # output vec for first task
+    output_1_dim=7,  # 7,  # output vec for second task
     output_2_dim=2,  # 3,    # output vec for third task
     output_3_dim=0,
     # FC layer parameters
@@ -135,7 +135,7 @@ model_params = Namespace(
     final_hidden_dim=50, # the out size of dset-specific fc1 and input of fc2
     dropout=[0.3],  # 0.2
     # optimizer parameters
-    lrs=[1e-3, 1e-4],
+    lrs=[1e-3],
     beta_1=0.9,
     beta_2=0.999,
     weight_decay=0.0001,

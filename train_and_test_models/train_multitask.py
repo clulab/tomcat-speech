@@ -13,7 +13,7 @@ import torch.nn as nn
 sys.path.append("/work/johnculnan/github/asist-speech")
 sys.path.append("/work/johnculnan")
 
-# from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split
 
 from data_prep.chalearn_data.chalearn_prep import ChalearnPrep
 from data_prep.ravdess_data.ravdess_prep import RavdessPrep
@@ -63,6 +63,8 @@ if __name__ == "__main__":
         + config.EXPERIMENT_DESCRIPTION
         + str(date.today()),
     )
+
+    print(f"OUTPUT PATH:\n{output_path}")
     
     # set location for pickled data (saving or loading)
     if config.USE_SERVER:
@@ -99,7 +101,7 @@ if __name__ == "__main__":
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
-                utts_file_name="mustard_google.tsv"
+                utts_file_name="mustard_kaldi.tsv"
             )
 
             meld_data = MeldPrep(
@@ -109,7 +111,7 @@ if __name__ == "__main__":
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
-                utts_file_name="meld_google.tsv"
+                utts_file_name="meld_kaldi.tsv"
             )
 
             chalearn_data = ChalearnPrep(
@@ -121,7 +123,6 @@ if __name__ == "__main__":
                 avgd=config.model_params.avgd_acoustic,
                 pred_type=config.chalearn_predtype,
                 utts_file_name="chalearn_google.tsv"
-
             )
 
             # ravdess_data = RavdessPrep(ravdess_path=config.ravdess_path, acoustic_length=params.audio_dim, glove=glove,
@@ -136,7 +137,7 @@ if __name__ == "__main__":
             # ravdess_data.emotion_weights = ravdess_data.emotion_weights.to(device)
 
             # get train, dev, test partitions
-            mustard_train_ds = DatumListDataset(mustard_data.train_data * 10, "mustard", mustard_data.sarcasm_weights)
+            # mustard_train_ds = DatumListDataset(mustard_data.train_data * 10, "mustard", mustard_data.sarcasm_weights)
             mustard_train_ds = DatumListDataset(
                 mustard_data.train_data, "mustard", mustard_data.sarcasm_weights
             )
@@ -173,51 +174,53 @@ if __name__ == "__main__":
             if config.save_dataset:
                 # save all data for faster loading
                 # save meld dataset
-                pickle.dump(meld_train_ds, open("data/IS1076-avgd_google/meld_IS1076feat_15sec_train.pickle", "wb"))
-                pickle.dump(meld_dev_ds, open("data/IS1076-avgd_google/meld_IS1076feat_15sec_dev.pickle", "wb"))
-                pickle.dump(meld_test_ds, open("data/IS1076-avgd_google/meld_IS1076feat_15sec_test.pickle", "wb"))
+                pickle.dump(meld_train_ds, open("data/textonly_kaldi/meld_IS1076feat_15sec_train.pickle", "wb"))
+                pickle.dump(meld_dev_ds, open("data/textonly_kaldi/meld_IS1076feat_15sec_dev.pickle", "wb"))
+                pickle.dump(meld_test_ds, open("data/textonly_kaldi/meld_IS1076feat_15sec_test.pickle", "wb"))
 
                 # save mustard
-                pickle.dump(mustard_train_ds, open("data/IS1076-avgd_google/mustard_IS1076feat_15sec_train.pickle", "wb"))
-                pickle.dump(mustard_dev_ds, open("data/IS1076-avgd_google/mustard_IS1076feat_15sec_dev.pickle", "wb"))
-                pickle.dump(mustard_test_ds, open("data/IS1076-avgd_google/mustard_IS1076feat_15sec_test.pickle", "wb"))
+                pickle.dump(mustard_train_ds, open("data/textonly_kaldi/mustard_IS1076feat_15sec_train.pickle", "wb"))
+                pickle.dump(mustard_dev_ds, open("data/textonly_kaldi/mustard_IS1076feat_15sec_dev.pickle", "wb"))
+                pickle.dump(mustard_test_ds, open("data/textonly_kaldi/mustard_IS1076feat_15sec_test.pickle", "wb"))
                 #
                 # save chalearn
-                pickle.dump(chalearn_train_ds, open("data/IS1076-avgd_google/chalearn_IS1076feat_15sec_train.pickle", "wb"))
-                pickle.dump(chalearn_dev_ds, open("data/IS1076-avgd_google/chalearn_IS1076feat_15sec_dev.pickle", "wb"))
-                pickle.dump(chalearn_test_ds, open('data/IS1076-avgd_google/chalearn_IS1076feat_15sec_test.pickle', 'wb'))
+                # pickle.dump(chalearn_train_ds, open("data/textonly_google/chalearn_IS1076feat_15sec_train.pickle", "wb"))
+                # pickle.dump(chalearn_dev_ds, open("data/textonly_google/chalearn_IS1076feat_15sec_dev.pickle", "wb"))
+                # pickle.dump(chalearn_test_ds, open('data/textonly_google/chalearn_IS1076feat_15sec_test.pickle', 'wb'))
 
-                sys.exit()
+                # sys.exit()
 
-                pickle.dump(
-                    glove, open("data/glove.pickle", "wb")
-                )  # todo: get different glove names
+                # pickle.dump(
+                #     glove, open("data/glove.pickle", "wb")
+                # )  # todo: get different glove names
 
             print("Datasets created")
-
-
 
         else:
             # 1. Load datasets + glove object
             # uncomment if loading saved data
-            meld_train_ds = pickle.load(open("data/meld_IS10RNN10feat_15sec_train.pickle", "rb"))
-            meld_dev_ds = pickle.load(open("data/meld_IS10RNN10feat_15sec_dev.pickle", "rb"))
-            meld_test_ds = pickle.load(open("data/meld_IS10RNN10feat_15sec_test.pickle", "rb"))
+            meld_train_ds = pickle.load(open("data/IS1076-avgd_gold/meld_IS1076feat_15sec_train.pickle", "rb"))
+            meld_dev_ds = pickle.load(open("data/IS1076-avgd_gold/meld_IS1076feat_15sec_dev.pickle", "rb"))
+            meld_test_ds = pickle.load(open("data/IS1076-avgd_gold/meld_IS1076feat_15sec_train.pickle", "rb"))
+
+            # combine train and dev data to increase the number of items in dev set
+            train_and_dev = meld_train_ds + meld_dev_ds
+            meld_train_ds, meld_dev_ds = train_test_split(train_and_dev, test_size=0.2)
+            print("MELD dataset rebalanced")
 
             print("MELD data loaded")
 
-            # save mustard
-            mustard_train_ds = pickle.load(open("data/mustard_IS10RNN10feat_15sec_train.pickle", "rb"))
-            mustard_dev_ds = pickle.load(open("data/mustard_IS10RNN10feat_15sec_dev.pickle", "rb"))
-            mustard_test_ds = pickle.load(open("data/mustard_IS10RNN10feat_15sec_test.pickle", "rb"))
+            # load mustard
+            mustard_train_ds = pickle.load(open("data/IS1076-avgd_gold/mustard_IS1076feat_15sec_train.pickle", "rb"))
+            mustard_dev_ds = pickle.load(open("data/IS1076-avgd_gold/mustard_IS1076feat_15sec_dev.pickle", "rb"))
+            mustard_test_ds = pickle.load(open("data/IS1076-avgd_gold/mustard_IS1076feat_15sec_test.pickle", "rb"))
 
             print("MUSTARD data loaded")
 
-            # save chalearn
-            chalearn_train_ds = pickle.load(open("data/chalearn_IS10RNN10feat_15sec_train.pickle", "rb"))
-            chalearn_dev_ds = pickle.load(open("data/chalearn_IS10RNN10feat_15sec_dev.pickle", "rb"))
-            # chalearn_test_ds = pickle.load(open('data/chalearn_test.pickle', 'rb'))
-            chalearn_test_ds = None
+            # load chalearn
+            chalearn_train_ds = pickle.load(open("data/IS1076-avgd_gold/chalearn_IS1076feat_15sec_train.pickle", "rb"))
+            chalearn_dev_ds = pickle.load(open("data/IS1076-avgd_gold/chalearn_IS1076feat_15sec_dev.pickle", "rb"))
+            chalearn_test_ds = pickle.load(open("data/IS1076-avgd_gold/chalearn_IS1076feat_15sec_test.pickle", 'rb'))
 
             print("ChaLearn data loaded")
 
@@ -316,7 +319,7 @@ if __name__ == "__main__":
                                         mustard_dev_ds,
                                         mustard_test_ds,
                                         mustard_loss_func,
-                                        task_num=0,
+                                        task_num=2,
                                     )
 
                                     # add loss function for meld
@@ -330,7 +333,7 @@ if __name__ == "__main__":
                                         meld_dev_ds,
                                         meld_test_ds,
                                         meld_loss_func,
-                                        task_num=1,
+                                        task_num=0,
                                     )
 
                                     # add loss function for chalearn
@@ -344,7 +347,7 @@ if __name__ == "__main__":
                                         chalearn_dev_ds,
                                         chalearn_test_ds,
                                         chalearn_loss_func,
-                                        task_num=2,
+                                        task_num=1,
                                     )
 
                                     # calculate lengths of train sets and use this to determine multipliers for the loss functions
@@ -383,15 +386,15 @@ if __name__ == "__main__":
                                     )
 
                                     # set all data list
-                                    all_data_list = [
-                                        mustard_obj,
-                                        meld_obj,
-                                        chalearn_obj,
-                                    ]
-
                                     # all_data_list = [
-                                    #     mustard_obj
+                                    #     mustard_obj,
+                                    #     meld_obj,
+                                    #     chalearn_obj,
                                     # ]
+
+                                    all_data_list = [
+                                        meld_obj
+                                    ]
 
                                     print(
                                         "Model, loss function, and optimization created"

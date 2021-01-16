@@ -170,9 +170,6 @@ class MustardPrep:
         dev_data = []
         test_data = []
 
-        print(len(self.train_acoustic))
-        print(len(self.train_acoustic_lengths))
-        exit()
         for i, item in enumerate(self.train_acoustic):
             # normalize
             item_transformed = transform_acoustic_item(

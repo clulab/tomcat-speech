@@ -152,17 +152,17 @@ if __name__ == "__main__":
         else:
             # 1. Load datasets + glove object
             # uncomment if loading saved data
-            meld_test_ds = pickle.load(open("data/meld_IS10RNN10feat_15sec_test.pickle", "rb"))
+            meld_test_ds = pickle.load(open("data/IS1076-avgd_gold/meld_IS1076feat_15sec_train.pickle", "rb"))
 
             print("MELD data loaded")
 
             # save mustard
-            mustard_test_ds = pickle.load(open("data/mustard_IS10RNN10feat_15sec_test.pickle", "rb"))
+            mustard_test_ds = pickle.load(open("data/IS1076-avgd_gold/mustard_IS1076feat_15sec_test.pickle", "rb"))
 
             print("MUSTARD data loaded")
 
             # save chalearn
-            chalearn_test_ds = pickle.load(open('data/chalearn_IS10RNN10feat_15sec_test.pickle', 'rb'))
+            chalearn_test_ds = pickle.load(open("data/IS1076-avgd_gold/chalearn_IS1076feat_15sec_test.pickle", 'rb'))
             print("ChaLearn data loaded")
 
             # load glove
@@ -205,23 +205,6 @@ if __name__ == "__main__":
 
                                     print(this_model_params)
 
-                                    item_output_path = os.path.join(
-                                        output_path,
-                                        f"LR{lr}_BATCH{b_size}_"
-                                        f"NUMLYR{num_gru_layer}_"
-                                        f"SHORTEMB{short_emb_size}_"
-                                        f"INT-OUTPUT{output_d}_"
-                                        f"DROPOUT{dout}_"
-                                        f"TEXTHIDDEN{txt_hidden_dim}",
-                                    )
-
-                                    # make sure the full save path exists; if not, create it
-                                    os.system(
-                                        'if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(
-                                            item_output_path
-                                        )
-                                    )
-
                                     # this uses train-dev-test folds
                                     # create instance of model
                                     if config.model_type.lower() == "multitask":
@@ -258,7 +241,7 @@ if __name__ == "__main__":
                                     mustard_obj = MultitaskTestObject(
                                         mustard_test_ds,
                                         mustard_loss_func,
-                                        task_num=0,
+                                        task_num=2,
                                     )
 
                                     # add loss function for meld
@@ -282,7 +265,7 @@ if __name__ == "__main__":
                                     chalearn_obj = MultitaskTestObject(
                                         chalearn_test_ds,
                                         chalearn_loss_func,
-                                        task_num=2,
+                                        task_num=0,
                                     )
 
                                     # set all data list
@@ -293,7 +276,7 @@ if __name__ == "__main__":
                                     # ]
 
                                     all_data_list = [
-                                        mustard_obj
+                                        chalearn_obj
                                     ]
 
                                     print(
@@ -315,20 +298,3 @@ if __name__ == "__main__":
                                         use_gender=this_model_params.use_gender,
 
                                     )
-
-                                    # plot the loss and accuracy curves
-                                    # set plot titles
-                                    loss_title = f"Training and Dev loss for model {config.model_type} with lr {lr}"
-                                    loss_save = f"{item_output_path}/loss.png"
-
-                                    # plot the avg f1 curves for each dataset
-                                    for item in train_state["tasks"]:
-                                        plot_train_dev_curve(
-                                            train_state["test_avg_f1"][item],
-                                            x_label="Epoch",
-                                            y_label="Weighted AVG F1",
-                                            title=f"Average f-scores for task {item} for model {config.model_type} with lr {lr}",
-                                            save_name=f"{item_output_path}/avg-f1_task-{item}.png",
-                                            losses=False,
-                                            set_axis_boundaries=False,
-                                        )
