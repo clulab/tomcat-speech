@@ -11,37 +11,72 @@ save_path = "../../glove.short.300d.punct.txt"
 short_path = save_path
 vec_length = 300
 
-vocab_file_path = "../../datasets/multimodal_datasets/MUStARD/mustard_utts.tsv"
-vocab_file = pd.read_csv(vocab_file_path, sep="\t", names=['id', 'utterance'])
-vocab_file.drop(columns=['id'], inplace=True)
+# vocab_file_path = "../../datasets/multimodal_datasets/MUStARD/mustard_utts.tsv"
+# vocab_file = pd.read_csv(vocab_file_path, sep="\t", names=['id', 'utterance'])
+# vocab_file.drop(columns=['id'], inplace=True)
+#
+# vocab_file_path8 = "../../datasets/multimodal_datasets/MUStARD/mustard_16000_transcription.txt"
+# vocab_file8 = pd.read_csv(vocab_file_path8, sep="\t", names=['id', 'utterance'])
+# vocab_file8.drop(columns=['id'], inplace=True)
+#
+# vocab_file_path9 = "../../datasets/multimodal_datasets/MUStARD/mustard_sphinx.txt"
+# vocab_file9 = pd.read_csv(vocab_file_path9, sep="\t", names=['id', 'utterance'])
+# vocab_file9.drop(columns=['id'], inplace=True)
+#
+# vocab_file_path10 = "../../datasets/multimodal_datasets/MUStARD/mustard_google.tsv"
+# vocab_file10 = pd.read_csv(vocab_file_path10, sep="\t", usecols=["utterance"])
 
-vocab_file_path8 = "../../datasets/multimodal_datasets/MUStARD/mustard_16000_transcription.txt"
-vocab_file8 = pd.read_csv(vocab_file_path8, sep="\t", names=['id', 'utterance'])
-vocab_file8.drop(columns=['id'], inplace=True)
+# all_vocab = pd.concat([vocab_file, vocab_file8, vocab_file9, vocab_file10], axis=0)
 
-vocab_file_path2 = "../../datasets/multimodal_datasets/MELD_formatted/train/train_sent_emo.csv"
-vocab_file2 = pd.read_csv(vocab_file_path2, sep=",", usecols=["Utterance"])
-vocab_file2.rename(columns={"Utterance": "utterance"}, inplace=True)
+# vocab_file_path2 = "../../datasets/multimodal_datasets/MELD_formatted/train/train_sent_emo.csv"
+# vocab_file2 = pd.read_csv(vocab_file_path2, sep=",", usecols=["Utterance"])
+# vocab_file2.rename(columns={"Utterance": "utterance"}, inplace=True)
 
-vocab_file_path3 = "../../datasets/multimodal_datasets/MELD_formatted/dev/dev_sent_emo.csv"
-vocab_file3 = pd.read_csv(vocab_file_path3, sep=",", usecols=["Utterance"])
-vocab_file3.rename(columns={"Utterance": "utterance"}, inplace=True)
+vocab_file_path11 = "../../datasets/multimodal_datasets/MELD_formatted/train/meld_google.tsv"
+vocab_file11 = pd.read_csv(vocab_file_path11, sep="\t", usecols=["Utterance"])
+vocab_file11.rename(columns={"Utterance": "utterance"}, inplace=True)
 
-vocab_file_path4 = "../../datasets/multimodal_datasets/MELD_formatted/test/test_sent_emo.csv"
-vocab_file4 = pd.read_csv(vocab_file_path4, sep=",", usecols=["Utterance"])
-vocab_file4.rename(columns={"Utterance": "utterance"}, inplace=True)
+vocab_file_path12 = "../../datasets/multimodal_datasets/MELD_formatted/train/meld_train_sphinx_16000.txt"
+vocab_file12 = pd.read_csv(vocab_file_path12, sep="\t", names=["id", "utterance"])
+vocab_file12.drop(columns=["id"], inplace=True)
 
-vocab_file_path5 = "../../datasets/multimodal_datasets/Chalearn/train/gold_and_utts.tsv"
-vocab_file5 = pd.read_csv(vocab_file_path5, sep="\t", usecols=["utterance"])
+vocab_file_path13 = "../../datasets/multimodal_datasets/MELD_formatted/dev/meld_google.tsv"
+vocab_file13 = pd.read_csv(vocab_file_path13, sep="\t", usecols=["Utterance"])
+vocab_file13.rename(columns={"Utterance": "utterance"}, inplace=True)
 
-vocab_file_path6 = "../../datasets/multimodal_datasets/Chalearn/val/gold_and_utts.tsv"
-vocab_file6 = pd.read_csv(vocab_file_path6, sep="\t", usecols=["utterance"])
+vocab_file_path14 = "../../datasets/multimodal_datasets/MELD_formatted/dev/meld_dev_sphinx_16000.txt"
+vocab_file14 = pd.read_csv(vocab_file_path14, sep="\t", names=["id", "utterance"])
+vocab_file14.drop(columns=["id"], inplace=True)
 
-vocab_file_path7 = "../../datasets/multimodal_datasets/Chalearn/test/gold_and_utts.tsv"
-vocab_file7 = pd.read_csv(vocab_file_path7, sep="\t", usecols=["utterance"])
+vocab_file_path15 = "../../datasets/multimodal_datasets/MELD_formatted/test/meld_google.tsv"
+vocab_file15 = pd.read_csv(vocab_file_path15, sep="\t", usecols=["Utterance"])
+vocab_file15.rename(columns={"Utterance": "utterance"}, inplace=True)
 
-all_vocab = pd.concat([vocab_file, vocab_file2, vocab_file3, vocab_file4, vocab_file5, vocab_file6,
-                       vocab_file7, vocab_file8], axis=0)
+vocab_file_path16 = "../../datasets/multimodal_datasets/MELD_formatted/test/meld_test_sphinx_16000.txt"
+vocab_file16 = pd.read_csv(vocab_file_path16, sep="\t", names=["id", "utterance"])
+vocab_file16.drop(columns=["id"], inplace=True)
+
+all_vocab = pd.concat([vocab_file11, vocab_file12, vocab_file13, vocab_file14, vocab_file15, vocab_file16], axis=0)
+#
+# vocab_file_path3 = "../../datasets/multimodal_datasets/MELD_formatted/dev/dev_sent_emo.csv"
+# vocab_file3 = pd.read_csv(vocab_file_path3, sep=",", usecols=["Utterance"])
+# vocab_file3.rename(columns={"Utterance": "utterance"}, inplace=True)
+#
+# vocab_file_path4 = "../../datasets/multimodal_datasets/MELD_formatted/test/test_sent_emo.csv"
+# vocab_file4 = pd.read_csv(vocab_file_path4, sep=",", usecols=["Utterance"])
+# vocab_file4.rename(columns={"Utterance": "utterance"}, inplace=True)
+#
+# vocab_file_path5 = "../../datasets/multimodal_datasets/Chalearn/train/gold_and_utts.tsv"
+# vocab_file5 = pd.read_csv(vocab_file_path5, sep="\t", usecols=["utterance"])
+#
+# vocab_file_path6 = "../../datasets/multimodal_datasets/Chalearn/val/gold_and_utts.tsv"
+# vocab_file6 = pd.read_csv(vocab_file_path6, sep="\t", usecols=["utterance"])
+#
+# vocab_file_path7 = "../../datasets/multimodal_datasets/Chalearn/test/gold_and_utts.tsv"
+# vocab_file7 = pd.read_csv(vocab_file_path7, sep="\t", usecols=["utterance"])
+
+# all_vocab = pd.concat([vocab_file, vocab_file2, vocab_file3, vocab_file4, vocab_file5, vocab_file6,
+#                        vocab_file7, vocab_file8], axis=0)
 # all_vocab = vocab_file
 all_vocab = all_vocab.replace(np.nan, "", regex=True)
 
