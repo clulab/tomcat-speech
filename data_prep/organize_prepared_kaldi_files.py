@@ -153,7 +153,7 @@ if __name__ == "__main__":
         mustard_location = "/Users/jculnan/datasets/multimodal_datasets/MUStARD"
         mustard_extensions = ""
         current_file_path = f"{mustard_location}/mustard_utts.tsv"
-        transcribed_file = "mustard_transcription.txt"
+        transcribed_file = "mustard_16000_transcription.txt"
 
         mustard_organizer = OrganizeKaldiTranscriptions("MUStARD", mustard_location, mustard_extensions,
                                                         transcribed_file)
@@ -166,6 +166,25 @@ if __name__ == "__main__":
 
         # save transcriptions
         mustard_organizer.save_transcriptions(transcripts, current_file, "mustard_kaldi.tsv")
+
+    elif sys.argv[1] == "mustard-sphinx":
+        # assumes that datasets are in the untracked 'data' directory
+        mustard_location = "/Users/jculnan/datasets/multimodal_datasets/MUStARD"
+        mustard_extensions = ""
+        current_file_path = f"{mustard_location}/mustard_utts.tsv"
+        transcribed_file = "mustard_sphinx.txt"
+
+        mustard_organizer = OrganizeKaldiTranscriptions("MUStARD", mustard_location, mustard_extensions,
+                                                        transcribed_file)
+
+        # get current label file
+        current_file = mustard_organizer.read_in_current_files(current_file_path)
+
+        # transcribe data
+        transcripts = mustard_organizer.read_in_transcribed_file()
+
+        # save transcriptions
+        mustard_organizer.save_transcriptions(transcripts, current_file, "mustard_sphinx.tsv")
 
     elif sys.argv[1] == "meld":
         # assumes that datasets are in the untracked 'data' directory
