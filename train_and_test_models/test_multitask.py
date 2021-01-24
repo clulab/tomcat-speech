@@ -104,7 +104,7 @@ if __name__ == "__main__":
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
-                utts_file_name="mustard_sphinx.tsv"
+                # utts_file_name="mustard_sphinx.tsv"
             )
 
             meld_data = MeldPrep(
@@ -114,7 +114,7 @@ if __name__ == "__main__":
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
-                utts_file_name="meld_sphinx.tsv"
+                # utts_file_name="meld_sphinx.tsv"
             )
 
             chalearn_data = ChalearnPrep(
@@ -125,7 +125,7 @@ if __name__ == "__main__":
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
                 pred_type=config.chalearn_predtype,
-                utts_file_name="chalearn_sphinx.tsv"
+                # utts_file_name="chalearn_sphinx.tsv"
 
             )
 
@@ -152,7 +152,7 @@ if __name__ == "__main__":
         else:
             # 1. Load datasets + glove object
             # uncomment if loading saved data
-            meld_test_ds = pickle.load(open("data/IS1076-avgd_gold/meld_IS1076feat_15sec_train.pickle", "rb"))
+            meld_test_ds = pickle.load(open("data/IS1076-avgd_gold/meld_IS1076feat_15sec_test.pickle", "rb"))
 
             print("MELD data loaded")
 
@@ -253,7 +253,7 @@ if __name__ == "__main__":
                                     meld_obj = MultitaskTestObject(
                                         meld_test_ds,
                                         meld_loss_func,
-                                        task_num=1,
+                                        task_num=0,
                                     )
 
                                     # add loss function for chalearn
@@ -265,7 +265,7 @@ if __name__ == "__main__":
                                     chalearn_obj = MultitaskTestObject(
                                         chalearn_test_ds,
                                         chalearn_loss_func,
-                                        task_num=0,
+                                        task_num=1,
                                     )
 
                                     # set all data list
@@ -276,7 +276,7 @@ if __name__ == "__main__":
                                     # ]
 
                                     all_data_list = [
-                                        chalearn_obj
+                                        meld_obj
                                     ]
 
                                     print(

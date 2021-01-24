@@ -12,22 +12,22 @@ import os
 save_dataset = False
 
 # do you want to load pre-saved dataset files?
-load_dataset = True
+load_dataset = False
 
 
 EXPERIMENT_ID = 1
 # during training: enter a brief description that will make the experiment easy to identify
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
-EXPERIMENT_DESCRIPTION = "CHALEARN_AcousticOnly_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_BaseOutpt20_"
-# EXPERIMENT_DESCRIPTION = "NONE"
+# EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
+EXPERIMENT_DESCRIPTION = "MELD_5sec_minmaxavgstdevcalcs_test"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
 
-model_type = "ACOUSTIC_MULTITASK"
+model_type = "MULTITASK"
 
 # set parameters for data prep
 # glove_file = "/work/bsharp/glove.short.300d.punct.txt"
@@ -50,9 +50,9 @@ else:
     # ravdess_path = "../../datasets/multimodal_datasets/RAVDESS_speech"
 
 # set dir to save full experiments
-exp_save_path = "output/EACL_21/CHALEARN/CHALEARN_ACOUSTICONLY"
+exp_save_path = "output/TEST"
 
-data_type = "acoustic_multitask"
+data_type = "multitask"
 fusion_type = "early"
 
 #set type of predictions to make for chalearn
@@ -94,15 +94,15 @@ model_params = Namespace(
     text_only=False,
     # overall model parameters
     model="Multitask-mustard",
-    num_epochs=300,
+    num_epochs=100,
     batch_size=[100],  # 128,  # 32
-    early_stopping_criteria=300,
+    early_stopping_criteria=20,
     num_gru_layers=[2],  # 1,  # 3,  # 1,  # 4, 2,
     bidirectional=False,
     # input dimension parameters
     text_dim=300,  # text vector length
     short_emb_dim=[30],  # length of trainable embeddings vec
-    audio_dim=len(acoustic_columns),  # 78,  # 76,  # 79,  # 10 # audio vector length
+    audio_dim=len(acoustic_columns) * 5,  # 78,  # 76,  # 79,  # 10 # audio vector length
     # audio_dim=10,
     # text NN
     kernel_1_size=3,
@@ -125,8 +125,8 @@ model_params = Namespace(
     gender_emb_dim=4,
     # outputs
     output_dim=[100],  # output dimensions from last layer of base model
-    output_0_dim=5,  # output vec for first task
-    output_1_dim=7,  # 7,  # output vec for second task
+    output_0_dim=7,  # output vec for first task
+    output_1_dim=5,  # 7,  # output vec for second task
     output_2_dim=2,  # 3,    # output vec for third task
     output_3_dim=0,
     # FC layer parameters

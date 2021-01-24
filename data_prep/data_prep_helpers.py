@@ -277,30 +277,39 @@ class MinMaxScaleRange:
 
 def clean_up_word(word):
     word = word.replace("\x92", "'")
-    word = word.replace("\x91", "")
+    word = word.replace("\x91", " ")
     word = word.replace("\x97", "-")
+    word = word.replace("\x93", " ")
+    word = word.replace("[", " ")
+    word = word.replace("]", " ")
+    word = word.replace("-", " - ")
+    word = word.replace("%", " % ")
+    word = word.replace("@", " @ ")
+    word = word.replace("$", " $ ")
+    word = word.replace("...", " ... ")
+    word = word.replace("/", " / ")
     # clean up word by putting in lowercase + removing punct
-    punct = [
-        ",",
-        ".",
-        "!",
-        "?",
-        ";",
-        ":",
-        "'",
-        '"',
-        "-",
-        "$",
-        "’",
-        "…",
-        "[",
-        "]",
-        "(",
-        ")",
-    ]
-    for char in word:
-        if char in punct:
-            word = word.replace(char, " ")
+    # punct = [
+    #     ",",
+    #     ".",
+    #     "!",
+    #     "?",
+    #     ";",
+    #     ":",
+    #     "'",
+    #     '"',
+    #     "-",
+    #     "$",
+    #     "’",
+    #     "…",
+    #     "[",
+    #     "]",
+    #     "(",
+    #     ")",
+    # ]
+    # for char in word:
+    #     if char in punct:
+    #         word = word.replace(char, " ")
     if word.strip() == "":
         word = "<UNK>"
     return word
@@ -604,9 +613,10 @@ def make_acoustic_set(
 
     # for all items with audio + gold label
     for idx, item in enumerate(valid_dia_utt):
+        # print(idx, item)
         # if that dialogue and utterance appears has an acoustic feats file
         if (item.split("_")[0], item.split("_")[1]) in acoustic_dict.keys():
-
+            # print(f"{item} was found")
             # pull out the acoustic feats dataframe
             acoustic_data = acoustic_dict[(item.split("_")[0], item.split("_")[1])]
 
@@ -632,19 +642,48 @@ def make_acoustic_set(
                     # acoustic_holder = torch.mean(torch.tensor(acoustic_data), dim=0)
                     # acoustic_holder = torch.mean(torch.tensor(acoustic_data)[10:min(1491, len(acoustic_data) - 9)], dim=0)
                     # try skipping first and last 5%
-                    data_len = len(acoustic_data)
                     # acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.05):math.ceil(data_len * 0.95)], dim=0)
                     # try skipping first and last 25% 15%
+                    data_len = len(acoustic_data)
                     # acoustic_holder = torch.rand(76 * 3)
+                    # try just getting within the certain range of frames
+                    # acoustic_mean = torch.mean(torch.tensor(acoustic_data), dim=0)
                     acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
-                    # acoustic_holder = torch.cat((acoustic_holder, acoustic_holder, acoustic_holder), 0)
-                    # try using means, medians, stdev
-                    # try mean, mean + stdev, mean - stdev
-                    # acoustic_means = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
+                    # acoustic_max = torch.max(torch.tensor(acoustic_data), dim=0).values
+                    # acoustic_min = torch.min(torch.tensor(acoustic_data), dim=0).values
+                    # acoustic_stdev = torch.std(torch.tensor(acoustic_data), dim=0)
+
+                    # acoustic_mean = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.5)], dim=0)
+                    # acoustic_max = torch.max(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.5)], dim=0).values
+                    # acoustic_min = torch.min(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.5)], dim=0).values
                     # acoustic_med = torch.median(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)[0]
-                    # acoustic_stdev = torch.std(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
-                    # acoustic_meanplus = acoustic_means + acoustic_stdev
-                    # acoustic_meanminus = acoustic_means - acoustic_stdev
+                    # acoustic_stdev = torch.std(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.5)], dim=0)
+                    #
+                    # acoustic_meanplus = acoustic_mean + acoustic_stdev
+                    # acoustic_meanminus = acoustic_mean - acoustic_stdev
+                    # acoustic_holder = torch.cat((acoustic_mean, acoustic_max, acoustic_min, acoustic_meanplus, acoustic_meanminus), dim=0)
+                    # acoustic_holder = torch.cat((acoustic_mean, acoustic_meanplus, acoustic_meanminus), dim=0)
+                    # acoustic_holder = torch.cat((acoustic_mean, acoustic_max, acoustic_min), dim=0)
+
+                    # x = torch.tensor(acoustic_data)
+                    # print(acoustic_mean)
+                    # print(torch.mean(torch.tensor(acoustic_data)[:math.ceil(data_len * 0.75)], dim=0))
+                    # torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.5)],
+                    #            dim=0)
+                    # print(x.shape)
+                    # print(x[5:25].shape)
+                    # print(x[:25].shape)
+                    # print(x[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)].shape)
+                    # print(x[math.floor(data_len * 0.25):math.ceil(data_len * 0.5)].shape)
+                    # y = x[math.floor(data_len * 0.25):math.ceil(data_len * 0.5)].shape
+                    # print(torch.m)
+                    # print(x[:math.ceil(data_len * 0.75)].shape)
+                    # print(len(acoustic_data[:math.ceil(data_len * 0.75)]))
+                    # exit()
+
+
+
+                    # print(acoustic_holder.shape)
                     # acoustic_holder = torch.cat((acoustic_means, acoustic_meanplus, acoustic_meanminus))
                     # acoustic_holder = torch.cat((acoustic_means, acoustic_med, acoustic_stdev), 0)
                     # get average of all non-padding vectors

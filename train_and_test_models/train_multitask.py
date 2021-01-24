@@ -91,6 +91,8 @@ if __name__ == "__main__":
             # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
             glove_dict = make_glove_dict(config.glove_file)
             glove = Glove(glove_dict)
+            # # load glove
+            # glove = pickle.load(open("data/glove.pickle", "rb"))
             print("Glove object created")
 
             # 2. MAKE DATASET
@@ -101,29 +103,32 @@ if __name__ == "__main__":
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
-                utts_file_name="mustard_kaldi.tsv"
+                f_end=f"_{config.feature_set}.csv",
+                # utts_file_name="mustard_kaldi.tsv"
             )
 
-            meld_data = MeldPrep(
-                meld_path=config.meld_path,
-                acoustic_length=config.model_params.audio_dim,
-                glove=glove,
-                add_avging=config.model_params.add_avging,
-                use_cols=config.acoustic_columns,
-                avgd=config.model_params.avgd_acoustic,
-                utts_file_name="meld_kaldi.tsv"
-            )
+            # meld_data = MeldPrep(
+            #     meld_path=config.meld_path,
+            #     acoustic_length=config.model_params.audio_dim,
+            #     glove=glove,
+            #     add_avging=config.model_params.add_avging,
+            #     use_cols=config.acoustic_columns,
+            #     avgd=config.model_params.avgd_acoustic,
+            #     f_end=f"_{config.feature_set}.csv",
+            #     # utts_file_name="meld_kaldi.tsv"
+            # )
 
-            chalearn_data = ChalearnPrep(
-                chalearn_path=config.chalearn_path,
-                acoustic_length=config.model_params.audio_dim,
-                glove=glove,
-                add_avging=config.model_params.add_avging,
-                use_cols=config.acoustic_columns,
-                avgd=config.model_params.avgd_acoustic,
-                pred_type=config.chalearn_predtype,
-                utts_file_name="chalearn_google.tsv"
-            )
+            # chalearn_data = ChalearnPrep(
+            #     chalearn_path=config.chalearn_path,
+            #     acoustic_length=config.model_params.audio_dim,
+            #     glove=glove,
+            #     add_avging=config.model_params.add_avging,
+            #     use_cols=config.acoustic_columns,
+            #     avgd=config.model_params.avgd_acoustic,
+            #     pred_type=config.chalearn_predtype,
+            #     f_end=f"_{config.feature_set}.csv",
+            #     # utts_file_name="chalearn_kaldi.tsv"
+            # )
 
             # ravdess_data = RavdessPrep(ravdess_path=config.ravdess_path, acoustic_length=params.audio_dim, glove=glove,
             #                      add_avging=params.add_avging,
@@ -132,12 +137,11 @@ if __name__ == "__main__":
 
             # add class weights to device
             mustard_data.sarcasm_weights = mustard_data.sarcasm_weights.to(device)
-            meld_data.emotion_weights = meld_data.emotion_weights.to(device)
-            chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
+            # meld_data.emotion_weights = meld_data.emotion_weights.to(device)
+            # chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
             # ravdess_data.emotion_weights = ravdess_data.emotion_weights.to(device)
-
-            # get train, dev, test partitions
-            # mustard_train_ds = DatumListDataset(mustard_data.train_data * 10, "mustard", mustard_data.sarcasm_weights)
+            #
+            # # get train, dev, test partitions
             mustard_train_ds = DatumListDataset(
                 mustard_data.train_data, "mustard", mustard_data.sarcasm_weights
             )
@@ -148,51 +152,59 @@ if __name__ == "__main__":
                 mustard_data.test_data, "mustard", mustard_data.sarcasm_weights
             )
 
-            meld_train_ds = DatumListDataset(
-                meld_data.train_data, "meld_emotion", meld_data.emotion_weights
-            )
+            # meld_train_ds = DatumListDataset(
+            #     meld_data.train_data, "meld_emotion", meld_data.emotion_weights
+            # )
+            #
+            # meld_dev_ds = DatumListDataset(
+            #     meld_data.dev_data, "meld_emotion", meld_data.emotion_weights
+            # )
+            # meld_test_ds = DatumListDataset(
+            #     meld_data.test_data, "meld_emotion", meld_data.emotion_weights
+            # )
 
-            meld_dev_ds = DatumListDataset(
-                meld_data.dev_data, "meld_emotion", meld_data.emotion_weights
-            )
-            meld_test_ds = DatumListDataset(
-                meld_data.test_data, "meld_emotion", meld_data.emotion_weights
-            )
 
-            # create chalearn train, dev, _ data
-            # todo: we need to properly extract test set
-            chalearn_train_ds = DatumListDataset(
-                chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights
-            )
-            chalearn_dev_ds = DatumListDataset(
-                chalearn_data.dev_data, "chalearn_traits", chalearn_data.trait_weights
-            )
-            chalearn_test_ds = DatumListDataset(
-                chalearn_data.test_data, "chalearn_traits", chalearn_data.trait_weights
-            )
+            # combine train and dev data to increase the number of items in dev set
+            # train_and_dev = meld_train_ds + meld_dev_ds
+            # meld_train_ds, meld_dev_ds = train_test_split(train_and_dev, test_size=0.2)
+            # print("MELD dataset rebalanced")
+
+            #
+            # # create chalearn train, dev, _ data
+            # chalearn_train_ds = DatumListDataset(
+            #     chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights
+            # )
+            # chalearn_dev_ds = DatumListDataset(
+            #     chalearn_data.dev_data, "chalearn_traits", chalearn_data.trait_weights
+            # )
+            # chalearn_test_ds = DatumListDataset(
+            #     chalearn_data.test_data, "chalearn_traits", chalearn_data.trait_weights
+            # )
 
             if config.save_dataset:
                 # save all data for faster loading
+                save_path = "data/textonly_kaldi"
+
+                # make sure the full save path exists; if not, create it
+                os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(save_path))
+
                 # save meld dataset
-                pickle.dump(meld_train_ds, open("data/textonly_kaldi/meld_IS1076feat_15sec_train.pickle", "wb"))
-                pickle.dump(meld_dev_ds, open("data/textonly_kaldi/meld_IS1076feat_15sec_dev.pickle", "wb"))
-                pickle.dump(meld_test_ds, open("data/textonly_kaldi/meld_IS1076feat_15sec_test.pickle", "wb"))
+                # pickle.dump(meld_train_ds, open(f"{save_path}/meld_IS1076feat_15sec_train.pickle", "wb"))
+                # pickle.dump(meld_dev_ds, open(f"{save_path}/meld_IS1076feat_15sec_dev.pickle", "wb"))
+                # pickle.dump(meld_test_ds, open(f"{save_path}/meld_IS1076feat_15sec_test.pickle", "wb"))
 
                 # save mustard
-                pickle.dump(mustard_train_ds, open("data/textonly_kaldi/mustard_IS1076feat_15sec_train.pickle", "wb"))
-                pickle.dump(mustard_dev_ds, open("data/textonly_kaldi/mustard_IS1076feat_15sec_dev.pickle", "wb"))
-                pickle.dump(mustard_test_ds, open("data/textonly_kaldi/mustard_IS1076feat_15sec_test.pickle", "wb"))
+                # pickle.dump(mustard_train_ds, open(f"{save_path}/mustard_IS1076feat_15sec_train.pickle", "wb"))
+                # pickle.dump(mustard_dev_ds, open(f"{save_path}/mustard_IS1076feat_15sec_dev.pickle", "wb"))
+                # pickle.dump(mustard_test_ds, open(f"{save_path}/mustard_IS1076feat_15sec_test.pickle", "wb"))
                 #
                 # save chalearn
-                # pickle.dump(chalearn_train_ds, open("data/textonly_google/chalearn_IS1076feat_15sec_train.pickle", "wb"))
-                # pickle.dump(chalearn_dev_ds, open("data/textonly_google/chalearn_IS1076feat_15sec_dev.pickle", "wb"))
-                # pickle.dump(chalearn_test_ds, open('data/textonly_google/chalearn_IS1076feat_15sec_test.pickle', 'wb'))
+                # pickle.dump(chalearn_train_ds, open(f"{save_path}/chalearn_IS1076feat_15sec_train.pickle", "wb"))
+                # pickle.dump(chalearn_dev_ds, open(f"{save_path}/chalearn_IS1076feat_15sec_dev.pickle", "wb"))
+                # pickle.dump(chalearn_test_ds, open(f'{save_path}/chalearn_IS1076feat_15sec_test.pickle', 'wb'))
 
+                # pickle.dump(glove, open("data/42B_glove.pickle", "wb"))  # todo: get different glove names
                 # sys.exit()
-
-                # pickle.dump(
-                #     glove, open("data/glove.pickle", "wb")
-                # )  # todo: get different glove names
 
             print("Datasets created")
 
@@ -307,83 +319,83 @@ if __name__ == "__main__":
                                     multitask_model = multitask_model.to(device)
                                     print(multitask_model)
 
-                                    # add loss function for mustard
-                                    # NOTE: multitask training doesn't work with BCELoss for mustard
+                                    # # add loss function for mustard
+                                    # # NOTE: multitask training doesn't work with BCELoss for mustard
                                     mustard_loss_func = nn.CrossEntropyLoss(
                                         # weight=mustard_train_ds.class_weights,
                                         reduction="mean"
                                     )
-                                    # create multitask object
+                                    # # create multitask object
                                     mustard_obj = MultitaskObject(
                                         mustard_train_ds,
                                         mustard_dev_ds,
                                         mustard_test_ds,
                                         mustard_loss_func,
-                                        task_num=2,
-                                    )
-
-                                    # add loss function for meld
-                                    meld_loss_func = nn.CrossEntropyLoss(
-                                        # weight=meld_train_ds.class_weights,
-                                        reduction="mean"
-                                    )
-                                    # create multitask object
-                                    meld_obj = MultitaskObject(
-                                        meld_train_ds,
-                                        meld_dev_ds,
-                                        meld_test_ds,
-                                        meld_loss_func,
                                         task_num=0,
                                     )
 
-                                    # add loss function for chalearn
-                                    chalearn_loss_func = nn.CrossEntropyLoss(
-                                        # weight=chalearn_train_ds.class_weights,
-                                        reduction="mean"
-                                    )
-                                    # create multitask object
-                                    chalearn_obj = MultitaskObject(
-                                        chalearn_train_ds,
-                                        chalearn_dev_ds,
-                                        chalearn_test_ds,
-                                        chalearn_loss_func,
-                                        task_num=1,
-                                    )
+                                    # # add loss function for meld
+                                    # meld_loss_func = nn.CrossEntropyLoss(
+                                    #     # weight=meld_train_ds.class_weights,
+                                    #     reduction="mean"
+                                    # )
+                                    # # create multitask object
+                                    # meld_obj = MultitaskObject(
+                                    #     meld_train_ds,
+                                    #     meld_dev_ds,
+                                    #     meld_test_ds,
+                                    #     meld_loss_func,
+                                    #     task_num=0,
+                                    # )
+
+                                    # # add loss function for chalearn
+                                    # chalearn_loss_func = nn.CrossEntropyLoss(
+                                    #     # weight=chalearn_train_ds.class_weights,
+                                    #     reduction="mean"
+                                    # )
+                                    # # create multitask object
+                                    # chalearn_obj = MultitaskObject(
+                                    #     chalearn_train_ds,
+                                    #     chalearn_dev_ds,
+                                    #     chalearn_test_ds,
+                                    #     chalearn_loss_func,
+                                    #     task_num=0,
+                                    # )
 
                                     # calculate lengths of train sets and use this to determine multipliers for the loss functions
-                                    mustard_len = len(mustard_train_ds)
-                                    meld_len = len(meld_train_ds)
-                                    chalearn_len = len(chalearn_train_ds)
+                                    # mustard_len = len(mustard_train_ds)
+                                    # meld_len = len(meld_train_ds)
+                                    # chalearn_len = len(chalearn_train_ds)
 
                                     # get length of all training data
-                                    total_len = mustard_len + meld_len + chalearn_len
+                                    # total_len = mustard_len + meld_len + chalearn_len
                                     # use this to calculate multipliers
-                                    meld_multiplier = 1 - (meld_len / total_len)
-                                    mustard_multiplier = 1 - (mustard_len / total_len)
-                                    chalearn_multiplier = 1 - (chalearn_len / total_len)
+                                    # meld_multiplier = 1 - (meld_len / total_len)
+                                    # mustard_multiplier = 1 - (mustard_len / total_len)
+                                    # chalearn_multiplier = 1 - (chalearn_len / total_len)
 
-                                    print(
-                                        f"MELD multiplier is: 1 - (meld_len / total_len) = {meld_multiplier}"
-                                    )
-                                    print(
-                                        f"MUStARD multiplier is: (1 - (mustard_len / total_len)) = {mustard_multiplier}"
-                                    )
-                                    print(
-                                        f"Chalearn multiplier is: (1 - (chalearn_len / total_len)) = {chalearn_multiplier}"
-                                    )
-
-                                    # add multipliers to their relevant objects
-                                    # TODO: add additional multiplying  (or replace multipliers) based on the label space,
-                                    # where fewer labels = more weight
-                                    mustard_obj.change_loss_multiplier(
-                                        mustard_multiplier
-                                    )
-                                    meld_obj.change_loss_multiplier(
-                                        meld_multiplier
-                                        )
-                                    chalearn_obj.change_loss_multiplier(
-                                        chalearn_multiplier
-                                    )
+                                    # print(
+                                    #     f"MELD multiplier is: 1 - (meld_len / total_len) = {meld_multiplier}"
+                                    # )
+                                    # print(
+                                    #     f"MUStARD multiplier is: (1 - (mustard_len / total_len)) = {mustard_multiplier}"
+                                    # )
+                                    # print(
+                                    #     f"Chalearn multiplier is: (1 - (chalearn_len / total_len)) = {chalearn_multiplier}"
+                                    # )
+                                    #
+                                    # # add multipliers to their relevant objects
+                                    # # TODO: add additional multiplying  (or replace multipliers) based on the label space,
+                                    # # where fewer labels = more weight
+                                    # mustard_obj.change_loss_multiplier(
+                                    #     mustard_multiplier
+                                    # )
+                                    # meld_obj.change_loss_multiplier(
+                                    #     meld_multiplier
+                                    #     )
+                                    # chalearn_obj.change_loss_multiplier(
+                                    #     chalearn_multiplier
+                                    # )
 
                                     # set all data list
                                     # all_data_list = [
@@ -393,7 +405,7 @@ if __name__ == "__main__":
                                     # ]
 
                                     all_data_list = [
-                                        meld_obj
+                                        mustard_obj
                                     ]
 
                                     print(
