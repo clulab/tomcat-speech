@@ -8,6 +8,8 @@ import pandas as pd
 import numpy as np
 from data_prep.data_prep_helpers import clean_up_word
 
+from torchtext.data import get_tokenizer
+
 
 def get_all_vocab(data_dir):
     """
@@ -28,7 +30,59 @@ def get_all_vocab(data_dir):
     return all_vocab
 
 
-def subset_glove(glove_path, vocab_set, vec_len=100, add_unk=True):
+def get_all_vocab_from_transcribed_df(dataframe):
+    """
+    Get all the words in the vocabulary from a transcribed file
+    dataframe: a pandas df containing a column 'utterance'
+    """
+    all_wds = []
+    all_vocab = set()
+    # get tokenizer
+    tokenizer = get_tokenizer("basic_english")
+    # put all utterances in a list
+    utts = dataframe['utterance'].tolist()
+    for utt in utts:
+        try:
+            utt = clean_up_word(utt)
+            wds = tokenizer(utt)
+        except AttributeError:
+            print(utt)
+        for wd in wds:
+            all_vocab.add(wd)
+            all_wds.append(wd)
+
+    return all_vocab
+
+
+def compare_vocab_with_existing_data(vocab_set, existing_set):
+    """
+    Compare a vocabulary set with existing data
+    Used for appending new embeddings to file
+    existing_set : a set of existing data
+    """
+    for wd in existing_set:
+        if wd in vocab_set:
+            vocab_set.remove(wd)
+
+    return vocab_set
+
+
+def read_glove(glove_path):
+    """
+    Read the GloVe file
+    pandas read_csv cannot handle this file
+    because of ' and " as items
+    """
+    word2glove = {}
+    with open(glove_path, "r") as glove:
+        for line in glove:
+            vals = line.split()
+            word2glove[vals[0]] = np.array(float(item) for item in vals[1:])
+
+    return word2glove
+
+
+def subset_glove(glove_path, vocab_set, vec_len=100, add_unk=False):
     with open(glove_path, "r") as glove:
         subset = []
         num_items = 0
@@ -46,11 +100,19 @@ def subset_glove(glove_path, vocab_set, vec_len=100, add_unk=True):
         unk_vec = ["<UNK>"] + unk_vec.tolist()
         unk_vec = [str(item) for item in unk_vec]
         subset.append(unk_vec)
+
     return subset
 
 
 def save_subset(subset, save_path):
     with open(save_path, "w") as gfile:
+        for item in subset:
+            gfile.write(" ".join(item))
+            gfile.write("\n")
+
+
+def append_subset(subset, save_path):
+    with open(save_path, "a") as gfile:
         for item in subset:
             gfile.write(" ".join(item))
             gfile.write("\n")
