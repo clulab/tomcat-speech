@@ -194,9 +194,13 @@ if __name__ == "__main__":
         meld_dev_extensions = "dev"
         meld_test_extensions = "test"
 
-        transcribed_train = "meld_train_transcription.txt"
-        transcribed_dev = "meld_dev_transcription.txt"
-        transcribed_test = "meld_test_transcription.txt"
+        transcribed_train = "meld_16000_train_transcription.txt"
+        transcribed_dev = "meld_16000_dev_transcription.txt"
+        transcribed_test = "meld_16000_test_transcription.txt"
+
+        # transcribed_train = "meld_train_sphinx_16000.txt"
+        # transcribed_dev = "meld_dev_sphinx_16000.txt"
+        # transcribed_test = "meld_test_sphinx_16000.txt"
 
         current_train_path = f"{meld_location}/train/train_sent_emo.csv"
         current_dev_path = f"{meld_location}/dev/dev_sent_emo.csv"
@@ -229,16 +233,16 @@ if __name__ == "__main__":
         chalearn_location = "/Users/jculnan/datasets/multimodal_datasets/Chalearn"
 
         chalearn_train_extension = "train"
-        # chalearn_dev_extension = "val"
-        # chalearn_test_extension = "test"
+        chalearn_dev_extension = "val"
+        chalearn_test_extension = "test"
 
         transcribed_train = "chalearn_train_transcription.txt"
-        # transcribed_dev = "chalearn_dev_transcription.txt"
-        # transcribed_test = "chalearn_test_transcription.txt"
+        transcribed_dev = "chalearn_dev_transcription.txt"
+        transcribed_test = "chalearn_test_transcription.txt"
 
         current_train_path = f"{chalearn_location}/train/gold_and_utts.tsv"
-        # current_dev_path = f"{chalearn_location}/val/gold_and_utts.tsv"
-        # current_test_path = f"{chalearn_location}/test/gold_and_utts.tsv"
+        current_dev_path = f"{chalearn_location}/val/gold_and_utts.tsv"
+        current_test_path = f"{chalearn_location}/test/gold_and_utts.tsv"
 
         chalearn_train_organizer = OrganizeKaldiTranscriptions("Chalearn", chalearn_location, chalearn_train_extension,
                                                                transcribed_train)
@@ -247,22 +251,22 @@ if __name__ == "__main__":
 
         # save transcriptions
         chalearn_train_organizer.save_transcriptions(train_transcripts, current_train_file, "train/chalearn_kaldi.tsv")
-        #
-        # chalearn_dev_organizer = OrganizeKaldiTranscriptions("Chalearn", chalearn_location, chalearn_dev_extension,
-        #                                                      transcribed_dev)
-        # current_dev_file = chalearn_dev_organizer.read_in_current_files(current_dev_path)
-        # dev_transcripts = chalearn_dev_organizer.read_in_transcribed_file()
+
+        chalearn_dev_organizer = OrganizeKaldiTranscriptions("Chalearn", chalearn_location, chalearn_dev_extension,
+                                                             transcribed_dev)
+        current_dev_file = chalearn_dev_organizer.read_in_current_files(current_dev_path)
+        dev_transcripts = chalearn_dev_organizer.read_in_transcribed_file()
 
         # save transcriptions
-        # chalearn_dev_organizer.save_transcriptions(dev_transcripts, current_dev_file, "val/chalearn_kaldi.tsv")
-        #
-        # chalearn_test_organizer = OrganizeKaldiTranscriptions("Chalearn", chalearn_location, chalearn_test_extension,
-        #                                                      transcribed_test)
-        # current_test_file = chalearn_test_organizer.read_in_current_files(current_test_path)
-        # test_transcripts = chalearn_test_organizer.read_in_transcribed_file()
-        #
+        chalearn_dev_organizer.save_transcriptions(dev_transcripts, current_dev_file, "val/chalearn_kaldi.tsv")
+
+        chalearn_test_organizer = OrganizeKaldiTranscriptions("Chalearn", chalearn_location, chalearn_test_extension,
+                                                             transcribed_test)
+        current_test_file = chalearn_test_organizer.read_in_current_files(current_test_path)
+        test_transcripts = chalearn_test_organizer.read_in_transcribed_file()
+
         # save transcriptions
-        # chalearn_test_organizer.save_transcriptions(test_transcripts, current_test_file, "test/chalearn_kaldi.tsv")
+        chalearn_test_organizer.save_transcriptions(test_transcripts, current_test_file, "test/chalearn_kaldi.tsv")
 
     elif sys.argv[1] == "mustard-google":
         # assumes that datasets are in the untracked 'data' directory
