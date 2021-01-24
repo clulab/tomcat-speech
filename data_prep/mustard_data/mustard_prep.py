@@ -2,6 +2,7 @@
 import math
 import os
 import json
+import re
 from collections import OrderedDict
 import random
 
@@ -23,6 +24,7 @@ from data_prep.data_prep_helpers import (
 from data_prep.meld_data.meld_prep import (
     get_max_num_acoustic_frames,
     make_acoustic_dict_meld,
+    run_feature_extraction
 )
 import pandas as pd
 
@@ -51,7 +53,12 @@ class MustardPrep:
         self.utts_gold_file = os.path.join(mustard_path, utts_file_name)
         self.utterances = pd.read_csv(self.utts_gold_file, sep="\t")
         # path to acoustic files
-        self.acoustic_path = os.path.join(mustard_path, "acoustic_feats")
+        if f_end != "_IS10.csv":
+            setname = re.search("_(.*)\.csv", f_end)
+            name = setname.group(1)
+            self.acoustic_path = os.path.join(mustard_path, name)
+        else:
+            self.acoustic_path = os.path.join(mustard_path, "acoustic_feats")
 
         # train, dev, and test dataframes
         self.train, self.dev, self.test = create_data_folds(
@@ -367,4 +374,10 @@ if __name__ == "__main__":
     savedir = "acoustic_feats_attempt_2"
     smilepath = "~/opensmile-2.3.0"
 
-    preprocess_mustard_data(base, gold_save, savedir, smilepath)
+    # uncomment to preprocess for the first time
+    # preprocess_mustard_data(base, gold_save, savedir, smilepath)
+
+    # uncomment to process audio with additional feature sets
+    audio_dir = os.path.join(base, "wav")
+    save_dir = os.path.join(base, "IS11")
+    run_feature_extraction(audio_dir, "IS11", save_dir)

@@ -1,6 +1,7 @@
 # prepare MELD input for usage in networks
 
 import os
+import re
 import sys
 
 import pandas as pd
@@ -9,6 +10,7 @@ import torch
 from torch import nn
 from torch.utils.data import Dataset
 
+from data_prep.audio_extraction import ExtractAudio
 from data_prep.data_prep_helpers import (
     clean_up_word,
     get_speaker_to_index_dict,
@@ -83,22 +85,23 @@ class MeldPrep:
             self.dev_dir = "audios"
             self.test_dir = "audios"
         else:
+            setname = re.search("_(.*)\.csv", f_end)
+            name = setname.group(1)
             self.avgd = False
-            self.train_dir = "IS10_train"
-            self.dev_dir = "IS10_dev"
-            self.test_dir = "IS10_test"
+            self.train_dir = f"{name}_train"
+            self.dev_dir = f"{name}_dev"
+            self.test_dir = f"{name}_test"
 
         print("Collecting acoustic features for meld")
 
         # ordered dicts of acoustic data
-        # todo: is this screwed up?
-        #   ordered dict--is it same order as acoustic_lengths
         self.train_dict, self.train_acoustic_lengths = make_acoustic_dict_meld(
             "{0}/{1}".format(self.train_path, self.train_dir),
             f_end,
             use_cols=use_cols,
             avgd=avgd,
         )
+        # print(self.train_dict)
         self.train_dict = OrderedDict(self.train_dict)
         self.dev_dict, self.dev_acoustic_lengths = make_acoustic_dict_meld(
             "{0}/{1}".format(self.dev_path, self.dev_dir),
@@ -590,3 +593,44 @@ def make_acoustic_dict_meld(
 #             all_acoustic.append(torch.tensor(acoustic_holder))
 #
 #     return all_acoustic, usable_utts
+
+def run_feature_extraction(audio_path, feature_set, save_dir, dataset="mustard"):
+    """
+    Run feature extraction from audio_extraction.py for meld
+    """
+    # save all files in the directory
+    for wfile in os.listdir(audio_path):
+        if dataset == "meld":
+            save_name = str(wfile.split("_2.wav")[0]) + f"_{feature_set}.csv"
+            meld_extractor = ExtractAudio(audio_path, wfile, save_dir, "../../opensmile-2.3.0")
+            meld_extractor.save_acoustic_csv(feature_set, save_name)
+        else:
+            save_name = str(wfile.split(".wav")[0]) + f"_{feature_set}.csv"
+            meld_extractor = ExtractAudio(audio_path, wfile, save_dir, "../../opensmile-2.3.0")
+            meld_extractor.save_acoustic_csv(feature_set, save_name)
+
+
+if __name__ == "__main__":
+    # path to meld
+    meld_train_path = "../../datasets/multimodal_datasets/MELD_formatted/train"
+    meld_dev_path = "../../datasets/multimodal_datasets/MELD_formatted/dev"
+    meld_test_path = "../../datasets/multimodal_datasets/MELD_formatted/test"
+
+    train_extension = "train_audio_mono"
+    dev_extension = "dev_audio_mono"
+    test_extension = "test_audio_mono"
+
+    full_train_path = os.path.join(meld_train_path, train_extension)
+    train_save_dir = os.path.join(meld_train_path, "IS11_train")
+
+    run_feature_extraction(full_train_path, "IS11", train_save_dir, dataset="meld")
+
+    full_dev_path = os.path.join(meld_dev_path, dev_extension)
+    dev_save_dir = os.path.join(meld_dev_path, "IS11_dev")
+
+    run_feature_extraction(full_dev_path, "IS11", dev_save_dir, dataset="meld")
+
+    full_test_path = os.path.join(meld_test_path, test_extension)
+    test_save_dir = os.path.join(meld_test_path, "IS11_test")
+
+    run_feature_extraction(full_test_path, "IS11", test_save_dir, dataset="meld")
