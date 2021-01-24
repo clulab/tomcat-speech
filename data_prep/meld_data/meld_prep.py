@@ -243,6 +243,9 @@ class MeldPrep:
                 item_transformed = transform_acoustic_item(
                     item, self.male_acoustic_means, self.male_deviations
                 )
+            # item_transformed = transform_acoustic_item(
+            #     item, self.all_acoustic_means, self.all_acoustic_deviations
+            # )
             train_data.append(
                 (
                     item_transformed,
@@ -257,11 +260,11 @@ class MeldPrep:
             )
 
         for i, item in enumerate(self.dev_acoustic):
-            if self.train_genders[i] == 0:
+            if self.dev_genders[i] == 0:
                 item_transformed = transform_acoustic_item(
                     item, self.all_acoustic_means, self.all_acoustic_deviations
                 )
-            elif self.train_genders[i] == 1:
+            elif self.dev_genders[i] == 1:
                 item_transformed = transform_acoustic_item(
                     item, self.female_acoustic_means, self.female_deviations
                 )
@@ -269,6 +272,9 @@ class MeldPrep:
                 item_transformed = transform_acoustic_item(
                     item, self.male_acoustic_means, self.male_deviations
                 )
+            # item_transformed = transform_acoustic_item(
+            #     item, self.all_acoustic_means, self.all_acoustic_deviations
+            # )
             dev_data.append(
                 (
                     item_transformed,
@@ -283,11 +289,11 @@ class MeldPrep:
             )
 
         for i, item in enumerate(self.test_acoustic):
-            if self.train_genders[i] == 0:
+            if self.test_genders[i] == 0:
                 item_transformed = transform_acoustic_item(
                     item, self.all_acoustic_means, self.all_acoustic_deviations
                 )
-            elif self.train_genders[i] == 1:
+            elif self.test_genders[i] == 1:
                 item_transformed = transform_acoustic_item(
                     item, self.female_acoustic_means, self.female_deviations
                 )
@@ -295,6 +301,9 @@ class MeldPrep:
                 item_transformed = transform_acoustic_item(
                     item, self.male_acoustic_means, self.male_deviations
                 )
+            # item_transformed = transform_acoustic_item(
+            #     item, self.all_acoustic_means, self.all_acoustic_deviations
+            # )
             test_data.append(
                 (
                     item_transformed,
