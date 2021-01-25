@@ -115,7 +115,7 @@ if __name__ == "__main__":
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
                 f_end=f"_{config.feature_set}.csv",
-                utts_file_name="meld_google.tsv"
+                # utts_file_name="meld_sphinx.tsv"
             )
 
             # chalearn_data = ChalearnPrep(
