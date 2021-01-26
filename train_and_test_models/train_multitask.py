@@ -104,31 +104,31 @@ if __name__ == "__main__":
             #     use_cols=config.acoustic_columns,
             #     avgd=config.model_params.avgd_acoustic,
             #     f_end=f"_{config.feature_set}.csv",
-            #     # utts_file_name="mustard_kaldi.tsv"
+            #     # utts_file_name="mustard_sphinx.tsv"
             # )
 
-            meld_data = MeldPrep(
-                meld_path=config.meld_path,
-                acoustic_length=config.model_params.audio_dim,
-                glove=glove,
-                add_avging=config.model_params.add_avging,
-                use_cols=config.acoustic_columns,
-                avgd=config.model_params.avgd_acoustic,
-                f_end=f"_{config.feature_set}.csv",
-                # utts_file_name="meld_sphinx.tsv"
-            )
-
-            # chalearn_data = ChalearnPrep(
-            #     chalearn_path=config.chalearn_path,
+            # meld_data = MeldPrep(
+            #     meld_path=config.meld_path,
             #     acoustic_length=config.model_params.audio_dim,
             #     glove=glove,
             #     add_avging=config.model_params.add_avging,
             #     use_cols=config.acoustic_columns,
             #     avgd=config.model_params.avgd_acoustic,
-            #     pred_type=config.chalearn_predtype,
             #     f_end=f"_{config.feature_set}.csv",
-            #     # utts_file_name="chalearn_kaldi.tsv"
+            #     utts_file_name="meld_sphinx.tsv"
             # )
+
+            chalearn_data = ChalearnPrep(
+                chalearn_path=config.chalearn_path,
+                acoustic_length=config.model_params.audio_dim,
+                glove=glove,
+                add_avging=config.model_params.add_avging,
+                use_cols=config.acoustic_columns,
+                avgd=config.model_params.avgd_acoustic,
+                pred_type=config.chalearn_predtype,
+                f_end=f"_{config.feature_set}.csv",
+                # utts_file_name="chalearn_kaldi.tsv"
+            )
 
             # ravdess_data = RavdessPrep(ravdess_path=config.ravdess_path, acoustic_length=params.audio_dim, glove=glove,
             #                      add_avging=params.add_avging,
@@ -137,8 +137,8 @@ if __name__ == "__main__":
 
             # add class weights to device
             # mustard_data.sarcasm_weights = mustard_data.sarcasm_weights.to(device)
-            meld_data.emotion_weights = meld_data.emotion_weights.to(device)
-            # chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
+            # meld_data.emotion_weights = meld_data.emotion_weights.to(device)
+            chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
             # ravdess_data.emotion_weights = ravdess_data.emotion_weights.to(device)
             #
             # # get train, dev, test partitions
@@ -152,38 +152,37 @@ if __name__ == "__main__":
             #     mustard_data.test_data, "mustard", mustard_data.sarcasm_weights
             # )
 
-            meld_train_ds = DatumListDataset(
-                meld_data.train_data, "meld_emotion", meld_data.emotion_weights
-            )
-
-            meld_dev_ds = DatumListDataset(
-                meld_data.dev_data, "meld_emotion", meld_data.emotion_weights
-            )
-            meld_test_ds = DatumListDataset(
-                meld_data.test_data, "meld_emotion", meld_data.emotion_weights
-            )
-
+            # meld_train_ds = DatumListDataset(
+            #     meld_data.train_data, "meld_emotion", meld_data.emotion_weights
+            # )
+            #
+            # meld_dev_ds = DatumListDataset(
+            #     meld_data.dev_data, "meld_emotion", meld_data.emotion_weights
+            # )
+            # meld_test_ds = DatumListDataset(
+            #     meld_data.test_data, "meld_emotion", meld_data.emotion_weights
+            # )
 
             # combine train and dev data to increase the number of items in dev set
-            train_and_dev = meld_train_ds + meld_dev_ds
-            meld_train_ds, meld_dev_ds = train_test_split(train_and_dev, test_size=0.2)
-            print("MELD dataset rebalanced")
+            # train_and_dev = meld_train_ds + meld_dev_ds
+            # meld_train_ds, meld_dev_ds = train_test_split(train_and_dev, test_size=0.2)
+            # print("MELD dataset rebalanced")
 
-            #
-            # # create chalearn train, dev, _ data
-            # chalearn_train_ds = DatumListDataset(
-            #     chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights
-            # )
-            # chalearn_dev_ds = DatumListDataset(
-            #     chalearn_data.dev_data, "chalearn_traits", chalearn_data.trait_weights
-            # )
-            # chalearn_test_ds = DatumListDataset(
-            #     chalearn_data.test_data, "chalearn_traits", chalearn_data.trait_weights
-            # )
+
+            # create chalearn train, dev, _ data
+            chalearn_train_ds = DatumListDataset(
+                chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights
+            )
+            chalearn_dev_ds = DatumListDataset(
+                chalearn_data.dev_data, "chalearn_traits", chalearn_data.trait_weights
+            )
+            chalearn_test_ds = DatumListDataset(
+                chalearn_data.test_data, "chalearn_traits", chalearn_data.trait_weights
+            )
 
             if config.save_dataset:
                 # save all data for faster loading
-                save_path = "data/textonly_kaldi"
+                save_path = "data/IS13_avg_GOLD"
 
                 # make sure the full save path exists; if not, create it
                 os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(save_path))
@@ -203,8 +202,8 @@ if __name__ == "__main__":
                 # pickle.dump(chalearn_dev_ds, open(f"{save_path}/chalearn_IS1076feat_15sec_dev.pickle", "wb"))
                 # pickle.dump(chalearn_test_ds, open(f'{save_path}/chalearn_IS1076feat_15sec_test.pickle', 'wb'))
 
-                # pickle.dump(glove, open("data/42B_glove.pickle", "wb"))  # todo: get different glove names
-                # sys.exit()
+                # pickle.dump(glove, open("data/temp_glove.pickle", "wb"))  # todo: get different glove names
+                sys.exit()
 
             print("Datasets created")
 
@@ -335,32 +334,32 @@ if __name__ == "__main__":
                                     # )
 
                                     # # add loss function for meld
-                                    meld_loss_func = nn.CrossEntropyLoss(
-                                        # weight=meld_train_ds.class_weights,
-                                        reduction="mean"
-                                    )
-                                    # create multitask object
-                                    meld_obj = MultitaskObject(
-                                        meld_train_ds,
-                                        meld_dev_ds,
-                                        meld_test_ds,
-                                        meld_loss_func,
-                                        task_num=0,
-                                    )
-
-                                    # # add loss function for chalearn
-                                    # chalearn_loss_func = nn.CrossEntropyLoss(
-                                    #     # weight=chalearn_train_ds.class_weights,
+                                    # meld_loss_func = nn.CrossEntropyLoss(
+                                    #     # weight=meld_train_ds.class_weights,
                                     #     reduction="mean"
                                     # )
                                     # # create multitask object
-                                    # chalearn_obj = MultitaskObject(
-                                    #     chalearn_train_ds,
-                                    #     chalearn_dev_ds,
-                                    #     chalearn_test_ds,
-                                    #     chalearn_loss_func,
+                                    # meld_obj = MultitaskObject(
+                                    #     meld_train_ds,
+                                    #     meld_dev_ds,
+                                    #     meld_test_ds,
+                                    #     meld_loss_func,
                                     #     task_num=0,
                                     # )
+
+                                    # # add loss function for chalearn
+                                    chalearn_loss_func = nn.CrossEntropyLoss(
+                                        # weight=chalearn_train_ds.class_weights,
+                                        reduction="mean"
+                                    )
+                                    # create multitask object
+                                    chalearn_obj = MultitaskObject(
+                                        chalearn_train_ds,
+                                        chalearn_dev_ds,
+                                        chalearn_test_ds,
+                                        chalearn_loss_func,
+                                        task_num=0,
+                                    )
 
                                     # calculate lengths of train sets and use this to determine multipliers for the loss functions
                                     # mustard_len = len(mustard_train_ds)
@@ -405,7 +404,7 @@ if __name__ == "__main__":
                                     # ]
 
                                     all_data_list = [
-                                        meld_obj
+                                        chalearn_obj
                                     ]
 
                                     print(

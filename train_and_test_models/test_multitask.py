@@ -97,27 +97,27 @@ if __name__ == "__main__":
             print("Glove object created")
 
             # 2. MAKE DATASET
-            # mustard_data = MustardPrep(
-            #     mustard_path=config.mustard_path,
-            #     acoustic_length=config.model_params.audio_dim,
-            #     glove=glove,
-            #     add_avging=config.model_params.add_avging,
-            #     use_cols=config.acoustic_columns,
-            #     avgd=config.model_params.avgd_acoustic,
-            #     f_end = f"_{config.feature_set}.csv",
-            #     # utts_file_name="mustard_sphinx.tsv"
-            # )
-
-            meld_data = MeldPrep(
-                meld_path=config.meld_path,
+            mustard_data = MustardPrep(
+                mustard_path=config.mustard_path,
                 acoustic_length=config.model_params.audio_dim,
                 glove=glove,
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
-                f_end=f"_{config.feature_set}.csv",
-                # utts_file_name="meld_kaldi.tsv"
+                f_end = f"_{config.feature_set}.csv",
+                # utts_file_name="mustard_sphinx.tsv"
             )
+
+            # meld_data = MeldPrep(
+            #     meld_path=config.meld_path,
+            #     acoustic_length=config.model_params.audio_dim,
+            #     glove=glove,
+            #     add_avging=config.model_params.add_avging,
+            #     use_cols=config.acoustic_columns,
+            #     avgd=config.model_params.avgd_acoustic,
+            #     f_end=f"_{config.feature_set}.csv",
+            #     utts_file_name="meld_sphinx.tsv"
+            # )
 
             # chalearn_data = ChalearnPrep(
             #     chalearn_path=config.chalearn_path,
@@ -129,24 +129,23 @@ if __name__ == "__main__":
             #     pred_type=config.chalearn_predtype,
             #     f_end = f"_{config.feature_set}.csv",
             #     # utts_file_name="chalearn_sphinx.tsv"
-            #
             # )
 
             # add class weights to device
-            # mustard_data.sarcasm_weights = mustard_data.sarcasm_weights.to(device)
-            meld_data.emotion_weights = meld_data.emotion_weights.to(device)
+            mustard_data.sarcasm_weights = mustard_data.sarcasm_weights.to(device)
+            # meld_data.emotion_weights = meld_data.emotion_weights.to(device)
             # chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
             # ravdess_data.emotion_weights = ravdess_data.emotion_weights.to(device)
 
             # get train, dev, test partitions
             # mustard_train_ds = DatumListDataset(mustard_data.train_data * 10, "mustard", mustard_data.sarcasm_weights)
-            # mustard_test_ds = DatumListDataset(
-            #     mustard_data.test_data, "mustard", mustard_data.sarcasm_weights
-            # )
-
-            meld_test_ds = DatumListDataset(
-                meld_data.test_data, "meld_emotion", meld_data.emotion_weights
+            mustard_test_ds = DatumListDataset(
+                mustard_data.test_data, "mustard", mustard_data.sarcasm_weights
             )
+
+            # meld_test_ds = DatumListDataset(
+            #     meld_data.test_data, "meld_emotion", meld_data.emotion_weights
+            # )
 
             # chalearn_test_ds = DatumListDataset(
             #     chalearn_data.test_data, "chalearn_traits", chalearn_data.trait_weights
@@ -236,28 +235,28 @@ if __name__ == "__main__":
 
                                     # add loss function for mustard
                                     # NOTE: multitask training doesn't work with BCELoss for mustard
-                                    # mustard_loss_func = nn.CrossEntropyLoss(
-                                    #     # weight=mustard_train_ds.class_weights,
-                                    #     reduction="mean"
-                                    # )
-                                    # # create multitask object
-                                    # mustard_obj = MultitaskTestObject(
-                                    #     mustard_test_ds,
-                                    #     mustard_loss_func,
-                                    #     task_num=2,
-                                    # )
-
-                                    # add loss function for meld
-                                    meld_loss_func = nn.CrossEntropyLoss(
-                                        # weight=meld_train_ds.class_weights,
+                                    mustard_loss_func = nn.CrossEntropyLoss(
+                                        # weight=mustard_train_ds.class_weights,
                                         reduction="mean"
                                     )
                                     # create multitask object
-                                    meld_obj = MultitaskTestObject(
-                                        meld_test_ds,
-                                        meld_loss_func,
+                                    mustard_obj = MultitaskTestObject(
+                                        mustard_test_ds,
+                                        mustard_loss_func,
                                         task_num=0,
                                     )
+
+                                    # add loss function for meld
+                                    # meld_loss_func = nn.CrossEntropyLoss(
+                                    #     # weight=meld_train_ds.class_weights,
+                                    #     reduction="mean"
+                                    # )
+                                    # # create multitask object
+                                    # meld_obj = MultitaskTestObject(
+                                    #     meld_test_ds,
+                                    #     meld_loss_func,
+                                    #     task_num=0,
+                                    # )
 
                                     # add loss function for chalearn
                                     # chalearn_loss_func = nn.CrossEntropyLoss(
@@ -279,7 +278,7 @@ if __name__ == "__main__":
                                     # ]
 
                                     all_data_list = [
-                                        meld_obj
+                                        mustard_obj
                                     ]
 
                                     print(

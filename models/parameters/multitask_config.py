@@ -20,7 +20,7 @@ EXPERIMENT_ID = 1
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
-EXPERIMENT_DESCRIPTION = "MELD_GOLD_correctavging_25to75perc_minmaxavgstdevcalcs_IS13_"
+EXPERIMENT_DESCRIPTION = "CHALEARN_GOLD_genericavging_25to75perc_avg_IS13_"
 # EXPERIMENT_DESCRIPTION = "DELETE"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
@@ -256,6 +256,7 @@ model_params = Namespace(
     seed=88,  # 1007
     # trying text only model or not
     text_only=False,
+    audio_only=False,
     # overall model parameters
     model="Multitask-mustard",
     num_epochs=100,
@@ -289,9 +290,9 @@ model_params = Namespace(
     gender_emb_dim=4,
     # outputs
     output_dim=[100],  # output dimensions from last layer of base model
-    output_0_dim=7,  # output vec for first task
-    output_1_dim=2,  # 7,  # output vec for second task
-    output_2_dim=5,  # 3,    # output vec for third task
+    output_0_dim=5,  # output vec for first task
+    output_1_dim=7,  # 7,  # output vec for second task
+    output_2_dim=2,  # 3,    # output vec for third task
     output_3_dim=0,
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,

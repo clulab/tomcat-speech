@@ -189,6 +189,13 @@ class Glove(object):
     def index(self, toks):
         return [self.id_or_unk(t) for t in toks]
 
+    def index_with_counter(self, toks, counter):
+        for tok in toks:
+            if tok in counter.keys() and counter[tok] > 4:
+                return [self.id_or_unk(tok)]
+            else:
+                return [self.wd2idx["<UNK>"]]
+
     def create_embedding(self):
         emb = []
         for vec in self.glove_dict.values():
@@ -648,20 +655,20 @@ def make_acoustic_set(
                     # acoustic_holder = torch.rand(76 * 3)
                     # try just getting within the certain range of frames
                     # acoustic_mean = torch.mean(torch.tensor(acoustic_data), dim=0)
-                    # acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
+                    acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
                     # acoustic_max = torch.max(torch.tensor(acoustic_data), dim=0).values
                     # acoustic_min = torch.min(torch.tensor(acoustic_data), dim=0).values
                     # acoustic_stdev = torch.std(torch.tensor(acoustic_data), dim=0)
 
-                    acoustic_mean = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
-                    acoustic_max = torch.max(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0).values
-                    acoustic_min = torch.min(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0).values
+                    # acoustic_mean = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
+                    # acoustic_max = torch.max(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0).values
+                    # acoustic_min = torch.min(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0).values
                     # acoustic_med = torch.median(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)[0]
-                    acoustic_stdev = torch.std(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
+                    # acoustic_stdev = torch.std(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
                     #
-                    acoustic_meanplus = acoustic_mean + acoustic_stdev
-                    acoustic_meanminus = acoustic_mean - acoustic_stdev
-                    acoustic_holder = torch.cat((acoustic_mean, acoustic_max, acoustic_min, acoustic_meanplus, acoustic_meanminus), dim=0)
+                    # acoustic_meanplus = acoustic_mean + acoustic_stdev
+                    # acoustic_meanminus = acoustic_mean - acoustic_stdev
+                    # acoustic_holder = torch.cat((acoustic_mean, acoustic_max, acoustic_min, acoustic_meanplus, acoustic_meanminus), dim=0)
                     # acoustic_holder = torch.cat((acoustic_mean, acoustic_meanplus, acoustic_meanminus), dim=0)
                     # acoustic_holder = torch.cat((acoustic_mean, acoustic_max, acoustic_min), dim=0)
 

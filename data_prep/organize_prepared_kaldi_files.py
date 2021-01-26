@@ -236,9 +236,9 @@ if __name__ == "__main__":
         chalearn_dev_extension = "val"
         chalearn_test_extension = "test"
 
-        transcribed_train = "chalearn_train_transcription.txt"
-        transcribed_dev = "chalearn_dev_transcription.txt"
-        transcribed_test = "chalearn_test_transcription.txt"
+        transcribed_train = "chalearn_16000_train_transcription.txt"
+        transcribed_dev = "chalearn_16000_dev_transcription.txt"
+        transcribed_test = "chalearn_16000_test_transcription.txt"
 
         current_train_path = f"{chalearn_location}/train/gold_and_utts.tsv"
         current_dev_path = f"{chalearn_location}/val/gold_and_utts.tsv"

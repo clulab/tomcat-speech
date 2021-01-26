@@ -136,6 +136,9 @@ class MustardPrep:
             avgd=avgd,
         )
 
+        # calculate number of times each word appears
+        # self.wd_counter = get_word_counts([self.train, self.dev, self.test])
+
         # get utterance, speaker, and gold label information
         (
             self.train_utts,
@@ -192,21 +195,21 @@ class MustardPrep:
 
         for i, item in enumerate(self.train_acoustic):
             # normalize
-            if self.train_genders[i] == 0:
-                item_transformed = transform_acoustic_item(
-                    item, self.all_acoustic_means, self.all_acoustic_deviations
-                )
-            elif self.train_genders[i] == 1:
-                item_transformed = transform_acoustic_item(
-                    item, self.female_acoustic_means, self.female_deviations
-                )
-            else:
-                item_transformed = transform_acoustic_item(
-                    item, self.male_acoustic_means, self.male_deviations
-                )
-            # item_transformed = transform_acoustic_item(
-            #     item, self.all_acoustic_means, self.all_acoustic_deviations
-            # )
+            # if self.train_genders[i] == 0:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.all_acoustic_means, self.all_acoustic_deviations
+            #     )
+            # elif self.train_genders[i] == 1:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.female_acoustic_means, self.female_deviations
+            #     )
+            # else:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.male_acoustic_means, self.male_deviations
+            #     )
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
             train_data.append(
                 (
                     item_transformed,
@@ -220,21 +223,21 @@ class MustardPrep:
             )
 
         for i, item in enumerate(self.dev_acoustic):
-            if self.dev_genders[i] == 0:
-                item_transformed = transform_acoustic_item(
-                    item, self.all_acoustic_means, self.all_acoustic_deviations
-                )
-            elif self.dev_genders[i] == 1:
-                item_transformed = transform_acoustic_item(
-                    item, self.female_acoustic_means, self.female_deviations
-                )
-            else:
-                item_transformed = transform_acoustic_item(
-                    item, self.male_acoustic_means, self.male_deviations
-                )
-            # item_transformed = transform_acoustic_item(
-            #     item, self.all_acoustic_means, self.all_acoustic_deviations
-            # )
+            # if self.dev_genders[i] == 0:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.all_acoustic_means, self.all_acoustic_deviations
+            #     )
+            # elif self.dev_genders[i] == 1:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.female_acoustic_means, self.female_deviations
+            #     )
+            # else:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.male_acoustic_means, self.male_deviations
+            #     )
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
             dev_data.append(
                 (
                     item_transformed,
@@ -248,21 +251,21 @@ class MustardPrep:
             )
 
         for i, item in enumerate(self.test_acoustic):
-            if self.test_genders[i] == 0:
-                item_transformed = transform_acoustic_item(
-                    item, self.all_acoustic_means, self.all_acoustic_deviations
-                )
-            elif self.test_genders[i] == 1:
-                item_transformed = transform_acoustic_item(
-                    item, self.female_acoustic_means, self.female_deviations
-                )
-            else:
-                item_transformed = transform_acoustic_item(
-                    item, self.male_acoustic_means, self.male_deviations
-                )
-            # item_transformed = transform_acoustic_item(
-            #     item, self.all_acoustic_means, self.all_acoustic_deviations
-            # )
+            # if self.test_genders[i] == 0:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.all_acoustic_means, self.all_acoustic_deviations
+            #     )
+            # elif self.test_genders[i] == 1:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.female_acoustic_means, self.female_deviations
+            #     )
+            # else:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.male_acoustic_means, self.male_deviations
+            #     )
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
             test_data.append(
                 (
                     item_transformed,
@@ -312,6 +315,7 @@ class MustardPrep:
 
             # convert words to indices for glove
             utt_indexed = glove.index(utt)
+            # utt_indexed = glove.index_with_counter(utt, self.wd_counter)
             for i, item in enumerate(utt_indexed):
                 utts[i] = item
             # for ix, wd in enumerate(utt):
@@ -414,6 +418,27 @@ def preprocess_mustard_data(
         extractor.save_acoustic_csv(
             feature_set=acoustic_feature_set, savename=audio_save_name
         )
+
+
+def get_word_counts(dataframes_list):
+    """
+    Get the number of times each word appears in the dataset
+    Returns dict of word: count
+    """
+    # set dict
+    counter_dict = {}
+    for dataframe in dataframes_list:
+        all_utts = dataframe['utterance'].tolist()
+        all_utts = " ".join(all_utts)
+        all_wds = [clean_up_word(wd) for wd in str(all_utts).strip().split(" ")]
+
+        for wd in all_wds:
+            if wd not in counter_dict:
+                counter_dict[wd] = 1
+            else:
+                counter_dict[wd] += 1
+
+    return counter_dict
 
 
 if __name__ == "__main__":

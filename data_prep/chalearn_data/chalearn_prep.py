@@ -243,14 +243,17 @@ class ChalearnPrep:
 
         for i, item in enumerate(self.train_acoustic):
             # normalize
-            if self.train_genders[i] == 2:
-                item_transformed = transform_acoustic_item(
-                    item, self.female_acoustic_means, self.female_deviations
-                )
-            else:
-                item_transformed = transform_acoustic_item(
-                    item, self.male_acoustic_means, self.male_deviations
-                )
+            # if self.train_genders[i] == 2:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.female_acoustic_means, self.female_deviations
+            #     )
+            # else:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.male_acoustic_means, self.male_deviations
+            #     )
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
             if self.pred_type is not "max_class":
                 train_data.append(
                     (
@@ -287,14 +290,17 @@ class ChalearnPrep:
                 )
 
         for i, item in enumerate(self.dev_acoustic):
-            if self.dev_genders[i] == 2:
-                item_transformed = transform_acoustic_item(
-                    item, self.female_acoustic_means, self.female_deviations
-                )
-            else:
-                item_transformed = transform_acoustic_item(
-                    item, self.male_acoustic_means, self.male_deviations
-                )
+            # if self.dev_genders[i] == 2:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.female_acoustic_means, self.female_deviations
+            #     )
+            # else:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.male_acoustic_means, self.male_deviations
+            #     )
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
             if self.pred_type is not "max_class":
                 dev_data.append(
                     (
@@ -332,14 +338,17 @@ class ChalearnPrep:
                 )
 
         for i, item in enumerate(self.test_acoustic):
-            if self.test_genders[i] == 2:
-                item_transformed = transform_acoustic_item(
-                    item, self.female_acoustic_means, self.female_deviations
-                )
-            else:
-                item_transformed = transform_acoustic_item(
-                    item, self.male_acoustic_means, self.male_deviations
-                )
+            # if self.test_genders[i] == 2:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.female_acoustic_means, self.female_deviations
+            #     )
+            # else:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.male_acoustic_means, self.male_deviations
+            #     )
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
             if self.pred_type is not "max_class":
                 test_data.append(
                     (
@@ -734,11 +743,15 @@ def make_acoustic_set_chalearn(
                     acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
                     # acoustic_holder = torch.cat((acoustic_holder, acoustic_holder, acoustic_holder), 0)
                     # try using means, medians, stdev
-                    # acoustic_means = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
+                    # acoustic_max = torch.max(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0).values
+                    # acoustic_min = torch.min(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0).values
+                    # acoustic_mean = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
                     # acoustic_med = torch.median(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)[0]
                     # acoustic_stdev = torch.std(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
-                    # acoustic_meanplus = acoustic_means + acoustic_stdev
-                    # acoustic_meanminus = acoustic_means - acoustic_stdev
+                    # acoustic_meanplus = acoustic_mean + acoustic_stdev
+                    # acoustic_meanminus = acoustic_mean - acoustic_stdev
+                    # acoustic_holder = torch.cat(
+                    #     (acoustic_mean, acoustic_max, acoustic_min, acoustic_meanplus, acoustic_meanminus), dim=0)
                     # acoustic_holder = torch.cat((acoustic_means, acoustic_meanplus, acoustic_meanminus))
                     # acoustic_holder = torch.cat((acoustic_means, acoustic_med, acoustic_stdev), 0)
             # add features as tensor to acoustic data

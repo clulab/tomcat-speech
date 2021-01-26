@@ -1704,6 +1704,38 @@ def multitask_predict(
         print(f"standard deviation of score: {stdevscore}")
 
 
+def bootstrap_resampling(output_list_1, output_list_2, num=10000):
+    """
+    Run bootstrap resampling as in:
+    Assumes we are looking to see if output_list_1 is significantly higher than output_list_2
+    DOES NOT check to see if they are significantly different in either direction
+    """
+    if len(output_list_1) != len(output_list_2):
+        exit("Error: Output lists are not the same length")
+
+    data_size = len(output_list_1)
+    indices = list(range(data_size))
+    num_above_threshold = 0.0
+
+    for n in range(num):
+        avg_delta = 0.0
+
+        shuffled_idxs = resample(indices, n_samples=data_size)
+
+        for idx in shuffled_idxs:
+            avg_delta += (output_list_1[idx] - output_list_2[idx])
+
+        avg_delta = avg_delta / float(data_size)
+
+        if avg_delta > 0:
+            num_above_threshold += 1
+
+    # get p-value
+    p = 1 - (num_above_threshold / float(num))
+
+    return p
+
+
 def run_bootstrap_resampling(gold_pred_list, n=1000, p=.05):
     """
     Run bootstrap resampling on results of network

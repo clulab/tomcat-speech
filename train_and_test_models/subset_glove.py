@@ -7,7 +7,7 @@ import numpy as np
 # set paths
 # vocab_path = "/Volumes/LIvES/multimodal_data/"
 glove_path = "../../glove.42B.300d.txt"
-save_path = "../../glove.short.300d.punct.txt"
+save_path = "../../glove.short.300d.punct.chkldi.txt"
 short_path = save_path
 vec_length = 300
 
@@ -87,27 +87,38 @@ vec_length = 300
 #
 # vocab_file_path7 = "../../datasets/multimodal_datasets/Chalearn/test/gold_and_utts.tsv"
 # vocab_file7 = pd.read_csv(vocab_file_path7, sep="\t", usecols=["utterance"])
+#
+# vocab_file_path20 = "../../datasets/multimodal_datasets/Chalearn/train/chalearn_google.tsv"
+# vocab_file20 = pd.read_csv(vocab_file_path20, sep="\t", usecols=["utterance"])
+#
+# vocab_file_path21 = "../../datasets/multimodal_datasets/Chalearn/val/chalearn_google.tsv"
+# vocab_file21 = pd.read_csv(vocab_file_path21, sep="\t", usecols=["utterance"])
+#
+# vocab_file_path22 = "../../datasets/multimodal_datasets/Chalearn/test/chalearn_google.tsv"
+# vocab_file22 = pd.read_csv(vocab_file_path22, sep="\t", usecols=["utterance"])
+#
+# vocab_file_path23 = "../../datasets/multimodal_datasets/Chalearn/train/chalearn_sphinx.tsv"
+# vocab_file23 = pd.read_csv(vocab_file_path23, sep="\t", usecols=["utterance"])
+#
+# vocab_file_path24 = "../../datasets/multimodal_datasets/Chalearn/val/chalearn_sphinx.tsv"
+# vocab_file24 = pd.read_csv(vocab_file_path24, sep="\t", usecols=["utterance"])
+#
+# vocab_file_path25 = "../../datasets/multimodal_datasets/Chalearn/test/chalearn_sphinx.tsv"
+# vocab_file25 = pd.read_csv(vocab_file_path25, sep="\t", usecols=["utterance"])
 
-vocab_file_path20 = "../../datasets/multimodal_datasets/Chalearn/train/chalearn_google.tsv"
-vocab_file20 = pd.read_csv(vocab_file_path20, sep="\t", usecols=["utterance"])
+vocab_file_path26 = "../../datasets/multimodal_datasets/Chalearn/train/chalearn_kaldi.tsv"
+vocab_file26 = pd.read_csv(vocab_file_path26, sep="\t", usecols=["utterance"])
 
-vocab_file_path21 = "../../datasets/multimodal_datasets/Chalearn/val/chalearn_google.tsv"
-vocab_file21 = pd.read_csv(vocab_file_path21, sep="\t", usecols=["utterance"])
+vocab_file_path27 = "../../datasets/multimodal_datasets/Chalearn/val/chalearn_kaldi.tsv"
+vocab_file27 = pd.read_csv(vocab_file_path27, sep="\t", usecols=["utterance"])
 
-vocab_file_path22 = "../../datasets/multimodal_datasets/Chalearn/test/chalearn_google.tsv"
-vocab_file22 = pd.read_csv(vocab_file_path22, sep="\t", usecols=["utterance"])
+vocab_file_path28 = "../../datasets/multimodal_datasets/Chalearn/test/chalearn_kaldi.tsv"
+vocab_file28 = pd.read_csv(vocab_file_path28, sep="\t", usecols=["utterance"])
 
-vocab_file_path23 = "../../datasets/multimodal_datasets/Chalearn/train/chalearn_sphinx.tsv"
-vocab_file23 = pd.read_csv(vocab_file_path23, sep="\t", usecols=["utterance"])
+all_vocab = pd.concat([vocab_file26, vocab_file27, vocab_file28], axis=0)
 
-vocab_file_path24 = "../../datasets/multimodal_datasets/Chalearn/val/chalearn_sphinx.tsv"
-vocab_file24 = pd.read_csv(vocab_file_path24, sep="\t", usecols=["utterance"])
-
-vocab_file_path25 = "../../datasets/multimodal_datasets/Chalearn/test/chalearn_sphinx.tsv"
-vocab_file25 = pd.read_csv(vocab_file_path25, sep="\t", usecols=["utterance"])
-
-all_vocab = pd.concat([vocab_file20, vocab_file21, vocab_file22, vocab_file23, vocab_file24, vocab_file25],
-                      axis=0)
+# all_vocab = pd.concat([vocab_file20, vocab_file21, vocab_file22, vocab_file23, vocab_file24, vocab_file25],
+#                       axis=0)
 
 # all_vocab = pd.concat([vocab_file, vocab_file2, vocab_file3, vocab_file4, vocab_file5, vocab_file6,
 #                        vocab_file7, vocab_file8], axis=0)
