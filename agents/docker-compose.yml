@@ -1,3 +1,7 @@
+# Compose file for running on localhost.
+# You will need to set the following environment variables for this to work:
+# - GOOGLE_APPLICATION_CREDENTIALS
+
 version: '3'
 services:
   tomcat_asr_agent:
@@ -13,6 +17,7 @@ services:
     volumes:
       - $GOOGLE_APPLICATION_CREDENTIALS:/google_application_credentials.json
       - ./asr:/asr
+    entrypoint: ./entrypoints/localhost_mac_win.sh
   webmic:
     image: webmic:latest
     container_name: webmic
@@ -21,4 +26,3 @@ services:
       - 8000:8000
     depends_on:    
     - tomcat_asr_agent
-
