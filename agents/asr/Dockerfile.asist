@@ -1,4 +1,9 @@
-from python:3
+# This is a Dockerfile created for the purpose of integrating with the SIM2
+# testbed in DARPA's Artificial Social Intelligence for Successful Teams
+# (ASIST) program.
+
+from python:3.7
+
 run apt update
 run apt -y install mosquitto-clients
 run pip install\
@@ -7,5 +12,3 @@ run pip install\
     google-cloud-speech
 workdir asr
 copy * /asr/
-cmd ./tomcat_asr_agent websockets --ws_host 0.0.0.0 --ws_port 8888\
-    | mosquitto_pub -t agents/asr -l -h host.docker.internal
