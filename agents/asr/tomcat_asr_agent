@@ -170,6 +170,20 @@ if __name__ == "__main__":
         help="Port to run the websocket server on.",
     )
 
+    parser_websockets.add_argument(
+        "--ssl_cert_chain",
+        type=str,
+        default=None,
+        help="SSL certificate and chain",
+    )
+
+    parser_websockets.add_argument(
+        "--ssl_keyfile",
+        type=str,
+        default=None,
+        help="SSL key file",
+    )
+
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.WARNING)
@@ -218,13 +232,22 @@ if __name__ == "__main__":
 
         else:
             import websockets
-            from functools import partial
+
+            # If a path to an SSL certificate is provided, we provide secure
+            # connections.
+            if args.ssl_cert_chain is not None:
+                import ssl
+                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                ssl_context.load_cert_chain(args.ssl_cert_chain, args.ssl_keyfile)
+            else:
+                ssl_context=None
 
             asyncio.gather(
                 websockets.serve(
                     message_handler,
                     args.ws_host,
                     args.ws_port,
+                    ssl=ssl_context,
                 ),
             )
             asyncio.get_event_loop().run_forever()
