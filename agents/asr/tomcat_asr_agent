@@ -60,7 +60,7 @@ async def message_handler(
     threading.Thread(target=asr_client.run, daemon=True).start()
 
     # We save the start time of the recording in a JSON metadata file.
-    with open(f"participant_{participant_id}_metadata.json", "w") as f:
+    with open(f"data/participant_{participant_id}_metadata.json", "w") as f:
         f.write(
             json.dumps(
                 {
@@ -71,7 +71,7 @@ async def message_handler(
             )
         )
 
-    with open(f"participant_{participant_id}.raw", "wb") as f:
+    with open(f"data/participant_{participant_id}.raw", "wb") as f:
         async for data in websocket:
             debug(
                 f"Received chunk of size {len(data)} bytes from browser at "

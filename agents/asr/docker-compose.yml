@@ -3,13 +3,11 @@ services:
   tomcat_asr_agent:
     image: tomcat_asr_agent:latest
     container_name: tomcat_asr_agent
-    build:
-      context: .
-      dockerfile: Dockerfile.asist
+    build: .
     ports:
       - 8888:8888
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/google_application_credentials.json
     volumes:
       - $GOOGLE_APPLICATION_CREDENTIALS:/google_application_credentials.json
-      - .:/asr
+      - ./data:/asr/data

@@ -7,4 +7,4 @@
 ./tomcat_asr_agent websockets\
   --ws_host 0.0.0.0 --ws_port 8888\
   --ssl_cert_chain $SSL_CERT_CHAIN --ssl_keyfile $SSL_KEYFILE\
-    | mosquitto_pub -t agents/asr -l -h mosquitto
+    | tee -a data/asr_messages.txt | mosquitto_pub -t agents/asr -l -h mosquitto
