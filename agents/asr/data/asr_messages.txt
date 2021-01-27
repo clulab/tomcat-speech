@@ -1,1 +1,0 @@
-{"data": {"text": "Speech to text.", "asr_system": "Google"}, "header": {"timestamp": "2021-01-27T16:38:13.014196Z", "message_type": "observation", "version": "0.1"}, "msg": {"timestamp": "2021-01-27T16:38:13.015183Z", "experiment_id": null, "participant_id": "adarsh", "trial_id": null, "version": "0.1", "source": "tomcat_asr_agent", "sub_type": "asr"}}
