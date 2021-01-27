@@ -9,9 +9,7 @@ services:
   tomcat_asr_agent:
     image: tomcat_asr_agent:latest
     container_name: tomcat_asr_agent
-    build:
-      context: ./asr
-      dockerfile: Dockerfile.asist
+    build: ./asr
     ports:
       - 8888:8888
     environment:
