@@ -152,23 +152,29 @@ if __name__ == "__main__":
             # )
 
         else:
+            # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
+            glove_dict = make_glove_dict(config.glove_file)
+            glove = Glove(glove_dict)
+            print("Glove object created")
+
             # 1. Load datasets + glove object
-            # uncomment if loading saved data
-            meld_test_ds = pickle.load(open("data/IS1076-avgd_gold/meld_IS1076feat_15sec_test.pickle", "rb"))
+            saved_dir = "IS13_TEXTONLY_SPHINX"
+            # # uncomment if loading saved data
+            meld_test_ds = pickle.load(open(f"data/{saved_dir}/meld_IS13_test.pickle", "rb"))
 
             print("MELD data loaded")
-
-            # save mustard
-            mustard_test_ds = pickle.load(open("data/IS1076-avgd_gold/mustard_IS1076feat_15sec_test.pickle", "rb"))
-
-            print("MUSTARD data loaded")
+            #
+            # # save mustard
+            # mustard_test_ds = pickle.load(open(f"data/{saved_dir}/mustard_IS1076feat_15sec_test.pickle", "rb"))
+            #
+            # print("MUSTARD data loaded")
 
             # save chalearn
-            chalearn_test_ds = pickle.load(open("data/IS1076-avgd_gold/chalearn_IS1076feat_15sec_test.pickle", 'rb'))
-            print("ChaLearn data loaded")
+            # chalearn_test_ds = pickle.load(open(f"data/{saved_dir}/chalearn_IS13_test.pickle", 'rb'))
+            # print("ChaLearn data loaded")
 
             # load glove
-            glove = pickle.load(open("data/glove.pickle", "rb"))
+            # glove = pickle.load(open("data/glove.pickle", "rb"))
             print("GloVe object loaded")
 
         # 3. CREATE NN
@@ -235,28 +241,28 @@ if __name__ == "__main__":
 
                                     # add loss function for mustard
                                     # NOTE: multitask training doesn't work with BCELoss for mustard
-                                    mustard_loss_func = nn.CrossEntropyLoss(
-                                        # weight=mustard_train_ds.class_weights,
-                                        reduction="mean"
-                                    )
-                                    # create multitask object
-                                    mustard_obj = MultitaskTestObject(
-                                        mustard_test_ds,
-                                        mustard_loss_func,
-                                        task_num=0,
-                                    )
-
-                                    # add loss function for meld
-                                    # meld_loss_func = nn.CrossEntropyLoss(
-                                    #     # weight=meld_train_ds.class_weights,
+                                    # mustard_loss_func = nn.CrossEntropyLoss(
+                                    #     # weight=mustard_train_ds.class_weights,
                                     #     reduction="mean"
                                     # )
                                     # # create multitask object
-                                    # meld_obj = MultitaskTestObject(
-                                    #     meld_test_ds,
-                                    #     meld_loss_func,
+                                    # mustard_obj = MultitaskTestObject(
+                                    #     mustard_test_ds,
+                                    #     mustard_loss_func,
                                     #     task_num=0,
                                     # )
+
+                                    # add loss function for meld
+                                    meld_loss_func = nn.CrossEntropyLoss(
+                                        # weight=meld_train_ds.class_weights,
+                                        reduction="mean"
+                                    )
+                                    # create multitask object
+                                    meld_obj = MultitaskTestObject(
+                                        meld_test_ds,
+                                        meld_loss_func,
+                                        task_num=0,
+                                    )
 
                                     # add loss function for chalearn
                                     # chalearn_loss_func = nn.CrossEntropyLoss(
@@ -267,7 +273,7 @@ if __name__ == "__main__":
                                     # chalearn_obj = MultitaskTestObject(
                                     #     chalearn_test_ds,
                                     #     chalearn_loss_func,
-                                    #     task_num=1,
+                                    #     task_num=0,
                                     # )
 
                                     # set all data list
@@ -278,7 +284,7 @@ if __name__ == "__main__":
                                     # ]
 
                                     all_data_list = [
-                                        mustard_obj
+                                        meld_obj
                                     ]
 
                                     print(
@@ -294,7 +300,8 @@ if __name__ == "__main__":
                                         train_state,
                                         all_data_list,
                                         this_model_params.batch_size,
-                                        device,
+                                        pickle_save_name=f"{output_path}/test_preds.pickle",
+                                        device=device,
                                         avgd_acoustic=avgd_acoustic_in_network,
                                         use_speaker=this_model_params.use_speaker,
                                         use_gender=this_model_params.use_gender,

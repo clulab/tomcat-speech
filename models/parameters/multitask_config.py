@@ -12,7 +12,7 @@ import os
 save_dataset = False
 
 # do you want to load pre-saved dataset files?
-load_dataset = False
+load_dataset = True
 
 
 EXPERIMENT_ID = 1
@@ -20,7 +20,7 @@ EXPERIMENT_ID = 1
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
-EXPERIMENT_DESCRIPTION = "CHALEARN_GOLD_genericavging_25to75perc_avg_IS13_"
+EXPERIMENT_DESCRIPTION = "MELD_AcousticOnly_genericavging_nogender_25to75perc_avg_IS13_trial2_"
 # EXPERIMENT_DESCRIPTION = "DELETE"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
@@ -33,7 +33,7 @@ model_type = "MULTITASK"
 # set parameters for data prep
 # glove_file = "/work/bsharp/glove.short.300d.punct.txt"
 # glove_file = "/data/nlp/corpora/glove/glove.840B.300d.no_proc_header.txt"
-glove_file = "../../glove.short.300d.punct.txt"
+glove_file = "../../glove.short.300d.punct.chkldi.txt"
 # glove_file = "../../glove.42B.300d.txt"
 
 if USE_SERVER:
@@ -256,7 +256,7 @@ model_params = Namespace(
     seed=88,  # 1007
     # trying text only model or not
     text_only=False,
-    audio_only=False,
+    audio_only=True,
     # overall model parameters
     model="Multitask-mustard",
     num_epochs=100,
@@ -267,7 +267,7 @@ model_params = Namespace(
     # input dimension parameters
     text_dim=300,  # text vector length
     short_emb_dim=[30],  # length of trainable embeddings vec
-    audio_dim=len(acoustic_columns) * 5,  # 78,  # 76,  # 79,  # 10 # audio vector length
+    audio_dim=len(acoustic_columns),  # 78,  # 76,  # 79,  # 10 # audio vector length
     # audio_dim=10,
     # text NN
     kernel_1_size=3,
@@ -276,7 +276,7 @@ model_params = Namespace(
     out_channels=20,
     text_cnn_hidden_dim=100,
     # text_output_dim=30,   # 100,   # 50, 300,
-    text_gru_hidden_dim=[100, 20],  # 30,  # 50,  # 20
+    text_gru_hidden_dim=[100],  # 30,  # 50,  # 20
     # acoustic NN
     avgd_acoustic=False,  # set true to use avgd acoustic feat vectors without RNN
     add_avging=True,  # set to true if you want to avg acoustic feature vecs upon input
@@ -286,19 +286,19 @@ model_params = Namespace(
     num_speakers=13,  # check this number
     speaker_emb_dim=3,
     # gender embeddings
-    use_gender=True,
+    use_gender=False,
     gender_emb_dim=4,
     # outputs
     output_dim=[100],  # output dimensions from last layer of base model
-    output_0_dim=5,  # output vec for first task
-    output_1_dim=7,  # 7,  # output vec for second task
+    output_0_dim=7,  # output vec for first task
+    output_1_dim=5,  # 7,  # output vec for second task
     output_2_dim=2,  # 3,    # output vec for third task
     output_3_dim=0,
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,
     fc_hidden_dim=100,  # 20,  must match output_dim if final fc layer removed from base model
     final_hidden_dim=50, # the out size of dset-specific fc1 and input of fc2
-    dropout=[0.2, 0.3],  # 0.2, 0.3
+    dropout=[0.2],  # 0.2, 0.3
     # optimizer parameters
     lrs=[1e-3],
     beta_1=0.9,

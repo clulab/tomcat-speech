@@ -146,6 +146,7 @@ class MustardPrep:
             self.train_genders,
             self.train_y_sarcasm,
             self.train_utt_lengths,
+            self.train_audio_ids,
         ) = self.make_mustard_data_tensors(self.train, glove)
         (
             self.dev_utts,
@@ -153,6 +154,7 @@ class MustardPrep:
             self.dev_genders,
             self.dev_y_sarcasm,
             self.dev_utt_lengths,
+            self.dev_audio_ids,
         ) = self.make_mustard_data_tensors(self.dev, glove)
         (
             self.test_utts,
@@ -160,6 +162,7 @@ class MustardPrep:
             self.test_genders,
             self.test_y_sarcasm,
             self.test_utt_lengths,
+            self.test_audio_ids,
         ) = self.make_mustard_data_tensors(self.test, glove)
 
         # set the sarcasm weights
@@ -217,6 +220,7 @@ class MustardPrep:
                     self.train_spkrs[i],
                     self.train_genders[i],
                     self.train_y_sarcasm[i],
+                    self.train_audio_ids[i],
                     self.train_utt_lengths[i],
                     self.train_acoustic_lengths[i],
                 )
@@ -245,6 +249,7 @@ class MustardPrep:
                     self.dev_spkrs[i],
                     self.dev_genders[i],
                     self.dev_y_sarcasm[i],
+                    self.dev_audio_ids[i],
                     self.dev_utt_lengths[i],
                     self.dev_acoustic_lengths[i],
                 )
@@ -273,6 +278,7 @@ class MustardPrep:
                     self.test_spkrs[i],
                     self.test_genders[i],
                     self.test_y_sarcasm[i],
+                    self.test_audio_ids[i],
                     self.test_utt_lengths[i],
                     self.test_acoustic_lengths[i],
                 )
@@ -292,11 +298,14 @@ class MustardPrep:
         all_speakers = []
         all_sarcasm = []
         all_genders = []
+        all_audio_ids = []
 
         # create holder for sequence lengths information
         utt_lengths = []
 
         for idx, row in all_utts_df.iterrows():
+            # add id
+            all_audio_ids.append(row["clip_id"])
 
             # create utterance-level holders
             utts = [0] * self.longest_utt
@@ -318,11 +327,6 @@ class MustardPrep:
             # utt_indexed = glove.index_with_counter(utt, self.wd_counter)
             for i, item in enumerate(utt_indexed):
                 utts[i] = item
-            # for ix, wd in enumerate(utt):
-            #     if wd in glove.wd2idx.keys():
-            #         utts[ix] = glove.wd2idx[wd]
-            #     else:
-            #         utts[ix] = glove.wd2idx["<UNK>"]
 
             all_utts.append(torch.tensor(utts))
             all_speakers.append(spk_id)
@@ -343,7 +347,7 @@ class MustardPrep:
         all_utts = all_utts.transpose(0, 1)
 
         # return data
-        return all_utts, speaker_ids, all_genders, all_sarcasm, utt_lengths
+        return all_utts, speaker_ids, all_genders, all_sarcasm, utt_lengths, all_audio_ids
 
 
 def organize_labels_from_json(jsonfile, savepath, save_name):

@@ -124,6 +124,7 @@ class ChalearnPrep:
             add_avging=add_avging,
             avgd=avgd,
         )
+        del self.train_dict
         self.dev_acoustic, self.dev_usable_utts = make_acoustic_set_chalearn(
             self.dev,
             self.dev_dict,
@@ -132,6 +133,7 @@ class ChalearnPrep:
             add_avging=add_avging,
             avgd=avgd,
         )
+        del self.dev_dict
         self.test_acoustic, self.test_usable_utts = make_acoustic_set_chalearn(
             self.test,
             self.test_dict,
@@ -140,6 +142,7 @@ class ChalearnPrep:
             add_avging=add_avging,
             avgd=avgd,
         )
+        del self.test_dict
 
         # get utterance, speaker, y matrices for train, dev, and test sets
         (
@@ -153,6 +156,7 @@ class ChalearnPrep:
             self.train_y_consc,
             self.train_y_inter,
             self.train_utt_lengths,
+            self.train_audio_ids,
         ) = self.make_data_tensors(self.train_data_file, self.train_usable_utts, glove)
 
         (
@@ -166,6 +170,7 @@ class ChalearnPrep:
             self.dev_y_consc,
             self.dev_y_inter,
             self.dev_utt_lengths,
+            self.dev_audio_ids,
         ) = self.make_data_tensors(self.dev_data_file, self.dev_usable_utts, glove)
 
         (
@@ -179,6 +184,7 @@ class ChalearnPrep:
             self.test_y_consc,
             self.test_y_inter,
             self.test_utt_lengths,
+            self.test_audio_ids,
         ) = self.make_data_tensors(
             self.test_data_file, self.test_usable_utts, glove
         )
@@ -268,6 +274,7 @@ class ChalearnPrep:
                         self.train_y_openn[i],
                         self.train_y_consc[i],
                         self.train_y_inter[i],
+                        self.train_audio_ids[i],
                         self.train_utt_lengths[i],
                         self.train_acoustic_lengths[i],
                     )
@@ -284,6 +291,7 @@ class ChalearnPrep:
                     self.train_genders[i],
                     torch.tensor(item_y),
                     self.train_ethnicities[i],
+                    self.train_audio_ids[i],
                     self.train_utt_lengths[i],
                     self.train_acoustic_lengths[i]
                     )
@@ -315,6 +323,7 @@ class ChalearnPrep:
                         self.dev_y_openn[i],
                         self.dev_y_consc[i],
                         self.dev_y_inter[i],
+                        self.dev_audio_ids[i],
                         self.dev_utt_lengths[i],
                         self.dev_acoustic_lengths[i],
                     )
@@ -332,6 +341,7 @@ class ChalearnPrep:
                         self.dev_genders[i],
                         torch.tensor(item_y),
                         self.dev_ethnicities[i],
+                        self.dev_audio_ids[i],
                         self.dev_utt_lengths[i],
                         self.dev_acoustic_lengths[i],
                     )
@@ -363,6 +373,7 @@ class ChalearnPrep:
                         self.test_y_openn[i],
                         self.test_y_consc[i],
                         self.test_y_inter[i],
+                        self.test_audio_ids[i],
                         self.test_utt_lengths[i],
                         self.test_acoustic_lengths[i],
                     )
@@ -380,6 +391,7 @@ class ChalearnPrep:
                         self.test_genders[i],
                         torch.tensor(item_y),
                         self.test_ethnicities[i],
+                        self.test_audio_ids[i],
                         self.test_utt_lengths[i],
                         self.test_acoustic_lengths[i],
                     )
@@ -434,6 +446,7 @@ class ChalearnPrep:
         all_openness = []
         all_conscientiousness = []
         all_interview = []
+        all_audio_ids = []
 
         # create holder for sequence lengths information
         utt_lengths = []
@@ -444,6 +457,8 @@ class ChalearnPrep:
             audio_name = row["file"]
             audio_id = audio_name.split(".mp4")[0]
             if audio_id in all_utts_list:
+                # add audio id to list
+                all_audio_ids.append(audio_id)
 
                 # create utterance-level holders
                 utts = [0] * self.longest_utt
@@ -502,6 +517,7 @@ class ChalearnPrep:
             all_conscientiousness,
             all_interview,
             utt_lengths,
+            all_audio_ids
         )
 
 
@@ -665,6 +681,9 @@ def make_acoustic_dict_chalearn(
             if feats.shape[0] > 0:
                 acoustic_dict[id] = feats.values.tolist()
                 acoustic_lengths[id] = feats.shape[0]
+
+            # delete the features df bc it takes up masses of space
+            del feats
 
     # sort acoustic lengths so they are in the same order as other data
     acoustic_lengths = [value for key, value in sorted(acoustic_lengths.items())]

@@ -1,4 +1,5 @@
 # implement training and testing for models
+import pickle
 import sys
 from collections import OrderedDict
 import random
@@ -1603,6 +1604,7 @@ def multitask_predict(
     train_state,
     datasets_list,
     batch_size,
+    pickle_save_name,
     device="cpu",
     avgd_acoustic=True,
     use_speaker=True,
@@ -1631,6 +1633,9 @@ def multitask_predict(
     preds_holder = {}
     for i in range(num_tasks):
         preds_holder[i] = []
+    ids_holder = {}
+    for i in range(num_tasks):
+        ids_holder[i] = []
 
     # for each batch in the list of batches created by the dataloader
     for batch_index, batch in enumerate(batches):
@@ -1638,6 +1643,9 @@ def multitask_predict(
         batch_task = tasks[batch_index]
 
         y_gold = batch[4].to(device)
+
+        batch_ids = batch[-3]
+        ids_holder[batch_task].extend(batch_ids)
 
         batch_acoustic = batch[0].to(device)
         batch_text = batch[1].to(device)
@@ -1695,82 +1703,19 @@ def multitask_predict(
         print("======================================================")
         print(classification_report(ys_holder[task], preds_holder[task], digits=4))
 
+    # combine
+    gold_preds_ids = {}
     for task in preds_holder.keys():
-        gold_and_preds = list(zip(ys_holder[task], preds_holder[task]))
-        minscore, maxscore, meanscore, stdevscore = run_bootstrap_resampling(gold_and_preds)
-        print(f"Bootstrap resampling results for task {task}:")
-        print(f"95% range: {minscore}-{maxscore}")
-        print(f"mean score: {meanscore}")
-        print(f"standard deviation of score: {stdevscore}")
+        gold_preds_ids[task] = list(zip(ys_holder[task], preds_holder[task], ids_holder[task]))
 
+    # save to pickle
+    with open(pickle_save_name, 'wb') as pfile:
+        pickle.dump(gold_preds_ids, pfile)
 
-def bootstrap_resampling(output_list_1, output_list_2, num=10000):
-    """
-    Run bootstrap resampling as in:
-    Assumes we are looking to see if output_list_1 is significantly higher than output_list_2
-    DOES NOT check to see if they are significantly different in either direction
-    """
-    if len(output_list_1) != len(output_list_2):
-        exit("Error: Output lists are not the same length")
-
-    data_size = len(output_list_1)
-    indices = list(range(data_size))
-    num_above_threshold = 0.0
-
-    for n in range(num):
-        avg_delta = 0.0
-
-        shuffled_idxs = resample(indices, n_samples=data_size)
-
-        for idx in shuffled_idxs:
-            avg_delta += (output_list_1[idx] - output_list_2[idx])
-
-        avg_delta = avg_delta / float(data_size)
-
-        if avg_delta > 0:
-            num_above_threshold += 1
-
-    # get p-value
-    p = 1 - (num_above_threshold / float(num))
-
-    return p
-
-
-def run_bootstrap_resampling(gold_pred_list, n=1000, p=.05):
-    """
-    Run bootstrap resampling on results of network
-    gold_pred_list : a list with (gold, prediction) doubles
-    n : the number of iterations to run through
-    p : the p-value (default p = .05)
-    """
-    all_scores = []
-    num_samples = len(gold_pred_list)
-
-    # for each time
-    for i in range(n):
-        # resample
-        sample_set = resample(gold_pred_list, n_samples=num_samples)
-
-        # calculate avg f1
-        golds = [item[0] for item in sample_set]
-        preds = [item[1] for item in sample_set]
-        task_avg_f1 = precision_recall_fscore_support(golds, preds, average="weighted")
-        # add avg f1 to all_scores
-        all_scores.append(task_avg_f1[2])
-
-    # print all scores sorted
-    print(sorted(all_scores))
-
-    # calculate statistics on all_scores
-    mean_score = statistics.mean(all_scores)
-    stdev_score = statistics.stdev(all_scores, xbar=mean_score)
-
-    # calculate percentile scores
-    # todo: could use scipy.stats scoreatpercentile -- scipy not required for the project yet
-    min_percentile = (p / 2.0) * 100
-    print(min_percentile)
-    max_percentile = (1 - (p / 2.0)) * 100
-    print(max_percentile)
-    min_score, max_score = stats.scoreatpercentile(all_scores, per=[min_percentile, max_percentile])
-
-    return min_score, max_score, mean_score, stdev_score
+    # for task in preds_holder.keys():
+    #     gold_and_preds = list(zip(ys_holder[task], preds_holder[task]))
+    #     minscore, maxscore, meanscore, stdevscore = run_bootstrap_resampling(gold_and_preds)
+    #     print(f"Bootstrap resampling results for task {task}:")
+    #     print(f"95% range: {minscore}-{maxscore}")
+    #     print(f"mean score: {meanscore}")
+    #     print(f"standard deviation of score: {stdevscore}")

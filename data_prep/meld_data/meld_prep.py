@@ -167,6 +167,7 @@ class MeldPrep:
             self.train_y_emo,
             self.train_y_sent,
             self.train_utt_lengths,
+            self.train_audio_ids,
         ) = self.make_meld_data_tensors(
             self.train_data_file, self.train_usable_utts, glove
         )
@@ -178,6 +179,7 @@ class MeldPrep:
             self.dev_y_emo,
             self.dev_y_sent,
             self.dev_utt_lengths,
+            self.dev_audio_ids,
         ) = self.make_meld_data_tensors(self.dev_data_file, self.dev_usable_utts, glove)
 
         (
@@ -187,14 +189,15 @@ class MeldPrep:
             self.test_y_emo,
             self.test_y_sent,
             self.test_utt_lengths,
+            self.test_audio_ids,
         ) = self.make_meld_data_tensors(
             self.test_data_file, self.test_usable_utts, glove
         )
 
-        print(len(self.train_y_emo))
-        print(len(self.train_y_sent))
-        print(self.train_y_emo[0])
-        print(self.train_y_sent[0])
+        # print(len(self.train_y_emo))
+        # print(len(self.train_y_sent))
+        # print(self.train_y_emo[0])
+        # print(self.train_y_sent[0])
 
         # set emotion and sentiment weights
         self.emotion_weights = get_class_weights(self.train_y_emo)
@@ -254,6 +257,7 @@ class MeldPrep:
                     self.train_genders[i],
                     self.train_y_emo[i],
                     self.train_y_sent[i],
+                    self.train_audio_ids[i],
                     self.train_utt_lengths[i],
                     self.train_acoustic_lengths[i],
                 )
@@ -283,6 +287,7 @@ class MeldPrep:
                     self.dev_genders[i],
                     self.dev_y_emo[i],
                     self.dev_y_sent[i],
+                    self.dev_audio_ids[i],
                     self.dev_utt_lengths[i],
                     self.dev_acoustic_lengths[i],
                 )
@@ -312,6 +317,7 @@ class MeldPrep:
                     self.test_genders[i],
                     self.test_y_emo[i],
                     self.test_y_sent[i],
+                    self.test_audio_ids[i],
                     self.test_utt_lengths[i],
                     self.test_acoustic_lengths[i],
                 )
@@ -363,6 +369,7 @@ class MeldPrep:
         all_genders = []
         all_emotions = []
         all_sentiments = []
+        all_audio_ids = []
 
         # create holder for sequence lengths information
         utt_lengths = []
@@ -372,6 +379,8 @@ class MeldPrep:
             # check to make sure this utterance is used
             dia_num, utt_num = row["DiaID_UttID"].split("_")[:2]
             if (dia_num, utt_num) in all_utts_list:
+                # add to all ids
+                all_audio_ids.append("_".join([dia_num, utt_num]))
 
                 # create utterance-level holders
                 utts = [0] * self.longest_utt
@@ -414,6 +423,7 @@ class MeldPrep:
             all_emotions,
             all_sentiments,
             utt_lengths,
+            all_audio_ids
         )
 
     def make_dialogue_aware_meld_data_tensors(self, text_path, all_utts_list, glove):
