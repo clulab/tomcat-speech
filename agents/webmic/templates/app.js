@@ -5,9 +5,6 @@
 
 let connectedAtLeastOnce = false;
 
-// Get parameters from URL query string
-const params = new URLSearchParams(window.location.search);
-const participantId = params.get("id");
 
 var processWebSocketMessage = function(event) {
     var data = JSON.parse(event.data);
@@ -80,6 +77,10 @@ let socket,
     sampleRate;
 
 document.getElementById("connectButton").onclick = function() {
+    // Get parameters from URL query string
+    const params = new URLSearchParams(window.location.search);
+    const participantId = params.get("id");
+
     var context = getAudioContext();
     var destination = "{{ ws_url }}" +
                       "?id=" + participantId +
@@ -123,13 +124,11 @@ function initRecording(context) {
         input = context.createMediaStreamSource(stream);
         input.connect(processor);
 
-        processor.onaudioprocess = function(e) { microphoneProcess(e); };
+        processor.onaudioprocess = function(audioProcessingEvent) {
+            var channelData = audioProcessingEvent.inputBuffer.getChannelData(0);
+            socket.send(channelData);
+        };
     };
 
     navigator.mediaDevices.getUserMedia(constraints).then(handleSuccess);
-}
-
-function microphoneProcess(e) {
-    var channelData = e.inputBuffer.getChannelData(0);
-    socket.send(channelData);
 }
