@@ -22,7 +22,7 @@ services:
       - $SSL_CERT_CHAIN:/ssl_cert_chain.pem
       - $SSL_KEYFILE:/ssl_keyfile.pem
       - ./asr:/asr
-    entrypoint: ./entrypoints/vanga.sh   
+    entrypoint: ./entrypoints/linux_server.sh   
     depends_on:    
     - mosquitto
   webmic:

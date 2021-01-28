@@ -1,1 +1,3 @@
+# Excluding data files (recordings, metadata, message dumps, etc.) from version
+# control.
 data/*

@@ -1,2 +1,2 @@
-This directory contains output recordings and metadata from the tomcat ASR
+This directory contains output recordings and metadata from the ToMCAT ASR
 agent.

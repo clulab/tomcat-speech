@@ -1,3 +1,4 @@
+# A Docker Compose file for running the ASR agent as a standalone container.
 version: '3'
 services:
   tomcat_asr_agent:
@@ -5,9 +6,15 @@ services:
     container_name: tomcat_asr_agent
     build: .
     ports:
-      - 8888:8888
+      # Change the line below if you want to use a different port mapping. The
+      # format is "host_port:container_port".
+      - "8888:8888"
     environment:
+      # This environment variable needs to be set for the Google Cloud Speech
+      # API to work.
       - GOOGLE_APPLICATION_CREDENTIALS=/google_application_credentials.json
     volumes:
       - $GOOGLE_APPLICATION_CREDENTIALS:/google_application_credentials.json
+      # We mount the data/ directory so that the running container can write to
+      # that directory (recordings, metadata files, etc.).
       - ./data:/asr/data
