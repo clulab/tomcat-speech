@@ -1,8 +1,11 @@
-# Compose file for deployment on vanga.sista.arizona.edu.
+# Compose file for deployment on a Linux server
 # You will need to set the following environment variables for this to work:
 # - GOOGLE_APPLICATION_CREDENTIALS
 # - SSL_CERT_CHAIN
 # - SSL_KEYFILE
+# - WEBMIC_WS_URL - set this to the websocket URL you want the audio data from
+#                   from the webmic app to be streamed to.
+#                   Example: wss://vanga.sista.arizona.edu/tomcat/agents/asr:8888
 
 version: '3'
 services:
@@ -29,7 +32,7 @@ services:
     image: webmic:latest
     container_name: webmic
     environment:
-      - WEBMIC_WS_URL=wss://vanga.sista.arizona.edu/tomcat/agents/asr:8888
+      - WEBMIC_WS_URL=$WEBMIC_WS_URL
     build: ./webmic
     ports:
       - 8000:8000
