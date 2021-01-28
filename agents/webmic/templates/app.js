@@ -8,7 +8,6 @@ let connectedAtLeastOnce = false;
 
 var processWebSocketMessage = function(event) {
     var data = JSON.parse(event.data);
-    console.log(data);
     if ("participantId" in data) {
         document.getElementById("participantId").innerHTML = data["participantId"];
     }
