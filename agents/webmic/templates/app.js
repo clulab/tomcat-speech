@@ -58,7 +58,7 @@ function makeSocket(destination) {
 
 // A wrapper class to create a websocket that tries repeatedly to connect to
 // a given URL. It does not try to reconnect if the connection is terminated
-// after successfully connected.
+// after successfully connecting at least once.
 class PersistentSocket {
     constructor(destination) {
         this.destination = destination;
