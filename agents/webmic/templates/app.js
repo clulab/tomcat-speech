@@ -3,19 +3,11 @@
 
 'use strict'
 
-// Edit the 'config' object below if you want to set a different destination
-// host/port.
-var config = {"destination_host" : "localhost", "destination_port" : 8888}
-
 let connectedAtLeastOnce = false;
 
-// Get parameters from URL query string
-const params = new URLSearchParams(window.location.search);
-const participantId = params.get("id");
 
 var processWebSocketMessage = function(event) {
     var data = JSON.parse(event.data);
-    console.log(data);
     if ("participantId" in data) {
         document.getElementById("participantId").innerHTML = data["participantId"];
     }
@@ -64,6 +56,9 @@ function makeSocket(destination) {
     return ws;
 }
 
+// A wrapper class to create a websocket that tries repeatedly to connect to
+// a given URL. It does not try to reconnect if the connection is terminated
+// after successfully connecting at least once.
 class PersistentSocket {
     constructor(destination) {
         this.destination = destination;
@@ -81,9 +76,12 @@ let socket,
     sampleRate;
 
 document.getElementById("connectButton").onclick = function() {
+    // Get parameters from URL query string
+    const params = new URLSearchParams(window.location.search);
+    const participantId = params.get("id");
+
     var context = getAudioContext();
-    var destination = "ws://" + config["destination_host"] + ":" +
-                      config["destination_port"].toString() +
+    var destination = "{{ ws_url }}" +
                       "?id=" + participantId +
                       "&sampleRate=" + context.sampleRate;
     socket = new PersistentSocket(destination);
@@ -125,13 +123,11 @@ function initRecording(context) {
         input = context.createMediaStreamSource(stream);
         input.connect(processor);
 
-        processor.onaudioprocess = function(e) { microphoneProcess(e); };
+        processor.onaudioprocess = function(audioProcessingEvent) {
+            var channelData = audioProcessingEvent.inputBuffer.getChannelData(0);
+            socket.send(channelData);
+        };
     };
 
     navigator.mediaDevices.getUserMedia(constraints).then(handleSuccess);
-}
-
-function microphoneProcess(e) {
-    var channelData = e.inputBuffer.getChannelData(0);
-    socket.send(channelData);
 }

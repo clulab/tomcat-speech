@@ -1,18 +1,22 @@
+# Compose file for running on localhost.
+# You will need to set the following environment variables for this to work:
+# - GOOGLE_APPLICATION_CREDENTIALS
+
 version: '3'
 services:
   tomcat_asr_agent:
     image: tomcat_asr_agent:latest
     container_name: tomcat_asr_agent
-    build:
-      context: ./asr
-      dockerfile: Dockerfile.asist
+    build: ./asr
     ports:
       - 8888:8888
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/google_application_credentials.json
+      - PYTHONUNBUFFERED=1
     volumes:
       - $GOOGLE_APPLICATION_CREDENTIALS:/google_application_credentials.json
-      - ./asr:/asr
+      - ./asr/data:/asr/data
+    entrypoint: ./entrypoints/localhost_mac_win.sh
   webmic:
     image: webmic:latest
     container_name: webmic
@@ -21,4 +25,3 @@ services:
       - 8000:8000
     depends_on:    
     - tomcat_asr_agent
-
