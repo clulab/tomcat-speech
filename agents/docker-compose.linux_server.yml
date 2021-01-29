@@ -5,7 +5,7 @@
 # - SSL_KEYFILE
 # - WEBMIC_WS_URL - set this to the websocket URL you want the audio data from
 #                   from the webmic app to be streamed to.
-#                   Example: wss://vanga.sista.arizona.edu/tomcat/agents/asr:8888
+#                   Example: wss://example.com/ws
 
 version: '3'
 services:
