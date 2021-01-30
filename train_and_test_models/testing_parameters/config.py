@@ -12,7 +12,7 @@ import os
 save_dataset = False
 
 # do you want to load pre-saved dataset files?
-load_dataset = True
+load_dataset = False
 
 
 EXPERIMENT_ID = 1
@@ -20,7 +20,7 @@ EXPERIMENT_ID = 1
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
-EXPERIMENT_DESCRIPTION = "MELD_SPHINX_TEXTONLY_genericavging_nogender_25to75perc_avg_IS13_trial2_"
+EXPERIMENT_DESCRIPTION = "MUSTARD_GOOGLE_TEXTONLY_withoutgender_"
 # EXPERIMENT_DESCRIPTION = "DELETE"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
@@ -33,7 +33,7 @@ model_type = "MULTITASK"
 # set parameters for data prep
 # glove_file = "/work/bsharp/glove.short.300d.punct.txt"
 # glove_file = "/data/nlp/corpora/glove/glove.840B.300d.no_proc_header.txt"
-glove_file = "../../glove.short.300d.punct.chkldi.txt"
+glove_file = "../../glove.short.300d.punct.txt"
 # glove_file = "../../glove.42B.300d.txt"
 
 if USE_SERVER:
@@ -51,7 +51,7 @@ else:
     # ravdess_path = "../../datasets/multimodal_datasets/RAVDESS_speech"
 
 # set dir to save full experiments
-exp_save_path = "output/multitask/EACL_TEST"
+exp_save_path = "output/multitask/EACL_21_CORRECTED"
 
 data_type = "multitask"
 fusion_type = "early"
@@ -259,15 +259,15 @@ model_params = Namespace(
     audio_only=False,
     # overall model parameters
     model="Multitask-mustard",
-    num_epochs=100,
+    num_epochs=200,
     batch_size=[100],  # 128,  # 32
-    early_stopping_criteria=20,
+    early_stopping_criteria=50,
     num_gru_layers=[2],  # 1,  # 3,  # 1,  # 4, 2,
     bidirectional=False,
     # input dimension parameters
     text_dim=300,  # text vector length
     short_emb_dim=[30],  # length of trainable embeddings vec
-    audio_dim=len(acoustic_columns),  # 78,  # 76,  # 79,  # 10 # audio vector length
+    audio_dim=len(acoustic_columns) * 5,  # 78,  # 76,  # 79,  # 10 # audio vector length
     # audio_dim=10,
     # text NN
     kernel_1_size=3,
@@ -290,9 +290,9 @@ model_params = Namespace(
     gender_emb_dim=4,
     # outputs
     output_dim=[100],  # output dimensions from last layer of base model
-    output_0_dim=7,  # output vec for first task
-    output_1_dim=5,  # 7,  # output vec for second task
-    output_2_dim=2,  # 3,    # output vec for third task
+    output_0_dim=2,  # output vec for first task
+    output_1_dim=7,  # 7,  # output vec for second task
+    output_2_dim=5,  # 3,    # output vec for third task
     output_3_dim=0,
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,
@@ -300,7 +300,7 @@ model_params = Namespace(
     final_hidden_dim=50, # the out size of dset-specific fc1 and input of fc2
     dropout=[0.2],  # 0.2, 0.3
     # optimizer parameters
-    lrs=[1e-3],
+    lrs=[1e-4],
     beta_1=0.9,
     beta_2=0.999,
     weight_decay=0.0001,

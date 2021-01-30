@@ -1,4 +1,6 @@
 # run bootstrap resampling on the data
+import sys
+
 from sklearn.utils import resample
 import pickle
 
@@ -83,6 +85,11 @@ def order_results(results_tuple_1, results_tuple_2):
     data_1 = []
     data_2 = []
 
+    print(results_tuple_1[:50])
+    print(results_tuple_2[:50])
+    print(len(results_tuple_1))
+    print(len(results_tuple_2))
+
     for i, item in enumerate(results_tuple_1):
         if item[2] != results_tuple_2[i][2]:
             exit("These test sets do not contain the same elements")
@@ -94,9 +101,14 @@ def order_results(results_tuple_1, results_tuple_2):
 
 
 if __name__ == "__main__":
+    print(len(sys.argv))
+    test_1_path = sys.argv[1]
+    test_2_path = sys.argv[2]
+
     # for dataset MUStARD
-    test_1_path = "output/multitask/EACL_TEST_2/TEST1_MUSTARD_AcousticOnly_withoutgender_genericavging_25to75perc_minmaxavgstdevcalcs_IS10_2021-01-25"
-    test_2_path = "output/multitask/EACL_TEST_2/TEST1_MUSTARD_GOLD_TEXTONLY_withoutgender_2021-01-25"
+    #
+    # test_1_path = "output/multitask/EACL_TEST_2/TEST1_MUSTARD_AcousticOnly_withoutgender_genericavging_25to75perc_minmaxavgstdevcalcs_IS10_2021-01-25"
+    # test_2_path = "output/multitask/EACL_TEST_2/TEST1_MUSTARD_GOLD_TEXTONLY_withoutgender_2021-01-25"
     # load data 1
     with open(f"{test_1_path}/test_preds.pickle", 'rb') as test1file:
         test_1_results = pickle.load(test1file)
