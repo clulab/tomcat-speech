@@ -26,6 +26,10 @@ Prerequisites
 
       sudo apt-get install portaudio19-dev
 
+- To record WAVE audio files, you'll need the `pysoundfile` package:
+    
+      pip install pysoundfile
+
 ### Google Cloud engine
 
 If you are using the Google Cloud speech recognition engine:

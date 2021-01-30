@@ -10,5 +10,5 @@
 # appropriately.
 
 
-cmd ./tomcat_asr_agent websockets --ws_host 0.0.0.0 --ws_port 8888\
+./tomcat_asr_agent websockets --ws_host 0.0.0.0 --ws_port 8888\
     | mosquitto_pub -t agents/asr -l -h host.docker.internal

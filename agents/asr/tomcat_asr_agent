@@ -25,6 +25,8 @@ from urllib.parse import urlparse, parse_qs
 from utils import float32_array_to_int16_array
 from audio_stream import AudioStream
 from google_asr_client import GoogleASRClient
+from soundfile import SoundFile
+import numpy as np
 
 
 # This mutable global variable should be encapsulated in a class in the future.
@@ -60,25 +62,33 @@ async def message_handler(
     threading.Thread(target=asr_client.run, daemon=True).start()
 
     # We save the start time of the recording in a JSON metadata file.
-    with open(f"data/participant_{participant_id}_metadata.json", "w") as f:
+    with open(f"participant_{participant_id}_metadata.json", "w") as f:
         f.write(
             json.dumps(
                 {
                     "recording_start_timestamp": datetime.datetime.utcnow().isoformat()
                     + "Z",
-                    "sample_rate": sample_rate,
                 }
             )
         )
 
-    with open(f"data/participant_{participant_id}.raw", "wb") as f:
+    # Number of channels. Currently we expect only one channel.
+    n_channels = 1
+
+    with SoundFile(
+        f"participant_{participant_id}.wav",
+        "w",
+        sample_rate,
+        n_channels,
+        "FLOAT",
+    ) as f:
         async for data in websocket:
             debug(
                 f"Received chunk of size {len(data)} bytes from browser at "
                 f"{datetime.datetime.utcnow().isoformat()}Z"
             )
             if RECORDING_IN_PROGRESS:
-                f.write(data)
+                f.write(np.frombuffer(data, dtype=np.float32))
 
             chunk = float32_array_to_int16_array(data)
             audio_stream.fill_buffer(chunk)
@@ -237,10 +247,13 @@ if __name__ == "__main__":
             # connections.
             if args.ssl_cert_chain is not None:
                 import ssl
+
                 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-                ssl_context.load_cert_chain(args.ssl_cert_chain, args.ssl_keyfile)
+                ssl_context.load_cert_chain(
+                    args.ssl_cert_chain, args.ssl_keyfile
+                )
             else:
-                ssl_context=None
+                ssl_context = None
 
             asyncio.gather(
                 websockets.serve(
