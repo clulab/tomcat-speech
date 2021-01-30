@@ -23,19 +23,7 @@ the following:
 
 The recording of the audio will begin as soon as the `Connect` button is
 pressed. The timestamp corresponding to the start of the recording will be
-saved in a file named `participant_<id>_metadata.json`, along with the sample
-rate.
+saved in a file named `participant_<id>_metadata.json`.
 
-The audio will be recorded as a raw collection of bytes representing 32-bit
-floating point numbers, with a sample rate of 44.1 kHz using a single channel.
-This is to enable downstream usage by other programs that take in streaming
-audio input.
-
-To convert the raw audio file to a WAV file that can be played using media
-players such as [VLC](https://www.videolan.org/vlc/index.html), you can use
-[`ffmpeg`](http://ffmpeg.org). For example, the following invocation:
-
-    ffmpeg -f f32le -ar 44.1k -ac 1 -i participant_name.raw participant_name.wav
-
-will convert the file `participant_name.raw` to a WAV file named
-`participant_name.wav`.
+The audio will be recorded as a WAVE file that can played using media players
+such as VLC or `ffplay`.
