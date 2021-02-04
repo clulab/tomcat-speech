@@ -4,14 +4,14 @@ from typing import Optional
 
 @dataclass(frozen=True)
 class Header(object):
-    timestamp: Optional[str] = datetime.datetime.utcnow().isoformat() + "Z"
+    timestamp: str = field(default_factory=lambda: datetime.datetime.utcnow().isoformat() + "Z")
     message_type: str = "observation"
     version: str = "0.1"
 
 
 @dataclass(frozen=True)
 class Msg(object):
-    timestamp: Optional[str] = datetime.datetime.utcnow().isoformat() + "Z"
+    timestamp: str = field(default_factory=lambda: datetime.datetime.utcnow().isoformat() + "Z")
     experiment_id: Optional[str] = None
     participant_id: Optional[str] = None
     trial_id: Optional[str] = None
