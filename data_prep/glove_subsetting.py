@@ -40,7 +40,7 @@ def get_all_vocab_from_transcribed_df(dataframe):
     # get tokenizer
     tokenizer = get_tokenizer("basic_english")
     # put all utterances in a list
-    utts = dataframe['utterance'].tolist()
+    utts = dataframe["utterance"].tolist()
     for utt in utts:
         try:
             utt = clean_up_word(utt)

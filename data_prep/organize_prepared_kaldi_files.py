@@ -24,13 +24,16 @@ class OrganizeKaldiTranscriptions:
     extension : the extension needed to access the transcribed file
     transcribed_file : the name of the transcribed file
     """
+
     def __init__(self, dataset, dataset_location, extension, transcribed_file):
         self.dataset = dataset.lower()  # options: 'meld', 'mustard', 'chalearn'
         self.location = dataset_location
         self.extension = extension
         # get list of extensions
         self.transcribed_file = transcribed_file
-        self.transcribed_file_path = os.path.join(dataset_location, extension, transcribed_file)
+        self.transcribed_file_path = os.path.join(
+            dataset_location, extension, transcribed_file
+        )
 
     def read_in_current_files(self, current_file_location):
         """
@@ -44,7 +47,7 @@ class OrganizeKaldiTranscriptions:
             all_utts = pd.read_csv(current_file_location)
         elif self.dataset == "mustard" or self.dataset == "chalearn":
             # all utterances are in a single tsv file
-            all_utts = pd.read_csv(current_file_location, sep='\t')
+            all_utts = pd.read_csv(current_file_location, sep="\t")
 
         return all_utts
 
@@ -54,13 +57,27 @@ class OrganizeKaldiTranscriptions:
         """
         # same format for all google transcriptions
         if self.dataset == "mustard":
-            transcribed = pd.read_csv(self.transcribed_file_path, names=["clip_id", "utterance", "confidence"], sep="\t")
+            transcribed = pd.read_csv(
+                self.transcribed_file_path,
+                names=["clip_id", "utterance", "confidence"],
+                sep="\t",
+            )
             transcribed["clip_id"] = transcribed["clip_id"].str.replace(".wav", "")
         elif self.dataset == "meld":
-            transcribed = pd.read_csv(self.transcribed_file_path, names=["DiaID_UttID", "Utterance", "confidence"], sep="\t")
-            transcribed["DiaID_UttID"] = transcribed["DiaID_UttID"].str.replace("_2.wav", "")
+            transcribed = pd.read_csv(
+                self.transcribed_file_path,
+                names=["DiaID_UttID", "Utterance", "confidence"],
+                sep="\t",
+            )
+            transcribed["DiaID_UttID"] = transcribed["DiaID_UttID"].str.replace(
+                "_2.wav", ""
+            )
         elif self.dataset == "chalearn":
-            transcribed = pd.read_csv(self.transcribed_file_path, names=["file", "utterance", "confidence"], sep="\t")
+            transcribed = pd.read_csv(
+                self.transcribed_file_path,
+                names=["file", "utterance", "confidence"],
+                sep="\t",
+            )
             transcribed["file"] = transcribed["file"].str.replace(".wav", ".mp4")
 
         return transcribed
@@ -71,15 +88,23 @@ class OrganizeKaldiTranscriptions:
         """
         # same format for all kaldi transcriptions
         if self.dataset == "mustard":
-            transcribed = pd.read_csv(self.transcribed_file_path, names=["clip_id", "utterance"], sep="\t")
+            transcribed = pd.read_csv(
+                self.transcribed_file_path, names=["clip_id", "utterance"], sep="\t"
+            )
             # remove the file extension
-            transcribed["clip_id"] = transcribed['clip_id'].str.replace(".wav", "")
+            transcribed["clip_id"] = transcribed["clip_id"].str.replace(".wav", "")
         elif self.dataset == "meld":
-            transcribed = pd.read_csv(self.transcribed_file_path, names=["DiaID_UttID", "Utterance"], sep="\t")
+            transcribed = pd.read_csv(
+                self.transcribed_file_path, names=["DiaID_UttID", "Utterance"], sep="\t"
+            )
             # remove the file extension
-            transcribed["DiaID_UttID"] = transcribed["DiaID_UttID"].str.replace(".wav", "")
+            transcribed["DiaID_UttID"] = transcribed["DiaID_UttID"].str.replace(
+                ".wav", ""
+            )
         elif self.dataset == "chalearn":
-            transcribed = pd.read_csv(self.transcribed_file_path, names=["file", "utterance"], sep="\t")
+            transcribed = pd.read_csv(
+                self.transcribed_file_path, names=["file", "utterance"], sep="\t"
+            )
             # replace the file extension
             transcribed["file"] = transcribed["file"].str.replace(".wav", ".mp4")
 
@@ -100,27 +125,43 @@ class OrganizeKaldiTranscriptions:
             sname = f"{save_name}.tsv"
 
         # delete utterance from current_files
-        current_files = current_files.loc[:, ~(current_files.columns.str.lower() == 'utterance')]
+        current_files = current_files.loc[
+            :, ~(current_files.columns.str.lower() == "utterance")
+        ]
 
         # merge dfs on id
         if self.dataset == "meld":
-            transcribed_data.rename(columns={'id': 'DiaID_UttID'}, inplace=True)
-            transcribed_data = pd.merge(left=current_files, right=transcribed_data, how="left",
-                                        left_on="DiaID_UttID", right_on="DiaID_UttID")
+            transcribed_data.rename(columns={"id": "DiaID_UttID"}, inplace=True)
+            transcribed_data = pd.merge(
+                left=current_files,
+                right=transcribed_data,
+                how="left",
+                left_on="DiaID_UttID",
+                right_on="DiaID_UttID",
+            )
             # transcribed_data = transcribed_data.merge(current_files, on='DiaID_UttID')
         elif self.dataset == "mustard":
-            transcribed_data.rename(columns={'id': 'clip_id'}, inplace=True)
-            transcribed_data = pd.merge(left=current_files, right=transcribed_data, how="left",
-                                        left_on="clip_id", right_on="clip_id")
+            transcribed_data.rename(columns={"id": "clip_id"}, inplace=True)
+            transcribed_data = pd.merge(
+                left=current_files,
+                right=transcribed_data,
+                how="left",
+                left_on="clip_id",
+                right_on="clip_id",
+            )
             # transcribed_data = transcribed_data.merge(current_files, on='clip_id')
         elif self.dataset == "chalearn":
-            transcribed_data.rename(columns={'id': 'file'}, inplace=True)
-            transcribed_data = pd.merge(left=current_files, right=transcribed_data, how="left",
-                                        left_on="file", right_on="file")
+            transcribed_data.rename(columns={"id": "file"}, inplace=True)
+            transcribed_data = pd.merge(
+                left=current_files,
+                right=transcribed_data,
+                how="left",
+                left_on="file",
+                right_on="file",
+            )
             # transcribed_data = transcribed_data.merge(current_files, on='file')
 
-        transcribed_data.to_csv(f"{self.location}/{sname}", index=False,
-                                sep="\t")
+        transcribed_data.to_csv(f"{self.location}/{sname}", index=False, sep="\t")
 
 
 def combine_google_partial_transcripts(google_file, new_save_file):
@@ -133,7 +174,7 @@ def combine_google_partial_transcripts(google_file, new_save_file):
     """
     google_holder = {}
     print(f"preparing {google_file}")
-    with open(google_file, 'r') as gfile:
+    with open(google_file, "r") as gfile:
         for line in gfile:
             line = line.strip().split("\t")
             if line[0] not in google_holder:
@@ -141,7 +182,7 @@ def combine_google_partial_transcripts(google_file, new_save_file):
             else:
                 google_holder[line[0]][0] += line[1]
 
-    with open(new_save_file, 'w') as nfile:
+    with open(new_save_file, "w") as nfile:
         for k, v in google_holder.items():
             nfile.write(f"{k}\t{v[0]}\t{v[1]}\n")
     print(f"new file saved at: {new_save_file}")
@@ -155,8 +196,9 @@ if __name__ == "__main__":
         current_file_path = f"{mustard_location}/mustard_utts.tsv"
         transcribed_file = "mustard_16000_transcription.txt"
 
-        mustard_organizer = OrganizeKaldiTranscriptions("MUStARD", mustard_location, mustard_extensions,
-                                                        transcribed_file)
+        mustard_organizer = OrganizeKaldiTranscriptions(
+            "MUStARD", mustard_location, mustard_extensions, transcribed_file
+        )
 
         # get current label file
         current_file = mustard_organizer.read_in_current_files(current_file_path)
@@ -165,7 +207,9 @@ if __name__ == "__main__":
         transcripts = mustard_organizer.read_in_transcribed_file()
 
         # save transcriptions
-        mustard_organizer.save_transcriptions(transcripts, current_file, "mustard_kaldi.tsv")
+        mustard_organizer.save_transcriptions(
+            transcripts, current_file, "mustard_kaldi.tsv"
+        )
 
     elif sys.argv[1] == "mustard-sphinx":
         # assumes that datasets are in the untracked 'data' directory
@@ -174,8 +218,9 @@ if __name__ == "__main__":
         current_file_path = f"{mustard_location}/mustard_utts.tsv"
         transcribed_file = "mustard_sphinx.txt"
 
-        mustard_organizer = OrganizeKaldiTranscriptions("MUStARD", mustard_location, mustard_extensions,
-                                                        transcribed_file)
+        mustard_organizer = OrganizeKaldiTranscriptions(
+            "MUStARD", mustard_location, mustard_extensions, transcribed_file
+        )
 
         # get current label file
         current_file = mustard_organizer.read_in_current_files(current_file_path)
@@ -184,7 +229,9 @@ if __name__ == "__main__":
         transcripts = mustard_organizer.read_in_transcribed_file()
 
         # save transcriptions
-        mustard_organizer.save_transcriptions(transcripts, current_file, "mustard_sphinx.tsv")
+        mustard_organizer.save_transcriptions(
+            transcripts, current_file, "mustard_sphinx.tsv"
+        )
 
     elif sys.argv[1] == "meld":
         # assumes that datasets are in the untracked 'data' directory
@@ -206,15 +253,20 @@ if __name__ == "__main__":
         current_dev_path = f"{meld_location}/dev/dev_sent_emo.csv"
         current_test_path = f"{meld_location}/test/test_sent_emo.csv"
 
-        meld_train_organizer = OrganizeKaldiTranscriptions("MELD", meld_location, meld_train_extensions,
-                                                             transcribed_train)
-        meld_dev_organizer = OrganizeKaldiTranscriptions("MELD", meld_location, meld_dev_extensions,
-                                                           transcribed_dev)
-        meld_test_organizer = OrganizeKaldiTranscriptions("MELD", meld_location, meld_test_extensions,
-                                                           transcribed_test)
+        meld_train_organizer = OrganizeKaldiTranscriptions(
+            "MELD", meld_location, meld_train_extensions, transcribed_train
+        )
+        meld_dev_organizer = OrganizeKaldiTranscriptions(
+            "MELD", meld_location, meld_dev_extensions, transcribed_dev
+        )
+        meld_test_organizer = OrganizeKaldiTranscriptions(
+            "MELD", meld_location, meld_test_extensions, transcribed_test
+        )
 
         # get paths
-        current_train_file = meld_train_organizer.read_in_current_files(current_train_path)
+        current_train_file = meld_train_organizer.read_in_current_files(
+            current_train_path
+        )
         current_dev_file = meld_dev_organizer.read_in_current_files(current_dev_path)
         current_test_file = meld_test_organizer.read_in_current_files(current_test_path)
 
@@ -224,9 +276,15 @@ if __name__ == "__main__":
         test_transcripts = meld_test_organizer.read_in_transcribed_file()
 
         # save transcriptions
-        meld_train_organizer.save_transcriptions(train_transcripts, current_train_file, "train/meld_kaldi.tsv")
-        meld_dev_organizer.save_transcriptions(dev_transcripts, current_dev_file, "dev/meld_kaldi.tsv")
-        meld_test_organizer.save_transcriptions(test_transcripts, current_test_file, "test/meld_kaldi.tsv")
+        meld_train_organizer.save_transcriptions(
+            train_transcripts, current_train_file, "train/meld_kaldi.tsv"
+        )
+        meld_dev_organizer.save_transcriptions(
+            dev_transcripts, current_dev_file, "dev/meld_kaldi.tsv"
+        )
+        meld_test_organizer.save_transcriptions(
+            test_transcripts, current_test_file, "test/meld_kaldi.tsv"
+        )
 
     elif sys.argv[1] == "chalearn":
         # assumes that datasets are in the untracked 'data' directory
@@ -244,29 +302,44 @@ if __name__ == "__main__":
         current_dev_path = f"{chalearn_location}/val/gold_and_utts.tsv"
         current_test_path = f"{chalearn_location}/test/gold_and_utts.tsv"
 
-        chalearn_train_organizer = OrganizeKaldiTranscriptions("Chalearn", chalearn_location, chalearn_train_extension,
-                                                               transcribed_train)
-        current_train_file = chalearn_train_organizer.read_in_current_files(current_train_path)
+        chalearn_train_organizer = OrganizeKaldiTranscriptions(
+            "Chalearn", chalearn_location, chalearn_train_extension, transcribed_train
+        )
+        current_train_file = chalearn_train_organizer.read_in_current_files(
+            current_train_path
+        )
         train_transcripts = chalearn_train_organizer.read_in_transcribed_file()
 
         # save transcriptions
-        chalearn_train_organizer.save_transcriptions(train_transcripts, current_train_file, "train/chalearn_kaldi.tsv")
+        chalearn_train_organizer.save_transcriptions(
+            train_transcripts, current_train_file, "train/chalearn_kaldi.tsv"
+        )
 
-        chalearn_dev_organizer = OrganizeKaldiTranscriptions("Chalearn", chalearn_location, chalearn_dev_extension,
-                                                             transcribed_dev)
-        current_dev_file = chalearn_dev_organizer.read_in_current_files(current_dev_path)
+        chalearn_dev_organizer = OrganizeKaldiTranscriptions(
+            "Chalearn", chalearn_location, chalearn_dev_extension, transcribed_dev
+        )
+        current_dev_file = chalearn_dev_organizer.read_in_current_files(
+            current_dev_path
+        )
         dev_transcripts = chalearn_dev_organizer.read_in_transcribed_file()
 
         # save transcriptions
-        chalearn_dev_organizer.save_transcriptions(dev_transcripts, current_dev_file, "val/chalearn_kaldi.tsv")
+        chalearn_dev_organizer.save_transcriptions(
+            dev_transcripts, current_dev_file, "val/chalearn_kaldi.tsv"
+        )
 
-        chalearn_test_organizer = OrganizeKaldiTranscriptions("Chalearn", chalearn_location, chalearn_test_extension,
-                                                             transcribed_test)
-        current_test_file = chalearn_test_organizer.read_in_current_files(current_test_path)
+        chalearn_test_organizer = OrganizeKaldiTranscriptions(
+            "Chalearn", chalearn_location, chalearn_test_extension, transcribed_test
+        )
+        current_test_file = chalearn_test_organizer.read_in_current_files(
+            current_test_path
+        )
         test_transcripts = chalearn_test_organizer.read_in_transcribed_file()
 
         # save transcriptions
-        chalearn_test_organizer.save_transcriptions(test_transcripts, current_test_file, "test/chalearn_kaldi.tsv")
+        chalearn_test_organizer.save_transcriptions(
+            test_transcripts, current_test_file, "test/chalearn_kaldi.tsv"
+        )
 
     elif sys.argv[1] == "mustard-google":
         # assumes that datasets are in the untracked 'data' directory
@@ -275,8 +348,9 @@ if __name__ == "__main__":
         current_file_path = f"{mustard_location}/mustard_utts.tsv"
         transcribed_file = "google_transcriptions_combined.txt"
 
-        mustard_organizer = OrganizeKaldiTranscriptions("MUStARD", mustard_location, mustard_extensions,
-                                                        transcribed_file)
+        mustard_organizer = OrganizeKaldiTranscriptions(
+            "MUStARD", mustard_location, mustard_extensions, transcribed_file
+        )
 
         # get current label file
         current_file = mustard_organizer.read_in_current_files(current_file_path)
@@ -285,7 +359,9 @@ if __name__ == "__main__":
         transcripts = mustard_organizer.read_in_google_transcribed_file()
 
         # save transcriptions
-        mustard_organizer.save_transcriptions(transcripts, current_file, "mustard_google.tsv")
+        mustard_organizer.save_transcriptions(
+            transcripts, current_file, "mustard_google.tsv"
+        )
 
     elif sys.argv[1] == "meld-google":
         # assumes that datasets are in the untracked 'data' directory
@@ -301,15 +377,20 @@ if __name__ == "__main__":
         current_dev_path = f"{meld_location}/dev/dev_sent_emo.csv"
         current_test_path = f"{meld_location}/test/test_sent_emo.csv"
 
-        meld_train_organizer = OrganizeKaldiTranscriptions("MELD", meld_location, meld_train_extensions,
-                                                             transcribed_name)
-        meld_dev_organizer = OrganizeKaldiTranscriptions("MELD", meld_location, meld_dev_extensions,
-                                                           transcribed_name)
-        meld_test_organizer = OrganizeKaldiTranscriptions("MELD", meld_location, meld_test_extensions,
-                                                           transcribed_name)
+        meld_train_organizer = OrganizeKaldiTranscriptions(
+            "MELD", meld_location, meld_train_extensions, transcribed_name
+        )
+        meld_dev_organizer = OrganizeKaldiTranscriptions(
+            "MELD", meld_location, meld_dev_extensions, transcribed_name
+        )
+        meld_test_organizer = OrganizeKaldiTranscriptions(
+            "MELD", meld_location, meld_test_extensions, transcribed_name
+        )
 
         # get paths
-        current_train_file = meld_train_organizer.read_in_current_files(current_train_path)
+        current_train_file = meld_train_organizer.read_in_current_files(
+            current_train_path
+        )
         current_dev_file = meld_dev_organizer.read_in_current_files(current_dev_path)
         current_test_file = meld_test_organizer.read_in_current_files(current_test_path)
 
@@ -319,9 +400,15 @@ if __name__ == "__main__":
         test_transcripts = meld_test_organizer.read_in_google_transcribed_file()
 
         # save transcriptions
-        meld_train_organizer.save_transcriptions(train_transcripts, current_train_file, "train/meld_google.tsv")
-        meld_dev_organizer.save_transcriptions(dev_transcripts, current_dev_file, "dev/meld_google.tsv")
-        meld_test_organizer.save_transcriptions(test_transcripts, current_test_file, "test/meld_google.tsv")
+        meld_train_organizer.save_transcriptions(
+            train_transcripts, current_train_file, "train/meld_google.tsv"
+        )
+        meld_dev_organizer.save_transcriptions(
+            dev_transcripts, current_dev_file, "dev/meld_google.tsv"
+        )
+        meld_test_organizer.save_transcriptions(
+            test_transcripts, current_test_file, "test/meld_google.tsv"
+        )
 
     elif sys.argv[1] == "chalearn-google":
         # assumes that datasets are in the untracked 'data' directory
@@ -337,29 +424,44 @@ if __name__ == "__main__":
         current_dev_path = f"{chalearn_location}/val/gold_and_utts.tsv"
         current_test_path = f"{chalearn_location}/test/gold_and_utts.tsv"
 
-        chalearn_train_organizer = OrganizeKaldiTranscriptions("Chalearn", chalearn_location, chalearn_train_extension,
-                                                               transcribed_name)
-        current_train_file = chalearn_train_organizer.read_in_current_files(current_train_path)
+        chalearn_train_organizer = OrganizeKaldiTranscriptions(
+            "Chalearn", chalearn_location, chalearn_train_extension, transcribed_name
+        )
+        current_train_file = chalearn_train_organizer.read_in_current_files(
+            current_train_path
+        )
         train_transcripts = chalearn_train_organizer.read_in_google_transcribed_file()
 
         # save transcriptions
-        chalearn_train_organizer.save_transcriptions(train_transcripts, current_train_file, "train/chalearn_google.tsv")
+        chalearn_train_organizer.save_transcriptions(
+            train_transcripts, current_train_file, "train/chalearn_google.tsv"
+        )
 
-        chalearn_dev_organizer = OrganizeKaldiTranscriptions("Chalearn", chalearn_location, chalearn_dev_extension,
-                                                             transcribed_name)
-        current_dev_file = chalearn_dev_organizer.read_in_current_files(current_dev_path)
+        chalearn_dev_organizer = OrganizeKaldiTranscriptions(
+            "Chalearn", chalearn_location, chalearn_dev_extension, transcribed_name
+        )
+        current_dev_file = chalearn_dev_organizer.read_in_current_files(
+            current_dev_path
+        )
         dev_transcripts = chalearn_dev_organizer.read_in_google_transcribed_file()
 
         # save transcriptions
-        chalearn_dev_organizer.save_transcriptions(dev_transcripts, current_dev_file, "val/chalearn_google.tsv")
+        chalearn_dev_organizer.save_transcriptions(
+            dev_transcripts, current_dev_file, "val/chalearn_google.tsv"
+        )
 
-        chalearn_test_organizer = OrganizeKaldiTranscriptions("Chalearn", chalearn_location, chalearn_test_extension,
-                                                             transcribed_name)
-        current_test_file = chalearn_test_organizer.read_in_current_files(current_test_path)
+        chalearn_test_organizer = OrganizeKaldiTranscriptions(
+            "Chalearn", chalearn_location, chalearn_test_extension, transcribed_name
+        )
+        current_test_file = chalearn_test_organizer.read_in_current_files(
+            current_test_path
+        )
         test_transcripts = chalearn_test_organizer.read_in_google_transcribed_file()
 
         # save transcriptions
-        chalearn_test_organizer.save_transcriptions(test_transcripts, current_test_file, "test/chalearn_google.tsv")
+        chalearn_test_organizer.save_transcriptions(
+            test_transcripts, current_test_file, "test/chalearn_google.tsv"
+        )
 
     elif sys.argv[1] == "combine_google":
         # mustard
@@ -369,8 +471,10 @@ if __name__ == "__main__":
         current_file_path = f"{mustard_location}/mustard_utts.tsv"
         transcribed_file = "google_transcriptions.txt"
 
-        combine_google_partial_transcripts(f"{mustard_location}/{transcribed_file}",
-                                           f"{mustard_location}/google_transcriptions_combined.txt")
+        combine_google_partial_transcripts(
+            f"{mustard_location}/{transcribed_file}",
+            f"{mustard_location}/google_transcriptions_combined.txt",
+        )
 
         # meld
         meld_location = "/Users/jculnan/datasets/multimodal_datasets/MELD_formatted"
@@ -381,15 +485,20 @@ if __name__ == "__main__":
 
         transcribed_name = "google_transcriptions.txt"
 
-        combine_google_partial_transcripts(f"{meld_location}/{meld_train_extensions}/{transcribed_name}",
-                                           f"{meld_location}/{meld_train_extensions}/google_transcriptions_combined.txt")
+        combine_google_partial_transcripts(
+            f"{meld_location}/{meld_train_extensions}/{transcribed_name}",
+            f"{meld_location}/{meld_train_extensions}/google_transcriptions_combined.txt",
+        )
 
-        combine_google_partial_transcripts(f"{meld_location}/{meld_dev_extensions}/{transcribed_name}",
-                                           f"{meld_location}/{meld_dev_extensions}/google_transcriptions_combined.txt")
+        combine_google_partial_transcripts(
+            f"{meld_location}/{meld_dev_extensions}/{transcribed_name}",
+            f"{meld_location}/{meld_dev_extensions}/google_transcriptions_combined.txt",
+        )
 
-        combine_google_partial_transcripts(f"{meld_location}/{meld_test_extensions}/{transcribed_name}",
-                                           f"{meld_location}/{meld_test_extensions}/google_transcriptions_combined.txt")
-
+        combine_google_partial_transcripts(
+            f"{meld_location}/{meld_test_extensions}/{transcribed_name}",
+            f"{meld_location}/{meld_test_extensions}/google_transcriptions_combined.txt",
+        )
 
         # chalearn
         # assumes that datasets are in the untracked 'data' directory
@@ -401,11 +510,17 @@ if __name__ == "__main__":
 
         transcribed_name = "google_transcriptions.txt"
 
-        combine_google_partial_transcripts(f"{chalearn_location}/{chalearn_train_extension}/{transcribed_name}",
-                                           f"{chalearn_location}/{chalearn_train_extension}/google_transcriptions_combined.txt")
+        combine_google_partial_transcripts(
+            f"{chalearn_location}/{chalearn_train_extension}/{transcribed_name}",
+            f"{chalearn_location}/{chalearn_train_extension}/google_transcriptions_combined.txt",
+        )
 
-        combine_google_partial_transcripts(f"{chalearn_location}/{chalearn_dev_extension}/{transcribed_name}",
-                                           f"{chalearn_location}/{chalearn_dev_extension}/google_transcriptions_combined.txt")
+        combine_google_partial_transcripts(
+            f"{chalearn_location}/{chalearn_dev_extension}/{transcribed_name}",
+            f"{chalearn_location}/{chalearn_dev_extension}/google_transcriptions_combined.txt",
+        )
 
-        combine_google_partial_transcripts(f"{chalearn_location}/{chalearn_test_extension}/{transcribed_name}",
-                                           f"{chalearn_location}/{chalearn_test_extension}/google_transcriptions_combined.txt")
+        combine_google_partial_transcripts(
+            f"{chalearn_location}/{chalearn_test_extension}/{transcribed_name}",
+            f"{chalearn_location}/{chalearn_test_extension}/google_transcriptions_combined.txt",
+        )
