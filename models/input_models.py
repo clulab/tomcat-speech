@@ -1367,3 +1367,230 @@ class EarlyFusionTextOnlyModel(nn.Module):
 
         # return the output
         return output
+
+
+class MultitaskDuplicateInputModel(nn.Module):
+    """
+    A multimodal model that duplicates input modality tensors
+    Inspired by:
+    Frustratingly easy domain adaptation
+    """
+
+    def __init__(
+        self, params, num_embeddings=None, pretrained_embeddings=None, multi_dataset=True,
+            num_tasks=2
+    ):
+        super(MultitaskDuplicateInputModel, self).__init__()
+        # save whether there are multiple datasets
+        # if so, assumes each dataset has its own task
+        self.multi_dataset = multi_dataset
+
+        # # set base of model
+        # comment this out and uncomment the below to try late fusion model
+        self.base = MultimodalBaseDuplicateInput(
+            params, num_embeddings, pretrained_embeddings, num_tasks
+        )
+
+        # set output layers
+        self.task_0_predictor = PredictionLayer(params, params.output_0_dim)
+        self.task_1_predictor = PredictionLayer(params, params.output_1_dim)
+        self.task_2_predictor = PredictionLayer(params, params.output_2_dim)
+
+    def forward(
+        self,
+        acoustic_input,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        acoustic_len_input=None,
+        gender_input=None,
+        task_num=0
+    ):
+        # call forward on base model
+        final_base_layer = self.base(
+            acoustic_input,
+            text_input,
+            length_input=length_input,
+            gender_input=gender_input,
+            task_num=task_num
+        )
+
+        task_0_out = None
+        task_1_out = None
+        task_2_out = None
+
+        if not self.multi_dataset:
+            task_0_out = self.task_0_predictor(final_base_layer)
+            task_1_out = self.task_1_predictor(final_base_layer)
+            task_2_out = self.task_2_predictor(final_base_layer)
+        else:
+            if task_num == 0:
+                task_0_out = self.task_0_predictor(final_base_layer)
+            elif task_num == 1:
+                task_1_out = self.task_1_predictor(final_base_layer)
+            elif task_num == 2:
+                task_2_out = self.task_2_predictor(final_base_layer)
+            else:
+                sys.exit(f"Task {task_num} not defined")
+
+        return task_0_out, task_1_out, task_2_out
+
+
+class MultimodalBaseDuplicateInput(nn.Module):
+    """
+    A multimodal model that duplicates input modality tensors
+    Inspired by:
+    Frustratingly easy domain adaptation
+    """
+
+    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None,
+                 num_tasks=2):
+        super(MultimodalBaseDuplicateInput, self).__init__()
+        # get the number of duplicates
+        self.mult_size = num_tasks + 1
+
+        # input text + acoustic + speaker
+        self.text_dim = params.text_dim * self.mult_size
+        self.short_dim = params.short_emb_dim * self.mult_size
+        self.audio_dim = params.audio_dim * self.mult_size
+
+        self.num_embeddings = num_embeddings
+        self.num_speakers = params.num_speakers
+        self.text_gru_hidden_dim = params.text_gru_hidden_dim
+
+        # get number of output dims
+        self.out_dims = params.output_dim
+
+        # if we feed text through additional layer(s)
+        self.text_rnn = nn.LSTM(
+            input_size=self.text_dim + self.short_dim,
+            hidden_size=params.text_gru_hidden_dim,
+            num_layers=params.num_gru_layers,
+            batch_first=True,
+            bidirectional=True,
+        )
+
+        # set the size of acoustic fc layers
+        self.acoustic_fc_1 = nn.Linear(self.audio_dim, 50)
+        self.acoustic_fc_2 = nn.Linear(50, params.audio_dim)
+
+        # set the size of the input into the multimodal fc layers
+        self.fc_input_dim = params.text_gru_hidden_dim + params.audio_dim
+
+        if params.use_gender:
+            self.fc_input_dim = self.fc_input_dim + params.gender_emb_dim
+
+        # set number of classes
+        self.output_dim = params.output_dim
+
+        # set number of layers and dropout
+        self.dropout = params.dropout
+
+        # initialize word embeddings
+        self.embedding = nn.Embedding(
+            num_embeddings, params.text_dim, _weight=pretrained_embeddings
+        )
+        self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
+
+        # initialize speaker embeddings
+        self.speaker_embedding = nn.Embedding(
+            params.num_speakers, params.speaker_emb_dim
+        )
+
+        self.gender_embedding = nn.Embedding(3, params.gender_emb_dim)
+
+        # initialize fully connected layers
+        self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
+
+    def forward(
+        self,
+        acoustic_input,
+        text_input,
+        length_input=None,
+        gender_input=None,
+        task_num=0,
+    ):
+        # using pretrained embeddings, so detach to not update weights
+        # embs: (batch_size, seq_len, emb_dim)
+        embs = self.embedding(text_input).detach()
+        temp_embs = torch.clone(embs).detach()
+
+        # do the same with trainable short embeddings
+        short_embs = self.short_embedding(text_input)
+
+        # add a tensor for each task; if not the tensor for this task,
+        # fill it with zeros; otherwise, just copy the tensor
+        for num in range(1, self.mult_size):
+            # don't want to detach so recalculating short embs here
+            # for safety; may not be necessary
+            temp_short_embs = self.short_embedding(text_input)
+
+            if num != task_num + 1:
+                temp_embs = torch.zeros_like(temp_embs).detach()
+                temp_short_embs = torch.zeros_like(temp_short_embs)
+
+            embs = torch.cat((embs, temp_embs), dim=2)
+            short_embs = torch.cat((short_embs, temp_short_embs), dim=2)
+
+        # add dropout
+        embs = F.dropout(embs, 0.1)
+        short_embs = F.dropout(short_embs, 0.1)
+
+        # concatenate short and regular embeddings
+        all_embs = torch.cat((embs, short_embs), dim=2)
+
+        # get gender embeddings, if needed
+        if gender_input is not None:
+            gender_embs = self.gender_embedding(gender_input)
+
+            for num in range(1, self.mult_size):
+                temp_gend_embs = self.gender_embedding(gender_input)
+
+                if num != task_num + 1:
+                    temp_gend_embs = torch.zeros_like(temp_gend_embs)
+
+                gender_embs = torch.cat((gender_embs, temp_gend_embs), dim=-1)
+
+        # pack embeddings for RNN
+        packed = nn.utils.rnn.pack_padded_sequence(
+            all_embs, length_input, batch_first=True, enforce_sorted=False
+        )
+
+        # feed embeddings through RNN
+        packed_output, (hidden, cell) = self.text_rnn(packed)
+        encoded_text = F.dropout(hidden[-1], 0.3)
+
+        if len(acoustic_input.shape) > 2:
+            acoustic_input = acoustic_input.squeeze()
+
+        temp_acoustic_input = torch.clone(acoustic_input).detach()
+
+        for num in range(1, self.mult_size):
+            # i THINK detach here just keeps differentiation separate from the original
+            # could check both ways to verify
+            if num != task_num + 1:
+                temp_acoustic_input = torch.zeros_like(temp_acoustic_input)
+
+            acoustic_input = torch.cat((acoustic_input, temp_acoustic_input), dim=1)
+
+        int_acoustic = torch.tanh(
+            F.dropout(self.acoustic_fc_1(acoustic_input), self.dropout)
+        )
+        encoded_acoustic = torch.tanh(
+            F.dropout(self.acoustic_fc_2(int_acoustic), self.dropout)
+        )
+
+        # combine modalities as required by architecture
+        if gender_input is not None:
+            inputs = torch.cat((encoded_acoustic, encoded_text, gender_embs), 1)
+        else:
+            inputs = torch.cat((encoded_acoustic, encoded_text), 1)
+
+        # use pooled, squeezed feats as input into fc layers
+        output = torch.tanh(F.dropout(self.fc1(inputs), 0.5))
+
+        if self.out_dims == 1:
+            output = torch.sigmoid(output)
+
+        # return the output
+        return output

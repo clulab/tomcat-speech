@@ -12,7 +12,7 @@ import os
 save_dataset = False
 
 # do you want to load pre-saved dataset files?
-load_dataset = False
+load_dataset = True
 
 
 EXPERIMENT_ID = 1
@@ -20,7 +20,7 @@ EXPERIMENT_ID = 1
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
-EXPERIMENT_DESCRIPTION = "MUSTARD_GOOGLE_TEXTONLY_withoutgender_"
+EXPERIMENT_DESCRIPTION = "MC_GOLD_concatInput_"
 # EXPERIMENT_DESCRIPTION = "DELETE"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
@@ -28,7 +28,10 @@ USE_SERVER = False
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
 
-model_type = "MULTITASK"
+model_type = "CONCAT_MULTITASK"
+load_path = "IS13_GOLD"
+
+num_tasks = 2
 
 # set parameters for data prep
 # glove_file = "/work/bsharp/glove.short.300d.punct.txt"
@@ -51,16 +54,13 @@ else:
     # ravdess_path = "../../datasets/multimodal_datasets/RAVDESS_speech"
 
 # set dir to save full experiments
-exp_save_path = "output/multitask/EACL_21_CORRECTED"
-
-data_type = "multitask"
-fusion_type = "early"
+exp_save_path = "output/multitask/MC"
 
 #set type of predictions to make for chalearn
 chalearn_predtype = "max_class"
 
 # set the acoustic feature set
-feature_set = "IS10"
+feature_set = "IS13"
 
 # small set
 # acoustic_columns = ['pcm_loudness_sma', 'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'jitterLocal_sma',
@@ -184,70 +184,70 @@ feature_set = "IS10"
 #                     'pcm_fftMag_mfcc_sma_de[12]','pcm_fftMag_mfcc_sma_de[13]','pcm_fftMag_mfcc_sma_de[14]']
 
 # IS13 FULL SET
-# acoustic_columns = ['F0final_sma','voicingFinalUnclipped_sma','jitterLocal_sma','jitterDDP_sma','shimmerLocal_sma',
-#                     'logHNR_sma','audspec_lengthL1norm_sma','audspecRasta_lengthL1norm_sma','pcm_RMSenergy_sma',
-#                     'pcm_zcr_sma','audSpec_Rfilt_sma[0]','audSpec_Rfilt_sma[1]','audSpec_Rfilt_sma[2]',
-#                     'audSpec_Rfilt_sma[3]','audSpec_Rfilt_sma[4]','audSpec_Rfilt_sma[5]','audSpec_Rfilt_sma[6]',
-#                     'audSpec_Rfilt_sma[7]','audSpec_Rfilt_sma[8]','audSpec_Rfilt_sma[9]','audSpec_Rfilt_sma[10]',
-#                     'audSpec_Rfilt_sma[11]','audSpec_Rfilt_sma[12]','audSpec_Rfilt_sma[13]','audSpec_Rfilt_sma[14]',
-#                     'audSpec_Rfilt_sma[15]','audSpec_Rfilt_sma[16]','audSpec_Rfilt_sma[17]','audSpec_Rfilt_sma[18]',
-#                     'audSpec_Rfilt_sma[19]','audSpec_Rfilt_sma[20]','audSpec_Rfilt_sma[21]','audSpec_Rfilt_sma[22]',
-#                     'audSpec_Rfilt_sma[23]','audSpec_Rfilt_sma[24]','audSpec_Rfilt_sma[25]',
-#                     'pcm_fftMag_fband250-650_sma','pcm_fftMag_fband1000-4000_sma','pcm_fftMag_spectralRollOff25.0_sma',
-#                     'pcm_fftMag_spectralRollOff50.0_sma','pcm_fftMag_spectralRollOff75.0_sma',
-#                     'pcm_fftMag_spectralRollOff90.0_sma','pcm_fftMag_spectralFlux_sma',
-#                     'pcm_fftMag_spectralCentroid_sma','pcm_fftMag_spectralEntropy_sma',
-#                     'pcm_fftMag_spectralVariance_sma','pcm_fftMag_spectralSkewness_sma',
-#                     'pcm_fftMag_spectralKurtosis_sma','pcm_fftMag_spectralSlope_sma','pcm_fftMag_psySharpness_sma',
-#                     'pcm_fftMag_spectralHarmonicity_sma','mfcc_sma[1]','mfcc_sma[2]','mfcc_sma[3]','mfcc_sma[4]',
-#                     'mfcc_sma[5]','mfcc_sma[6]','mfcc_sma[7]','mfcc_sma[8]','mfcc_sma[9]','mfcc_sma[10]',
-#                     'mfcc_sma[11]','mfcc_sma[12]','mfcc_sma[13]','mfcc_sma[14]','F0final_sma_de',
-#                     'voicingFinalUnclipped_sma_de','jitterLocal_sma_de','jitterDDP_sma_de','shimmerLocal_sma_de',
-#                     'logHNR_sma_de','audspec_lengthL1norm_sma_de','audspecRasta_lengthL1norm_sma_de',
-#                     'pcm_RMSenergy_sma_de','pcm_zcr_sma_de','audSpec_Rfilt_sma_de[0]','audSpec_Rfilt_sma_de[1]',
-#                     'audSpec_Rfilt_sma_de[2]','audSpec_Rfilt_sma_de[3]','audSpec_Rfilt_sma_de[4]',
-#                     'audSpec_Rfilt_sma_de[5]','audSpec_Rfilt_sma_de[6]','audSpec_Rfilt_sma_de[7]',
-#                     'audSpec_Rfilt_sma_de[8]','audSpec_Rfilt_sma_de[9]','audSpec_Rfilt_sma_de[10]',
-#                     'audSpec_Rfilt_sma_de[11]','audSpec_Rfilt_sma_de[12]','audSpec_Rfilt_sma_de[13]',
-#                     'audSpec_Rfilt_sma_de[14]','audSpec_Rfilt_sma_de[15]','audSpec_Rfilt_sma_de[16]',
-#                     'audSpec_Rfilt_sma_de[17]','audSpec_Rfilt_sma_de[18]','audSpec_Rfilt_sma_de[19]',
-#                     'audSpec_Rfilt_sma_de[20]','audSpec_Rfilt_sma_de[21]','audSpec_Rfilt_sma_de[22]',
-#                     'audSpec_Rfilt_sma_de[23]','audSpec_Rfilt_sma_de[24]','audSpec_Rfilt_sma_de[25]',
-#                     'pcm_fftMag_fband250-650_sma_de','pcm_fftMag_fband1000-4000_sma_de',
-#                     'pcm_fftMag_spectralRollOff25.0_sma_de','pcm_fftMag_spectralRollOff50.0_sma_de',
-#                     'pcm_fftMag_spectralRollOff75.0_sma_de','pcm_fftMag_spectralRollOff90.0_sma_de',
-#                     'pcm_fftMag_spectralFlux_sma_de','pcm_fftMag_spectralCentroid_sma_de',
-#                     'pcm_fftMag_spectralEntropy_sma_de','pcm_fftMag_spectralVariance_sma_de',
-#                     'pcm_fftMag_spectralSkewness_sma_de','pcm_fftMag_spectralKurtosis_sma_de',
-#                     'pcm_fftMag_spectralSlope_sma_de','pcm_fftMag_psySharpness_sma_de',
-#                     'pcm_fftMag_spectralHarmonicity_sma_de','mfcc_sma_de[1]','mfcc_sma_de[2]','mfcc_sma_de[3]',
-#                     'mfcc_sma_de[4]','mfcc_sma_de[5]','mfcc_sma_de[6]','mfcc_sma_de[7]','mfcc_sma_de[8]',
-#                     'mfcc_sma_de[9]','mfcc_sma_de[10]','mfcc_sma_de[11]','mfcc_sma_de[12]','mfcc_sma_de[13]',
-#                     'mfcc_sma_de[14]']
+acoustic_columns = ['F0final_sma','voicingFinalUnclipped_sma','jitterLocal_sma','jitterDDP_sma','shimmerLocal_sma',
+                    'logHNR_sma','audspec_lengthL1norm_sma','audspecRasta_lengthL1norm_sma','pcm_RMSenergy_sma',
+                    'pcm_zcr_sma','audSpec_Rfilt_sma[0]','audSpec_Rfilt_sma[1]','audSpec_Rfilt_sma[2]',
+                    'audSpec_Rfilt_sma[3]','audSpec_Rfilt_sma[4]','audSpec_Rfilt_sma[5]','audSpec_Rfilt_sma[6]',
+                    'audSpec_Rfilt_sma[7]','audSpec_Rfilt_sma[8]','audSpec_Rfilt_sma[9]','audSpec_Rfilt_sma[10]',
+                    'audSpec_Rfilt_sma[11]','audSpec_Rfilt_sma[12]','audSpec_Rfilt_sma[13]','audSpec_Rfilt_sma[14]',
+                    'audSpec_Rfilt_sma[15]','audSpec_Rfilt_sma[16]','audSpec_Rfilt_sma[17]','audSpec_Rfilt_sma[18]',
+                    'audSpec_Rfilt_sma[19]','audSpec_Rfilt_sma[20]','audSpec_Rfilt_sma[21]','audSpec_Rfilt_sma[22]',
+                    'audSpec_Rfilt_sma[23]','audSpec_Rfilt_sma[24]','audSpec_Rfilt_sma[25]',
+                    'pcm_fftMag_fband250-650_sma','pcm_fftMag_fband1000-4000_sma','pcm_fftMag_spectralRollOff25.0_sma',
+                    'pcm_fftMag_spectralRollOff50.0_sma','pcm_fftMag_spectralRollOff75.0_sma',
+                    'pcm_fftMag_spectralRollOff90.0_sma','pcm_fftMag_spectralFlux_sma',
+                    'pcm_fftMag_spectralCentroid_sma','pcm_fftMag_spectralEntropy_sma',
+                    'pcm_fftMag_spectralVariance_sma','pcm_fftMag_spectralSkewness_sma',
+                    'pcm_fftMag_spectralKurtosis_sma','pcm_fftMag_spectralSlope_sma','pcm_fftMag_psySharpness_sma',
+                    'pcm_fftMag_spectralHarmonicity_sma','mfcc_sma[1]','mfcc_sma[2]','mfcc_sma[3]','mfcc_sma[4]',
+                    'mfcc_sma[5]','mfcc_sma[6]','mfcc_sma[7]','mfcc_sma[8]','mfcc_sma[9]','mfcc_sma[10]',
+                    'mfcc_sma[11]','mfcc_sma[12]','mfcc_sma[13]','mfcc_sma[14]','F0final_sma_de',
+                    'voicingFinalUnclipped_sma_de','jitterLocal_sma_de','jitterDDP_sma_de','shimmerLocal_sma_de',
+                    'logHNR_sma_de','audspec_lengthL1norm_sma_de','audspecRasta_lengthL1norm_sma_de',
+                    'pcm_RMSenergy_sma_de','pcm_zcr_sma_de','audSpec_Rfilt_sma_de[0]','audSpec_Rfilt_sma_de[1]',
+                    'audSpec_Rfilt_sma_de[2]','audSpec_Rfilt_sma_de[3]','audSpec_Rfilt_sma_de[4]',
+                    'audSpec_Rfilt_sma_de[5]','audSpec_Rfilt_sma_de[6]','audSpec_Rfilt_sma_de[7]',
+                    'audSpec_Rfilt_sma_de[8]','audSpec_Rfilt_sma_de[9]','audSpec_Rfilt_sma_de[10]',
+                    'audSpec_Rfilt_sma_de[11]','audSpec_Rfilt_sma_de[12]','audSpec_Rfilt_sma_de[13]',
+                    'audSpec_Rfilt_sma_de[14]','audSpec_Rfilt_sma_de[15]','audSpec_Rfilt_sma_de[16]',
+                    'audSpec_Rfilt_sma_de[17]','audSpec_Rfilt_sma_de[18]','audSpec_Rfilt_sma_de[19]',
+                    'audSpec_Rfilt_sma_de[20]','audSpec_Rfilt_sma_de[21]','audSpec_Rfilt_sma_de[22]',
+                    'audSpec_Rfilt_sma_de[23]','audSpec_Rfilt_sma_de[24]','audSpec_Rfilt_sma_de[25]',
+                    'pcm_fftMag_fband250-650_sma_de','pcm_fftMag_fband1000-4000_sma_de',
+                    'pcm_fftMag_spectralRollOff25.0_sma_de','pcm_fftMag_spectralRollOff50.0_sma_de',
+                    'pcm_fftMag_spectralRollOff75.0_sma_de','pcm_fftMag_spectralRollOff90.0_sma_de',
+                    'pcm_fftMag_spectralFlux_sma_de','pcm_fftMag_spectralCentroid_sma_de',
+                    'pcm_fftMag_spectralEntropy_sma_de','pcm_fftMag_spectralVariance_sma_de',
+                    'pcm_fftMag_spectralSkewness_sma_de','pcm_fftMag_spectralKurtosis_sma_de',
+                    'pcm_fftMag_spectralSlope_sma_de','pcm_fftMag_psySharpness_sma_de',
+                    'pcm_fftMag_spectralHarmonicity_sma_de','mfcc_sma_de[1]','mfcc_sma_de[2]','mfcc_sma_de[3]',
+                    'mfcc_sma_de[4]','mfcc_sma_de[5]','mfcc_sma_de[6]','mfcc_sma_de[7]','mfcc_sma_de[8]',
+                    'mfcc_sma_de[9]','mfcc_sma_de[10]','mfcc_sma_de[11]','mfcc_sma_de[12]','mfcc_sma_de[13]',
+                    'mfcc_sma_de[14]']
 # acoustic_columns = None
 
 # IS10 FULL SET
-acoustic_columns = ['pcm_loudness_sma', 'mfcc_sma[0]', 'mfcc_sma[1]', 'mfcc_sma[2]', 'mfcc_sma[3]',
-                    'mfcc_sma[4]', 'mfcc_sma[5]', 'mfcc_sma[6]', 'mfcc_sma[7]', 'mfcc_sma[8]',
-                    'mfcc_sma[9]', 'mfcc_sma[10]', 'mfcc_sma[11]', 'mfcc_sma[12]', 'mfcc_sma[13]',
-                    'mfcc_sma[14]', 'logMelFreqBand_sma[0]', 'logMelFreqBand_sma[1]',
-                    'logMelFreqBand_sma[2]', 'logMelFreqBand_sma[3]', 'logMelFreqBand_sma[4]',
-                    'logMelFreqBand_sma[5]', 'logMelFreqBand_sma[6]', 'logMelFreqBand_sma[7]',
-                    'lspFreq_sma[0]', 'lspFreq_sma[1]', 'lspFreq_sma[2]', 'lspFreq_sma[3]',
-                    'lspFreq_sma[4]', 'lspFreq_sma[5]', 'lspFreq_sma[6]', 'lspFreq_sma[7]',
-                    'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'F0final_sma', 'jitterLocal_sma',
-                    'jitterDDP_sma', 'shimmerLocal_sma', 'pcm_loudness_sma_de', 'mfcc_sma_de[0]',
-                    'mfcc_sma_de[1]', 'mfcc_sma_de[2]', 'mfcc_sma_de[3]', 'mfcc_sma_de[4]',
-                    'mfcc_sma_de[5]', 'mfcc_sma_de[6]', 'mfcc_sma_de[7]', 'mfcc_sma_de[8]',
-                    'mfcc_sma_de[9]', 'mfcc_sma_de[10]', 'mfcc_sma_de[11]', 'mfcc_sma_de[12]',
-                    'mfcc_sma_de[13]', 'mfcc_sma_de[14]', 'logMelFreqBand_sma_de[0]',
-                    'logMelFreqBand_sma_de[1]', 'logMelFreqBand_sma_de[2]', 'logMelFreqBand_sma_de[3]',
-                    'logMelFreqBand_sma_de[4]', 'logMelFreqBand_sma_de[5]', 'logMelFreqBand_sma_de[6]',
-                    'logMelFreqBand_sma_de[7]', 'lspFreq_sma_de[0]', 'lspFreq_sma_de[1]',
-                    'lspFreq_sma_de[2]', 'lspFreq_sma_de[3]', 'lspFreq_sma_de[4]', 'lspFreq_sma_de[5]',
-                    'lspFreq_sma_de[6]', 'lspFreq_sma_de[7]', 'F0finEnv_sma_de',
-                    'voicingFinalUnclipped_sma_de', 'F0final_sma_de', 'jitterLocal_sma_de',
-                    'jitterDDP_sma_de', 'shimmerLocal_sma_de']
+# acoustic_columns = ['pcm_loudness_sma', 'mfcc_sma[0]', 'mfcc_sma[1]', 'mfcc_sma[2]', 'mfcc_sma[3]',
+#                     'mfcc_sma[4]', 'mfcc_sma[5]', 'mfcc_sma[6]', 'mfcc_sma[7]', 'mfcc_sma[8]',
+#                     'mfcc_sma[9]', 'mfcc_sma[10]', 'mfcc_sma[11]', 'mfcc_sma[12]', 'mfcc_sma[13]',
+#                     'mfcc_sma[14]', 'logMelFreqBand_sma[0]', 'logMelFreqBand_sma[1]',
+#                     'logMelFreqBand_sma[2]', 'logMelFreqBand_sma[3]', 'logMelFreqBand_sma[4]',
+#                     'logMelFreqBand_sma[5]', 'logMelFreqBand_sma[6]', 'logMelFreqBand_sma[7]',
+#                     'lspFreq_sma[0]', 'lspFreq_sma[1]', 'lspFreq_sma[2]', 'lspFreq_sma[3]',
+#                     'lspFreq_sma[4]', 'lspFreq_sma[5]', 'lspFreq_sma[6]', 'lspFreq_sma[7]',
+#                     'F0finEnv_sma', 'voicingFinalUnclipped_sma', 'F0final_sma', 'jitterLocal_sma',
+#                     'jitterDDP_sma', 'shimmerLocal_sma', 'pcm_loudness_sma_de', 'mfcc_sma_de[0]',
+#                     'mfcc_sma_de[1]', 'mfcc_sma_de[2]', 'mfcc_sma_de[3]', 'mfcc_sma_de[4]',
+#                     'mfcc_sma_de[5]', 'mfcc_sma_de[6]', 'mfcc_sma_de[7]', 'mfcc_sma_de[8]',
+#                     'mfcc_sma_de[9]', 'mfcc_sma_de[10]', 'mfcc_sma_de[11]', 'mfcc_sma_de[12]',
+#                     'mfcc_sma_de[13]', 'mfcc_sma_de[14]', 'logMelFreqBand_sma_de[0]',
+#                     'logMelFreqBand_sma_de[1]', 'logMelFreqBand_sma_de[2]', 'logMelFreqBand_sma_de[3]',
+#                     'logMelFreqBand_sma_de[4]', 'logMelFreqBand_sma_de[5]', 'logMelFreqBand_sma_de[6]',
+#                     'logMelFreqBand_sma_de[7]', 'lspFreq_sma_de[0]', 'lspFreq_sma_de[1]',
+#                     'lspFreq_sma_de[2]', 'lspFreq_sma_de[3]', 'lspFreq_sma_de[4]', 'lspFreq_sma_de[5]',
+#                     'lspFreq_sma_de[6]', 'lspFreq_sma_de[7]', 'F0finEnv_sma_de',
+#                     'voicingFinalUnclipped_sma_de', 'F0final_sma_de', 'jitterLocal_sma_de',
+#                     'jitterDDP_sma_de', 'shimmerLocal_sma_de']
 
 model_params = Namespace(
     # use gradnorm for loss normalization
@@ -255,7 +255,7 @@ model_params = Namespace(
     # consistency parameters
     seed=88,  # 1007
     # trying text only model or not
-    text_only=True,
+    text_only=False,
     audio_only=False,
     # overall model parameters
     model="Multitask-mustard",
@@ -267,7 +267,7 @@ model_params = Namespace(
     # input dimension parameters
     text_dim=300,  # text vector length
     short_emb_dim=[30],  # length of trainable embeddings vec
-    audio_dim=len(acoustic_columns) * 5,  # 78,  # 76,  # 79,  # 10 # audio vector length
+    audio_dim=len(acoustic_columns),  # 78,  # 76,  # 79,  # 10 # audio vector length
     # audio_dim=10,
     # text NN
     kernel_1_size=3,
@@ -290,9 +290,9 @@ model_params = Namespace(
     gender_emb_dim=4,
     # outputs
     output_dim=[100],  # output dimensions from last layer of base model
-    output_0_dim=2,  # output vec for first task
-    output_1_dim=7,  # 7,  # output vec for second task
-    output_2_dim=5,  # 3,    # output vec for third task
+    output_0_dim=7,  # output vec for first task
+    output_1_dim=5,  # 7,  # output vec for second task
+    output_2_dim=2,  # 3,    # output vec for third task
     output_3_dim=0,
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,
