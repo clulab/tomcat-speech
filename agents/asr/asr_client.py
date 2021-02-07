@@ -13,9 +13,8 @@ class ASRClient(object):
 
     def publish_transcript(self, transcript, asr_system):
         ta3_data = Data(transcript, asr_system)
-        msg = Msg(participant_id = self.participant_id)
         json_message_str = json.dumps(
-            asdict(Message(ta3_data, msg = msg))
+            asdict(Message(ta3_data, Msg(participant_id=self.participant_id)))
         )
         print(json_message_str)
         # We call sys.stdout.flush() to make this program work with piping,
