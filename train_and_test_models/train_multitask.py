@@ -30,11 +30,14 @@ import models.parameters.multitask_config as config
 # set device
 cuda = False
 
-# # Check CUDA
 if torch.cuda.is_available():
     cuda = True
 
 device = torch.device("cuda" if cuda else "cpu")
+
+# # Check CUDA
+if torch.cuda.is_available():
+    torch.cuda.set_device(2)
 
 # set random seed
 
