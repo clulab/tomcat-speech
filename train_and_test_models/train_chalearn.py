@@ -31,11 +31,14 @@ import models.parameters.chalearn_config as config
 # set device
 cuda = False
 
-# # Check CUDA
 if torch.cuda.is_available():
     cuda = True
 
 device = torch.device("cuda" if cuda else "cpu")
+
+# # Check CUDA
+if torch.cuda.is_available():
+    torch.cuda.set_device(2)
 
 # set random seed
 
@@ -100,6 +103,7 @@ if __name__ == "__main__":
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
+                f_end=f"_{config.feature_set}.csv",
                 pred_type=config.chalearn_predtype,
             )
 
@@ -118,32 +122,36 @@ if __name__ == "__main__":
                 chalearn_data.trait_weights = None
 
             # get train, dev, test partitions
-            # todo: we need to properly extract test set
             chalearn_train_ds = DatumListDataset(
                 chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights
             )
             chalearn_dev_ds = DatumListDataset(
                 chalearn_data.dev_data, "chalearn_traits", chalearn_data.trait_weights
             )
-            chalearn_test_ds = None
+            chalearn_test_ds = DatumListDataset(
+                chalearn_data.test_data, "chalearn_traits", chalearn_data.trait_weights
+            )
 
             if config.save_dataset:
                 # save all data for faster loading
-                pickle.dump(chalearn_train_ds, open("data/chalearn_IS10RNN10feat_15sec_train.pickle", "wb"))
-                pickle.dump(chalearn_dev_ds, open("data/chalearn_IS10RNN10feat_15sec_dev.pickle", "wb"))
-                # pickle.dump(chalearn_test_ds, open('data/chalearn_IS10RNN10feat_15sec_test.pickle', 'wb'))
+                save_path = data + "/" + config.load_path
 
-                pickle.dump(
-                    glove, open("data/glove.pickle", "wb")
-                )  # todo: get different glove names
+                # save all data for faster loading
+                pickle.dump(chalearn_train_ds, open(f"{save_path}/chalearn_IS1013_train.pickle", "wb"))
+                pickle.dump(chalearn_dev_ds, open(f"{save_path}/chalearn_IS1013_dev.pickle", "wb"))
+                pickle.dump(chalearn_test_ds, open(f'{save_path}/chalearn_IS1013_test.pickle', 'wb'))
+
+                # pickle.dump(
+                #     glove, open("data/glove.pickle", "wb")
+                # )
 
             print("Datasets created")
 
         else:
             # 1. Load datasets + glove object
-            chalearn_train_ds = pickle.load(open("data/chalearn_IS10RNN10feat_15sec_train.pickle", "rb"))
-            chalearn_dev_ds = pickle.load(open("data/chalearn_IS10RNN10feat_15sec_dev.pickle", "rb"))
-            # chalearn_test_ds = pickle.load(open('data/chalearn_test.pickle', 'rb'))
+            chalearn_train_ds = pickle.load(open("data/chalearn_IS1013_train.pickle", "rb"))
+            chalearn_dev_ds = pickle.load(open("data/chalearn_IS1013_dev.pickle", "rb"))
+            chalearn_test_ds = pickle.load(open('data/chalearn_IS1013_test.pickle', 'rb'))
             chalearn_test_ds = None
 
             print("ChaLearn data loaded")
