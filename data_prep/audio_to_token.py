@@ -52,7 +52,7 @@ class EmotionDataPreprocessing():
 
         # item = {}
         if audio_path:
-            audio_files = sorted(glob.glob(audio_path + "*.mp3"))
+            audio_files = sorted(glob.glob(audio_path + "*.wav"))
             print(len(audio_files), "audio_files found")
 
             for audio_file in audio_files:
@@ -90,7 +90,7 @@ class EmotionDataPreprocessing():
 
                 tokens = self.roberta.task.source_dictionary.encode_line(idx_str, append_eos=True, add_if_not_exist=False).detach().numpy()
 
-                output_file = audio_file.replace('audio_dev', 'audio_dev_token').replace('.mp3', '.txt')
+                output_file = audio_file.replace('wavs', 'wavs_roberta').replace('.wav', '.txt')
 
                 os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
