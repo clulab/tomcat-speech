@@ -21,7 +21,6 @@ class Msg(object):
         default_factory=lambda: datetime.datetime.utcnow().isoformat() + "Z"
     )
     experiment_id: Optional[str] = None
-    participant_id: Optional[str] = None
     trial_id: Optional[str] = None
     version: str = "0.1"
     source: str = "tomcat_asr_agent"
@@ -32,6 +31,7 @@ class Msg(object):
 class Data(object):
     text: str
     asr_system: str
+    participant_id: Optional[str] = None
 
 
 @dataclass
