@@ -436,7 +436,8 @@ class EarlyFusionMultimodalModel(nn.Module):
             else:
                 # print(acoustic_input.shape)
                 if len(acoustic_input.shape) > 2:
-                    elf.acoustic_fc_2 = nn.Linear(100, 20)  F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout)
+                    self.acoustic_fc_2 = nn.Linear(100, 20)  
+                    encoded_acoustic = F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout)
             )
             # print(encoded_acoustic.shape)
             # encoded_acoustic = self.acoustic_batch_norm(encoded_acoustic)
