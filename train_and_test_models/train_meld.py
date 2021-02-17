@@ -6,7 +6,7 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 
-sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
+sys.path.append("/work/seongjinpark/tomcat-speech")
 
 from models.train_and_test_models import *
 
@@ -39,12 +39,12 @@ random.seed(seed)
 # todo: should be updated later to a glove subset appropriate for this task
 # glove_file = "/work/bsharp/glove.short.300d.punct.txt"
 # glove_file = "/data/nlp/corpora/glove/glove.840B.300d.no_proc_header.txt"
-glove_file = "../../glove.short.300d.punct.txt"
+glove_file = "/data/nlp/corpora/MM/glove.short.300d.punct.txt"
 # glove_file = "../../glove.42B.300d.txt"
 
 # meld_path = "/data/nlp/corpora/MM/MELD_five_dialogues"
 # meld_path = "/data/nlp/corpora/MM/MELD_formatted"
-meld_path = "../../datasets/multimodal_datasets/MELD_formatted"
+meld_path = "/data/nlp/corpora/MM/MELD_formatted"
 # meld_path = "../../datasets/multimodal_datasets/MELD_five_utterances"
 # meld_path = "../../datasets/multimodal_datasets/MUStARD"
 
