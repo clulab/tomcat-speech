@@ -1,6 +1,18 @@
 | Field Name | Type | Description
 | --- | --- | ---|
-
+| header.timestamp | string | Timestamp of when the data was generated in ISO 8601 format: YYYY-MM-DDThh:mm:ss.sssz |
+| header.message_type | string | One of the defined message types |
+| header.version | string | The version of the message type object |
+| msg.timestamp | string | Timestamp of when the data was generated in ISO 8601 format: YYYY-MM-DDThh:mm:ss.sssz |
+| msg.experiment_id | string | The experiment id this message is associated with |
+| msg.trial_id | string | The trial id this message is associate with |
+| msg.version | string | The version of the sub_type format |
+| msg.source | string | The name of the component that published this data |
+| msg.sub_type | string | The subtype of the data. This field describes the format of this particular type of data |
+| data.text | string | NA |
+| data.is_final | boolean | NA |
+| data.asr_system | string | NA |
+| data.participant_id | string | NA |
 '''json
 {"header" {
 	"timestamp": "2019-12-26T12:47:23.1234Z",
@@ -22,3 +34,5 @@
 	"participant_id" : ""
   }
 }
+
+```
