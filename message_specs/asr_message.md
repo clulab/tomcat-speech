@@ -13,8 +13,9 @@
 | data.is_final | boolean | NA |
 | data.asr_system | string | NA |
 | data.participant_id | string | NA |
-'''json
-{"header" {
+
+```json
+{"header": {
 	"timestamp": "2019-12-26T12:47:23.1234Z",
 	"message_type": "event",
 	"version": "0.4
