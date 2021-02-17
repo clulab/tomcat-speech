@@ -152,9 +152,9 @@ class GoogleASRClient(ASRClient):
                 )
                 asyncio.run(self.publish_to_websocket(message))
 
+            self.publish_transcript(transcript, result.is_final, "Google")
+
             if result.is_final:
-                self.publish_transcript(transcript, "Google")
                 self.stream.is_final_end_time = self.stream.result_end_time
-                self.stream.last_transcript_was_final = True
-            else:
-                self.stream.last_transcript_was_final = False
+
+            self.stream.last_transcript_was_final = result.is_final

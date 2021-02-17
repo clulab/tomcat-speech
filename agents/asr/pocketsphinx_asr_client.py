@@ -21,4 +21,4 @@ class PocketSphinxASRClient(ASRClient):
 
     def callback(self, recognizer, audio_data):
         transcript = recognizer.recognize_sphinx(audio_data)
-        self.publish_transcript(transcript, "PocketSphinx")
+        self.publish_transcript(transcript, True, "PocketSphinx")
