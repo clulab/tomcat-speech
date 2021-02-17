@@ -11,8 +11,8 @@ class ASRClient(object):
     ):
         self.participant_id = participant_id
 
-    def publish_transcript(self, transcript, asr_system):
-        ta3_data = Data(transcript, asr_system, self.participant_id)
+    def publish_transcript(self, transcript: str, is_final: bool, asr_system: str):
+        ta3_data = Data(transcript, is_final, asr_system, self.participant_id)
         json_message_str = json.dumps(
             asdict(Message(ta3_data, Msg()))
         )

@@ -30,6 +30,7 @@ class Msg(object):
 @dataclass(frozen=True)
 class Data(object):
     text: str
+    is_final: bool
     asr_system: str
     participant_id: Optional[str] = None
 
