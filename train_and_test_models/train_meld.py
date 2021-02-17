@@ -10,7 +10,7 @@ sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 
 from models.train_and_test_models import *
 
-from models.input_models import *
+from models.input_models_sjp import *
 from data_prep.data_prep_helpers import *
 from data_prep.meld_data.meld_prep import *
 from data_prep.mustard_data.mustard_prep import *
@@ -125,7 +125,7 @@ if __name__ == "__main__":
             # model_type = f"AcousticGenderAvgd_noBatchNorm_.2splitTrainDev_IS10avgdAI_100batch_wd{str(wd)}_30each"
             # model_type = "DELETE_ME_extraAudioFCs_.4drpt_Acou20Hid100Out"
             model_type = (
-                "EMOTION_MODEL_FOR_ASIST"
+                "EMOTION_MODEL_FOR_ASIST_EMBRACE"
                 # "MELD_IS10sm_500txthid_.1InDrpt_.3textdrpt_.4acdrpt_.5finalFCdrpt"
             )
 
@@ -159,7 +159,7 @@ if __name__ == "__main__":
                 # optimizer = torch.optim.Adadelta(lr=lr, params=bimodal_trial.parameters(),
                 # weight_decay=wd)
             else:
-                bimodal_trial = EarlyFusionMultimodalModel(
+                bimodal_trial = EarlyFusionEmbraceModel(
                     params=params,
                     num_embeddings=num_embeddings,
                     pretrained_embeddings=pretrained_embeddings,
