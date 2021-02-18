@@ -15,10 +15,10 @@ agent/asr
 | msg.version | string | The version of the sub_type format |
 | msg.source | string | The name of the component that published this data |
 | msg.sub_type | string | The subtype of the data. This field describes the format of this particular type of data |
-| data.text | string | NA |
-| data.is_final | boolean | NA |
-| data.asr_system | string | NA |
-| data.participant_id | string | NA |
+| data.text | string | The transcription returned from the asr system |
+| data.is_final | boolean |  Indicates whether the transcription is an intermediate or final transcription |
+| data.asr_system | string | The system used by the agent for automatic speech recognition |
+| data.participant_id | string | The participant id this data is accociated with |
 
 ## Message Example
 
