@@ -23,25 +23,27 @@ agent/asr
 ## Message Example
 
 ```json
-{"header": {
-    "timestamp": "2019-12-26T12:47:23.1234Z",
-    "message_type": "event",
-    "version": "0.4"
-    },
-"msg": {
-    "timestamp" : "2019-12-26T14:05:02.1412Z",
-    "experiment_id" : "523e4567-e89b-12d3-a456-426655440000",
-    "trial_id" : "123e4567-e89b-12d3-a456-426655440000",
-    "version" : "0.1",
-    "source" : "tomcat_asr_agent",
-    "sub_type" : "asr"
-    },
-"data": {
-    "text" : "",
-    "is_final" : "",
-    "asr_system" : "",
-    "participant_id" : ""
-    }
+{
+  "data": {
+    "text": "I am going to save a green victim.",
+    "asr_system": "Google",
+    "is_final": true,
+    "participant_id": "participant_1"
+  },
+  "header": {
+    "timestamp": "2021-01-19T23:27:58.633076Z",
+    "message_type": "observation",
+    "version": "0.1"
+  },
+  "msg": {
+    "timestamp": "2021-01-19T23:27:58.633967Z",
+    "experiment_id": "e2a3cb96-5f2f-11eb-8971-18810ee8274e",
+    "trial_id": "ec76544c-7080-11eb-9123-18810ee8274e",
+    "version": "0.1",
+    "source": "tomcat_asr_agent",
+    "sub_type": "asr"
+  }
 }
+
 
 ```
