@@ -1,0 +1,243 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "http://example.com/example.json",
+    "type": "object",
+    "title": "The root schema",
+    "description": "The root schema comprises the entire JSON document.",
+    "default": {},
+    "examples": [
+        {
+            "data": {
+                "text": "I am going to save a green victim.",
+                "asr_system": "Google",
+                "is_final": true,
+                "participant_id": "participant_1"
+            },
+            "header": {
+                "timestamp": "2021-01-19T23:27:58.633076Z",
+                "message_type": "observation",
+                "version": "0.1"
+            },
+            "msg": {
+                "timestamp": "2021-01-19T23:27:58.633967Z",
+                "experiment_id": "e2a3cb96-5f2f-11eb-8971-18810ee8274e",
+                "trial_id": "ec76544c-7080-11eb-9123-18810ee8274e",
+                "version": "0.1",
+                "source": "tomcat_asr_agent",
+                "sub_type": "asr"
+            }
+        }
+    ],
+    "required": [
+        "data",
+        "header",
+        "msg"
+    ],
+    "properties": {
+        "data": {
+            "$id": "#/properties/data",
+            "type": "object",
+            "title": "The data schema",
+            "description": "An explanation about the purpose of this instance.",
+            "default": {},
+            "examples": [
+                {
+                    "text": "I am going to save a green victim.",
+                    "asr_system": "Google",
+                    "is_final": true,
+                    "participant_id": "participant_1"
+                }
+            ],
+            "required": [
+                "text",
+                "asr_system",
+                "is_final",
+                "participant_id"
+            ],
+            "properties": {
+                "text": {
+                    "$id": "#/properties/data/properties/text",
+                    "type": "string",
+                    "title": "The text schema",
+                    "description": "An explanation about the purpose of this instance.",
+                    "default": "",
+                    "examples": [
+                        "I am going to save a green victim."
+                    ]
+                },
+                "asr_system": {
+                    "$id": "#/properties/data/properties/asr_system",
+                    "type": "string",
+                    "title": "The asr_system schema",
+                    "description": "An explanation about the purpose of this instance.",
+                    "default": "",
+                    "examples": [
+                        "Google"
+                    ]
+                },
+                "is_final": {
+                    "$id": "#/properties/data/properties/is_final",
+                    "type": "boolean",
+                    "title": "The is_final schema",
+                    "description": "An explanation about the purpose of this instance.",
+                    "default": false,
+                    "examples": [
+                        true
+                    ]
+                },
+                "participant_id": {
+                    "$id": "#/properties/data/properties/participant_id",
+                    "type": "string",
+                    "title": "The participant_id schema",
+                    "description": "An explanation about the purpose of this instance.",
+                    "default": "",
+                    "examples": [
+                        "participant_1"
+                    ]
+                }
+            },
+            "additionalProperties": true
+        },
+        "header": {
+            "$id": "#/properties/header",
+            "type": "object",
+            "title": "The header schema",
+            "description": "An explanation about the purpose of this instance.",
+            "default": {},
+            "examples": [
+                {
+                    "timestamp": "2021-01-19T23:27:58.633076Z",
+                    "message_type": "observation",
+                    "version": "0.1"
+                }
+            ],
+            "required": [
+                "timestamp",
+                "message_type",
+                "version"
+            ],
+            "properties": {
+                "timestamp": {
+                    "$id": "#/properties/header/properties/timestamp",
+                    "type": "string",
+                    "title": "The timestamp schema",
+                    "description": "An explanation about the purpose of this instance.",
+                    "default": "",
+                    "examples": [
+                        "2021-01-19T23:27:58.633076Z"
+                    ]
+                },
+                "message_type": {
+                    "$id": "#/properties/header/properties/message_type",
+                    "type": "string",
+                    "title": "The message_type schema",
+                    "description": "An explanation about the purpose of this instance.",
+                    "default": "",
+                    "examples": [
+                        "observation"
+                    ]
+                },
+                "version": {
+                    "$id": "#/properties/header/properties/version",
+                    "type": "string",
+                    "title": "The version schema",
+                    "description": "An explanation about the purpose of this instance.",
+                    "default": "",
+                    "examples": [
+                        "0.1"
+                    ]
+                }
+            },
+            "additionalProperties": true
+        },
+        "msg": {
+            "$id": "#/properties/msg",
+            "type": "object",
+            "title": "The msg schema",
+            "description": "An explanation about the purpose of this instance.",
+            "default": {},
+            "examples": [
+                {
+                    "timestamp": "2021-01-19T23:27:58.633967Z",
+                    "experiment_id": "e2a3cb96-5f2f-11eb-8971-18810ee8274e",
+                    "trial_id": "ec76544c-7080-11eb-9123-18810ee8274e",
+                    "version": "0.1",
+                    "source": "tomcat_asr_agent",
+                    "sub_type": "asr"
+                }
+            ],
+            "required": [
+                "timestamp",
+                "experiment_id",
+                "trial_id",
+                "version",
+                "source",
+                "sub_type"
+            ],
+            "properties": {
+                "timestamp": {
+                    "$id": "#/properties/msg/properties/timestamp",
+                    "type": "string",
+                    "title": "The timestamp schema",
+                    "description": "An explanation about the purpose of this instance.",
+                    "default": "",
+                    "examples": [
+                        "2021-01-19T23:27:58.633967Z"
+                    ]
+                },
+                "experiment_id": {
+                    "$id": "#/properties/msg/properties/experiment_id",
+                    "type": "string",
+                    "title": "The experiment_id schema",
+                    "description": "An explanation about the purpose of this instance.",
+                    "default": "",
+                    "examples": [
+                        "e2a3cb96-5f2f-11eb-8971-18810ee8274e"
+                    ]
+                },
+                "trial_id": {
+                    "$id": "#/properties/msg/properties/trial_id",
+                    "type": "string",
+                    "title": "The trial_id schema",
+                    "description": "An explanation about the purpose of this instance.",
+                    "default": "",
+                    "examples": [
+                        "ec76544c-7080-11eb-9123-18810ee8274e"
+                    ]
+                },
+                "version": {
+                    "$id": "#/properties/msg/properties/version",
+                    "type": "string",
+                    "title": "The version schema",
+                    "description": "An explanation about the purpose of this instance.",
+                    "default": "",
+                    "examples": [
+                        "0.1"
+                    ]
+                },
+                "source": {
+                    "$id": "#/properties/msg/properties/source",
+                    "type": "string",
+                    "title": "The source schema",
+                    "description": "An explanation about the purpose of this instance.",
+                    "default": "",
+                    "examples": [
+                        "tomcat_asr_agent"
+                    ]
+                },
+                "sub_type": {
+                    "$id": "#/properties/msg/properties/sub_type",
+                    "type": "string",
+                    "title": "The sub_type schema",
+                    "description": "An explanation about the purpose of this instance.",
+                    "default": "",
+                    "examples": [
+                        "asr"
+                    ]
+                }
+            },
+            "additionalProperties": true
+        }
+    },
+    "additionalProperties": true
+}
