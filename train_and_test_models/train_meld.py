@@ -6,7 +6,7 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 
-sys.path.append("/work/seongjinpark/tomcat-speech")
+sys.path.append("/work/seongjin/tomcat-speech")
 
 from models.train_and_test_models import *
 
@@ -133,40 +133,14 @@ if __name__ == "__main__":
             # create instance of model
             multitask = False
 
-            if params.output_2_dim is not None:
-                multitask = True
-                bimodal_trial = MultitaskModel(
+            bimodal_trial = EarlyFusionEmbraceModel(
                     params=params,
                     num_embeddings=num_embeddings,
                     pretrained_embeddings=pretrained_embeddings,
                 )
-                optimizer = torch.optim.Adagrad(
+            optimizer = torch.optim.Adam(
                     lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
-                )
-                # optimizer = torch.optim.Adam(lr=lr, params=bimodal_trial.parameters(),
-                #                              weight_decay=wd)
-            elif params.text_only:
-                bimodal_trial = TextOnlyCNN(
-                    params=params,
-                    num_embeddings=num_embeddings,
-                    pretrained_embeddings=pretrained_embeddings,
-                )
-                optimizer = torch.optim.Adam(
-                    lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
-                )
-                # optimizer = torch.optim.Adagrad(lr=lr, params=bimodal_trial.parameters(),
-                #                              weight_decay=wd)
-                # optimizer = torch.optim.Adadelta(lr=lr, params=bimodal_trial.parameters(),
-                # weight_decay=wd)
-            else:
-                bimodal_trial = EarlyFusionEmbraceModel(
-                    params=params,
-                    num_embeddings=num_embeddings,
-                    pretrained_embeddings=pretrained_embeddings,
-                )
-                optimizer = torch.optim.Adam(
-                    lr=lr, params=bimodal_trial.parameters(), weight_decay=wd
-                )
+             )
                 # bimodal_trial = UttLRBaseline(params=params, num_embeddings=num_embeddings,
                 #                               pretrained_embeddings=pretrained_embeddings)
 
@@ -215,7 +189,7 @@ if __name__ == "__main__":
             )
 
             # make the train state to keep track of model training/development
-            train_state = make_train_state(lr, model_save_path, model_save_file)
+            train_state = make_train_state(lr, os.path.join(model_save_path, model_save_file))
 
             # train the model and evaluate on development set
             if multitask:

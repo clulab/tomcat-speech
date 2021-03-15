@@ -9,6 +9,7 @@ from models.attn_models import *
 
 class EmbraceNet(nn.Module):
     def __init__(self,
+                 device,
                  input_size_list,
                  params):
         """
@@ -438,7 +439,7 @@ class EarlyFusionMultimodalModel(nn.Module):
                 if len(acoustic_input.shape) > 2:
                     self.acoustic_fc_2 = nn.Linear(100, 20)  
                     encoded_acoustic = F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout)
-            )
+            
             # print(encoded_acoustic.shape)
             # encoded_acoustic = self.acoustic_batch_norm(encoded_acoustic)
 
@@ -479,6 +480,7 @@ class EarlyFusionEmbraceModel(nn.Module):
     def __init__(self, params, num_embeddings=None, pretrained_embeddings=None, acoustic_cnn=False):
         super(EarlyFusionEmbraceModel, self).__init__()
         # input text + acoustic + speaker
+        self.device = params.device
         self.text_dim = params.text_dim
         self.audio_dim = params.audio_dim
         self.num_embeddings = num_embeddings
@@ -581,7 +583,7 @@ class EarlyFusionEmbraceModel(nn.Module):
 
         input_size = [params.text_gru_hidden_dim, params.audio_dim]
 
-        self.multi_input_net = EmbraceNet(input_size_list = input_size, params=params)
+        self.multi_input_net = EmbraceNet(device=self.device, input_size_list=input_size, params=params)
 
         self.fc_input_dim = sum(input_size)
 
@@ -594,7 +596,7 @@ class EarlyFusionEmbraceModel(nn.Module):
 
         # initialize fully connected layers
         # self.fc1 = nn.Linear(self.fc_input_dim, params.output_dim)
-        self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
+        self.fc1 = nn.Linear(params.embracement_size, params.fc_hidden_dim)
 
         # self.interfc_batch_norm = nn.BatchNorm1d(params.fc_hidden_dim)
 
@@ -638,6 +640,7 @@ class EarlyFusionEmbraceModel(nn.Module):
                 # acoustic_input = self.acoustic_batch_norm(acoustic_input.permute(0, 2, 1))
                 # print(acoustic_input.shape)
                 # acoustic_input = acoustic_input.permute(0, 2, 1)
+                print("XXX")
                 packed_acoustic = nn.utils.rnn.pack_padded_sequence(
                     acoustic_input,
                     # acoustic_len_input,
@@ -659,6 +662,7 @@ class EarlyFusionEmbraceModel(nn.Module):
                 else:
                     encoded_acoustic = acoustic_input
 
+            # print(encoded_acoustic.size())
             encoded_acoustic = torch.tanh(
                 F.dropout(self.acoustic_fc_1(encoded_acoustic), self.dropout)
             )
@@ -684,6 +688,7 @@ class EarlyFusionEmbraceModel(nn.Module):
         inputs = self.multi_input_net([encoded_text, encoded_acoustic])
 
         # use pooled, squeezed feats as input into fc layers
+        print(inputs.size())
         output = torch.tanh(F.dropout(self.fc1(inputs), 0.5))
         # output = torch.tanh(self.fc1(inputs))
         # output = self.interfc_batch_norm(output)

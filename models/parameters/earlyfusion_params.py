@@ -15,7 +15,7 @@ params = Namespace(
     # input dimension parameters
     text_dim=300,  # text vector length
     short_emb_dim=30,  # length of trainable embeddings vec
-    audio_dim=76,  # 76,  # 79,  # 10 # audio_train vector length
+    audio_dim=10,  # 76,  # 79,  # 10 # audio_train vector length
     # audio_dim=10,
     # text NN
     # text_output_dim=30,   # 100,   # 50, 300,
@@ -43,10 +43,15 @@ params = Namespace(
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,
     fc_hidden_dim=100,  # 20,
+    embracement_size=100,
     dropout=0.2,  # 0.2
     # optimizer parameters
-    lrs=[1e-3],
+    lrs=[1e-5],
     beta_1=0.9,
     beta_2=0.999,
     weight_decay=[0.0001],
+    device="cpu",
+    bypass_docking=False, 
+    availabilities=None,
+    selection_probabilities=None
 )
