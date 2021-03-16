@@ -27,6 +27,7 @@ smile.log
 *.p
 *.m4a
 *.json
+*.txt
 
 # Ignore raw audio files
 *.raw

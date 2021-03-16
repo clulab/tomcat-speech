@@ -731,7 +731,7 @@ def test_model(
     print("Classification report: ")
     print(classification_report(ys_holder, preds_holder, digits=4))
 
-
+# GENERATES LIST OF LISTS WITH PREDICTION AND CONFIDENCE LEVELS
 def predict_without_gold_labels(
     classifier,
     test_ds,
@@ -740,6 +740,7 @@ def predict_without_gold_labels(
     avgd_acoustic=True,
     use_speaker=True,
     use_gender=False,
+    get_prob_dist=False
 ):
     """
     Test a pretrained model
@@ -777,6 +778,7 @@ def predict_without_gold_labels(
                 speaker_input=batch_speakers,
                 length_input=batch_lengths,
                 gender_input=batch_genders,
+                get_prob_dist=get_prob_dist
             )
         else:
             y_pred = classifier(
@@ -786,11 +788,12 @@ def predict_without_gold_labels(
                 length_input=batch_lengths,
                 acoustic_len_input=batch_acoustic_lengths,
                 gender_input=batch_genders,
+                get_prob_dist=get_prob_dist
             )
 
         # add ys to holder for error analysis
         preds_holder.extend(
-            [item.index(max(item)) for item in y_pred.tolist()]
+            [[item.index(max(item)), max(item)] for item in y_pred.tolist()]
         )
 
     return preds_holder

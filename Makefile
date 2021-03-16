@@ -1,6 +1,6 @@
 # This Makefile is a work in progress - it has not been tested yet!
 
-all: asist_output.txt
+all: build/asist_output.txt
 
 DATA_DIR = data/study-1_2020.08
 OPENSMILE_DIR = external/opensmile-3.0
@@ -85,10 +85,22 @@ wav_files: $(WAV_FILES)
 opensmile_csv_files: $(OPENSMILE_CSV_FILES)
 averaged_tsv_files: $(firstword $(AVERAGED_TSV_FILES))
 
-test_asist_output.txt: scripts/run_asist_analysis $(GLOVE_FILE) $(EMOTION_MODEL) $(firstword $(AVERAGED_TSV_FILES))
-	$^
+build/test_asist_output.txt: scripts/run_asist_analysis\
+ 						tomcat_speech/data_prep/data_prep_helpers.py\
+ 						tomcat_speech/data_prep/asist_data/asist_dataset_creation.py\
+						$(GLOVE_FILE)\
+						$(EMOTION_MODEL)\
+						$(GENDER_CLASSIFIER_MODEL)\
+						$(firstword $(AVERAGED_TSV_FILES))
+	./scripts/run_asist_analysis $@ $(GLOVE_FILE) $(EMOTION_MODEL) $(firstword $(AVERAGED_TSV_FILES))
 
-test: test_asist_output.txt $(GENDER_CLASSIFIER_MODEL)
+test: build/test_asist_output.txt
 
-asist_output.txt: scripts/run_asist_analysis $(GLOVE_FILE) $(EMOTION_MODEL) $(AVERAGED_TSV_FILES)
-	$^
+build/asist_output.txt: scripts/run_asist_analysis\
+ 					tomcat_speech/data_prep/data_prep_helpers.py\
+ 					tomcat_speech/data_prep/asist_data/asist_dataset_creation.py\
+					$(GLOVE_FILE)\
+					$(EMOTION_MODEL)\
+					$(GENDER_CLASSIFIER_MODEL)\
+					$(AVERAGED_TSV_FILES)
+	./scripts/run_asist_analysis $@ $(GLOVE_FILE) $(EMOTION_MODEL) $(AVERAGED_TSV_FILES)

@@ -40,7 +40,18 @@ class AsistDataset(Dataset):
         :param truncate_from: whether to truncate from start or end of file
         """
         self.cols_to_skip = 2 if transcript_type.lower() == "zoom" else 4
-        self.acoustic_dict = OrderedDict(acoustic_dict)
+        self.acoustic_dict = OrderedDict({key: df[["speaker",
+                "utt",
+                "pcm_loudness_sma",
+                "F0finEnv_sma",
+                "voicingFinalUnclipped_sma",
+                "jitterLocal_sma",
+                "shimmerLocal_sma",
+                "pcm_loudness_sma_de",
+                "F0finEnv_sma_de",
+                "voicingFinalUnclipped_sma_de",
+                "jitterLocal_sma_de",
+                "shimmerLocal_sma_de"]] for key, df in acoustic_dict.items()})
         self.glove = glove
         if ys_path is not None:
             self.ys_df = pd.read_csv(ys_path)
@@ -97,8 +108,9 @@ class AsistDataset(Dataset):
         self.set_split(0)
 
     def get_min_max_scales(self):
-        for call in self.acoustic_dict.values():
-            for row in call.itertuples():
+        for df in self.acoustic_dict.values():
+
+            for row in df_subset.itertuples():
                 for i, wd in enumerate(row):
                     if i >= self.cols_to_skip + 1:
                         self.min_max_scaler.update(
@@ -183,7 +195,7 @@ class AsistDataset(Dataset):
             smallest = self.truncate_seq()
 
         # get the longest utterance
-        print(self.acoustic_dict)
+
         longest_utt = get_longest_utterance_asist(
             [
                 item
