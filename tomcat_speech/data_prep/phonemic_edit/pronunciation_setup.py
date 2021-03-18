@@ -18,14 +18,14 @@ phones = pandas.read_csv(open("cmu_feature_key.csv",encoding = "ISO-8859-1"), se
 
 
 def capitalize(utt):
-    input = re.compile('[^\W_]+').findall(utt)
+    input = re.compile('[^\W_]+\'*[^\W_]*').findall(utt)
     words = []
     for i in input:
         j = i.upper()
         words.append(j)
     return words
 
-def cmudict_search(lst, missing_words):
+def cmudict_search(lst):
     out = []
     for word in lst:
         for line in cmu_dict:
@@ -51,27 +51,15 @@ def cmudict_search(lst, missing_words):
         # return missing_words
     return out, missing_words
 
-# def missing(lst):
-#     missing_words = []
-#     for i in lst:
-#         print(i[0], i[1])
-#         if i[1] == 'pronunciation entry not found':
-#             missing_words.append(i[0])
-#     if len(missing_words) > 0:
-#         return missing_words
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == "__main__":
-    domain = open("domain_words.csv", "r")
+    domain = open("sample_data.txt", "r")
     target = domain.readlines()
     # target = "Pycharm is good...But I need to really see this ?? ## !$% ^4@ ,. _ happen"
     for i in target[:5]:
         line = i.rstrip('\n')
         word = line.split("    ")[0]
         g = capitalize(word)
-        missing = []
-        pronunciation = cmudict_search(g,missing)
+        pronunciation = cmudict_search(g)
         print(pronunciation)
 
 

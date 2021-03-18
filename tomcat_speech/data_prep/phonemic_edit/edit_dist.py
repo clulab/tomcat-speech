@@ -7,19 +7,63 @@
 # 6. save as list of lists
 import collections
 class PhonemicMagic:
-    def __init__(self, map_path, cmu_path, stb_file):
+    def __init__(self, map_path, cmu_path, stb_file, domain_word_path):
         self.cmu_to_pronunc_map = self.load_map(map_path)
         self.stb_table = self.load_stb(stb_file)
-        self.cmu = self.load(cmu_path)
+        self.cmu_dict = self.load(cmu_path)
+        self.domain_word_path = self.load(domain_word_path)
+
+    # Function for listing words, ignoring punctuation, witespaces from an utterance:
+    def capitalize(self, utt):
+        input = re.compile('[^\W_]+\'*[^\W_]*').findall(utt)
+        words = []
+        for i in input:
+            j = i.upper()
+            words.append(j)
+        return words
+
+    # process utterance and retrieve pronunciation from CMU dictionary. Input must be a list:
+    def cmudict_search(self, lst):
+        if isinstance(lst, list):
+            out = []
+            for word in lst:
+                out.append(translate(word))
+            # work on words missing in CMU dict
+            s = []
+            for i in out:
+                s.append(i[0])
+            # print("success list:", s)
+            for j in lst:
+                if j not in s:
+                    out.append([j, "pronunciation entry not found"])
+            missing_words = []
+            for i in out:
+                # print(i[0], i[1])
+                if i[1] == 'pronunciation entry not found':
+                    missing_words.append(i[0])
+            if len(missing_words) > 0:
+                print("some words were not found in the pronunciation dictionary")
+                # return missing_words
+            return out, missing_words
+        else:
+            print("input not formatted")
+
     def translate(self, token):
+        for line in cmu_dict:
+            reg = "^" + token + " \s"
+            if re.search(reg, line, re.I):
+                result = line.rstrip('\n')
+                trans = [token, result.split("  ")[1]]
+                out.append(trans)
+
         raise NotImplementedError
+
     def weighted_levenshtein(self, s1, s2):
         raise NotImplementedError
 EditScore = collections.namedtuple('EditScore', 'asr_token asr_phonemes domain_token domain_phonemes score')
 def main():
     threshold = 0 # TODO
-    phonemic_helper = PhonemicMagic(None, None, None)
-    domain_words = set() # fill in, leave out ones not in CMU??
+    phonemic_helper = PhonemicMagic(None, None, None, None)
     # TODO: load from Adarsh dictionary file, get the utterance, tokenize
     # TODO: server/client interface
     asr_tokens = [] # fill in
