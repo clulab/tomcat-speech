@@ -18,45 +18,47 @@ phones = pandas.read_csv(open("cmu_feature_key.csv",encoding = "ISO-8859-1"), se
 
 
 def capitalize(utt):
-    ls = utt.split(" ")
     input = re.compile('[^\W_]+').findall(utt)
     words = []
     for i in input:
         j = i.upper()
-        # print(j)
         words.append(j)
     return words
 
-def cmudict_search(lst):
+def cmudict_search(lst, missing_words):
     out = []
     for word in lst:
         for line in cmu_dict:
             reg = "^"+word+" \s"
             if re.search(reg, line, re.I):
-                y = [word, line.split("  ")[1].split("\n")[0]]
-                # print(y)
+                result = line.rstrip('\n')
+                y = [word, result.split("  ")[1]]
                 out.append(y)
-    # print(out)
     s = []
     for i in out:
         s.append(i[0])
     # print("success list:", s)
     for j in lst:
         if j not in s:
-            print("word not found")
-            # out.extend([[j]])
-    return out
-
-def pronun(lst):
-    cmu_pron = []
+            out.append([j, "pronunciation entry not found"])
     missing_words = []
-    for i in lst:
-        if len(i)>=2:
-            cmu_pron.append(i)
-        elif len(i)<2:
-            missing_words.append(i)
-    # print("list of available and non-available pronunciations created")
-    return cmu_pron, missing_words
+    for i in out:
+        # print(i[0], i[1])
+        if i[1] == 'pronunciation entry not found':
+            missing_words.append(i[0])
+    if len(missing_words) > 0:
+        print("some words were not found in the pronunciation dictionary")
+        # return missing_words
+    return out, missing_words
+
+# def missing(lst):
+#     missing_words = []
+#     for i in lst:
+#         print(i[0], i[1])
+#         if i[1] == 'pronunciation entry not found':
+#             missing_words.append(i[0])
+#     if len(missing_words) > 0:
+#         return missing_words
 
 
 # Press the green button in the gutter to run the script.
@@ -64,12 +66,13 @@ if __name__ == "__main__":
     domain = open("domain_words.csv", "r")
     target = domain.readlines()
     # target = "Pycharm is good...But I need to really see this ?? ## !$% ^4@ ,. _ happen"
-    for i in target:
-        word = i.rstrip('\n')
+    for i in target[:5]:
+        line = i.rstrip('\n')
+        word = line.split("    ")[0]
         g = capitalize(word)
-        pronunciation = cmudict_search(g)
+        missing = []
+        pronunciation = cmudict_search(g,missing)
         print(pronunciation)
-        # print(pronun(pronunciation))
 
 
 
