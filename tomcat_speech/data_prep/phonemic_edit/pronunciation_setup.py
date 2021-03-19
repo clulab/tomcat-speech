@@ -12,10 +12,12 @@ else:
 # initialise cmudict:
 f = open("cmudict-0.7b.txt","r",encoding = "ISO-8859-1")
 cmu_dict = f.readlines()
+f.close()
 
 # initialise phonemic key:
 phonemes = open("cmu_feature_key.csv","r",encoding = "ISO-8859-1")
 phoneme_dict = phonemes.readlines()
+phonemes.close()
 
 
 def capitalize(utt):
