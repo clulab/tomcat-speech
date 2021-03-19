@@ -27,8 +27,7 @@ class PhonemicMagic:
     
     def load_map(self, map_path):
         cmu_to_pronuc_map = {}
-        
-        f = open(map_path)
+        f = open(map_path,encoding="ISO-8859-1")
         lines = f.readlines()[1:]
         f.close()
 
@@ -164,7 +163,7 @@ class PhonemicMagic:
        #print("previous_row   ", previous_row) 
         return previous_row[-1]
 
-    def process_utterance(self, utterance, thresh=1):
+    def process_utterance(self, utterance,thresh=1):
         candidates = []
         # put this into a method, call method for each item
         asr_tokens = self.tokenize(utterance)
@@ -198,7 +197,7 @@ def main(args):
     
     #input_utterances = "Doesn't simplify the mission file. understand Find the first flower. dig rebel"
     # load utterances, loop through them here
-    phonemic_helper = PhonemicMagic("cmu_feature_key.csv", "cmudict-0.7b.txt","stb_files/CELEXEnglish.fea.stb" ,"temp_domain.csv" )
+    phonemic_helper = PhonemicMagic("cmu_feature_key.csv", "cmudict-0.7b.txt","stb_files/CELEXEnglish.fea.stb" ,"domain_words.csv" )
     utt = "Rubble revel bow"
     phonemic_helper.process_utterance(args.utt, args.thresh)
 
