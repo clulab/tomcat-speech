@@ -110,7 +110,8 @@ class PhonemicMagic:
                     missing_words.append(word)
 
             if len(missing_words) > 0:
-                print("some words were not found in the pronunciation dictionary")
+                pass
+                #print("some words were not found in the pronunciation dictionary")
                 # return missing_words
             return out, missing_words
         else:
@@ -186,7 +187,7 @@ class PhonemicMagic:
             # is it a similarity or distance???? if similarity, then it's reverse=True
             # TODO: in place? returns?
             scored.sort(key=lambda x: x.score)
-            if scored[0].score < thresh:
+            if scored[0].score < thresh and scored[0].score > 0 :
                 print(scored[0])
             # sort them, keep top n candidates, append to c
             candidates.append(c)
@@ -198,7 +199,7 @@ def main(args):
     
     #input_utterances = "Doesn't simplify the mission file. understand Find the first flower. dig rebel"
     # load utterances, loop through them here
-    phonemic_helper = PhonemicMagic("cmu_feature_key.csv", "cmudict-0.7b.txt","stb_files/CELEXEnglish.fea.stb" ,"temp_domain.csv" )
+    phonemic_helper = PhonemicMagic("cmu_feature_key.csv", "cmudict-0.7b.txt","stb_files/CELEXEnglish.fea.stb" ,"domain_words.csv" )
     utt = "Rubble revel bow"
     phonemic_helper.process_utterance(args.utt, args.thresh)
 
