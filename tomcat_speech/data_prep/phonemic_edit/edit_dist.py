@@ -27,8 +27,7 @@ class PhonemicMagic:
     
     def load_map(self, map_path):
         cmu_to_pronuc_map = {}
-        
-        f = open(map_path)
+        f = open(map_path,encoding="ISO-8859-1")
         lines = f.readlines()[1:]
         f.close()
 
@@ -165,7 +164,7 @@ class PhonemicMagic:
        #print("previous_row   ", previous_row) 
         return previous_row[-1]
 
-    def process_utterance(self, utterance, thresh=1):
+    def process_utterance(self, utterance,thresh=1):
         candidates = []
         # put this into a method, call method for each item
         asr_tokens = self.tokenize(utterance)
