@@ -27,7 +27,7 @@ class PhonemicMagic:
     
     def load_map(self, map_path):
         cmu_to_pronuc_map = {}
-        f = open(map_path,encoding="ISO-8859-1")
+        f = open(map_path)
         lines = f.readlines()[1:]
         f.close()
 
