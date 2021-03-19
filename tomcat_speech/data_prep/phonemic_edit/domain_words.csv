@@ -42,12 +42,10 @@ Victim    V IH1 K T IH0 M
 Yellow    Y EH1 L OW0
 Green    G R IY1 N
 Friend    F R EH1 N D
-Foe    F OW1
 Player    P L EY1 ER0
 Alpha    AE1 L F AH0
 Bravo    B R AA1 V OW0
 Delta    D EH1 L T AH0
-Bow    B AW1
 Arrow    AE1 R OW0
 Sword    S AO1 R D
 Shovel    SH AH1 V AH0 L
@@ -66,7 +64,6 @@ IronDoor    AY1 ER0 N D AO1 R
 Redstone     R EH1 D S T OW1 N
 Boat    B OW1 T
 Clock    K L AA1 K
-Bed    B EH1 D
 Emerald    EH1 M R AH0 L D
 ItemFrame    AY1 T AH0 M F R EY1 M
 FlowerPot    F L AW1 ER0 P AA2 T
