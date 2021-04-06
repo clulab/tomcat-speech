@@ -16,19 +16,15 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("agent/asr")
 
 def on_message(client, userdata, msg):
-    json_message = msg.payload.decode("utf-8")
-    obj = json.loads(json_message)
-    
+    # Load asr message into python object 
+    obj = json.loads(msg.payload.decode("utf-8")) 
     if obj["data"]["is_final"]:
-        utterance = obj["data"]["text"]
-        candidates = phonemic_helper.process_utterance(utterance)
+        text = obj["data"]["text"]
+        candidates = phonemic_helper.process_utterance(text)
         repaired_text = repaired_from_candidates(candidates)
         
-        obj_repaired = {}
-        obj_repaired["header"] = obj["header"]
-        obj_repaired["msg"] = obj["msg"]
-        obj_repaired["data"] = {}
-        obj_repaired["data"]["text"] = obj["data"]["text"]
+        # Published repaired asr message 
+        obj_repaired = obj.copy()#{"header":obj["header"], "msg":obj["msg"], "data":{"text":text, "repaired_text":repaired_text}}
         obj_repaired["data"]["repaired_text"] = repaired_text
         client.publish("agent/asr/repaired", json.dumps(obj_repaired))
 

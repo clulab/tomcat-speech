@@ -25,7 +25,7 @@ class PhonemicMagic:
         self.cmu_dict = self.load_dict(cmu_path)
         self.domain_word_map = self.load_word_path(domain_word_path)
         self.threshold = 1
-        self.n = 1
+        self.n = 1 #Number of candidates to consider
  
     def load_map(self, map_path):
         cmu_to_pronuc_map = {}
@@ -190,7 +190,7 @@ class PhonemicMagic:
             scored.sort(key=lambda x: x.score)
             for i in range(self.n):
                 if scored[i].score < thresh and scored[i].score > 0 :
-                    c.append(scored[i])
+                    c.append(scored[i][2])
                 
             candidates.append(c)
         return candidates
