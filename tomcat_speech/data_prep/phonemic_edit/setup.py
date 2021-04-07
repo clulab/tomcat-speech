@@ -4,3 +4,4 @@
 # Check python requirements, if not, download:
 re
 pandas
+spacy

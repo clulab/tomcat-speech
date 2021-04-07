@@ -10,6 +10,50 @@ import re
 import os
 import argparse
 
+
+# class ParseUtt:
+#     def __init__(self, freq_path): #add input requirements here
+#         #open these files
+#         self.freq_list = self.load_freq(freq_path)
+#
+#     def load_freq(self, freq_path):
+#         freq_list = {}
+#         f = open(freq_path)
+#         lines = f.readlines()
+#         f.close()
+#
+#         for line in lines:
+#             word, freq = line.split("	")
+#             if re.match('((^\w*\'\w+$)|(^\w+\'\w*$)|(^\w+-*\w*$))', word):
+#                 freq_list[word] = freq.rstrip("\n")
+#
+#         return freq_list
+#
+#     def find_freq(self,list, words):
+#         output = {}
+#         for word in words:
+#             if word in list:
+#                 print(word, list[word])
+#                 output[word] = list[word]
+#             else:
+#                 output[word] = None
+#         return output
+#     def tokenize_input(string_of_text, option = "file"):
+#         if option == "file":
+#             if os.path.isfile(string_of_text):
+#                 input = open(string_of_text, "r").read()
+#             else:
+#                 print("filepath error")
+#         else:
+#             input = string_of_text
+#         transcripts = nlp(input)
+#         non_stop = [token.lower_ for token in transcripts
+#                     if not token.is_space and not token.is_punct and not token.is_stop]
+#
+#         return non_stop
+
+##################################################################
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('utt')
@@ -17,14 +61,15 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+
 class PhonemicMagic:
     def __init__(self, map_path, cmu_path, stb_file, domain_word_path):
-        #open these files
+        # open these files
         self.cmu_to_pronunc_map = self.load_map(map_path)
         self.stb_table = self.load_stb(stb_file)
         self.cmu_dict = self.load_dict(cmu_path)
         self.domain_word_map = self.load_word_path(domain_word_path)
-    
+
     def load_map(self, map_path):
         cmu_to_pronuc_map = {}
         f = open(map_path)
@@ -34,7 +79,7 @@ class PhonemicMagic:
         for line in lines:
             cmu, pronun = line.split("\t")
             cmu_to_pronuc_map[cmu] = pronun.rstrip()
-        
+
         return cmu_to_pronuc_map
 
     def load_stb(self, stb_file):
@@ -47,13 +92,13 @@ class PhonemicMagic:
         for line in lines:
             line = line.rstrip()
             class1, class2, shared, total, similarity = line.split("\t")
-           
+
             key = str(sorted([class1, class2]))
-            value = {"shared":shared, "total":total, "similarity":float(similarity)} 
-        
+            value = {"shared": shared, "total": total, "similarity": float(similarity)}
+
             stb_table[key] = value
         return stb_table
-    
+
     def load_dict(self, cmu_path):
         cmu_dict = {}
 
@@ -61,14 +106,14 @@ class PhonemicMagic:
             bash_command = "curl http://svn.code.sf.net/p/cmusphinx/code/trunk/cmudict/cmudict-0.7b >> cmudict-0.7b.txt"
             os.system(bash_command)
 
-        f = open("cmudict-0.7b.txt", encoding = "ISO-8859-1")
+        f = open("cmudict-0.7b.txt", encoding="ISO-8859-1")
         lines = f.readlines()[56:-1]
         f.close()
-        
+
         for line in lines:
             line = line.rstrip()
             key = line[0:line.find(" ")]
-            value = line[line.find(" "):].lstrip()    
+            value = line[line.find(" "):].lstrip()
             cmu_dict[key] = value
 
         return cmu_dict
@@ -77,23 +122,25 @@ class PhonemicMagic:
         domain_word_map = {}
 
         f = open(domain_word_path)
-        lines = f.readlines()[1:] 
+        lines = f.readlines()[1:]
         f.close()
 
         for line in lines:
             line = line.rstrip()
-            domain_word = line[0:line.find(" ")] 
+            domain_word = line[0:line.find(" ")]
             pronunciation = line[line.find(" "):].lstrip()
             domain_word_map[domain_word] = pronunciation
-        return domain_word_map        
+        return domain_word_map
 
-    # Function for listing words, ignoring punctuation, witespaces from an utterance:
+        # Function for listing words, ignoring punctuation, witespaces from an utterance:
+
     def tokenize(self, utt):
         input = re.findall('((\w+\'*\w*)|\.|\?|\!|,|:|;|\")', utt)
         output = [m[0] for m in input]
         return output
 
     # process utterance and retrieve pronunciation from CMU dictionary. Input must be a list:
+    #TO DO: Instead of returning None for missing words, find closest match in CMU dictionary
     def cmudict_search(self, lst):
         if isinstance(lst, list):
             out = []
@@ -101,7 +148,7 @@ class PhonemicMagic:
             for word in lst:
                 output = None
                 if word.upper() in self.cmu_dict:
-                    output = [word, self.cmu_dict[word.upper()]] #cmu_lookup(word)
+                    output = [word, self.cmu_dict[word.upper()]]  # cmu_lookup(word)
                 if output is not None:
                     out.append(output)
                 else:
@@ -110,22 +157,22 @@ class PhonemicMagic:
 
             if len(missing_words) > 0:
                 pass
-                #print("some words were not found in the pronunciation dictionary")
+                # print("some words were not found in the pronunciation dictionary")
                 # return missing_words
             return out, missing_words
         else:
             print("input not formatted")
 
-#store CMU Dictionary as a lookup table, with only entryies, not comments
+    # store CMU Dictionary as a lookup table, with only entryies, not comments
     def cmu_lookup(self, token):
         token = token.upper()
         return self.cmu_dict[token]
 
-#optimise by saving in memory by dict
+    # optimise by saving in memory by dict
     def phoneme(self, token):
         if not token:
             return None
-        
+
         converted = ""
         for cmu in token.split():
             if "AH0" in cmu:
@@ -136,9 +183,10 @@ class PhonemicMagic:
                 cmu = ''.join([c for c in cmu if not c.isdigit()])
             converted += self.cmu_to_pronunc_map[cmu]
 
-        return converted 
+        return converted
 
-    # Returning a cost
+        # Returning a cost
+    #for multi-word phrase, add scores
     def weighted_levenshtein(self, s1, s2):
         if len(s1) < len(s2):
             return self.weighted_levenshtein(s2, s1)
@@ -154,17 +202,17 @@ class PhonemicMagic:
                 insertions = previous_row[
                                  j + 1] + 1  # j+1 instead of j since previous_row and current_row are one character longer
                 deletions = current_row[j] + 1  # than s2
-                if c1 == c2: 
+                if c1 == c2:
                     substitutions = previous_row[j]
                 else:
-                    substitutions = previous_row[j] + (1-self.stb_table[str(sorted([c1, c2]))]["similarity"])
+                    substitutions = previous_row[j] + (1 - self.stb_table[str(sorted([c1, c2]))]["similarity"])
                 current_row.append(min(insertions, deletions, substitutions))
             previous_row = current_row
 
-       #print("previous_row   ", previous_row) 
+        # print("previous_row   ", previous_row)
         return previous_row[-1]
 
-    def process_utterance(self, utterance,thresh=1):
+    def process_utterance(self, utterance, thresh=1):
         candidates = []
         # put this into a method, call method for each item
         asr_tokens = self.tokenize(utterance)
@@ -174,11 +222,13 @@ class PhonemicMagic:
             if phonemic is None:
                 continue
             scored = []
-                #need to get scoresTuple
-    
-            for domain_word in self.domain_word_map: #if CMU pronunciation exists, expensive loop
+
+            # need to get scoresTuple
+
+            for domain_word in self.domain_word_map:  # if CMU pronunciation exists, expensive loop
                 pronunciation = self.domain_word_map[domain_word]
-                phonemic_domain = self.phoneme(pronunciation) #this is expensive, store domain words in memory so this doesn't happen
+                phonemic_domain = self.phoneme(
+                    pronunciation)  # this is expensive, store domain words in memory so this doesn't happen
                 phonemic_original = self.phoneme(phonemic)
                 score = self.weighted_levenshtein(phonemic_original, phonemic_domain)
                 scoredTuple = EditScore(original, phonemic_original, domain_word, phonemic_domain, score)
@@ -186,23 +236,24 @@ class PhonemicMagic:
             # is it a similarity or distance???? if similarity, then it's reverse=True
             # TODO: in place? returns?
             scored.sort(key=lambda x: x.score)
-            if scored[0].score < thresh and scored[0].score > 0 :
-                print(scored[0])
+            if scored[0].score < thresh and scored[0].score > 0:
+                print("asr_token:",scored[0][0],"\tdomain_match:",scored[0][2],"\tsimilarity:",scored[0][4])
             # sort them, keep top n candidates, append to c
             candidates.append(c)
         return candidates
-            # keep things > X??? keep top Y???
-            # these are the cadidates
+        # keep things > X??? keep top Y???
+        # these are the cadidates
+
 EditScore = collections.namedtuple('EditScore', 'asr_token asr_phonemes domain_token domain_phonemes score')
+
 def main(args):
-    
-    #input_utterances = "Doesn't simplify the mission file. understand Find the first flower. dig rebel"
+    # input_utterances = "Doesn't simplify the mission file. understand Find the first flower. dig rebel"
     # load utterances, loop through them here
-    phonemic_helper = PhonemicMagic("cmu_feature_key.csv", "cmudict-0.7b.txt","stb_files/CELEXEnglish.fea.stb" ,"domain_words.csv" )
+    phonemic_helper = PhonemicMagic("cmu_feature_key.csv", "cmudict-0.7b.txt", "stb_files/CELEXEnglish.fea.stb",
+                                    "domain_words.csv")
     utt = "Rubble revel bow"
     phonemic_helper.process_utterance(args.utt, args.thresh)
 
-        
     # TODO: load from Adarsh dictionary file, get the utterance, tokenize
     # TODO: server/client interface
     # asr_tokens = [] # fill in
@@ -211,6 +262,8 @@ def main(args):
     # make all possible combinations of candidates
     # dump
     pass
+
+
 if __name__ == "__main__":
     args = parse_args()
     main(args)

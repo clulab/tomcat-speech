@@ -2,7 +2,6 @@ domain_word	pronunciation
 Searcher    S ER1 CH ER0
 Medic    M EH1 D IH0 K
 Engineer    EH1 N JH AH0 N IH1 R
-DemPron    D EH1 M P R AH0 N
 Room    R UW1 M
 Door    D AO1 R
 Building    B IH1 L D IH0 NG
@@ -29,8 +28,6 @@ Defeat    D IH0 F IY1 T
 Sight    S AY1 T
 Craft    K R AE1 F T
 Question    K W EH1 S CH AH0 N
-Agreement    AH0 G R IY1 M AH0 N T
-Disagreement    D IH0 S AH0 G R IY1 M AH0 N T
 Commit    K AH0 M IH1 T
 Clear    K L IH1 R
 Role    R OW1 L
@@ -46,8 +43,6 @@ Player    P L EY1 ER0
 Alpha    AE1 L F AH0
 Bravo    B R AA1 V OW0
 Delta    D EH1 L T AH0
-Arrow    AE1 R OW0
-Sword    S AO1 R D
 Shovel    SH AH1 V AH0 L
 Pickaxe    P IH1 K AE1 K S
 Axe    AE1 K S
@@ -64,10 +59,11 @@ IronDoor    AY1 ER0 N D AO1 R
 Redstone     R EH1 D S T OW1 N
 Boat    B OW1 T
 Clock    K L AA1 K
-Emerald    EH1 M R AH0 L D
 ItemFrame    AY1 T AH0 M F R EY1 M
 FlowerPot    F L AW1 ER0 P AA2 T
 Hammer    HH AE1 M ER0
 MedKit    M EH1 D K IH1 T
 Stretcher    S T R EH1 CH ER0
 Map    M AE1 P
+Critical    K R IH1 T IH0 K AH0 L
+Zone    Z OW1 N
