@@ -9,48 +9,54 @@ import collections
 import re
 import os
 import argparse
+import spacy
 
 
-# class ParseUtt:
-#     def __init__(self, freq_path): #add input requirements here
-#         #open these files
-#         self.freq_list = self.load_freq(freq_path)
-#
-#     def load_freq(self, freq_path):
-#         freq_list = {}
-#         f = open(freq_path)
-#         lines = f.readlines()
-#         f.close()
-#
-#         for line in lines:
-#             word, freq = line.split("	")
-#             if re.match('((^\w*\'\w+$)|(^\w+\'\w*$)|(^\w+-*\w*$))', word):
-#                 freq_list[word] = freq.rstrip("\n")
-#
-#         return freq_list
-#
-#     def find_freq(self,list, words):
-#         output = {}
-#         for word in words:
-#             if word in list:
-#                 print(word, list[word])
-#                 output[word] = list[word]
-#             else:
-#                 output[word] = None
-#         return output
-#     def tokenize_input(string_of_text, option = "file"):
-#         if option == "file":
-#             if os.path.isfile(string_of_text):
-#                 input = open(string_of_text, "r").read()
-#             else:
-#                 print("filepath error")
-#         else:
-#             input = string_of_text
-#         transcripts = nlp(input)
-#         non_stop = [token.lower_ for token in transcripts
-#                     if not token.is_space and not token.is_punct and not token.is_stop]
-#
-#         return non_stop
+class ParseUtt:
+    def __init__(self, freq_path): #add input requirements here
+        #open these files
+        self.freq_list = self.load_freq(freq_path)
+        self.nlp = spacy.load('en_core_web_sm')
+
+    def load_freq(self, freq_path):
+        freq_list = {}
+        f = open(freq_path)
+        lines = f.readlines()
+        f.close()
+
+        for line in lines:
+            word, freq = line.split("	")
+            if re.match('((^\w*\'\w+$)|(^\w+\'\w*$)|(^\w+-*\w*$))', word):
+                freq_list[word] = freq.rstrip("\n")
+
+        return freq_list
+
+    def find_freq(self,list, words):
+        output = {}
+        missing = {}
+        for word in words:
+            if word not in output:
+                if word in list:
+                    output[word] = int(list[word])
+                else:
+                    missing[word] = None
+            else:
+                pass
+        return dict(sorted(output.items(), key=lambda item:item[1])), missing
+
+    def tokenize_input(self,string_of_text, option = "file"):
+        if option == "file":
+            if os.path.isfile(string_of_text):
+                input = open(string_of_text, "r").read()
+            else:
+                print("filepath error")
+        else:
+            input = string_of_text
+        transcripts = self.nlp(input)
+        non_stop = [token.lower_ for token in transcripts
+                    if not token.is_space and not token.is_punct and not token.is_stop]
+
+        return non_stop
 
 ##################################################################
 
@@ -251,10 +257,12 @@ def main(args):
     # load utterances, loop through them here
     phonemic_helper = PhonemicMagic("cmu_feature_key.csv", "cmudict-0.7b.txt", "stb_files/CELEXEnglish.fea.stb",
                                     "domain_words.csv")
+    word_cleanup = ParseUtt("gigaword_lean.txt")
     utt = "Rubble revel bow"
+    # processed_utt = word_cleanup.
     phonemic_helper.process_utterance(args.utt, args.thresh)
 
-    # TODO: load from Adarsh dictionary file, get the utterance, tokenize
+    # TODO: instead of utt, run on output of class ParseUtt: a dict with the utterance as key, and a dict with word: frequency as item.
     # TODO: server/client interface
     # asr_tokens = [] # fill in
 

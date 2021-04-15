@@ -88,6 +88,16 @@ if __name__ == "__main__":
     print("files loaded")
 
     # within text analysis:
+    def remove_stop_sort(input):
+        import spacy
+        nlp = spacy.load('en_core_web_sm')
+        print("spacy loaded")
+        transcripts = nlp(input)
+        no_stop = [token.lower_ for token in transcripts
+                    if not token.is_space and not token.is_punct and not token.is_stop]
+        return {input : no_stop}
+
+
     import spacy
     nlp = spacy.load('en_core_web_sm')
     print("spacy loaded")
@@ -100,12 +110,14 @@ if __name__ == "__main__":
     non_stop = [token.lower_ for token in transcripts
            if not token.is_space and not token.is_punct and not token.is_stop]
 
+    assert bag != non_stop
+
     # within-oc analysis:
-    word_freq_doc = dict(sorted(Counter(bag).items(), key=lambda item: item[1]))
+    word_freq_doc = dict(sorted(Counter(bag).most_common(), key=lambda item: item[1])) #use Counter.items() for ascending order
     print("most frequent words in doc:")
     n = 0
     for i in word_freq_doc:
-        if n < 100:
+        if n < 10:
             print(i, ":", word_freq_doc[i])
             n += 1
 
@@ -114,10 +126,11 @@ if __name__ == "__main__":
     print("most frequent content words in doc:")
     n = 0
     for i in word_freq_content:
-        if n < 100:
+        if n < 10:
             print(i, ":", word_freq_content[i])
             n += 1
     with open('gigaword_lean.txt', 'w') as file:
         for key in frequencies:
             x = key + "\t" + frequencies[key] + "\n"
             file.write(x)
+    edits1("hello")
