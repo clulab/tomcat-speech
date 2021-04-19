@@ -1,6 +1,7 @@
 import re
 # import pandas
 import os.path
+import sys
 import spacy
 nlp = spacy.load('en_core_web_sm')
 
@@ -129,7 +130,7 @@ if __name__ == "__main__":
     # print(output)
 
     #load gigawords:
-    frequencies = load_freq("gigawordDocFreq.sorted.lemma.txt")
+    frequencies = load_freq("gigaword_lean_head.txt")
     # n=0
     # for i in frequencies:
     #     if n < 400:

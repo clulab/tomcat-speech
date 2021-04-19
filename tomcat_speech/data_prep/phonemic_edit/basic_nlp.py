@@ -80,7 +80,7 @@ def known(words,dict): return set(w for w in words if w in dict)
 if __name__ == "__main__":
     print("initialised")
     #load gigawords:
-    frequencies = load_freq("gigaword_lean.txt")
+    frequencies = load_freq("gigaword_lean_head.txt")
 
     print(len(frequencies))
 
