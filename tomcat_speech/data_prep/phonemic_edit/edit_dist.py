@@ -249,7 +249,25 @@ class PhonemicMagic:
         return candidates
         # keep things > X??? keep top Y???
         # these are the cadidates
+    
+    def output_from_candidates(self, candidates):
+        graph = [["start"]] + candidates + [["end"]] 
+        path = []
+        paths = []
+        def dfs(src, dest, src_ind, dest_ind, graph):
+            if src_ind == dest_ind:
+                paths.append(path[0:-1]) 
+            else:
+                for adj in graph[src_ind+1]:
+                    path.append(adj)
+                    dfs(adj, dest, src_ind+1, dest_ind, graph)
+                    path.pop()
+        dfs("start", "end", 0, len(graph)-1, graph)
+        return paths
 
+
+
+dfs("start", "end", 0, len(graph)-1, graph)
 EditScore = collections.namedtuple('EditScore', 'asr_token asr_phonemes domain_token domain_phonemes score')
 
 def main(args):
