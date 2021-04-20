@@ -254,15 +254,15 @@ class PhonemicMagic:
         graph = [["start"]] + candidates + [["end"]] 
         path = []
         paths = []
-        def dfs(src, dest, src_ind, dest_ind, graph):
+        def dfs(src_ind, dest_ind):
             if src_ind == dest_ind:
                 paths.append(path[0:-1]) 
             else:
                 for adj in graph[src_ind+1]:
                     path.append(adj)
-                    dfs(adj, dest, src_ind+1, dest_ind, graph)
+                    dfs(src_ind+1, dest_ind)
                     path.pop()
-        dfs("start", "end", 0, len(graph)-1, graph)
+        dfs(0, len(graph)-1)
         return paths
 
 
