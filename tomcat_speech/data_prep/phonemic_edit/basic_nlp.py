@@ -105,10 +105,12 @@ if __name__ == "__main__":
 
     input = open("input.txt", "r").read()
     transcripts = nlp(input)
+    #I'm losing possessives and contractions here: find a way to run CMU dict search on original words, not tokens.
     bag = [token.lower_ for token in transcripts
            if not token.is_space and not token.is_punct]
     non_stop = [token.lower_ for token in transcripts
            if not token.is_space and not token.is_punct and not token.is_stop]
+    possessive = [bag[index - 1] + bag[index] for index, token in enumerate(bag) if token == "'s"]
 
     assert bag != non_stop
 
