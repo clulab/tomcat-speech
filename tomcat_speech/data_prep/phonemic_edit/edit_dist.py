@@ -18,6 +18,7 @@ class ParseUtt:
         self.freq_list = self.load_freq(freq_path)
         self.nlp = spacy.load('en_core_web_sm')
 
+    #loads gigaword:
     def load_freq(self, freq_path):
         freq_list = {}
         f = open(freq_path)
@@ -44,20 +45,29 @@ class ParseUtt:
                 pass
         return dict(sorted(output.items(), key=lambda item:item[1])), missing
 
-    def tokenize_input(self,string_of_text, option = "file"):
+    def remove_stops(string_of_text, option="text"):
         if option == "file":
             if os.path.isfile(string_of_text):
                 input = open(string_of_text, "r").read()
             else:
                 print("filepath error")
-        else:
+        elif option == "text":
             input = string_of_text
-        transcripts = self.nlp(input)
-        non_stop = [token.lower_ for token in transcripts
-                    if not token.is_space and not token.is_punct and not token.is_stop]
+        transcripts = nlp(input)
+        output = []
+        bag = []
+        for token in transcripts:
+            if not token.is_space and not token.is_punct and not (token.is_stop and token.text != "'s"):
+                bag.append(token)
+        count = 0
+        for i in range(0, len(bag)):
+            if bag[i].text == "'s":
+                output[i - 1 - count] = str(output[i - 1 - count]) + str(bag[i].text)  # this number is not ok
+                count += 1
+            else:
+                output.append(str(bag[i]))
 
-        return non_stop
-
+        return output
 ##################################################################
 
 def parse_args():
@@ -219,13 +229,18 @@ class PhonemicMagic:
         return previous_row[-1]
 
     def process_utterance(self, utterance, thresh=1):
+
+        #refactor this using becky's pseudocode
+
         candidates = []
         # put this into a method, call method for each item
+        # run for every utterance, and run process only for non-stop words
+        # and return top candidates, None for no pronunciations, non-stops
         asr_tokens = self.tokenize(utterance)
         out, missing = self.cmudict_search(asr_tokens)
         for original, phonemic in out:
             c = [original]  # find original utterance, score
-            if phonemic is None:
+            if phonemic is None: #we may be losing words if their phonemic spelling isn't available
                 continue
             scored = []
 
@@ -237,6 +252,7 @@ class PhonemicMagic:
                     pronunciation)  # this is expensive, store domain words in memory so this doesn't happen
                 phonemic_original = self.phoneme(phonemic)
                 score = self.weighted_levenshtein(phonemic_original, phonemic_domain)
+                #simplify this, scoredTuple has too much redundancy (?)
                 scoredTuple = EditScore(original, phonemic_original, domain_word, phonemic_domain, score)
                 scored.append(scoredTuple)
             # is it a similarity or distance???? if similarity, then it's reverse=True
@@ -245,7 +261,7 @@ class PhonemicMagic:
             if scored[0].score < thresh and scored[0].score > 0:
                 print("asr_token:",scored[0][0],"\tdomain_match:",scored[0][2],"\tsimilarity:",scored[0][4])
             # sort them, keep top n candidates, append to c
-            candidates.append(c)
+            candidates.append(c) #we are not returning the output of the processing, rather, getting back original
         return candidates
         # keep things > X??? keep top Y???
         # these are the cadidates
@@ -288,6 +304,12 @@ def main(args):
     # make all possible combinations of candidates
     # dump
     pass
+    # TO DO:
+    # 1. we don't want to lose stop words: so, let Phonemic Magic decide if its a stop word or not
+    # 2. maybe incorporate elements in PhonemicMagic, not separate class
+    # 3. Find an aggregate score based on gigaword
+    # 4. Output: an ordered list of all repaired transcripts, in all combinations, sorted by frequency.
+
 
 
 if __name__ == "__main__":

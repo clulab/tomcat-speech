@@ -1,6 +1,5 @@
 import re
 from collections import Counter
-# import pandas
 import os.path
 # import matplotlib.pyplot as plt
 
@@ -74,33 +73,86 @@ def load_dict(cmu_path):
         cmu_dict[key] = value
 
     return cmu_dict
-def known(words,dict): return set(w for w in words if w in dict)
+# def known(words,dict): return set(w for w in words if w in dict)
+def remove_stops(string_of_text, option = "text"):
+    if option == "file":
+        if os.path.isfile(string_of_text):
+            input = open(string_of_text, "r").read()
+        else:
+            print("filepath error")
+    elif option == "text":
+        input = string_of_text
+    transcripts = nlp(input)
+    output = []
+    bag = []
+    for token in transcripts:
+        if not token.is_space and not token.is_punct and not (token.is_stop and token.text != "'s"):
+            bag.append(token)
+    count = 0
+    for i in range(0, len(bag)):
+        if bag[i].text == "'s":
+            output[i-1-count] = str(output[i-1-count]) + str(bag[i].text) #this number is not ok
+            count += 1
+        else:
+            output.append(str(bag[i]))
+
+            # elif token.text == "'s": # then merge previous token and this one
+        #     print(str(token.text))
+        #     output.append(str(bag[x - 1]) + str(token.text))
+
+    return output
+
+# def find_candidates(token, k):
+#     # remove stops
+#     if self.is_stop(token):
+#         return []
+#     # get phonemic
+#     phonemic = cmu_lookup(token)
+#     if phonemic is None:
+#         return []
+#     # get freq
+#     token_freq = self.get_frequency(token)
+#     # compare to the domain words
+#     scored_domain_words = self.compare_token(phonemic)
+#     # List[(domain_word, score, freq)] -- not sorted yet
+#     # prune ones above threshold
+#     filtered = [x for x in scored_domain_words if x.score <= self.threshold and x.score > 0]
+#     # sort by frequency
+#     # return List(domain_word, score, freq)[0:k]
+#     tokens = self.tokenize(utt, k=1)
+#     candidates = [self.find_candidates(x) for x in utt]
+#     # cadidates: List[List[(domain_word, score, freq)]]
+#     for i, token in enumerate(tokens):
+#         options = [token, candidate]
+#         # Vincent do smart recursive thing here
+#         scored = score(repaired) # ??
+	# Output format: List[(alternative_transcription, score)] ← avg replacement, or inspired by the WER
+    # Choose top 1 for each word_to_be_replaced, and orig, cartesian product
 
 
 if __name__ == "__main__":
     print("initialised")
     #load gigawords:
     frequencies = load_freq("gigaword_lean_head.txt")
-
     print(len(frequencies))
 
     cmu = load_dict("cmudict-0.7b.txt")
     print("files loaded")
 
+    import spacy
+    nlp = spacy.load('en_core_web_sm')
+    print("spacy loaded")
     # within text analysis:
+    text = "John's simple routine's great! You should try it too."
+    print(remove_stops(text))
+
     def remove_stop_sort(input):
-        import spacy
-        nlp = spacy.load('en_core_web_sm')
-        print("spacy loaded")
+
         transcripts = nlp(input)
         no_stop = [token.lower_ for token in transcripts
                     if not token.is_space and not token.is_punct and not token.is_stop]
         return {input : no_stop}
 
-
-    import spacy
-    nlp = spacy.load('en_core_web_sm')
-    print("spacy loaded")
 
 
     input = open("input.txt", "r").read()
