@@ -5,6 +5,7 @@ import webvtt
 import pandas as pd
 import argparse
 from pathlib import Path
+import re
 
 parser = argparse.ArgumentParser()
 
@@ -19,15 +20,20 @@ records = []
 
 for i, caption in enumerate(webvtt.read(args.input_vtt_file)):
     # If a speaker is identified, extract the speaker.
-
-    text_components = caption.text.rsplit(": ", 1)
-    speaker = text_components[0] if len(text_components) > 1 else None
+    text_components1 = re.split("^[\w\.]+\:\s|^[\w\.]+\sand\s[\w\.]+\:\s", caption.text, maxsplit=1)
+    #remove empty strings
+    text_components = [x for x in text_components1 if x]
+    #get speaker name
+    speaker_reg = re.search("^[\w\.]+\:\s|^[\w\.]+\sand\s[\w\.]+\:\s", caption.text)
+    # speaker = text_components[0] if len(text_components) > 1 else None
+    speaker = speaker_reg.group(0).replace(": ", "") if speaker_reg else None
 
     # Extract the text
     text = (
         text_components[1] if len(text_components) > 1 else text_components[0]
     )
-
+    #TO DO: If speaker is None, club utterance with previous utterance
+    # if speaker is not None:
     records.append(
         {
             "speaker": speaker,
@@ -37,6 +43,8 @@ for i, caption in enumerate(webvtt.read(args.input_vtt_file)):
             "utt_num": i+1,
         }
     )
+    #else:
+    # replace records[len(records)-1]["timeend"] and extend records[len(records)-1]["utt"]
 
 # Create the dataframe
 df = pd.DataFrame(records)
