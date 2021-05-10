@@ -3,16 +3,6 @@ import json
 import argparse
 from edit_dist import PhonemicMagic
 
-def repaired_from_candidates(candidates):
-    repaired = ""
-    for candidate in candidates:
-        if len(candidate) > 1:
-            repaired += candidate[1][2]
-        else:
-            repaired += candidate[0]
-        repaired += " "
-    return repaired
-
 def on_connect(client, userdata, flags, rc):
     client.subscribe("agent/asr/final")
 
@@ -20,8 +10,7 @@ def on_message(client, userdata, msg):
     obj = json.loads(msg.payload.decode("utf-8")
     
     utterance = obj["data"]["text"]
-    candidates = phonemic_helper.process_utterance(utterance)
-    repaired_text = repaired_from_candidates(candidates)
+    obj["data"]["repaired"] = phonemic_helper.process_utterance(utterance)
     
     client.publish("agent/asr/repaired", json.dumps(obj))
 
