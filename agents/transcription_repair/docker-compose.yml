@@ -1,0 +1,18 @@
+version: '3'
+
+networks:
+  asist_net:
+   external: true    
+    
+services:
+  transcription_repair_agent:
+    image: transcription_repair_agent:latest
+    container_name: transcription_repair_agent
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      asist_net:
+        aliases:
+          - transcription_repair_agent
+    entrypoint: python transcription_repair_agent.py
+
