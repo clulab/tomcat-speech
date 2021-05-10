@@ -282,8 +282,6 @@ class PhonemicMagic:
         return paths
 
 
-
-dfs("start", "end", 0, len(graph)-1, graph)
 EditScore = collections.namedtuple('EditScore', 'asr_token asr_phonemes domain_token domain_phonemes score')
 
 def main(args):
