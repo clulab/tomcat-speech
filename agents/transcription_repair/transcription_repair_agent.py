@@ -7,7 +7,7 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe("agent/asr/final")
 
 def on_message(client, userdata, msg):
-    obj = json.loads(msg.payload.decode("utf-8")
+    obj = json.loads(msg.payload.decode("utf-8"))
     
     utterance = obj["data"]["text"]
     obj["data"]["repaired"] = phonemic_helper.process_utterance(utterance)

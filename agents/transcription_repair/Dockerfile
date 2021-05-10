@@ -1,6 +1,10 @@
-from python:latest
+FROM python:latest
 
-run apt-get update
-run apt-get install mosquitto-clients libsndfile1-dev -y
+RUN apt-get update
+RUN apt-get install mosquitto-clients libsndfile1-dev -y
 
+RUN pip install\
+    spacy\
+    argparse
+    
 copy . .
