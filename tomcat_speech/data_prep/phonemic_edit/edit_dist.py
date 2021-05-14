@@ -10,7 +10,8 @@ import re
 import os
 import argparse
 import spacy
-
+import spacy
+nlp = spacy.load('en_core_web_sm')
 
 class ParseUtt:
     def __init__(self, freq_path): #add input requirements here
@@ -236,7 +237,8 @@ class PhonemicMagic:
         # put this into a method, call method for each item
         # run for every utterance, and run process only for non-stop words
         # and return top candidates, None for no pronunciations, non-stops
-        asr_tokens = self.tokenize(utterance)
+        asr_tokens = ParseUtt.remove_stops(utterance)
+        # asr_tokens = self.tokenize(utterance)
         out, missing = self.cmudict_search(asr_tokens)
         for original, phonemic in out:
             c = [original]  # find original utterance, score
@@ -283,7 +285,7 @@ class PhonemicMagic:
 
 
 
-dfs("start", "end", 0, len(graph)-1, graph)
+# dfs("start", "end", 0, len(graph)-1, graph)
 EditScore = collections.namedtuple('EditScore', 'asr_token asr_phonemes domain_token domain_phonemes score')
 
 def main(args):
