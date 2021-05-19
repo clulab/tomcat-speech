@@ -9,6 +9,7 @@
 output/
 backup/
 data/
+speech_recognition/wav2vec2-base-chalearn/
 
 #opensmile
 smile.log
