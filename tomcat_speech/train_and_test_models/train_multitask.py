@@ -16,6 +16,8 @@ from tomcat_speech.models.plot_training import *
 from tomcat_speech.models.input_models import *
 from tomcat_speech.data_prep.data_prep_helpers import *
 from tomcat_speech.data_prep.meld_data.meld_prep import *
+from tomcat_speech.data_prep.mustard_data.mustard_prep import MustardPrep
+from tomcat_speech.data_prep.chalearn_data.chalearn_prep import ChalearnPrep
 
 # import parameters for model
 import tomcat_speech.models.parameters.multitask_config as config
