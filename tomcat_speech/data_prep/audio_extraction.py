@@ -4,7 +4,7 @@
 
 # required packages
 import os, sys
-import json, re
+import re
 from pprint import pprint
 import subprocess as sp
 
@@ -99,10 +99,10 @@ class ExtractAudio:
         """
         # todo: can all of these take -lldcsvoutput ?
         conf_dict = {
-            "ISO9": "IS09_emotion.conf",
-            "IS10": "IS10_paraling.conf",
-            "IS12": "IS12_speaker_trait.conf",
-            "IS13": "IS13_ComParE.conf",
+            "ISO9": "is09-13/IS09_emotion.conf",
+            "IS10": "is09-13/IS10_paraling.conf",
+            "IS12": "is09-13/IS12_speaker_trait.conf",
+            "IS13": "is09-13/IS13_ComParE.conf",
         }
 
         fconf = conf_dict.get(feature_set, "IS09_emotion.conf")
@@ -113,7 +113,7 @@ class ExtractAudio:
         # run openSMILE
         sp.run(
             [
-                f"{self.smile}/SMILExtract",
+                f"{self.smile}/bin/SMILExtract",
                 "-C",
                 f"{self.smile}/config/{fconf}",
                 "-I",
@@ -163,7 +163,7 @@ class AudioSplit:
                         str(timeend),
                         f"{self.fullp}/{speaker}/{n}",
                         "-loglevel",
-                        "quiet"
+                        "quiet",
                     ]
                 )
                 # Consider using a tqdm progress bar here - Adarsh
@@ -244,6 +244,7 @@ def transform_audio(txtfile):
                 audio_input.join_audio(f"{extension}-{speaker}.txt", speaker)
 
             sp.run(["rm", "-r", f"{path}/{extension}"])
+
 
 def load_feature_csv(audio_csv):
     """
@@ -368,7 +369,8 @@ def convert_mp4_to_wav(mp4_file):
         print(f"{wav_name} already exists")
 
     return wav_name
-    
+
+
 def convert_m4a_to_wav(m4a_file):
     # if the audio is in an mp4 file, convert to wav
     # file is saved to the location where the mp4 was found
@@ -383,6 +385,23 @@ def convert_m4a_to_wav(m4a_file):
         print("{} already exists".format(wav_name))
 
     return wav_name
+
+
+def convert_mp3_to_wav(mp3_file):
+    # if the audio is in an mp4 file, convert to wav
+    # file is saved to the location where the mp4 was found
+    # returns the name of the file and its path
+    file_name = mp3_file.split(".mp3")[0]
+    wav_name = "{}.wav".format(file_name)
+    # check if the file already exists
+    if not os.path.exists(wav_name):
+        os.system("ffmpeg -i {0} -ac 1 {1}".format(mp3_file, wav_name))
+    # otherwise, print that it exists
+    else:
+        print("{} already exists".format(wav_name))
+
+    return wav_name
+
 
 def extract_portions_of_mp4_or_wav(
     path_to_sound_file,

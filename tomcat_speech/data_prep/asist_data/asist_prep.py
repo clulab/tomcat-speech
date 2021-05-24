@@ -214,7 +214,7 @@ class ASISTInput:
         else:
             self.missions = ["mission_2"]
 
-    def extract_audio_data(self, audio_path, audio_file, mp4=False, use_missions=False, m4a = True):
+    def extract_audio_data(self, audio_path, audio_file, mp4=False, use_missions=False, m4a=True):
         """
         Extract acoustic features from a given file
         """
@@ -481,7 +481,7 @@ class ASISTInput:
                 audio_name = item.split(".m4a")[0]
 
                 # create acoustic features for this file
-                _ = self.extract_audio_data(file_path, audio_name, m4a)
+                _ = self.extract_audio_data(file_path, audio_name, m4a=True)
         # extract transcripts
         self.extract_zoom_text_data()
 

@@ -6,10 +6,13 @@ import torch
 from torch import nn
 from torchtext.data import get_tokenizer
 
-from tomcat_speech.data_prep import ExtractAudio
+from tomcat_speech.data_prep.audio_extraction import ExtractAudio
 import pandas as pd
 
-from tomcat_speech.data_prep.data_prep_helpers import get_class_weights, get_gender_avgs
+from tomcat_speech.data_prep.data_prep_helpers import (
+    get_class_weights,
+    get_gender_avgs,
+)
 from tomcat_speech.data_prep.data_prep_helpers import create_data_folds_list
 
 
@@ -41,13 +44,19 @@ class RavdessPrep:
             self.path, glove, f_end, use_cols, add_avging=add_avging, avgd=avgd
         )
 
-        self.train_data, self.dev_data, self.test_data = create_data_folds_list(
-            self.all_data, train_prop, test_prop
-        )
+        (
+            self.train_data,
+            self.dev_data,
+            self.test_data,
+        ) = create_data_folds_list(self.all_data, train_prop, test_prop)
 
         # pull out ys from train to get class weights
-        self.train_y_emotion = torch.tensor([item[4] for item in self.train_data])
-        self.train_y_intensity = torch.tensor([item[5] for item in self.train_data])
+        self.train_y_emotion = torch.tensor(
+            [item[4] for item in self.train_data]
+        )
+        self.train_y_intensity = torch.tensor(
+            [item[5] for item in self.train_data]
+        )
 
         # set the sarcasm weights
         self.emotion_weights = get_class_weights(self.train_y_emotion)
@@ -61,8 +70,12 @@ class RavdessPrep:
 
         # acoustic feature normalization based on train
         # todo: incorporate acoustic means into data!!
-        self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
-        self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
+        self.all_acoustic_means = self.train_acoustic.mean(
+            dim=0, keepdim=False
+        )
+        self.all_acoustic_deviations = self.train_acoustic.std(
+            dim=0, keepdim=False
+        )
 
         self.male_acoustic_means, self.male_deviations = get_gender_avgs(
             self.train_acoustic, self.train_genders, gender=2
@@ -73,7 +86,12 @@ class RavdessPrep:
 
 
 def make_ravdess_data_tensors(
-    acoustic_path, glove, f_end="_IS10.csv", use_cols=None, add_avging=True, avgd=False
+    acoustic_path,
+    glove,
+    f_end="_IS10.csv",
+    use_cols=None,
+    add_avging=True,
+    avgd=False,
 ):
     """
     makes data tensors for use in RAVDESS objects
@@ -211,7 +229,9 @@ def preprocess_ravdess_data(
             # extract features using opensmile
             for audio_file in os.listdir(path_to_files):
                 audio_name = audio_file.split(".wav")[0]
-                audio_save_name = str(audio_name) + "_" + acoustic_feature_set + ".csv"
+                audio_save_name = (
+                    str(audio_name) + "_" + acoustic_feature_set + ".csv"
+                )
                 extractor = ExtractAudio(
                     path_to_files, audio_file, acoustic_save_path, smile_path
                 )

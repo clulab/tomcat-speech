@@ -9,12 +9,355 @@ import torch.nn as nn
 # import parameters for model
 from torch.utils.data import DataLoader, RandomSampler
 
-# from models.parameters.earlyfusion_params import *
-from tomcat_speech.models.parameters import model_params as params
+from tomcat_speech.models.parameters.earlyfusion_params import *
 
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
+
+
+def test_model(
+    classifier,
+    test_ds,
+    batch_size,
+    loss_func,
+    device="cpu",
+    avgd_acoustic=True,
+    use_speaker=True,
+    use_gender=False,
+):
+    """
+    Test a pretrained model
+    """
+    # Iterate over validation set--put it in a dataloader
+    val_batches = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
+
+    # reset loss and accuracy to zero
+    running_loss = 0.0
+    running_acc = 0.0
+
+    # set classifier to evaluation mode
+    classifier.eval()
+
+    # set holders to use for error analysis
+    ys_holder = []
+    preds_holder = []
+
+    # for each batch in the dataloader
+    for batch_index, batch in enumerate(val_batches):
+        # compute the output
+        batch_acoustic = batch[0].to(device)
+        batch_text = batch[1].to(device)
+        batch_lengths = batch[-2].to(device)
+        batch_acoustic_lengths = batch[-1].to(device)
+        if use_speaker:
+            batch_speakers = batch[2].to(device)
+        else:
+            batch_speakers = None
+
+        if use_gender:
+            batch_genders = batch[3].to(device)
+        else:
+            batch_genders = None
+
+        if avgd_acoustic:
+            y_pred = classifier(
+                acoustic_input=batch_acoustic,
+                text_input=batch_text,
+                speaker_input=batch_speakers,
+                length_input=batch_lengths,
+                gender_input=batch_genders,
+            )
+        else:
+            y_pred = classifier(
+                acoustic_input=batch_acoustic,
+                text_input=batch_text,
+                speaker_input=batch_speakers,
+                length_input=batch_lengths,
+                acoustic_len_input=batch_acoustic_lengths,
+                gender_input=batch_genders,
+            )
+
+        # get the gold labels
+        y_gold = batch[4].to(device)
+
+        # add ys to holder for error analysis
+        preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+        ys_holder.extend(y_gold.tolist())
+
+        y_pred = y_pred.float()
+        y_gold = y_gold.float()
+
+        loss = loss_func(y_pred, y_gold)
+        running_loss += (loss.item() - running_loss) / (batch_index + 1)
+
+        # compute the loss
+        if len(list(y_pred.size())) > 1:
+            y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
+        else:
+            y_pred = torch.round(y_pred)
+
+        # compute the accuracy
+        acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
+        running_acc += (acc_t - running_acc) / (batch_index + 1)
+
+    # print("Overall val loss: {0}, overall val acc: {1}".format(running_loss, running_acc))
+    avg_f1 = precision_recall_fscore_support(
+        ys_holder, preds_holder, average="weighted"
+    )
+
+    print("Weighted F=score: " + str(avg_f1))
+
+    # get confusion matrix
+    print(confusion_matrix(ys_holder, preds_holder))
+    print("Classification report: ")
+    print(classification_report(ys_holder, preds_holder, digits=4))
+
+
+
+def multitask_train_and_predict(
+    classifier,
+    train_state,
+    datasets_list,
+    batch_size,
+    num_epochs,
+    optimizer,
+    device="cpu",
+    scheduler=None,
+    sampler=None,
+    avgd_acoustic=True,
+    use_speaker=True,
+    use_gender=False,
+):
+    """
+    Train_ds_list and val_ds_list are lists of MultTaskObject objects!
+    Length of the list is the number of datasets used
+    """
+    num_tasks = len(datasets_list)
+    # get a list of the tasks by number
+    for dset in datasets_list:
+        train_state["tasks"].append(dset.task_num)
+        train_state["train_avg_f1"][dset.task_num] = []
+        train_state["val_avg_f1"][dset.task_num] = []
+
+    for epoch_index in range(num_epochs):
+
+        print("Now starting epoch {0}".format(epoch_index))
+
+        train_state["epoch_index"] = epoch_index
+
+        # Iterate over training dataset
+        running_loss = 0.0
+
+        # set classifier(s) to training mode
+        classifier.train()
+
+        batches, tasks = get_all_batches(
+            datasets_list, batch_size=batch_size, shuffle=True
+        )
+
+        # set holders to use for error analysis
+        ys_holder = {}
+        for i in range(num_tasks):
+            ys_holder[i] = []
+        preds_holder = {}
+        for i in range(num_tasks):
+            preds_holder[i] = []
+
+        # for each batch in the list of batches created by the dataloader
+        for batch_index, batch in enumerate(batches):
+            # find the task for this batch
+            batch_task = tasks[batch_index]
+
+            # step 1. zero the gradients
+            optimizer.zero_grad()
+
+            y_gold = batch[4].to(device)
+
+            batch_acoustic = batch[0].to(device)
+            batch_text = batch[1].to(device)
+            if use_speaker:
+                batch_speakers = batch[2].to(device)
+            else:
+                batch_speakers = None
+
+            if use_gender:
+                batch_genders = batch[3].to(device)
+            else:
+                batch_genders = None
+            batch_lengths = batch[-2].to(device)
+            batch_acoustic_lengths = batch[-1].to(device)
+
+            if avgd_acoustic:
+                y_pred = classifier(
+                    acoustic_input=batch_acoustic,
+                    text_input=batch_text,
+                    speaker_input=batch_speakers,
+                    length_input=batch_lengths,
+                    gender_input=batch_genders,
+                    task_num=tasks[batch_index],
+                )
+            else:
+                y_pred = classifier(
+                    acoustic_input=batch_acoustic,
+                    text_input=batch_text,
+                    speaker_input=batch_speakers,
+                    length_input=batch_lengths,
+                    acoustic_len_input=batch_acoustic_lengths,
+                    gender_input=batch_genders,
+                    task_num=tasks[batch_index],
+                )
+
+            batch_pred = y_pred[batch_task]
+
+            if datasets_list[batch_task].binary:
+                batch_pred = batch_pred.float()
+                y_gold = y_gold.float()
+
+            # calculate loss
+            loss = (
+                datasets_list[batch_task].loss_fx(batch_pred, y_gold)
+                * datasets_list[batch_task].loss_multiplier
+            )
+            loss_t = loss.item()
+
+            # calculate running loss
+            running_loss += (loss_t - running_loss) / (batch_index + 1)
+
+            # use loss to produce gradients
+            loss.backward()
+
+            # add ys to holder for error analysis
+            preds_holder[batch_task].extend(
+                [item.index(max(item)) for item in batch_pred.tolist()]
+            )
+            ys_holder[batch_task].extend(y_gold.tolist())
+
+            # increment optimizer
+            optimizer.step()
+
+        # add loss and accuracy information to the train state
+        train_state["train_loss"].append(running_loss)
+
+        for task in preds_holder.keys():
+            task_avg_f1 = precision_recall_fscore_support(
+                ys_holder[task], preds_holder[task], average="weighted"
+            )
+            print(f"Training weighted f-score for task {task}: {task_avg_f1}")
+            train_state["train_avg_f1"][task].append(task_avg_f1[2])
+
+        # Iterate over validation set--put it in a dataloader
+        batches, tasks = get_all_batches(
+            datasets_list, batch_size=batch_size, shuffle=True, partition="dev"
+        )
+
+        # reset loss and accuracy to zero
+        running_loss = 0.0
+
+        # set classifier to evaluation mode
+        classifier.eval()
+
+        # set holders to use for error analysis
+        ys_holder = {}
+        for i in range(num_tasks):
+            ys_holder[i] = []
+        preds_holder = {}
+        for i in range(num_tasks):
+            preds_holder[i] = []
+
+        # for each batch in the list of batches created by the dataloader
+        for batch_index, batch in enumerate(batches):
+            # get the task for this batch
+            batch_task = tasks[batch_index]
+
+            y_gold = batch[4].to(device)
+
+            batch_acoustic = batch[0].to(device)
+            batch_text = batch[1].to(device)
+            if use_speaker:
+                batch_speakers = batch[2].to(device)
+            else:
+                batch_speakers = None
+
+            if use_gender:
+                batch_genders = batch[3].to(device)
+            else:
+                batch_genders = None
+            batch_lengths = batch[-2].to(device)
+            batch_acoustic_lengths = batch[-1].to(device)
+
+            # compute the output
+            if avgd_acoustic:
+                y_pred = classifier(
+                    acoustic_input=batch_acoustic,
+                    text_input=batch_text,
+                    speaker_input=batch_speakers,
+                    length_input=batch_lengths,
+                    gender_input=batch_genders,
+                    task_num=tasks[batch_index],
+                )
+            else:
+                y_pred = classifier(
+                    acoustic_input=batch_acoustic,
+                    text_input=batch_text,
+                    speaker_input=batch_speakers,
+                    length_input=batch_lengths,
+                    acoustic_len_input=batch_acoustic_lengths,
+                    gender_input=batch_genders,
+                    task_num=tasks[batch_index],
+                )
+
+            batch_pred = y_pred[batch_task]
+
+            if datasets_list[batch_task].binary:
+                batch_pred = batch_pred.float()
+                y_gold = y_gold.float()
+
+            # calculate loss
+            loss = (
+                datasets_list[batch_task].loss_fx(batch_pred, y_gold)
+                * datasets_list[batch_task].loss_multiplier
+            )
+            loss_t = loss.item()
+
+            # calculate running loss
+            running_loss += (loss_t - running_loss) / (batch_index + 1)
+
+            # add ys to holder for error analysis
+            preds_holder[batch_task].extend(
+                [item.index(max(item)) for item in batch_pred.tolist()]
+            )
+            ys_holder[batch_task].extend(y_gold.tolist())
+
+        for task in preds_holder.keys():
+            task_avg_f1 = precision_recall_fscore_support(
+                ys_holder[task], preds_holder[task], average="weighted"
+            )
+            print(f"Val weighted f-score for task {task}: {task_avg_f1}")
+            train_state["val_avg_f1"][task].append(task_avg_f1[2])
+
+        if epoch_index % 5 == 0:
+            for task in preds_holder.keys():
+                print(f"Classification report and confusion matrix for task {task}:")
+                print(confusion_matrix(ys_holder[task], preds_holder[task]))
+                print("======================================================")
+                print(
+                    classification_report(ys_holder[task], preds_holder[task], digits=4)
+                )
+
+        # add loss and accuracy to train state
+        train_state["val_loss"].append(running_loss)
+
+        # update the train state now that our epoch is complete
+        train_state = update_train_state(model=classifier, train_state=train_state)
+
+        # update scheduler if there is one
+        if scheduler is not None:
+            scheduler.step(train_state["val_loss"][-1])
+
+        # if it's time to stop, end the training process
+        if train_state["stop_early"]:
+            break
 
 
 # adapted from https://github.com/joosthub/PyTorchNLPBook/blob/master/chapters/chapter_6/classifying-surnames/Chapter-6-Surname-Classification-with-RNNs.ipynb
@@ -23,8 +366,7 @@ def make_train_state(learning_rate, model_save_file):
     return {
         "stop_early": False,
         "early_stopping_step": 0,
-        "early_stopping_best_vav": 0.0,
-        # "early_stopping_best_val": 1e8,
+        "early_stopping_best_val": 0.0,
         "learning_rate": learning_rate,
         "epoch_index": 0,
         "tasks": [],
@@ -46,11 +388,9 @@ def make_train_state(learning_rate, model_save_file):
 
 def update_train_state(model, train_state):
     """Handle the training state updates.
-
     Components:
      - Early Stopping: Prevent overfitting.
      - Model Checkpoint: Model is saved if the model is better
-
     :param args: main arguments
     :param model: model to train
     :param train_state: a dictionary representing the training state values
@@ -723,349 +1063,6 @@ def get_batch_predictions(
     return y_pred, y_2_pred, y_3_pred, gold
 
 
-def test_model(
-    classifier,
-    test_ds,
-    batch_size,
-    loss_func,
-    device="cpu",
-    avgd_acoustic=True,
-    use_speaker=True,
-    use_gender=False,
-):
-    """
-    Test a pretrained model
-    """
-    # Iterate over validation set--put it in a dataloader
-    val_batches = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
-
-    # reset loss and accuracy to zero
-    running_loss = 0.0
-    running_acc = 0.0
-
-    # set classifier to evaluation mode
-    classifier.eval()
-
-    # set holders to use for error analysis
-    ys_holder = []
-    preds_holder = []
-
-    # for each batch in the dataloader
-    for batch_index, batch in enumerate(val_batches):
-        # compute the output
-        batch_acoustic = batch[0].to(device)
-        batch_text = batch[1].to(device)
-        batch_lengths = batch[-2].to(device)
-        batch_acoustic_lengths = batch[-1].to(device)
-        if use_speaker:
-            batch_speakers = batch[2].to(device)
-        else:
-            batch_speakers = None
-
-        if use_gender:
-            batch_genders = batch[3].to(device)
-        else:
-            batch_genders = None
-
-        if avgd_acoustic:
-            y_pred = classifier(
-                acoustic_input=batch_acoustic,
-                text_input=batch_text,
-                speaker_input=batch_speakers,
-                length_input=batch_lengths,
-                gender_input=batch_genders,
-            )
-        else:
-            y_pred = classifier(
-                acoustic_input=batch_acoustic,
-                text_input=batch_text,
-                speaker_input=batch_speakers,
-                length_input=batch_lengths,
-                acoustic_len_input=batch_acoustic_lengths,
-                gender_input=batch_genders,
-            )
-
-        # get the gold labels
-        y_gold = batch[4].to(device)
-
-        # add ys to holder for error analysis
-        preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
-        ys_holder.extend(y_gold.tolist())
-
-        y_pred = y_pred.float()
-        y_gold = y_gold.float()
-
-        loss = loss_func(y_pred, y_gold)
-        running_loss += (loss.item() - running_loss) / (batch_index + 1)
-
-        # compute the loss
-        if len(list(y_pred.size())) > 1:
-            y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
-        else:
-            y_pred = torch.round(y_pred)
-
-        # compute the accuracy
-        acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
-        running_acc += (acc_t - running_acc) / (batch_index + 1)
-
-    # print("Overall val loss: {0}, overall val acc: {1}".format(running_loss, running_acc))
-    avg_f1 = precision_recall_fscore_support(
-        ys_holder, preds_holder, average="weighted"
-    )
-
-    print("Weighted F=score: " + str(avg_f1))
-
-    # get confusion matrix
-    print(confusion_matrix(ys_holder, preds_holder))
-    print("Classification report: ")
-    print(classification_report(ys_holder, preds_holder, digits=4))
-
-
-def multitask_train_and_predict(
-    classifier,
-    train_state,
-    datasets_list,
-    batch_size,
-    num_epochs,
-    optimizer,
-    device="cpu",
-    scheduler=None,
-    sampler=None,
-    avgd_acoustic=True,
-    use_speaker=True,
-    use_gender=False,
-):
-    """
-    Train_ds_list and val_ds_list are lists of MultTaskObject objects!
-    Length of the list is the number of datasets used
-    """
-    num_tasks = len(datasets_list)
-    # get a list of the tasks by number
-    for dset in datasets_list:
-        train_state["tasks"].append(dset.task_num)
-        train_state["train_avg_f1"][dset.task_num] = []
-        train_state["val_avg_f1"][dset.task_num] = []
-
-    for epoch_index in range(num_epochs):
-
-        print("Now starting epoch {0}".format(epoch_index))
-
-        train_state["epoch_index"] = epoch_index
-
-        # Iterate over training dataset
-        running_loss = 0.0
-
-        # set classifier(s) to training mode
-        classifier.train()
-
-        batches, tasks = get_all_batches(
-            datasets_list, batch_size=batch_size, shuffle=True
-        )
-
-        # set holders to use for error analysis
-        ys_holder = {}
-        for i in range(num_tasks):
-            ys_holder[i] = []
-        preds_holder = {}
-        for i in range(num_tasks):
-            preds_holder[i] = []
-
-        # for each batch in the list of batches created by the dataloader
-        for batch_index, batch in enumerate(batches):
-            # find the task for this batch
-            batch_task = tasks[batch_index]
-
-            # step 1. zero the gradients
-            optimizer.zero_grad()
-
-            y_gold = batch[4].to(device)
-
-            batch_acoustic = batch[0].to(device)
-            batch_text = batch[1].to(device)
-            if use_speaker:
-                batch_speakers = batch[2].to(device)
-            else:
-                batch_speakers = None
-
-            if use_gender:
-                batch_genders = batch[3].to(device)
-            else:
-                batch_genders = None
-            batch_lengths = batch[-2].to(device)
-            batch_acoustic_lengths = batch[-1].to(device)
-
-            if avgd_acoustic:
-                y_pred = classifier(
-                    acoustic_input=batch_acoustic,
-                    text_input=batch_text,
-                    speaker_input=batch_speakers,
-                    length_input=batch_lengths,
-                    gender_input=batch_genders,
-                    task_num=tasks[batch_index],
-                )
-            else:
-                y_pred = classifier(
-                    acoustic_input=batch_acoustic,
-                    text_input=batch_text,
-                    speaker_input=batch_speakers,
-                    length_input=batch_lengths,
-                    acoustic_len_input=batch_acoustic_lengths,
-                    gender_input=batch_genders,
-                    task_num=tasks[batch_index],
-                )
-
-            batch_pred = y_pred[batch_task]
-
-            if datasets_list[batch_task].binary:
-                batch_pred = batch_pred.float()
-                y_gold = y_gold.float()
-
-            # calculate loss
-            loss = (
-                datasets_list[batch_task].loss_fx(batch_pred, y_gold)
-                * datasets_list[batch_task].loss_multiplier
-            )
-            loss_t = loss.item()
-
-            # calculate running loss
-            running_loss += (loss_t - running_loss) / (batch_index + 1)
-
-            # use loss to produce gradients
-            loss.backward()
-
-            # add ys to holder for error analysis
-            preds_holder[batch_task].extend(
-                [item.index(max(item)) for item in batch_pred.tolist()]
-            )
-            ys_holder[batch_task].extend(y_gold.tolist())
-
-            # increment optimizer
-            optimizer.step()
-
-        # add loss and accuracy information to the train state
-        train_state["train_loss"].append(running_loss)
-
-        for task in preds_holder.keys():
-            task_avg_f1 = precision_recall_fscore_support(
-                ys_holder[task], preds_holder[task], average="weighted"
-            )
-            print(f"Training weighted f-score for task {task}: {task_avg_f1}")
-            train_state["train_avg_f1"][task].append(task_avg_f1[2])
-
-        # Iterate over validation set--put it in a dataloader
-        batches, tasks = get_all_batches(
-            datasets_list, batch_size=batch_size, shuffle=True, partition="dev"
-        )
-
-        # reset loss and accuracy to zero
-        running_loss = 0.0
-
-        # set classifier to evaluation mode
-        classifier.eval()
-
-        # set holders to use for error analysis
-        ys_holder = {}
-        for i in range(num_tasks):
-            ys_holder[i] = []
-        preds_holder = {}
-        for i in range(num_tasks):
-            preds_holder[i] = []
-
-        # for each batch in the list of batches created by the dataloader
-        for batch_index, batch in enumerate(batches):
-            # get the task for this batch
-            batch_task = tasks[batch_index]
-
-            y_gold = batch[4].to(device)
-
-            batch_acoustic = batch[0].to(device)
-            batch_text = batch[1].to(device)
-            if use_speaker:
-                batch_speakers = batch[2].to(device)
-            else:
-                batch_speakers = None
-
-            if use_gender:
-                batch_genders = batch[3].to(device)
-            else:
-                batch_genders = None
-            batch_lengths = batch[-2].to(device)
-            batch_acoustic_lengths = batch[-1].to(device)
-
-            # compute the output
-            if avgd_acoustic:
-                y_pred = classifier(
-                    acoustic_input=batch_acoustic,
-                    text_input=batch_text,
-                    speaker_input=batch_speakers,
-                    length_input=batch_lengths,
-                    gender_input=batch_genders,
-                    task_num=tasks[batch_index],
-                )
-            else:
-                y_pred = classifier(
-                    acoustic_input=batch_acoustic,
-                    text_input=batch_text,
-                    speaker_input=batch_speakers,
-                    length_input=batch_lengths,
-                    acoustic_len_input=batch_acoustic_lengths,
-                    gender_input=batch_genders,
-                    task_num=tasks[batch_index],
-                )
-
-            batch_pred = y_pred[batch_task]
-
-            if datasets_list[batch_task].binary:
-                batch_pred = batch_pred.float()
-                y_gold = y_gold.float()
-
-            # calculate loss
-            loss = (
-                datasets_list[batch_task].loss_fx(batch_pred, y_gold)
-                * datasets_list[batch_task].loss_multiplier
-            )
-            loss_t = loss.item()
-
-            # calculate running loss
-            running_loss += (loss_t - running_loss) / (batch_index + 1)
-
-            # add ys to holder for error analysis
-            preds_holder[batch_task].extend(
-                [item.index(max(item)) for item in batch_pred.tolist()]
-            )
-            ys_holder[batch_task].extend(y_gold.tolist())
-
-        for task in preds_holder.keys():
-            task_avg_f1 = precision_recall_fscore_support(
-                ys_holder[task], preds_holder[task], average="weighted"
-            )
-            print(f"Val weighted f-score for task {task}: {task_avg_f1}")
-            train_state["val_avg_f1"][task].append(task_avg_f1[2])
-
-        if epoch_index % 5 == 0:
-            for task in preds_holder.keys():
-                print(f"Classification report and confusion matrix for task {task}:")
-                print(confusion_matrix(ys_holder[task], preds_holder[task]))
-                print("======================================================")
-                print(
-                    classification_report(ys_holder[task], preds_holder[task], digits=4)
-                )
-
-        # add loss and accuracy to train state
-        train_state["val_loss"].append(running_loss)
-
-        # update the train state now that our epoch is complete
-        train_state = update_train_state(model=classifier, train_state=train_state)
-
-        # update scheduler if there is one
-        if scheduler is not None:
-            scheduler.step(train_state["val_loss"][-1])
-
-        # if it's time to stop, end the training process
-        if train_state["stop_early"]:
-            break
-
-
 def get_all_batches(dataset_list, batch_size, shuffle, partition="train"):
     """
     Create all batches and put them together as a single dataset
@@ -1210,6 +1207,7 @@ def get_all_batches_oversampling(dataset_list, batch_size, shuffle, partition="t
     return randomized_batches, randomized_tasks
 
 
+# GENERATES LIST OF LISTS WITH PREDICTION AND CONFIDENCE LEVELS
 def predict_without_gold_labels(
     classifier,
     test_ds,
@@ -1218,6 +1216,7 @@ def predict_without_gold_labels(
     avgd_acoustic=True,
     use_speaker=True,
     use_gender=False,
+    get_prob_dist=False
 ):
     """
     Test a pretrained model
@@ -1255,6 +1254,7 @@ def predict_without_gold_labels(
                 speaker_input=batch_speakers,
                 length_input=batch_lengths,
                 gender_input=batch_genders,
+                get_prob_dist=get_prob_dist
             )
         else:
             y_pred = classifier(
@@ -1264,12 +1264,16 @@ def predict_without_gold_labels(
                 length_input=batch_lengths,
                 acoustic_len_input=batch_acoustic_lengths,
                 gender_input=batch_genders,
+                get_prob_dist=get_prob_dist
             )
 
         # add ys to holder for error analysis
-        preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
+        preds_holder.extend(
+            [[item.index(max(item)), max(item)] for item in y_pred.tolist()]
+        )
 
     return preds_holder
+
 
 
 def multitask_train_and_predict_with_gradnorm(

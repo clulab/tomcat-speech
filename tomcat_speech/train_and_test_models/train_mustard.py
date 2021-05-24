@@ -7,10 +7,12 @@ from tomcat_speech.models.train_and_test_models import *
 from tomcat_speech.models.input_models import *
 from tomcat_speech.data_prep.data_prep_helpers import *
 from tomcat_speech.data_prep.meld_data.meld_prep import *
+from tomcat_speech.models.plot_training import *
 
 # import parameters for model
-# from models.parameters.latefusion_params import params
 from tomcat_speech.models.parameters.earlyfusion_params import params
+from tomcat_speech.data_prep.mustard_data.mustard_prep import *
+
 
 sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
 
@@ -176,8 +178,12 @@ if __name__ == "__main__":
             train_ds = DatumListDataset(
                 data.train_data, data_type, data.sarcasm_weights
             )
-            dev_ds = DatumListDataset(data.dev_data, data_type, data.sarcasm_weights)
-            test_ds = DatumListDataset(data.test_data, data_type, data.sarcasm_weights)
+            dev_ds = DatumListDataset(
+                data.dev_data, data_type, data.sarcasm_weights
+            )
+            test_ds = DatumListDataset(
+                data.test_data, data_type, data.sarcasm_weights
+            )
 
             train_targets = torch.stack(list(train_ds.targets()))
             sampler_weights = data.sarcasm_weights
@@ -236,14 +242,22 @@ if __name__ == "__main__":
 
             # plot the loss and accuracy curves
             # set plot titles
-            loss_title = "Training and Dev loss for model {0} with lr {1}".format(
+            loss_title = (
+                "Training and Dev loss for model {0} with lr {1}".format(
+                    model_type, lr
+                )
+            )
+            acc_title = "Avg F scores for model {0} with lr {1}".format(
                 model_type, lr
             )
-            acc_title = "Avg F scores for model {0} with lr {1}".format(model_type, lr)
 
             # set save names
-            loss_save = "output/plots/{0}_lr{1}_loss.png".format(model_type, lr)
-            acc_save = "output/plots/{0}_lr{1}_avg_f1.png".format(model_type, lr)
+            loss_save = "output/plots/{0}_lr{1}_loss.png".format(
+                model_type, lr
+            )
+            acc_save = "output/plots/{0}_lr{1}_avg_f1.png".format(
+                model_type, lr
+            )
 
             # plot the loss from model
             plot_train_dev_curve(

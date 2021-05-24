@@ -8,7 +8,11 @@ import torch
 from torch import nn
 from torchtext.data import get_tokenizer
 
-from tomcat_speech.data_prep import convert_mp4_to_wav, ExtractAudio
+from tomcat_speech.data_prep.audio_extraction import (
+    convert_mp4_to_wav,
+    ExtractAudio,
+)
+
 from tomcat_speech.data_prep.data_prep_helpers import (
     clean_up_word,
     get_speaker_to_index_dict,
@@ -18,7 +22,9 @@ from tomcat_speech.data_prep.data_prep_helpers import (
     transform_acoustic_item,
     create_data_folds,
     get_acoustic_means, get_gender_avgs)
+
 from tomcat_speech.data_prep.meld_data.meld_prep import (
+    get_max_num_acoustic_frames,
     make_acoustic_dict_meld,
     run_feature_extraction
 )
@@ -167,8 +173,6 @@ class MustardPrep:
         # acoustic feature normalization based on train
         print("starting acoustic means for mustard")
         self.all_acoustic_means, self.all_acoustic_deviations = get_acoustic_means(self.train_acoustic)
-        # self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
-        # self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
 
         print("starting male acoustic means for meld")
         self.male_acoustic_means, self.male_deviations = get_gender_avgs(
@@ -182,7 +186,11 @@ class MustardPrep:
         print("acoustic means calculated for mustard")
 
         # get the data organized for input into the NNs
-        self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
+        (
+            self.train_data,
+            self.dev_data,
+            self.test_data,
+        ) = self.combine_xs_and_ys()
 
     def combine_xs_and_ys(self):
         """

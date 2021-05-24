@@ -4,6 +4,7 @@ import numpy as np
 
 from tomcat_speech.data_prep.ravdess_data.ravdess_prep import RavdessPrep
 from tomcat_speech.models.train_and_test_models import *
+from tomcat_speech.models.plot_training import *
 
 from tomcat_speech.models.input_models import *
 from tomcat_speech.data_prep.data_prep_helpers import *
@@ -124,8 +125,12 @@ if __name__ == "__main__":
             train_ds = DatumListDataset(
                 data.train_data, data_type, data.emotion_weights
             )
-            dev_ds = DatumListDataset(data.dev_data, data_type, data.emotion_weights)
-            test_ds = DatumListDataset(data.test_data, data_type, data.emotion_weights)
+            dev_ds = DatumListDataset(
+                data.dev_data, data_type, data.emotion_weights
+            )
+            test_ds = DatumListDataset(
+                data.test_data, data_type, data.emotion_weights
+            )
 
             # create a a save path and file for the model
             model_save_file = "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
@@ -133,7 +138,9 @@ if __name__ == "__main__":
             )
 
             # make the train state to keep track of model training/development
-            train_state = make_train_state(lr, model_save_path, model_save_file)
+            train_state = make_train_state(
+                lr, model_save_path, model_save_file
+            )
 
             # train the model and evaluate on development set
             train_and_predict(
@@ -155,14 +162,22 @@ if __name__ == "__main__":
 
             # plot the loss and accuracy curves
             # set plot titles
-            loss_title = "Training and Dev loss for model {0} with lr {1}".format(
+            loss_title = (
+                "Training and Dev loss for model {0} with lr {1}".format(
+                    model_type, lr
+                )
+            )
+            acc_title = "Avg F scores for model {0} with lr {1}".format(
                 model_type, lr
             )
-            acc_title = "Avg F scores for model {0} with lr {1}".format(model_type, lr)
 
             # set save names
-            loss_save = "output/plots/{0}_lr{1}_loss.png".format(model_type, lr)
-            acc_save = "output/plots/{0}_lr{1}_avg_f1.png".format(model_type, lr)
+            loss_save = "output/plots/{0}_lr{1}_loss.png".format(
+                model_type, lr
+            )
+            acc_save = "output/plots/{0}_lr{1}_avg_f1.png".format(
+                model_type, lr
+            )
 
             # plot the loss from model
             plot_train_dev_curve(

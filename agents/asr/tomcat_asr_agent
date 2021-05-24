@@ -1,0 +1,268 @@
+#!/usr/bin/env python
+
+"""Agent that can process one or more audio streams and outputs messages
+corresponding to real-time ASR transcriptions.
+
+Example usage:
+    ./tomcat_asr_agent
+
+To see all available options, run:
+    ./tomcat_asr_agent -h
+"""
+
+
+import os
+import sys
+import time
+import json
+import asyncio
+import logging
+import datetime
+import threading
+from uuid import uuid4
+from logging import debug, info
+from urllib.parse import urlparse, parse_qs
+from utils import float32_array_to_int16_array
+from audio_stream import AudioStream
+from google_asr_client import GoogleASRClient
+from soundfile import SoundFile
+import numpy as np
+
+
+# This mutable global variable should be encapsulated in a class in the future.
+# It can be set by listening for a message on the message bus, in order to
+# synchronize recording start and stop timestamps.
+RECORDING_IN_PROGRESS = True
+
+
+async def message_handler(
+    websocket,
+    path,
+):
+    query_params = parse_qs(urlparse(websocket.path).query)
+
+    participant_id = query_params["id"][0]
+    if participant_id == "null":
+        participant_id = str(uuid4())
+
+    sample_rate = int(query_params["sampleRate"][0])
+
+    await websocket.send(json.dumps({"participantId": participant_id}))
+
+    info(f"Participant {participant_id} is now connected.")
+
+    # Start the audio stream and ASR client.
+    audio_stream = AudioStream()
+    asr_client = GoogleASRClient(
+        audio_stream,
+        sample_rate,
+        participant_id=participant_id,
+        websocket=websocket,
+    )
+    threading.Thread(target=asr_client.run, daemon=True).start()
+
+    # We save the start time of the recording in a JSON metadata file.
+    with open(f"participant_{participant_id}_metadata.json", "w") as f:
+        f.write(
+            json.dumps(
+                {
+                    "recording_start_timestamp": datetime.datetime.utcnow().isoformat()
+                    + "Z",
+                }
+            )
+        )
+
+    # Number of channels. Currently we expect only one channel.
+    n_channels = 1
+
+    with SoundFile(
+        f"participant_{participant_id}.wav",
+        "w",
+        sample_rate,
+        n_channels,
+        "FLOAT",
+    ) as f:
+        async for data in websocket:
+            debug(
+                f"Received chunk of size {len(data)} bytes from browser at "
+                f"{datetime.datetime.utcnow().isoformat()}Z"
+            )
+            if RECORDING_IN_PROGRESS:
+                f.write(np.frombuffer(data, dtype=np.float32))
+
+            chunk = float32_array_to_int16_array(data)
+            audio_stream.fill_buffer(chunk)
+
+
+if __name__ == "__main__":
+    from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+
+    parser = ArgumentParser(
+        description="ToMCAT ASR Agent",
+        formatter_class=ArgumentDefaultsHelpFormatter,
+    )
+
+    parent_parser = ArgumentParser(add_help=False)
+
+    # ==========================================
+    # Adding subparsers for the different modes.
+    # ==========================================
+
+    subparsers = parser.add_subparsers(dest="mode", required=True)
+
+    parser_stdin = subparsers.add_parser(
+        "stdin",
+        help=(
+            "Run the agent in stdin mode, allowing it to process raw audio "
+            "from standard input."
+        ),
+        formatter_class=ArgumentDefaultsHelpFormatter,
+        parents=[parent_parser],
+    )
+
+    parser_stdin.add_argument(
+        "sample_rate",
+        type=int,
+        help="Sample rate in Hertz of the raw input audio stream.",
+    )
+
+    parser_stdin.add_argument(
+        "chunk_size",
+        type=int,
+        help=(
+            "Number of bytes to read at a time from the input audio stream."
+        ),
+    )
+
+    parser_microphone = subparsers.add_parser(
+        "microphone",
+        help="Run the agent using your computer's microphone.",
+        formatter_class=ArgumentDefaultsHelpFormatter,
+        parents=[parent_parser],
+    )
+
+    parser_microphone.add_argument(
+        "--engine",
+        type=str,
+        help="ASR engine to use",
+        choices=("google", "pocketsphinx"),
+        default="google",
+    )
+
+    parser_microphone.add_argument(
+        "--sample_rate",
+        type=int,
+        default=44100,
+        help="Sample rate in Hertz to use for microphone recording.",
+    )
+
+    parser_websockets = subparsers.add_parser(
+        "websockets",
+        help=(
+            "Run the agent in websockets mode, allowing it to act as a "
+            "server that can process multiple audio streams simultaneously."
+        ),
+        formatter_class=ArgumentDefaultsHelpFormatter,
+        parents=[parent_parser],
+    )
+
+    parser_websockets.add_argument(
+        "--ws_host",
+        type=str,
+        default="localhost",
+        help="Host to run the websocket server on.",
+    )
+
+    parser_websockets.add_argument(
+        "--ws_port",
+        type=int,
+        default=8888,
+        help="Port to run the websocket server on.",
+    )
+
+    parser_websockets.add_argument(
+        "--ssl_cert_chain",
+        type=str,
+        default=None,
+        help="SSL certificate and chain",
+    )
+
+    parser_websockets.add_argument(
+        "--ssl_keyfile",
+        type=str,
+        default=None,
+        help="SSL key file",
+    )
+
+    args = parser.parse_args()
+
+    logging.basicConfig(level=logging.WARNING)
+
+    try:
+        if args.mode == "stdin":
+            with AudioStream() as audio_stream:
+                asr_client = GoogleASRClient(
+                    audio_stream,
+                    args.sample_rate,
+                    # We divide by 2 since we assume 32 bit floats converted to 16 bit ints
+                    args.chunk_size / 2,
+                )
+                asr_thread = threading.Thread(target=asr_client.run)
+                asr_thread.start()
+
+                while True:
+                    data = sys.stdin.buffer.read(args.chunk_size)
+                    if not data:
+                        break
+                    else:
+                        chunk = float32_array_to_int16_array(data)
+                        audio_stream.fill_buffer(chunk)
+
+                time.sleep(1)
+
+        elif args.mode == "microphone":
+            if args.engine == "google":
+                from microphone_stream import MicrophoneStream
+
+                audio_stream = MicrophoneStream(args.sample_rate)
+
+                with audio_stream as stream:
+                    asr_client = GoogleASRClient(
+                        stream,
+                        args.sample_rate,
+                    )
+                    asr_client.run()
+            else:
+                from pocketsphinx_asr_client import PocketSphinxASRClient
+
+                asr_client = PocketSphinxASRClient(
+                    args.sample_rate, round(args.sample_rate / 10)
+                )
+                asr_client.run()
+
+        else:
+            import websockets
+
+            # If a path to an SSL certificate is provided, we provide secure
+            # connections.
+            if args.ssl_cert_chain is not None:
+                import ssl
+
+                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                ssl_context.load_cert_chain(
+                    args.ssl_cert_chain, args.ssl_keyfile
+                )
+            else:
+                ssl_context = None
+
+            asyncio.gather(
+                websockets.serve(
+                    message_handler,
+                    args.ws_host,
+                    args.ws_port,
+                    ssl=ssl_context,
+                ),
+            )
+            asyncio.get_event_loop().run_forever()
+    except KeyboardInterrupt:
+        sys.stderr.write("Keyboard interrupt (Ctrl-C) detected. Exiting now.")

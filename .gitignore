@@ -1,9 +1,14 @@
+# macOS
+.DS_Store
+
 # intellij
 .idea
 
 # python
 *.pyc
 */__pycache__/
+*egg-info
+pip-wheel-metadata
 
 # directories
 output/
@@ -13,7 +18,6 @@ data/
 #opensmile
 smile.log
 
-.DS_Store
 
 # extra files
 *.csv
@@ -22,12 +26,37 @@ smile.log
 *.mp3
 *.mp4
 *.p
-./output
-glove.short.300d.txt
-python_readme.md
+*.m4a
+*.json
+*.txt
 
+# Ignore raw audio files
+*.raw
+
+
+./output
+./classifier_R/extra/ 
+glove.short.300d.txt
+glove.short.300d.punct.txt
+python_readme.md
 external/opensmile*
 data/*
+requirements.txt
+
 
 # R code
 classifier_R
+classifier_R/.Rhistory
+classifier_R/.RData
+
+# Virtual environment
+.venv
+
+# builds
+build/
+dist/
+# Preventing people from accidentally committing ASIST human subjects data to the repo.
+HSR*
+
+# Vim swap files
+*.swp

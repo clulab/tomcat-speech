@@ -1,0 +1,44 @@
+# Compose file for deployment on a Linux server
+# You will need to set the following environment variables for this to work:
+# - GOOGLE_APPLICATION_CREDENTIALS
+# - SSL_CERT_CHAIN
+# - SSL_KEYFILE
+# - WEBMIC_WS_URL - set this to the websocket URL you want the audio data from
+#                   from the webmic app to be streamed to.
+#                   Example: wss://example.com/ws
+
+version: '3'
+services:
+  tomcat_asr_agent:
+    image: tomcat_asr_agent:latest
+    container_name: tomcat_asr_agent
+    build: ./asr
+    ports:
+      - 8888:8888
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/google_application_credentials.json
+      - SSL_CERT_CHAIN=/ssl_cert_chain.pem
+      - SSL_KEYFILE=/ssl_keyfile.pem
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - $GOOGLE_APPLICATION_CREDENTIALS:/google_application_credentials.json
+      - $SSL_CERT_CHAIN:/ssl_cert_chain.pem
+      - $SSL_KEYFILE:/ssl_keyfile.pem
+      - ./asr:/asr
+    entrypoint: ./entrypoints/linux_server.sh   
+    depends_on:    
+    - mosquitto
+  webmic:
+    image: webmic:latest
+    container_name: webmic
+    environment:
+      - WEBMIC_WS_URL=$WEBMIC_WS_URL
+    build: ./webmic
+    ports:
+      - 8000:8000
+    depends_on:    
+    - tomcat_asr_agent
+  # We bring up a Dockerized mosquitto broker in order to not have to worry
+  # about networking as much.
+  mosquitto:
+    image: eclipse-mosquitto:1.6.9

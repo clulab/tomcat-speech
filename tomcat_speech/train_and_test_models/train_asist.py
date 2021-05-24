@@ -2,22 +2,25 @@
 # currently the main entry point into the system
 # add "prep_data" as an argument when running this from command line
 #       if your acoustic features have not been extracted from audio
+
 from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDataset
 from tomcat_speech.models.train_and_test_models import *
+from tomcat_speech.models.plot_training import *
 from tomcat_speech.models.input_models import *
 
 from tomcat_speech.data_prep.data_prep_helpers import *
 from tomcat_speech.data_prep.data_prep_helpers import make_acoustic_dict
+
 import tomcat_speech.data_prep.asist_data.sentiment_score_prep as score_prep
 import tomcat_speech.data_prep.asist_data.asist_prep as asist_prep
 
 # import parameters for model
 # comment or uncomment as needed
-from tomcat_speech.models.parameters import model_params
+from tomcat_speech.models.parameters.multitask_params import *
 
-# from models.parameters.multitask_params import params
-# from models.parameters.lr_baseline_1_params import params
-# from models.parameters.multichannel_cnn_params import params
+# from tomcat_speech.models.parameters.multitask_params import params
+# from tomcat_speech.models.parameters.lr_baseline_1_params import params
+# from tomcat_speech.models.parameters.multichannel_cnn_params import params
 
 import numpy as np
 import random
@@ -78,13 +81,17 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
         os.system("time python data_prep/asist_data/asist_prep.py")
     elif len(sys.argv) > 1 and sys.argv[1] == "mp4_data":
-        os.system("time python data_prep/asist_data/asist_prep.py mp4_data")  # fixme
+        os.system(
+            "time python data_prep/asist_data/asist_prep.py mp4_data"
+        )  # fixme
     # elif len(sys.argv) > 1 and sys.argv[1] == "use_sentiment_analyzer":
     #     os.system("time python data_prep/asist_data/asist_prep.py prep_for_sentiment_analyzer")
 
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
-    acoustic_dict = make_acoustic_dict(input_dir, "_avgd.csv", data_type="asist")
+    acoustic_dict = make_acoustic_dict(
+        input_dir, "_avgd.csv", data_type="asist"
+    )
 
     print("Acoustic dict created")
 
@@ -128,12 +135,11 @@ if __name__ == "__main__":
     data = AsistDataset(
         acoustic_dict,
         glove,
-        cols_to_skip=cols_to_skip,
         ys_path=y_path,
         splits=3,
         sequence_prep="pad",
         truncate_from="start",
-        norm=None
+        norm=None,
     )
     print("Dataset created")
 
@@ -141,7 +147,9 @@ if __name__ == "__main__":
     # get set of pretrained embeddings and their shape
     pretrained_embeddings = glove.data
     num_embeddings = pretrained_embeddings.size()[0]
-    print("shape of pretrained embeddings is: {0}".format(data.glove.data.size()))
+    print(
+        f"shape of pretrained embeddings is: {data.glove.data.size()}"
+    )
 
     # get the number of utterances per data point
     num_utts = data.x_acoustic.shape[1]
@@ -161,7 +169,9 @@ if __name__ == "__main__":
 
             # use each train-val=test split in a separate training routine
             for split in range(data.splits):
-                print("Now starting training/tuning with split {0} held out".format(split))
+                print(
+                    f"Now starting training/tuning with split {split} held out"
+                )
 
                 # create instance of model
                 bimodal_trial = EarlyFusionMultimodalModel(
@@ -189,12 +199,16 @@ if __name__ == "__main__":
                 training_data = data.remaining_splits
 
                 # create a a save path and file for the model
-                model_save_file = "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
-                    model_type, model_params.batch_size, model_params.fc_hidden_dim, lr
+                model_save_file = (
+                    "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
+                        model_type, params.batch_size, params.fc_hidden_dim, lr
+                    )
                 )
 
                 # make the train state to keep track of model training/development
-                train_state = make_train_state(lr, model_save_path, model_save_file)
+                train_state = make_train_state(
+                    lr, model_save_path, model_save_file
+                )
 
                 load_path = model_save_path + model_save_file
 
@@ -212,7 +226,6 @@ if __name__ == "__main__":
                     use_speaker=model_params.use_speaker,
                     use_gender=model_params.use_gender,
                     scheduler=None,
-                    binary=True
                 )
 
                 # plot the loss and accuracy curves

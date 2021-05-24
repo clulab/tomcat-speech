@@ -22,13 +22,13 @@ class AsistDataset(Dataset):
         self,
         acoustic_dict,
         glove,
-        ys_path,
+        ys_path=None,
         splits=3,
-        cols_to_skip=5,
         norm="minmax",
         sequence_prep=None,
         truncate_from="start",
         add_avging=False,
+        transcript_type="zoom"
     ):
         """
         :param acoustic_dict: dict of {(sid, call) : data}
@@ -39,13 +39,30 @@ class AsistDataset(Dataset):
         :param sequence_prep: the way sequences are handled, options: truncate, pad, None
         :param truncate_from: whether to truncate from start or end of file
         """
-        self.cols_to_skip = cols_to_skip
-        self.acoustic_dict = OrderedDict(acoustic_dict)
+        self.cols_to_skip = 2 if transcript_type.lower() == "zoom" else 4
+        self.acoustic_dict = OrderedDict({key: df[["speaker",
+                "utt",
+                "pcm_loudness_sma",
+                "F0finEnv_sma",
+                "voicingFinalUnclipped_sma",
+                "jitterLocal_sma",
+                "shimmerLocal_sma",
+                "pcm_loudness_sma_de",
+                "F0finEnv_sma_de",
+                "voicingFinalUnclipped_sma_de",
+                "jitterLocal_sma_de",
+                "shimmerLocal_sma_de"]] for key, df in acoustic_dict.items()})
         self.glove = glove
-        self.ys_df = pd.read_csv(ys_path)
+        if ys_path is not None:
+            self.ys_df = pd.read_csv(ys_path)
+            self.valid_files = self.ys_df["sid"].tolist()
+        else:
+            self.ys_df = None
+            self.valid_files = [key[0] for key in self.acoustic_dict.keys()]
         self.norm = norm
         self.sequence_prep = sequence_prep
         self.truncate_from = truncate_from
+
         self.add_avging = add_avging
 
         if norm == "minmax":
@@ -54,21 +71,33 @@ class AsistDataset(Dataset):
             self.min_max_scaler = MinMaxScaleRange()
             self.get_min_max_scales()
 
-        self.valid_files = self.ys_df["sid"].tolist()
         self.skipped_files = []
+        #Tests gender classifier:print('start')
 
         # self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove()
-        self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove_wd_level()
-        # self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove_utt_level()
+        #Tests gender classifierprint('end')
+        if transcript_type.lower() == "zoom":
+            self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove_utt_level()
+        else:
+            (
+                self.x_acoustic,
+                self.x_glove,
+                self.x_speaker,
+                self.x_utt_lengths,
+                #self.x_speaker_gender, #sa
+            ) = self.combine_acoustic_and_glove_wd_level()
+
         # todo: we should get gender info on participants OR predict it
+        # add call to wrapper function that calls the gender classifier
         self.speaker_gender_data = 0
-        self.y_data = self.create_ordered_ys()
-        self.y_data = self.create_ordered_ys_utt_level(num_utts=len(self.x_utt_lengths))
-        self.data = self.combine_xs_and_ys()
+        if self.ys_df is not None:
+            self.y_data = self.create_ordered_ys()
+            self.y_data = self.create_ordered_ys_utt_level(
+                num_utts=len(self.x_utt_lengths)
+            )
+        self.data = self.combine_data()
         self.splits = splits
         self.data_for_model_input = self.get_data_splits()
-
-
 
         # for working with an individual split
         self.current_split = []
@@ -79,11 +108,14 @@ class AsistDataset(Dataset):
         self.set_split(0)
 
     def get_min_max_scales(self):
-        for call in self.acoustic_dict.values():
-            for row in call.itertuples():
+        for df in self.acoustic_dict.values():
+
+            for row in df_subset.itertuples():
                 for i, wd in enumerate(row):
                     if i >= self.cols_to_skip + 1:
-                        self.min_max_scaler.update((i - (self.cols_to_skip + 1)), wd)
+                        self.min_max_scaler.update(
+                            (i - (self.cols_to_skip + 1)), wd
+                        )
 
     def __len__(self):
         return len(self.current_split)
@@ -105,7 +137,9 @@ class AsistDataset(Dataset):
             for key, val in self.data_for_model_input.items()
             if (key != n and key != prev)
         ]
-        self.remaining_splits = functools.reduce(operator.iconcat, remaining_splits, [])
+        self.remaining_splits = functools.reduce(
+            operator.iconcat, remaining_splits, []
+        )
 
     def get_data_splits(self):
         data_dict = {}
@@ -161,13 +195,19 @@ class AsistDataset(Dataset):
             smallest = self.truncate_seq()
 
         # get the longest utterance
-        longest_utt = get_longest_utterance_asist([item for key, item in self.acoustic_dict.items()
-                                                   if key[0] in self.valid_files])
+
+        longest_utt = get_longest_utterance_asist(
+            [
+                item
+                for key, item in self.acoustic_dict.items()
+                if key[0] in self.valid_files
+            ]
+        )
 
         speaker_list = []
         for key, item in self.acoustic_dict.items():
             if key[0] in self.valid_files:
-                speakers = set(item['speaker'])
+                speakers = set(item["speaker"])
                 speaker_list.extend([str(item) for item in speakers])
 
         all_speakers = sorted(list(set(speaker_list)))
@@ -187,7 +227,7 @@ class AsistDataset(Dataset):
                     ordered_speakers.append(all_speakers.index(spkr))
 
                     # get the word
-                    utt = clean_up_word(row['utt']).lower()
+                    utt = clean_up_word(row["utt"]).lower()
                     utt_wds = [0] * longest_utt
                     wds = [wd for wd in utt.strip().split(" ")]
                     utt_lengths.append(len(wds))
@@ -266,13 +306,18 @@ class AsistDataset(Dataset):
             smallest = self.truncate_seq()
 
         # get the longest utterance
-        longest_utt = get_longest_aws_utterance_asist([item for key, item in self.acoustic_dict.items()
-                                                   if key[0] in self.valid_files])
+        longest_utt = get_longest_aws_utterance_asist(
+            [
+                item
+                for key, item in self.acoustic_dict.items()
+                if key[0] in self.valid_files
+            ]
+        )
 
         speaker_list = []
         for key, item in self.acoustic_dict.items():
             if key[0] in self.valid_files:
-                speakers = set(item['speaker'])
+                speakers = set(item["speaker"])
                 speaker_list.extend([str(item) for item in speakers])
 
         all_speakers = sorted(list(set(speaker_list)))
@@ -297,13 +342,13 @@ class AsistDataset(Dataset):
                     row_vals = row.values[start_idx:].tolist()
 
                     # get the word
-                    wd = clean_up_word(row['word']).lower()
+                    wd = clean_up_word(row["word"]).lower()
                     if wd in self.glove.wd2idx.keys():
                         wd_idx = self.glove.wd2idx[wd]
                     else:
                         wd_idx = self.glove.wd2idx["<UNK>"]
                     # if we are still in the same utterance
-                    if utt_num == row['utt_num']:
+                    if utt_num == row["utt_num"]:
                         # add the word
                         utt_wds[wd_in_utt] = wd_idx
                         wd_in_utt += 1
@@ -403,14 +448,19 @@ class AsistDataset(Dataset):
             smallest = self.truncate_seq()
 
         # get the longest utterance
-        longest_utt = get_longest_utterance_asist([item for key, item in self.acoustic_dict.items()
-                                                   if key[0] in self.valid_files])
+        longest_utt = get_longest_utterance_asist(
+            [
+                item
+                for key, item in self.acoustic_dict.items()
+                if key[0] in self.valid_files
+            ]
+        )
 
         # iterate through items in the acoustic dict
         for key, item in self.acoustic_dict.items():
             # if the item has gold data
             if key[0] in self.valid_files:
-                speaker_set = set(item['speaker'])
+                speaker_set = set(item["speaker"])
                 all_speakers = sorted([str(item) for item in speaker_set])
                 # print(all_speakers)
                 # sys.exit()
@@ -437,7 +487,7 @@ class AsistDataset(Dataset):
                     # sys.exit()
 
                     # get the word
-                    utt = clean_up_word(row['utt']).lower()
+                    utt = clean_up_word(row["utt"]).lower()
                     utt_wds = [0] * longest_utt
                     wds = [wd for wd in utt.strip().split(" ")]
                     intermediate_utt_lengths.append(len(wds))
@@ -472,7 +522,9 @@ class AsistDataset(Dataset):
                 else:
                     acoustic_data.append(torch.tensor(intermediate_acoustic))
                     ordered_words.append(torch.tensor(intermediate_wds))
-                    ordered_speakers.append(torch.tensor(intermediate_speakers))
+                    ordered_speakers.append(
+                        torch.tensor(intermediate_speakers)
+                    )
                     utt_lengths.append(torch.tensor(intermediate_utt_lengths))
 
         # use zero-padding to make all sequences the same length
@@ -493,11 +545,15 @@ class AsistDataset(Dataset):
             if self.truncate_from == "start":
                 acoustic_data = [item[-smallest:] for item in acoustic_data]
                 ordered_words = [item[-smallest:] for item in ordered_words]
-                ordered_speakers = [item[-smallest:] for item in ordered_speakers]
+                ordered_speakers = [
+                    item[-smallest:] for item in ordered_speakers
+                ]
             else:
                 acoustic_data = [item[:smallest] for item in acoustic_data]
                 ordered_words = [item[:smallest] for item in ordered_words]
-                ordered_speakers = [item[:smallest] for item in ordered_speakers]
+                ordered_speakers = [
+                    item[:smallest] for item in ordered_speakers
+                ]
 
             acoustic_data = torch.tensor(acoustic_data)
             ordered_words = torch.tensor(ordered_words)
@@ -545,17 +601,39 @@ class AsistDataset(Dataset):
         ordered_ys = [random.randint(0, 1) for _ in range(num_utts)]
         return ordered_ys
 
-    def combine_xs_and_ys(self):
-        # combine all x and y data into list of tuples for easier access with DataLoader
+    def combine_data(self):
+        # combine all x and y data into list of tuples
+        # if no gold labels, only combine x data
         all_data = []
 
-        for i, item in enumerate(self.x_acoustic):
-            # print(i)
-            # todo: this should be fixed earlier in code
-            acoustic_length = len(item)
-            # add in
-            all_data.append((item, self.x_glove[i], self.x_speaker[i], self.speaker_gender_data, self.y_data[i],
-                             self.x_utt_lengths[i], acoustic_length))
+        if self.ys_df:
+            for i, item in enumerate(self.x_acoustic):
+                # todo: this should be fixed earlier in code
+                acoustic_length = len(item)
+                all_data.append(
+                    (
+                        item,
+                        self.x_glove[i],
+                        self.x_speaker[i],
+                        self.speaker_gender_data,
+                        self.y_data[i],
+                        self.x_utt_lengths[i],
+                        acoustic_length,
+                    )
+                )
+        else:
+            for i, item in enumerate(self.x_acoustic):
+                acoustic_length = len(item)
+                all_data.append(
+                    (
+                        item,
+                        self.x_glove[i],
+                        self.x_speaker[i],
+                        self.speaker_gender_data,
+                        self.x_utt_lengths[i],
+                        acoustic_length,
+                    )
+                )
 
         return all_data
 
@@ -594,12 +672,14 @@ class AsistDataset(Dataset):
 def get_longest_utterance_asist(pd_dataframes):
     """
     Get the longest utterance in the dataset
+    Used with data from Zoom that has column 'utt' that
+    contains each utterance as a single string
     :param pd_dataframes: the dataframes for the dataset
     :return:
     """
     max_length = 0
     for item in pd_dataframes:
-        utts = item['utt']
+        utts = item["utt"]
         for item in utts:
             item = clean_up_word(item.lower())
             item = [wd for wd in item.strip().split(" ")]
@@ -617,7 +697,7 @@ def get_longest_aws_utterance_asist(pd_dataframes):
     """
     utt_len_counter = {}
     for item in pd_dataframes:
-        utt_nums = item['utt_num']
+        utt_nums = item["utt_num"]
         for item in utt_nums:
             if item not in utt_len_counter:
                 utt_len_counter[item] = 1

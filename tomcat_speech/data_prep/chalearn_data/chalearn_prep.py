@@ -11,7 +11,9 @@ import torch
 from torch import nn
 from torchtext.data import get_tokenizer
 
-from tomcat_speech.data_prep import ExtractAudio
+from tomcat_speech.data_prep.audio_extraction import (
+    ExtractAudio
+)
 import pandas as pd
 
 from tomcat_speech.data_prep.data_prep_helpers import (
@@ -20,7 +22,10 @@ from tomcat_speech.data_prep.data_prep_helpers import (
     clean_up_word,
     transform_acoustic_item,
     get_acoustic_means)
-from tomcat_speech.data_prep.meld_data.meld_prep import run_feature_extraction
+
+from tomcat_speech.data_prep.meld_data.meld_prep import (
+    run_feature_extraction
+)
 
 
 class ChalearnPrep:
@@ -671,7 +676,7 @@ def preprocess_chalearn_data(
         # extract features using opensmile
         for audio_file in os.listdir(path_to_files):
             audio_name = audio_file.split(".wav")[0]
-            audio_save_name = str(audio_name) + "_" + acoustic_feature_set + ".csv"
+            audio_save_name = f"{str(audio_name)}_{acoustic_feature_set}.csv"
             extractor = ExtractAudio(
                 path_to_files, audio_file, acoustic_save_path, smile_path
             )
@@ -833,29 +838,9 @@ def make_acoustic_set_chalearn(
                 if avgd:
                     acoustic_holder = torch.tensor(acoustic_data)
                 elif add_avging:
-                    # acoustic_holder = torch.mean(torch.tensor(acoustic_data), dim=0)
-                    # try skipping first, size-cutoff + skip end of that cutoff
-                    # skip first and last 100ms (10 frames)
-                    # acoustic_holder = torch.mean(torch.tensor(acoustic_data)[10:min(1491, len(acoustic_data) - 9)], dim=0)
-                    # try skipping first and last 5%
                     data_len = len(acoustic_data)
-                    # acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.05):math.ceil(data_len * 0.95)], dim=0)
-                    # try skipping first and last 25% 15%
-                    # acoustic_holder = torch.rand(76 * 3)
+                    # try skipping first and last 25%
                     acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
-                    # acoustic_holder = torch.cat((acoustic_holder, acoustic_holder, acoustic_holder), 0)
-                    # try using means, medians, stdev
-                    # acoustic_max = torch.max(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0).values
-                    # acoustic_min = torch.min(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0).values
-                    # acoustic_mean = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
-                    # acoustic_med = torch.median(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)[0]
-                    # acoustic_stdev = torch.std(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
-                    # acoustic_meanplus = acoustic_mean + acoustic_stdev
-                    # acoustic_meanminus = acoustic_mean - acoustic_stdev
-                    # acoustic_holder = torch.cat(
-                    #     (acoustic_mean, acoustic_max, acoustic_min, acoustic_meanplus, acoustic_meanminus), dim=0)
-                    # acoustic_holder = torch.cat((acoustic_means, acoustic_meanplus, acoustic_meanminus))
-                    # acoustic_holder = torch.cat((acoustic_means, acoustic_med, acoustic_stdev), 0)
             # add features as tensor to acoustic data
             all_acoustic.append(acoustic_holder)
 

@@ -12,9 +12,12 @@ sys.path.append("/work/johnculnan")
 
 # from sklearn.model_selection import train_test_split
 from tomcat_speech.models.train_and_test_models import *
+from tomcat_speech.models.plot_training import *
+
 from tomcat_speech.models.input_models import *
 from tomcat_speech.data_prep.data_prep_helpers import *
 from tomcat_speech.data_prep.meld_data.meld_prep import *
+from tomcat_speech.data_prep.mustard_data.mustard_prep import MustardPrep
 
 if __name__ == "__main__":
     # get path to saved mode

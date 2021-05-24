@@ -15,7 +15,9 @@ class MultichannelCNN(nn.Module):
         # input dimensions
         self.text_dim = params.text_dim
         self.audio_dim = params.audio_dim
-        self.in_channels = params.text_dim + params.audio_dim + params.spkr_emb_dim
+        self.in_channels = (
+            params.text_dim + params.audio_dim + params.spkr_emb_dim
+        )
 
         # number of classes
         self.output_dim = params.output_dim
@@ -54,11 +56,17 @@ class MultichannelCNN(nn.Module):
             self.pretrained_embeddings = True
 
         # convolutional layers and max pool of outputs
-        self.conv1 = nn.Conv1d(self.in_channels, self.out_channels, self.k1_size)
+        self.conv1 = nn.Conv1d(
+            self.in_channels, self.out_channels, self.k1_size
+        )
         self.maxconv1 = nn.MaxPool1d(kernel_size=self.k1_size)
-        self.conv2 = nn.Conv1d(self.in_channels, self.out_channels, self.k2_size)
+        self.conv2 = nn.Conv1d(
+            self.in_channels, self.out_channels, self.k2_size
+        )
         self.maxconv2 = nn.MaxPool1d(kernel_size=self.k2_size)
-        self.conv3 = nn.Conv1d(self.in_channels, self.out_channels, self.k3_size)
+        self.conv3 = nn.Conv1d(
+            self.in_channels, self.out_channels, self.k3_size
+        )
         self.maxconv3 = nn.MaxPool1d(kernel_size=self.k3_size)
 
         # fully connected layers
@@ -77,7 +85,9 @@ class MultichannelCNN(nn.Module):
         # concatenate and perform permutation on input data
         if speaker_input is not None:
             spk_embs = self.speaker_embeddings(speaker_input)
-            inputs = torch.cat((acoustic_input, embs, spk_embs), 2).permute(0, 2, 1)
+            inputs = torch.cat((acoustic_input, embs, spk_embs), 2).permute(
+                0, 2, 1
+            )
         else:
             inputs = torch.cat((acoustic_input, embs), 2).permute(0, 2, 1)
 
@@ -94,7 +104,9 @@ class MultichannelCNN(nn.Module):
         intermediate = torch.cat((feats1, feats2, feats3), 1)
 
         # feed this through fully connected layer
-        fc1_out = F.leaky_relu(self.fc1((F.dropout(intermediate, self.dropout))))
+        fc1_out = F.leaky_relu(
+            self.fc1((F.dropout(intermediate, self.dropout)))
+        )
         output = self.fc2(F.dropout(fc1_out, self.dropout))
 
         # get predictions
@@ -112,14 +124,18 @@ class BimodalCNN(nn.Module):
     output_dim : length of output vector
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None):
+    def __init__(
+        self, params, num_embeddings=None, pretrained_embeddings=None
+    ):
         super(BimodalCNN, self).__init__()
         # set dimensions of input
         self.text_dim = params.text_dim
         self.audio_dim = params.audio_dim
         self.num_embeddings = num_embeddings
         if num_embeddings is not None:
-            self.in_channels = params.text_dim + params.audio_dim + params.spkr_emb_dim
+            self.in_channels = (
+                params.text_dim + params.audio_dim + params.spkr_emb_dim
+            )
         else:
             self.in_channels = params.audio_dim + params.spkr_emb_dim
 
@@ -149,7 +165,10 @@ class BimodalCNN(nn.Module):
         if num_embeddings is not None:
             if pretrained_embeddings is None:
                 self.embedding = nn.Embedding(
-                    num_embeddings, self.text_dim, params.padding_idx, max_norm=1.0
+                    num_embeddings,
+                    self.text_dim,
+                    params.padding_idx,
+                    max_norm=1.0,
                 )
                 self.pretrained_embeddings = False
             else:
@@ -178,16 +197,25 @@ class BimodalCNN(nn.Module):
         # add optional layers as required
         if params.num_layers > 1:
             self.conv2 = nn.Conv1d(
-                params.out_channels, params.out_channels, self.kernel_size, stride=2
+                params.out_channels,
+                params.out_channels,
+                self.kernel_size,
+                stride=2,
             )
             if params.num_layers == 3:
                 self.conv3 = nn.Conv1d(
-                    params.out_channels, params.out_channels, self.kernel_size, stride=1
+                    params.out_channels,
+                    params.out_channels,
+                    self.kernel_size,
+                    stride=1,
                 )
             elif params.num_layers == 4:
                 # different stride in layer 3 if using 4 layers
                 self.conv3 = nn.Conv1d(
-                    params.out_channels, params.out_channels, self.kernel_size, stride=2
+                    params.out_channels,
+                    params.out_channels,
+                    self.kernel_size,
+                    stride=2,
                 )
                 self.conv4 = nn.Conv1d(
                     params.out_channels, params.out_channels, self.kernel_size
@@ -208,14 +236,18 @@ class BimodalCNN(nn.Module):
             if speaker_input is not None:
                 # if present, create speaker embedding + add to
                 spk_embs = self.speaker_embeddings(speaker_input)
-                inputs = torch.cat((acoustic_input, embs, spk_embs), 2).permute(0, 2, 1)
+                inputs = torch.cat(
+                    (acoustic_input, embs, spk_embs), 2
+                ).permute(0, 2, 1)
             else:
                 # else, just concatenate acoustic input + word embeddings
                 inputs = torch.cat((acoustic_input, embs), 2).permute(0, 2, 1)
         else:
             if speaker_input is not None:
                 spk_embs = self.speaker_embeddings(speaker_input)
-                inputs = torch.cat((acoustic_input, spk_embs), 2).permute(0, 2, 1)
+                inputs = torch.cat((acoustic_input, spk_embs), 2).permute(
+                    0, 2, 1
+                )
             else:
                 inputs = acoustic_input.permute(0, 2, 1)
 
@@ -327,14 +359,18 @@ class UttLevelBimodalCNN(nn.Module):
     output_dim : length of output vector
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None):
+    def __init__(
+        self, params, num_embeddings=None, pretrained_embeddings=None
+    ):
         super(UttLevelBimodalCNN, self).__init__()
         # set dimensions of input
         self.text_dim = params.text_dim
         self.audio_dim = params.audio_dim
         self.num_embeddings = num_embeddings
         if num_embeddings is not None:
-            self.in_channels = params.text_dim + params.audio_dim + params.spkr_emb_dim
+            self.in_channels = (
+                params.text_dim + params.audio_dim + params.spkr_emb_dim
+            )
         else:
             self.in_channels = params.audio_dim + params.spkr_emb_dim
 
@@ -364,7 +400,10 @@ class UttLevelBimodalCNN(nn.Module):
         if num_embeddings is not None:
             if pretrained_embeddings is None:
                 self.embedding = nn.Embedding(
-                    num_embeddings, self.text_dim, params.padding_idx, max_norm=1.0
+                    num_embeddings,
+                    self.text_dim,
+                    params.padding_idx,
+                    max_norm=1.0,
                 )
                 self.pretrained_embeddings = False
             else:
@@ -393,16 +432,25 @@ class UttLevelBimodalCNN(nn.Module):
         # add optional layers as required
         if params.num_layers > 1:
             self.conv2 = nn.Conv1d(
-                params.out_channels, params.out_channels, self.kernel_size, stride=2
+                params.out_channels,
+                params.out_channels,
+                self.kernel_size,
+                stride=2,
             )
             if params.num_layers == 3:
                 self.conv3 = nn.Conv1d(
-                    params.out_channels, params.out_channels, self.kernel_size, stride=1
+                    params.out_channels,
+                    params.out_channels,
+                    self.kernel_size,
+                    stride=1,
                 )
             elif params.num_layers == 4:
                 # different stride in layer 3 if using 4 layers
                 self.conv3 = nn.Conv1d(
-                    params.out_channels, params.out_channels, self.kernel_size, stride=2
+                    params.out_channels,
+                    params.out_channels,
+                    self.kernel_size,
+                    stride=2,
                 )
                 self.conv4 = nn.Conv1d(
                     params.out_channels, params.out_channels, self.kernel_size
@@ -423,14 +471,18 @@ class UttLevelBimodalCNN(nn.Module):
             if speaker_input is not None:
                 # if present, create speaker embedding + add to
                 spk_embs = self.speaker_embeddings(speaker_input)
-                inputs = torch.cat((acoustic_input, embs, spk_embs), 2).permute(0, 2, 1)
+                inputs = torch.cat(
+                    (acoustic_input, embs, spk_embs), 2
+                ).permute(0, 2, 1)
             else:
                 # else, just concatenate acoustic input + word embeddings
                 inputs = torch.cat((acoustic_input, embs), 2).permute(0, 2, 1)
         else:
             if speaker_input is not None:
                 spk_embs = self.speaker_embeddings(speaker_input)
-                inputs = torch.cat((acoustic_input, spk_embs), 2).permute(0, 2, 1)
+                inputs = torch.cat((acoustic_input, spk_embs), 2).permute(
+                    0, 2, 1
+                )
             else:
                 inputs = acoustic_input.permute(0, 2, 1)
 
