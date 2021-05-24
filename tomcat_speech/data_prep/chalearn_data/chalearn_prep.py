@@ -11,9 +11,7 @@ import torch
 from torch import nn
 from torchtext.data import get_tokenizer
 
-from tomcat_speech.data_prep.audio_extraction import (
-    ExtractAudio
-)
+from tomcat_speech.data_prep.audio_extraction import ExtractAudio
 import pandas as pd
 
 from tomcat_speech.data_prep.data_prep_helpers import (
@@ -21,11 +19,10 @@ from tomcat_speech.data_prep.data_prep_helpers import (
     get_gender_avgs,
     clean_up_word,
     transform_acoustic_item,
-    get_acoustic_means)
-
-from tomcat_speech.data_prep.meld_data.meld_prep import (
-    run_feature_extraction
+    get_acoustic_means,
 )
+
+from tomcat_speech.data_prep.meld_data.meld_prep import run_feature_extraction
 
 
 class ChalearnPrep:
@@ -43,7 +40,7 @@ class ChalearnPrep:
         add_avging=True,
         avgd=False,
         pred_type="max_class",
-        utts_file_name="gold_and_utts.tsv"
+        utts_file_name="gold_and_utts.tsv",
     ):
         self.path = chalearn_path
         self.train_path = chalearn_path + "/train"
@@ -114,8 +111,8 @@ class ChalearnPrep:
         self.longest_acoustic = 1500  # set to 15 seconds
         # self.longest_acoustic = get_max_num_acoustic_frames(
         #     list(self.train_dict.values())
-            # + list(self.dev_dict.values())
-            # + list(self.test_dict.values())
+        # + list(self.dev_dict.values())
+        # + list(self.test_dict.values())
         # )
 
         print("Finalizing acoustic organization")
@@ -189,9 +186,7 @@ class ChalearnPrep:
             self.test_y_inter,
             self.test_utt_lengths,
             self.test_audio_ids,
-        ) = self.make_data_tensors(
-            self.test_data_file, self.test_usable_utts, glove
-        )
+        ) = self.make_data_tensors(self.test_data_file, self.test_usable_utts, glove)
 
         # set trait weights
         # todo: determine how we're binning and get class weights
@@ -200,7 +195,9 @@ class ChalearnPrep:
 
         # acoustic feature normalization based on train
         print("starting acoustic means for chalearn")
-        self.all_acoustic_means, self.all_acoustic_deviations = get_acoustic_means(self.train_acoustic)
+        self.all_acoustic_means, self.all_acoustic_deviations = get_acoustic_means(
+            self.train_acoustic
+        )
 
         print("starting male acoustic means for chalearn")
         self.male_acoustic_means, self.male_deviations = get_gender_avgs(
@@ -215,9 +212,19 @@ class ChalearnPrep:
 
         # get the weights for chalearn personality traits
         if pred_type == "max_class":
-            all_train_ys = [[self.train_y_consc[i], self.train_y_openn[i], self.train_y_agree[i],
-                             self.train_y_neur[i], self.train_y_extr[i]] for i in range(len(self.train_y_consc))]
-            self.train_ys = torch.tensor([item.index(max(item)) for item in all_train_ys])
+            all_train_ys = [
+                [
+                    self.train_y_consc[i],
+                    self.train_y_openn[i],
+                    self.train_y_agree[i],
+                    self.train_y_neur[i],
+                    self.train_y_extr[i],
+                ]
+                for i in range(len(self.train_y_consc))
+            ]
+            self.train_ys = torch.tensor(
+                [item.index(max(item)) for item in all_train_ys]
+            )
             self.trait_weights = get_class_weights(self.train_ys)
 
         elif pred_type == "high-low" or pred_type == "binary":
@@ -256,47 +263,113 @@ class ChalearnPrep:
         elif pred_type == "high-med-low" or pred_type == "ternary":
             # get the locations you want
             # here we want 1/3 of the data and 2/3 of the data
-            q_measure = torch.tensor([.33, .67])
+            q_measure = torch.tensor([0.33, 0.67])
 
             # get the 1/3 and 2/3 quantiles
-            consc_onethird, consc_twothird = torch.quantile(self.train_y_consc, q_measure)
-            openn_onethird, openn_twothird = torch.quantile(self.train_y_openn, q_measure)
-            agree_onethird, agree_twothird = torch.quantile(self.train_y_agree, q_measure)
+            consc_onethird, consc_twothird = torch.quantile(
+                self.train_y_consc, q_measure
+            )
+            openn_onethird, openn_twothird = torch.quantile(
+                self.train_y_openn, q_measure
+            )
+            agree_onethird, agree_twothird = torch.quantile(
+                self.train_y_agree, q_measure
+            )
             extr_onethird, extr_twothird = torch.quantile(self.train_y_extr, q_measure)
             neur_onethird, neur_twothird = torch.quantile(self.train_y_neur, q_measure)
 
-            self.train_y_consc = convert_ys(self.train_y_consc, pred_type, one_third=consc_onethird,
-                                            two_thirds=consc_twothird)
-            self.train_y_openn = convert_ys(self.train_y_consc, pred_type, one_third=openn_onethird,
-                                            two_thirds=openn_twothird)
-            self.train_y_agree = convert_ys(self.train_y_agree, pred_type, one_third=agree_onethird,
-                                            two_thirds=agree_twothird)
-            self.train_y_extr = convert_ys(self.train_y_extr, pred_type, one_third=extr_onethird,
-                                           two_thirds=extr_twothird)
-            self.train_y_neur = convert_ys(self.train_y_neur, pred_type, one_third=neur_onethird,
-                                           two_thirds=neur_twothird)
+            self.train_y_consc = convert_ys(
+                self.train_y_consc,
+                pred_type,
+                one_third=consc_onethird,
+                two_thirds=consc_twothird,
+            )
+            self.train_y_openn = convert_ys(
+                self.train_y_consc,
+                pred_type,
+                one_third=openn_onethird,
+                two_thirds=openn_twothird,
+            )
+            self.train_y_agree = convert_ys(
+                self.train_y_agree,
+                pred_type,
+                one_third=agree_onethird,
+                two_thirds=agree_twothird,
+            )
+            self.train_y_extr = convert_ys(
+                self.train_y_extr,
+                pred_type,
+                one_third=extr_onethird,
+                two_thirds=extr_twothird,
+            )
+            self.train_y_neur = convert_ys(
+                self.train_y_neur,
+                pred_type,
+                one_third=neur_onethird,
+                two_thirds=neur_twothird,
+            )
 
-            self.dev_y_consc = convert_ys(self.dev_y_consc, pred_type, one_third=consc_onethird,
-                                            two_thirds=consc_twothird)
-            self.dev_y_openn = convert_ys(self.dev_y_openn, pred_type, one_third=openn_onethird,
-                                            two_thirds=openn_twothird)
-            self.dev_y_agree = convert_ys(self.dev_y_agree, pred_type, one_third=agree_onethird,
-                                            two_thirds=agree_twothird)
-            self.dev_y_extr = convert_ys(self.dev_y_extr, pred_type, one_third=extr_onethird,
-                                           two_thirds=extr_twothird)
-            self.dev_y_neur = convert_ys(self.dev_y_neur, pred_type, one_third=neur_onethird,
-                                           two_thirds=neur_twothird)
+            self.dev_y_consc = convert_ys(
+                self.dev_y_consc,
+                pred_type,
+                one_third=consc_onethird,
+                two_thirds=consc_twothird,
+            )
+            self.dev_y_openn = convert_ys(
+                self.dev_y_openn,
+                pred_type,
+                one_third=openn_onethird,
+                two_thirds=openn_twothird,
+            )
+            self.dev_y_agree = convert_ys(
+                self.dev_y_agree,
+                pred_type,
+                one_third=agree_onethird,
+                two_thirds=agree_twothird,
+            )
+            self.dev_y_extr = convert_ys(
+                self.dev_y_extr,
+                pred_type,
+                one_third=extr_onethird,
+                two_thirds=extr_twothird,
+            )
+            self.dev_y_neur = convert_ys(
+                self.dev_y_neur,
+                pred_type,
+                one_third=neur_onethird,
+                two_thirds=neur_twothird,
+            )
 
-            self.test_y_consc = convert_ys(self.test_y_consc, pred_type, one_third=consc_onethird,
-                                            two_thirds=consc_twothird)
-            self.test_y_openn = convert_ys(self.test_y_openn, pred_type, one_third=openn_onethird,
-                                            two_thirds=openn_twothird)
-            self.test_y_agree = convert_ys(self.test_y_agree, pred_type, one_third=agree_onethird,
-                                            two_thirds=agree_twothird)
-            self.test_y_extr = convert_ys(self.test_y_extr, pred_type, one_third=extr_onethird,
-                                           two_thirds=extr_twothird)
-            self.test_y_neur = convert_ys(self.test_y_neur, pred_type, one_third=neur_onethird,
-                                           two_thirds=neur_twothird)
+            self.test_y_consc = convert_ys(
+                self.test_y_consc,
+                pred_type,
+                one_third=consc_onethird,
+                two_thirds=consc_twothird,
+            )
+            self.test_y_openn = convert_ys(
+                self.test_y_openn,
+                pred_type,
+                one_third=openn_onethird,
+                two_thirds=openn_twothird,
+            )
+            self.test_y_agree = convert_ys(
+                self.test_y_agree,
+                pred_type,
+                one_third=agree_onethird,
+                two_thirds=agree_twothird,
+            )
+            self.test_y_extr = convert_ys(
+                self.test_y_extr,
+                pred_type,
+                one_third=extr_onethird,
+                two_thirds=extr_twothird,
+            )
+            self.test_y_neur = convert_ys(
+                self.test_y_neur,
+                pred_type,
+                one_third=neur_onethird,
+                two_thirds=neur_twothird,
+            )
 
             # get weights for each trait
             self.consc_weights = get_class_weights(self.train_y_consc)
@@ -350,20 +423,25 @@ class ChalearnPrep:
                     )
                 )
             else:
-                ys = [self.train_y_extr[i], self.train_y_neur[i],
-                      self.train_y_agree[i], self.train_y_openn[i],
-                      self.train_y_consc[i]]
+                ys = [
+                    self.train_y_extr[i],
+                    self.train_y_neur[i],
+                    self.train_y_agree[i],
+                    self.train_y_openn[i],
+                    self.train_y_consc[i],
+                ]
                 item_y = ys.index(max(ys))
-                train_data.append((
-                    item_transformed,
-                    self.train_utts[i],
-                    0,
-                    self.train_genders[i],
-                    torch.tensor(item_y),
-                    self.train_ethnicities[i],
-                    self.train_audio_ids[i],
-                    self.train_utt_lengths[i],
-                    self.train_acoustic_lengths[i]
+                train_data.append(
+                    (
+                        item_transformed,
+                        self.train_utts[i],
+                        0,
+                        self.train_genders[i],
+                        torch.tensor(item_y),
+                        self.train_ethnicities[i],
+                        self.train_audio_ids[i],
+                        self.train_utt_lengths[i],
+                        self.train_acoustic_lengths[i],
                     )
                 )
 
@@ -399,9 +477,13 @@ class ChalearnPrep:
                     )
                 )
             else:
-                ys = [self.dev_y_extr[i], self.dev_y_neur[i],
-                      self.dev_y_agree[i], self.dev_y_openn[i],
-                      self.dev_y_consc[i]]
+                ys = [
+                    self.dev_y_extr[i],
+                    self.dev_y_neur[i],
+                    self.dev_y_agree[i],
+                    self.dev_y_openn[i],
+                    self.dev_y_consc[i],
+                ]
                 item_y = ys.index(max(ys))
                 dev_data.append(
                     (
@@ -449,9 +531,13 @@ class ChalearnPrep:
                     )
                 )
             else:
-                ys = [self.test_y_extr[i], self.test_y_neur[i],
-                      self.test_y_agree[i], self.test_y_openn[i],
-                      self.test_y_consc[i]]
+                ys = [
+                    self.test_y_extr[i],
+                    self.test_y_neur[i],
+                    self.test_y_agree[i],
+                    self.test_y_openn[i],
+                    self.test_y_consc[i],
+                ]
                 item_y = ys.index(max(ys))
                 test_data.append(
                     (
@@ -587,7 +673,7 @@ class ChalearnPrep:
             all_conscientiousness,
             all_interview,
             utt_lengths,
-            all_audio_ids
+            all_audio_ids,
         )
 
 
@@ -606,8 +692,7 @@ def convert_chalearn_pickle_to_json(path, file):
         json.dump(data, jfile)
 
 
-def convert_ys(ys, conversion="high-low", mean_y=None,
-               one_third=None, two_thirds=None):
+def convert_ys(ys, conversion="high-low", mean_y=None, one_third=None, two_thirds=None):
     """
     Convert a set of ys into binary high-low labels
     or ternary high-medium-low labels
@@ -840,7 +925,12 @@ def make_acoustic_set_chalearn(
                 elif add_avging:
                     data_len = len(acoustic_data)
                     # try skipping first and last 25%
-                    acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
+                    acoustic_holder = torch.mean(
+                        torch.tensor(acoustic_data)[
+                            math.floor(data_len * 0.25) : math.ceil(data_len * 0.75)
+                        ],
+                        dim=0,
+                    )
             # add features as tensor to acoustic data
             all_acoustic.append(acoustic_holder)
 

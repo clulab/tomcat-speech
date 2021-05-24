@@ -19,6 +19,7 @@ from tomcat_speech.data_prep.meld_data.meld_prep import *
 
 # import parameters for model
 import tomcat_speech.models.parameters.multitask_config as config
+
 # from models.parameters.multitask_params import model_params
 
 # set device
@@ -50,7 +51,9 @@ if __name__ == "__main__":
         print(torch.cuda.current_device())
 
     # decide if you want to use avgd feats
-    avgd_acoustic_in_network = config.model_params.avgd_acoustic or config.model_params.add_avging
+    avgd_acoustic_in_network = (
+        config.model_params.avgd_acoustic or config.model_params.add_avging
+    )
 
     # create save location
     output_path = os.path.join(
@@ -62,7 +65,7 @@ if __name__ == "__main__":
     )
 
     print(f"OUTPUT PATH:\n{output_path}")
-    
+
     # set location for pickled data (saving or loading)
     if config.USE_SERVER:
         data = "/data/nlp/corpora/MM/pickled_data"
@@ -80,7 +83,7 @@ if __name__ == "__main__":
         # todo: make this flush more frequently so you can check the bottom of the log file
         #   or make a new function e.g. print_both and have it both print and save to file
         sys.stdout = f
-        
+
         if not config.load_dataset:
             # 0. CHECK TO MAKE SURE DATA DIRECTORY EXISTS
             os.system(f'if [ ! -d "{data}" ]; then mkdir -p {data}; fi')
@@ -101,7 +104,7 @@ if __name__ == "__main__":
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
                 f_end=f"_{config.feature_set}.csv",
-                utts_file_name="mustard_google.tsv"
+                utts_file_name="mustard_google.tsv",
             )
 
             # meld_data = MeldPrep(
@@ -212,9 +215,15 @@ if __name__ == "__main__":
             # 1. Load datasets + glove object
             load_dir = config.load_path
             # uncomment if loading saved data
-            meld_train_ds = pickle.load(open(f"{data}/{load_dir}/meld_IS13_train.pickle", "rb"))
-            meld_dev_ds = pickle.load(open(f"{data}/{load_dir}/meld_IS13_dev.pickle", "rb"))
-            meld_test_ds = pickle.load(open(f"{data}/{load_dir}/meld_IS13_train.pickle", "rb"))
+            meld_train_ds = pickle.load(
+                open(f"{data}/{load_dir}/meld_IS13_train.pickle", "rb")
+            )
+            meld_dev_ds = pickle.load(
+                open(f"{data}/{load_dir}/meld_IS13_dev.pickle", "rb")
+            )
+            meld_test_ds = pickle.load(
+                open(f"{data}/{load_dir}/meld_IS13_train.pickle", "rb")
+            )
 
             print("MELD data loaded")
             #
@@ -226,9 +235,15 @@ if __name__ == "__main__":
             # print("MUSTARD data loaded")
 
             # load chalearn
-            chalearn_train_ds = pickle.load(open(f"{data}/{load_dir}/chalearn_IS13_train.pickle", "rb"))
-            chalearn_dev_ds = pickle.load(open(f"{data}/{load_dir}/chalearn_IS13_dev.pickle", "rb"))
-            chalearn_test_ds = pickle.load(open(f"{data}/{load_dir}/chalearn_IS13_test.pickle", 'rb'))
+            chalearn_train_ds = pickle.load(
+                open(f"{data}/{load_dir}/chalearn_IS13_train.pickle", "rb")
+            )
+            chalearn_dev_ds = pickle.load(
+                open(f"{data}/{load_dir}/chalearn_IS13_dev.pickle", "rb")
+            )
+            chalearn_test_ds = pickle.load(
+                open(f"{data}/{load_dir}/chalearn_IS13_test.pickle", "rb")
+            )
 
             print("ChaLearn data loaded")
 
@@ -264,7 +279,7 @@ if __name__ == "__main__":
                                     this_model_params = copy.deepcopy(
                                         config.model_params
                                     )
- 
+
                                     this_model_params.batch_size = b_size
                                     this_model_params.num_gru_layers = num_gru_layer
                                     this_model_params.short_emb_dim = short_emb_size
@@ -300,7 +315,7 @@ if __name__ == "__main__":
                                             params=this_model_params,
                                             num_embeddings=num_embeddings,
                                             pretrained_embeddings=pretrained_embeddings,
-                                            num_tasks=config.num_tasks
+                                            num_tasks=config.num_tasks,
                                         )
                                     elif config.model_type.lower() == "multitask":
                                         multitask_model = MultitaskModel(
@@ -308,11 +323,14 @@ if __name__ == "__main__":
                                             num_embeddings=num_embeddings,
                                             pretrained_embeddings=pretrained_embeddings,
                                         )
-                                    elif config.model_type.lower() == "acoustic_multitask":
+                                    elif (
+                                        config.model_type.lower()
+                                        == "acoustic_multitask"
+                                    ):
                                         multitask_model = MultitaskAcousticShared(
                                             params=this_model_params,
                                             num_embeddings=num_embeddings,
-                                            pretrained_embeddings=pretrained_embeddings
+                                            pretrained_embeddings=pretrained_embeddings,
                                         )
 
                                     optimizer = torch.optim.Adam(
@@ -405,7 +423,7 @@ if __name__ == "__main__":
                                             avgd_acoustic=avgd_acoustic_in_network,
                                             use_speaker=this_model_params.use_speaker,
                                             use_gender=this_model_params.use_gender,
-                                            optimizer2_learning_rate=lr
+                                            optimizer2_learning_rate=lr,
                                         )
                                     else:
                                         multitask_train_and_predict(

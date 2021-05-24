@@ -52,7 +52,9 @@ if __name__ == "__main__":
         print(torch.cuda.current_device())
 
     # decide if you want to use avgd feats
-    avgd_acoustic_in_network = config.model_params.avgd_acoustic or config.model_params.add_avging
+    avgd_acoustic_in_network = (
+        config.model_params.avgd_acoustic or config.model_params.add_avging
+    )
 
     # create save location
     output_path = os.path.join(
@@ -101,7 +103,7 @@ if __name__ == "__main__":
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
                 pred_type=config.chalearn_predtype,
-                f_end = f"_{config.feature_set}.csv",
+                f_end=f"_{config.feature_set}.csv",
                 # utts_file_name="chalearn_sphinx.tsv"
             )
 
@@ -122,7 +124,9 @@ if __name__ == "__main__":
             saved_dir = config.load_path
 
             # load chalearn
-            chalearn_test_ds = pickle.load(open(f"data/{saved_dir}/chalearn_IS13_test.pickle", 'rb'))
+            chalearn_test_ds = pickle.load(
+                open(f"data/{saved_dir}/chalearn_IS13_test.pickle", "rb")
+            )
             print("ChaLearn data loaded")
 
         # 3. CREATE NN
@@ -143,7 +147,7 @@ if __name__ == "__main__":
                         for output_d in config.model_params.output_dim:
                             for dout in config.model_params.dropout:
                                 for (
-                                        txt_hidden_dim
+                                    txt_hidden_dim
                                 ) in config.model_params.text_gru_hidden_dim:
 
                                     this_model_params = copy.deepcopy(
@@ -169,11 +173,14 @@ if __name__ == "__main__":
                                             num_embeddings=num_embeddings,
                                             pretrained_embeddings=pretrained_embeddings,
                                         )
-                                    elif config.model_type.lower() == "acoustic_multitask":
+                                    elif (
+                                        config.model_type.lower()
+                                        == "acoustic_multitask"
+                                    ):
                                         multitask_model = MultitaskAcousticShared(
                                             params=this_model_params,
                                             num_embeddings=num_embeddings,
-                                            pretrained_embeddings=pretrained_embeddings
+                                            pretrained_embeddings=pretrained_embeddings,
                                         )
 
                                     optimizer = torch.optim.Adam(
@@ -183,7 +190,9 @@ if __name__ == "__main__":
                                     )
 
                                     # get saved parameters
-                                    multitask_model.load_state_dict(torch.load(saved_model))
+                                    multitask_model.load_state_dict(
+                                        torch.load(saved_model)
+                                    )
                                     multitask_model.to(device)
                                     print(multitask_model)
 
@@ -199,9 +208,7 @@ if __name__ == "__main__":
                                         task_num=0,
                                     )
 
-                                    all_data_list = [
-                                        chalearn_obj
-                                    ]
+                                    all_data_list = [chalearn_obj]
 
                                     print(
                                         "Model, loss function, and optimization created"
@@ -221,5 +228,4 @@ if __name__ == "__main__":
                                         avgd_acoustic=avgd_acoustic_in_network,
                                         use_speaker=this_model_params.use_speaker,
                                         use_gender=this_model_params.use_gender,
-
                                     )

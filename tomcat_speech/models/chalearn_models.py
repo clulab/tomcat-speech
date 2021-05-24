@@ -1,7 +1,10 @@
 # models to be used specifically with the personality trait data from chalearn
 
 import torch.nn as nn
-from tomcat_speech.models.input_models import EarlyFusionMultimodalModel, PredictionLayer
+from tomcat_speech.models.input_models import (
+    EarlyFusionMultimodalModel,
+    PredictionLayer,
+)
 
 
 # class RegressionLayer(nn.Module):
@@ -71,7 +74,7 @@ class OCEANPersonalityModel(nn.Module):
         speaker_input=None,
         length_input=None,
         acoustic_len_input=None,
-        gender_input=None
+        gender_input=None,
     ):
         # call forward on base model
         final_base_layer = self.base(

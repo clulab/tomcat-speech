@@ -21,12 +21,14 @@ from tomcat_speech.data_prep.data_prep_helpers import (
     make_acoustic_set,
     transform_acoustic_item,
     create_data_folds,
-    get_acoustic_means, get_gender_avgs)
+    get_acoustic_means,
+    get_gender_avgs,
+)
 
 from tomcat_speech.data_prep.meld_data.meld_prep import (
     get_max_num_acoustic_frames,
     make_acoustic_dict_meld,
-    run_feature_extraction
+    run_feature_extraction,
 )
 import pandas as pd
 
@@ -172,7 +174,9 @@ class MustardPrep:
 
         # acoustic feature normalization based on train
         print("starting acoustic means for mustard")
-        self.all_acoustic_means, self.all_acoustic_deviations = get_acoustic_means(self.train_acoustic)
+        self.all_acoustic_means, self.all_acoustic_deviations = get_acoustic_means(
+            self.train_acoustic
+        )
 
         print("starting male acoustic means for meld")
         self.male_acoustic_means, self.male_deviations = get_gender_avgs(
@@ -186,11 +190,7 @@ class MustardPrep:
         print("acoustic means calculated for mustard")
 
         # get the data organized for input into the NNs
-        (
-            self.train_data,
-            self.dev_data,
-            self.test_data,
-        ) = self.combine_xs_and_ys()
+        (self.train_data, self.dev_data, self.test_data,) = self.combine_xs_and_ys()
 
     def combine_xs_and_ys(self):
         """
@@ -351,7 +351,14 @@ class MustardPrep:
         all_utts = all_utts.transpose(0, 1)
 
         # return data
-        return all_utts, speaker_ids, all_genders, all_sarcasm, utt_lengths, all_audio_ids
+        return (
+            all_utts,
+            speaker_ids,
+            all_genders,
+            all_sarcasm,
+            utt_lengths,
+            all_audio_ids,
+        )
 
 
 def organize_labels_from_json(jsonfile, savepath, save_name):
@@ -436,7 +443,7 @@ def get_word_counts(dataframes_list):
     # set dict
     counter_dict = {}
     for dataframe in dataframes_list:
-        all_utts = dataframe['utterance'].tolist()
+        all_utts = dataframe["utterance"].tolist()
         all_utts = " ".join(all_utts)
         all_wds = [clean_up_word(wd) for wd in str(all_utts).strip().split(" ")]
 

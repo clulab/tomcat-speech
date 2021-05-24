@@ -39,9 +39,7 @@ for item in os.listdir(trs_path):
 
             # load csv of features + csv of transcription information
             audio_df = extraction.load_feature_csv(
-                "{0}/{1}".format(
-                    save_path, "{0}.csv".format(acoustic_savename)
-                )
+                "{0}/{1}".format(save_path, "{0}.csv".format(acoustic_savename))
             )
 
             # uncomment the first time using
@@ -58,16 +56,12 @@ for item in os.listdir(trs_path):
 
             # average across words and save as new csv
             wd_avgd = extraction.avg_feats_across_words(combined)
-            wd_avgd.to_csv(
-                "{0}/{1}_avgd.csv".format(save_path, acoustic_savename)
-            )
+            wd_avgd.to_csv("{0}/{1}_avgd.csv".format(save_path, acoustic_savename))
 
         except:
             failed_list.append(item)
 
-with open(
-    "/Volumes/LIvES/multimodal_data_updated/failed_items.txt", "w"
-) as tfile:
+with open("/Volumes/LIvES/multimodal_data_updated/failed_items.txt", "w") as tfile:
     for item in failed_list:
         tfile.write(item)
         tfile.write("\n")

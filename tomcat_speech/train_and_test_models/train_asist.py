@@ -81,17 +81,13 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
         os.system("time python data_prep/asist_data/asist_prep.py")
     elif len(sys.argv) > 1 and sys.argv[1] == "mp4_data":
-        os.system(
-            "time python data_prep/asist_data/asist_prep.py mp4_data"
-        )  # fixme
+        os.system("time python data_prep/asist_data/asist_prep.py mp4_data")  # fixme
     # elif len(sys.argv) > 1 and sys.argv[1] == "use_sentiment_analyzer":
     #     os.system("time python data_prep/asist_data/asist_prep.py prep_for_sentiment_analyzer")
 
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
-    acoustic_dict = make_acoustic_dict(
-        input_dir, "_avgd.csv", data_type="asist"
-    )
+    acoustic_dict = make_acoustic_dict(input_dir, "_avgd.csv", data_type="asist")
 
     print("Acoustic dict created")
 
@@ -147,9 +143,7 @@ if __name__ == "__main__":
     # get set of pretrained embeddings and their shape
     pretrained_embeddings = glove.data
     num_embeddings = pretrained_embeddings.size()[0]
-    print(
-        f"shape of pretrained embeddings is: {data.glove.data.size()}"
-    )
+    print(f"shape of pretrained embeddings is: {data.glove.data.size()}")
 
     # get the number of utterances per data point
     num_utts = data.x_acoustic.shape[1]
@@ -169,9 +163,7 @@ if __name__ == "__main__":
 
             # use each train-val=test split in a separate training routine
             for split in range(data.splits):
-                print(
-                    f"Now starting training/tuning with split {split} held out"
-                )
+                print(f"Now starting training/tuning with split {split} held out")
 
                 # create instance of model
                 bimodal_trial = EarlyFusionMultimodalModel(
@@ -184,9 +176,7 @@ if __name__ == "__main__":
                 loss_func = nn.BCELoss()
                 # loss_func = nn.CrossEntropyLoss()
                 optimizer = torch.optim.Adam(
-                    lr=lr,
-                    params=bimodal_trial.parameters(),
-                    weight_decay=wd,
+                    lr=lr, params=bimodal_trial.parameters(), weight_decay=wd,
                 )
 
                 print("Model, loss function, and optimization created")
@@ -199,16 +189,12 @@ if __name__ == "__main__":
                 training_data = data.remaining_splits
 
                 # create a a save path and file for the model
-                model_save_file = (
-                    "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
-                        model_type, params.batch_size, params.fc_hidden_dim, lr
-                    )
+                model_save_file = "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
+                    model_type, params.batch_size, params.fc_hidden_dim, lr
                 )
 
                 # make the train state to keep track of model training/development
-                train_state = make_train_state(
-                    lr, model_save_path, model_save_file
-                )
+                train_state = make_train_state(lr, model_save_path, model_save_file)
 
                 load_path = model_save_path + model_save_file
 

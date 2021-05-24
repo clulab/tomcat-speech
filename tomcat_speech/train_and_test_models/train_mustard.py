@@ -63,7 +63,9 @@ avgd_acoustic_in_network = params.avgd_acoustic or params.add_avging
 if __name__ == "__main__":
     # 0. copy the config file
     params_file = "models/parameters/earlyfusion_params.py"
-    shutil.copyfile(params_file, "output/MUStARD_TEST_TO_COMPARE_WITH_MULTITASK_config.py")
+    shutil.copyfile(
+        params_file, "output/MUStARD_TEST_TO_COMPARE_WITH_MULTITASK_config.py"
+    )
 
     # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
     glove_dict = make_glove_dict(glove_file)
@@ -178,12 +180,8 @@ if __name__ == "__main__":
             train_ds = DatumListDataset(
                 data.train_data, data_type, data.sarcasm_weights
             )
-            dev_ds = DatumListDataset(
-                data.dev_data, data_type, data.sarcasm_weights
-            )
-            test_ds = DatumListDataset(
-                data.test_data, data_type, data.sarcasm_weights
-            )
+            dev_ds = DatumListDataset(data.dev_data, data_type, data.sarcasm_weights)
+            test_ds = DatumListDataset(data.test_data, data_type, data.sarcasm_weights)
 
             train_targets = torch.stack(list(train_ds.targets()))
             sampler_weights = data.sarcasm_weights
@@ -198,7 +196,9 @@ if __name__ == "__main__":
             )
 
             # make the train state to keep track of model training/development
-            train_state = make_train_state(lr, os.path.join(model_save_path, model_save_file))
+            train_state = make_train_state(
+                lr, os.path.join(model_save_path, model_save_file)
+            )
 
             # set the load path for testing
             load_path = model_save_path + model_save_file
@@ -242,22 +242,14 @@ if __name__ == "__main__":
 
             # plot the loss and accuracy curves
             # set plot titles
-            loss_title = (
-                "Training and Dev loss for model {0} with lr {1}".format(
-                    model_type, lr
-                )
-            )
-            acc_title = "Avg F scores for model {0} with lr {1}".format(
+            loss_title = "Training and Dev loss for model {0} with lr {1}".format(
                 model_type, lr
             )
+            acc_title = "Avg F scores for model {0} with lr {1}".format(model_type, lr)
 
             # set save names
-            loss_save = "output/plots/{0}_lr{1}_loss.png".format(
-                model_type, lr
-            )
-            acc_save = "output/plots/{0}_lr{1}_avg_f1.png".format(
-                model_type, lr
-            )
+            loss_save = "output/plots/{0}_lr{1}_loss.png".format(model_type, lr)
+            acc_save = "output/plots/{0}_lr{1}_avg_f1.png".format(model_type, lr)
 
             # plot the loss from model
             plot_train_dev_curve(

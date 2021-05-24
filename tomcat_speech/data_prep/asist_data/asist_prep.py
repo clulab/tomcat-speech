@@ -1,7 +1,8 @@
 # prepare the asist-produced audio and transcription data for neural classifiers
 import sys
+
 # in case of path error, use:
-#sys.path.append("path_to_asist-speech")
+# sys.path.append("path_to_asist-speech")
 from tomcat_speech import data_prep as audio_extraction
 import tomcat_speech.data_prep.asist_data.sentiment_score_prep as sent_prep
 
@@ -41,9 +42,7 @@ class JSONtoTSV:
             self.jfile = f"{path}/{jsonfile}.json"
 
     def convert_json(self, savepath):
-        jarray = [
-            ["speaker", "timestart", "timeend", "word", "utt_num", "word_num"]
-        ]
+        jarray = [["speaker", "timestart", "timeend", "word", "utt_num", "word_num"]]
 
         # read in the json
         with open(self.jfile, "r") as djfile:
@@ -210,11 +209,15 @@ class ASISTInput:
         self.acoustic_feature_set = acoustic_feature_set
 
         if missions:
-            self.missions = missions  # list of names of missions of interest (e.g.['mission_2'])
+            self.missions = (
+                missions  # list of names of missions of interest (e.g.['mission_2'])
+            )
         else:
             self.missions = ["mission_2"]
 
-    def extract_audio_data(self, audio_path, audio_file, mp4=False, use_missions=False, m4a=True):
+    def extract_audio_data(
+        self, audio_path, audio_file, mp4=False, use_missions=False, m4a=True
+    ):
         """
         Extract acoustic features from a given file
         """
@@ -258,12 +261,8 @@ class ASISTInput:
         print("Extracting openSMILE features...")
 
         # extract audio features and save csv if not already extracted
-        if os.path.exists(
-            self.save_path + "/" + acoustic_savename + "_feats.csv"
-        ):
-            print(
-                f"Acoustic features already extracted for file {acoustic_savename}"
-            )
+        if os.path.exists(self.save_path + "/" + acoustic_savename + "_feats.csv"):
+            print(f"Acoustic features already extracted for file {acoustic_savename}")
         else:
             audio_extract = audio_extraction.ExtractAudio(
                 audio_path, audio_name, self.save_path, self.smilepath
@@ -293,9 +292,7 @@ class ASISTInput:
                 text_savename = f"{experiment_id}_{participant_id}"
 
                 # reorganize the transcription into a csv
-                transcript_convert = ZoomTranscriptToTSV(
-                    self.path, item, text_savename
-                )
+                transcript_convert = ZoomTranscriptToTSV(self.path, item, text_savename)
                 transcript_convert.convert_transcript(self.save_path)
 
     def align_text_and_audio_word_level(
@@ -312,9 +309,7 @@ class ASISTInput:
         )
 
         # read in the saved csv
-        expanded_wds_df = pd.read_csv(
-            f"{path_to_files}/{expanded_wds_file}", sep="\t"
-        )
+        expanded_wds_df = pd.read_csv(f"{path_to_files}/{expanded_wds_file}", sep="\t")
 
         # combine the files
         combined = pd.merge(audio_df, expanded_wds_df, on="frameTime")
@@ -374,7 +369,7 @@ class ASISTInput:
         return transcript_save_name
 
     # use the previously-defined functions to extract audio and text for different conditions
-    def extract_audio_and_aws_text(self, file_path, mp4=False, m4a = True):
+    def extract_audio_and_aws_text(self, file_path, mp4=False, m4a=True):
         """
         A basic method to extract audio and text data
         Assumes that audio and transcriptions are in the same path
@@ -418,6 +413,7 @@ class ASISTInput:
                 self.align_text_and_audio_word_level(
                     self.save_path, transcript_save_name, acoustic_feats_name
                 )
+
     def extract_audio_and_aws_text_with_missions(self, mp4=False):
         """
         Extract audio and aws transcripts from internal data
@@ -443,24 +439,17 @@ class ASISTInput:
 
                         # create acoustic features for this file
                         acoustic_feats_name = self.extract_audio_data(
-                            audio_path,
-                            acoustic_savename,
-                            mp4,
-                            use_missions=True,
+                            audio_path, acoustic_savename, mp4, use_missions=True,
                         )
 
                         # create preprocessed transcript of this file
                         transcript_save_name = self.extract_aws_text_data(
-                            name_and_mission,
-                            expand_data=True,
-                            use_missions=True,
+                            name_and_mission, expand_data=True, use_missions=True,
                         )
 
                         # align features and transcripts
                         self.align_text_and_audio_word_level(
-                            self.save_path,
-                            transcript_save_name,
-                            acoustic_feats_name,
+                            self.save_path, transcript_save_name, acoustic_feats_name,
                         )
 
     def extract_audio_and_zoom_text(self, file_path, mp4=True):
@@ -498,9 +487,7 @@ class ASISTInput:
 
         for item in os.listdir(self.save_path):
             # check to make sure it's a file of acoustic features
-            if item.endswith("_feats.csv") and "mission" not in item.split(
-                "_"
-            ):
+            if item.endswith("_feats.csv") and "mission" not in item.split("_"):
 
                 print(item + " found")
                 # get holder for averaged acoustic items
@@ -512,9 +499,7 @@ class ASISTInput:
 
                 # add column names to holder
                 col_names = acoustic_df.columns.tolist()
-                col_names.append(
-                    "timestart"
-                )  # so that we can join dataframes later
+                col_names.append("timestart")  # so that we can join dataframes later
 
                 # get experiment and participant IDs
                 experiment_id = item.split("_")[0]
@@ -556,9 +541,7 @@ class ASISTInput:
                 df = pd.merge(utt_df, acoustic, on="timestart")
 
                 # save the joined df as a new csv
-                df.to_csv(
-                    f"{self.save_path}/{experiment_id}_{participant_id}_avgd.csv"
-                )
+                df.to_csv(f"{self.save_path}/{experiment_id}_{participant_id}_avgd.csv")
 
 
 ################################################################################
@@ -687,9 +670,7 @@ if __name__ == "__main__":
         default="output/asist_audio",
     )
     parser.add_argument(
-        "--opensmile_path",
-        help="Path to OpenSMILE",
-        default="~/opensmile-2.3.0",
+        "--opensmile_path", help="Path to OpenSMILE", default="~/opensmile-2.3.0",
     )
     parser.add_argument(
         "--sentiment_text_path",

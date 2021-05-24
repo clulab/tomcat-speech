@@ -106,13 +106,17 @@ vec_length = 300
 # vocab_file_path25 = "../../datasets/multimodal_datasets/Chalearn/test/chalearn_sphinx.tsv"
 # vocab_file25 = pd.read_csv(vocab_file_path25, sep="\t", usecols=["utterance"])
 
-vocab_file_path26 = "../../datasets/multimodal_datasets/Chalearn/train/chalearn_kaldi.tsv"
+vocab_file_path26 = (
+    "../../datasets/multimodal_datasets/Chalearn/train/chalearn_kaldi.tsv"
+)
 vocab_file26 = pd.read_csv(vocab_file_path26, sep="\t", usecols=["utterance"])
 
 vocab_file_path27 = "../../datasets/multimodal_datasets/Chalearn/val/chalearn_kaldi.tsv"
 vocab_file27 = pd.read_csv(vocab_file_path27, sep="\t", usecols=["utterance"])
 
-vocab_file_path28 = "../../datasets/multimodal_datasets/Chalearn/test/chalearn_kaldi.tsv"
+vocab_file_path28 = (
+    "../../datasets/multimodal_datasets/Chalearn/test/chalearn_kaldi.tsv"
+)
 vocab_file28 = pd.read_csv(vocab_file_path28, sep="\t", usecols=["utterance"])
 
 all_vocab = pd.concat([vocab_file26, vocab_file27, vocab_file28], axis=0)

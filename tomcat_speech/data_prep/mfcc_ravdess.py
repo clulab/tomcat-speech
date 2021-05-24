@@ -36,9 +36,7 @@ def mfcc_wav(
                     + acoustic_feature_set
                     + ".csv"
                 )
-                extractor = ExtractAudio(
-                    input_dir, audio_file, savedir, smile_path
-                )
+                extractor = ExtractAudio(input_dir, audio_file, savedir, smile_path)
                 extractor.save_acoustic_csv(
                     feature_set=acoustic_feature_set, savename=audio_save_name
                 )

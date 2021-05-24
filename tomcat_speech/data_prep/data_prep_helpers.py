@@ -28,9 +28,7 @@ class DatumListDataset(Dataset):
     A dataset to hold a list of datums
     """
 
-    def __init__(
-        self, data_list, data_type="meld_emotion", class_weights=None
-    ):
+    def __init__(self, data_list, data_type="meld_emotion", class_weights=None):
         self.data_list = data_list
         self.data_type = data_type
         # todo: add task number
@@ -55,8 +53,7 @@ class DatumListDataset(Dataset):
             for datum in self.data_list:
                 yield datum[4]
         elif (
-            self.data_type == "meld_sentiment"
-            or self.data_type == "ravdess_intensity"
+            self.data_type == "meld_sentiment" or self.data_type == "ravdess_intensity"
         ):
             for datum in self.data_list:
                 yield datum[5]
@@ -66,8 +63,17 @@ class MultitaskObject(object):
     """
     An object to hold the data and meta-information for each of the datasets/tasks
     """
-    def __init__(self, train_data, dev_data, test_data, class_loss_func, task_num, binary=False,
-                 optimizer=None):
+
+    def __init__(
+        self,
+        train_data,
+        dev_data,
+        test_data,
+        class_loss_func,
+        task_num,
+        binary=False,
+        optimizer=None,
+    ):
         """
         train_data, dev_data, and test_data are DatumListDataset datasets
         """
@@ -93,8 +99,10 @@ class MultitaskTestObject(object):
     """
     An object to hold the data and meta-information for each of the datasets/tasks
     """
-    def __init__(self, test_data, class_loss_func, task_num, binary=False,
-                 optimizer=None):
+
+    def __init__(
+        self, test_data, class_loss_func, task_num, binary=False, optimizer=None
+    ):
         """
         train_data, dev_data, and test_data are DatumListDataset datasets
         """
@@ -112,6 +120,7 @@ class MultitaskTestObject(object):
         e.g. if weight == 1.5, loss = loss * 1.5
         """
         self.loss_multiplier = multiplier
+
 
 # todo: will we need this?
 # class BatchSchedulerSampler(torch.utils.data.sampler.Sampler):
@@ -252,9 +261,7 @@ class MinMaxScaleRange:
     use min-max scaling
     """
 
-    def __init__(
-        self,
-    ):
+    def __init__(self,):
         self.mins = {}
         self.maxes = {}
 
@@ -391,7 +398,7 @@ def get_avg_vec(nested_list):
 
 
 # I found this method recently, in a discussion that sometimes weights are better
-# served in the loss function than in a sampler.  What you were returning below 
+# served in the loss function than in a sampler.  What you were returning below
 # seem to be counts, not weights.  These are automatically calculated by sklearn, and
 # apparently based off imbalanced logistic regression.  Let's see if they help!
 def get_class_weights(y_tensor):
@@ -546,7 +553,6 @@ def get_speaker_to_index_dict(speaker_set):
     return speaker2idx
 
 
-
 def make_acoustic_dict(
     acoustic_path,
     f_end="_IS09_avgd.csv",
@@ -562,15 +568,10 @@ def make_acoustic_dict(
     acoustic_dict = {}
     for f in os.listdir(acoustic_path):
         if f.endswith(f_end):
-            if (
-                files_to_get is None
-                or "_".join(f.split("_")[:2]) in files_to_get
-            ):
+            if files_to_get is None or "_".join(f.split("_")[:2]) in files_to_get:
                 if use_cols is not None:
                     try:
-                        feats = pd.read_csv(
-                            acoustic_path + "/" + f, usecols=use_cols
-                        )
+                        feats = pd.read_csv(acoustic_path + "/" + f, usecols=use_cols)
                     except ValueError:
                         # todo: add warning
                         feats = []
@@ -586,7 +587,9 @@ def make_acoustic_dict(
                             sid = int(label[1])
                         except ValueError:
                             sid = int(label[1].split("-")[1])
-                        mission_id = 0  # later iterations of this should have mission IDs
+                        mission_id = (
+                            0  # later iterations of this should have mission IDs
+                        )
                     acoustic_dict[(sid, mission_id)] = feats
                     # callid = f.split("_")[2]  # asist data has format sid_mission_num
                 else:
@@ -639,9 +642,7 @@ def make_acoustic_set(
         if (item.split("_")[0], item.split("_")[1]) in acoustic_dict.keys():
             # print(f"{item} was found")
             # pull out the acoustic feats dataframe
-            acoustic_data = acoustic_dict[
-                (item.split("_")[0], item.split("_")[1])
-            ]
+            acoustic_data = acoustic_dict[(item.split("_")[0], item.split("_")[1])]
 
             # add this dialogue + utt combo to the list of possible ones
             usable_utts.append((item.split("_")[0], item.split("_")[1]))
@@ -664,7 +665,12 @@ def make_acoustic_set(
                 elif add_avging:
                     # skip first and last 25%
                     data_len = len(acoustic_data)
-                    acoustic_holder = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
+                    acoustic_holder = torch.mean(
+                        torch.tensor(acoustic_data)[
+                            math.floor(data_len * 0.25) : math.ceil(data_len * 0.75)
+                        ],
+                        dim=0,
+                    )
 
                     ## or for mustard, uncomment
                     # acoustic_mean = torch.mean(torch.tensor(acoustic_data)[math.floor(data_len * 0.25):math.ceil(data_len * 0.75)], dim=0)
@@ -726,9 +732,7 @@ def scale_feature(value, min_val, max_val, lower=0.0, upper=1.0):
         return upper
     else:
         # the result will be a value in [lower, upper]
-        return lower + (upper - lower) * (value - min_val) / (
-            max_val - min_val
-        )
+        return lower + (upper - lower) * (value - min_val) / (max_val - min_val)
 
 
 def transform_acoustic_item(item, acoustic_means, acoustic_stdev):
@@ -740,5 +744,5 @@ def transform_acoustic_item(item, acoustic_means, acoustic_stdev):
     """
     return (item - acoustic_means) / acoustic_stdev
 
-# def get_bert_embeddings(utterance):
 
+# def get_bert_embeddings(utterance):

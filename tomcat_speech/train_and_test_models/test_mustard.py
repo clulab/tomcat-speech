@@ -3,7 +3,11 @@
 
 import numpy as np
 
-from tomcat_speech.data_prep.data_prep_helpers import DatumListDataset, make_glove_dict, Glove
+from tomcat_speech.data_prep.data_prep_helpers import (
+    DatumListDataset,
+    make_glove_dict,
+    Glove,
+)
 from tomcat_speech.data_prep.mustard_data.mustard_prep import MustardPrep
 from tomcat_speech.models.train_and_test_models import *
 from tomcat_speech.models.plot_training import *
