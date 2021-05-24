@@ -1,23 +1,31 @@
 #!/usr/bin/env python
 
-
 import argparse
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "output_filepath",
     help="Path to output file",
     default="asist_output.txt",
+    nargs="?"
 )
-
 parser.add_argument(
     "glove_file",
     help="Path to Glove file",
     default="data/glove.short.300d.punct.txt",
+    nargs="?"
 )
 parser.add_argument(
     "emotion_model",
     help="Path to saved model you would like to use in testing",
     default="data/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth",
+    nargs="?"
+)
+parser.add_argument(
+    "config_path",
+    help="Path to config file you would like to use for testing",
+    default="tomcat_speech/train_and_test_models/testing_parameters/config.py",
+    nargs="?"
 )
 parser.add_argument(
     "input_csvfiles",
@@ -33,7 +41,6 @@ if __name__ == "__main__":
     import re
     import numpy as np
     import torch
-    import sys
     from tomcat_speech.data_prep.asist_data.asist_dataset_creation import (
         AsistDataset,
     )
@@ -52,7 +59,7 @@ if __name__ == "__main__":
     )
 
     # Import parameters for model
-    from tomcat_speech.models.parameters.multitask_params import params
+    import tomcat_speech.models.parameters.multitask_config as params
     import pandas as pd
 
     # Set device, checking CUDA
@@ -70,39 +77,24 @@ if __name__ == "__main__":
     num_splits = 1
 
     # set model name and model type
-    model = params.model
-    model_type = "BimodalCNN_k=4"
+    model = params.model_type
     # set number of columns to skip in data input files
     # cols_to_skip = 2  # 2 for Zoom, 4 for AWS
 
     # decide if you want to use avgd feats
-    avgd_acoustic = params.avgd_acoustic or params.add_avging
+    avgd_acoustic = params.model_params.avgd_acoustic or params.model_params.add_avging
 
     # set the path to the trained model
 
     acoustic_dict = {
         (filepath, 0): pd.read_table(
             filepath,
-            usecols=[
-                "speaker",
-                "utt",
-                "pcm_loudness_sma",
-                "F0finEnv_sma",
-                "voicingFinalUnclipped_sma",
-                "jitterLocal_sma",
-                "shimmerLocal_sma",
-                "pcm_loudness_sma_de",
-                "F0finEnv_sma_de",
-                "voicingFinalUnclipped_sma_de",
-                "jitterLocal_sma_de",
-                "shimmerLocal_sma_de",
-                "timestart"
-            ],
+            usecols=params.acoustic_columns,
         )
         for filepath in args.input_csvfiles
     }
     print("Acoustic dict created")
-    #metadata
+    # metadata
     meta_dict = {
         filepath_tuple[0]: dataframe["timestart"]
         for filepath_tuple, dataframe in acoustic_dict.items()
@@ -122,13 +114,9 @@ if __name__ == "__main__":
         sequence_prep="pad",
         truncate_from="start",
         norm=None,
-        add_avging=params.add_avging,
+        add_avging=params.model_params.add_avging,
         transcript_type="zoom"
-
-)
-    # sys.exit(0) #this stops the code
-
-
+    )
 
     # get data for testing
     test_data = data.current_split
@@ -141,10 +129,11 @@ if __name__ == "__main__":
     print(f"shape of pretrained embeddings is: {data.glove.data.size()}")
 
     # create test model
-    classifier = EarlyFusionMultimodalModel(
-        params=params,
+    classifier = MultitaskModel(
+        params=params.model_params,
         num_embeddings=num_embeddings,
         pretrained_embeddings=pretrained_embeddings,
+        multi_dataset=False
     )
     # get saved parameters
     classifier.load_state_dict(torch.load(args.emotion_model))
@@ -153,14 +142,13 @@ if __name__ == "__main__":
     ordered_predictions = predict_without_gold_labels(
         classifier,
         test_ds,
-        params.batch_size,
+        params.model_params.batch_size,
         device,
         avgd_acoustic=avgd_acoustic,
-        use_speaker=params.use_speaker,
-        use_gender=params.use_gender,
+        use_speaker=params.model_params.use_speaker,
+        use_gender=params.model_params.use_gender,
         get_prob_dist=True
     )
-
 
 
     # dict for printing emotions associated with model predictions:
