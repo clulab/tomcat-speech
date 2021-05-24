@@ -8,6 +8,7 @@ import pickle
 import numpy as np
 import copy
 import torch.nn as nn
+from sklearn.model_selection import train_test_split
 
 from models.chalearn_models import OCEANPersonalityModel
 
@@ -105,6 +106,7 @@ if __name__ == "__main__":
                 avgd=config.model_params.avgd_acoustic,
                 f_end=f"_{config.feature_set}.csv",
                 pred_type=config.chalearn_predtype,
+                # utts_file_name="chalearn_kaldi.tsv"
             )
 
             # add class weights to device
@@ -132,11 +134,52 @@ if __name__ == "__main__":
                 chalearn_data.test_data, "chalearn_traits", chalearn_data.trait_weights
             )
 
+            chalearn_train_ds_5000, _ = train_test_split(chalearn_train_ds, train_size=5000)
+            chalearn_train_ds_4000, _ = train_test_split(chalearn_train_ds_5000, train_size=4000)
+            chalearn_train_ds_3000, _ = train_test_split(chalearn_train_ds_4000, train_size=3000)
+            chalearn_train_ds_2000, _ = train_test_split(chalearn_train_ds_3000, train_size=2000)
+            chalearn_train_ds_1000, _ = train_test_split(chalearn_train_ds_2000, train_size=1000)
+            chalearn_train_ds_900, _ = train_test_split(chalearn_train_ds_1000, train_size=900)
+            chalearn_train_ds_800, _ = train_test_split(chalearn_train_ds_900, train_size=800)
+            chalearn_train_ds_700, _ = train_test_split(chalearn_train_ds_900, train_size=700)
+            chalearn_train_ds_600, _ = train_test_split(chalearn_train_ds_900, train_size=600)
+            chalearn_train_ds_500, _ = train_test_split(chalearn_train_ds_900, train_size=500)
+            chalearn_train_ds_400, _ = train_test_split(chalearn_train_ds_900, train_size=400)
+            chalearn_train_ds_300, _ = train_test_split(chalearn_train_ds_900, train_size=300)
+            chalearn_train_ds_200, _ = train_test_split(chalearn_train_ds_900, train_size=200)
+            chalearn_train_ds_100, _ = train_test_split(chalearn_train_ds_900, train_size=100)
+            chalearn_train_ds_50, _ = train_test_split(chalearn_train_ds_900, train_size=50)
+            chalearn_train_ds_10, _ = train_test_split(chalearn_train_ds_50, train_size=10)
+            chalearn_train_ds_5, _ = train_test_split(chalearn_train_ds_10, train_size=5)
+            chalearn_train_ds_1, _ = train_test_split(chalearn_train_ds_5, train_size=1)
+            print("CHALEARN data split")
+
             if config.save_dataset:
                 # save all data for faster loading
                 save_path = data + "/" + config.load_path
 
+                # make sure the full save path exists; if not, create it
+                os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(save_path))
+
                 # save all data for faster loading
+                pickle.dump(chalearn_train_ds_5000, open(f"{save_path}/chalearn_IS1013_5000_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_4000, open(f"{save_path}/chalearn_IS1013_4000_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_3000, open(f"{save_path}/chalearn_IS1013_3000_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_2000, open(f"{save_path}/chalearn_IS1013_2000_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_1000, open(f"{save_path}/chalearn_IS1013_1000_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_900, open(f"{save_path}/chalearn_IS1013_900_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_800, open(f"{save_path}/chalearn_IS1013_800_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_700, open(f"{save_path}/chalearn_IS1013_700_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_600, open(f"{save_path}/chalearn_IS1013_600_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_500, open(f"{save_path}/chalearn_IS1013_500_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_400, open(f"{save_path}/chalearn_IS1013_400_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_300, open(f"{save_path}/chalearn_IS1013_300_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_200, open(f"{save_path}/chalearn_IS1013_200_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_100, open(f"{save_path}/chalearn_IS1013_100_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_50, open(f"{save_path}/chalearn_IS1013_50_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_10, open(f"{save_path}/chalearn_IS1013_10_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_5, open(f"{save_path}/chalearn_IS1013_5_train.pickle", "wb"))
+                pickle.dump(chalearn_train_ds_1, open(f"{save_path}/chalearn_IS1013_1_train.pickle", "wb"))
                 pickle.dump(chalearn_train_ds, open(f"{save_path}/chalearn_IS1013_train.pickle", "wb"))
                 pickle.dump(chalearn_dev_ds, open(f"{save_path}/chalearn_IS1013_dev.pickle", "wb"))
                 pickle.dump(chalearn_test_ds, open(f'{save_path}/chalearn_IS1013_test.pickle', 'wb'))
@@ -144,20 +187,25 @@ if __name__ == "__main__":
                 # pickle.dump(
                 #     glove, open("data/glove.pickle", "wb")
                 # )
+                exit()
 
             print("Datasets created")
 
         else:
             # 1. Load datasets + glove object
-            chalearn_train_ds = pickle.load(open("data/chalearn_IS1013_train.pickle", "rb"))
-            chalearn_dev_ds = pickle.load(open("data/chalearn_IS1013_dev.pickle", "rb"))
-            chalearn_test_ds = pickle.load(open('data/chalearn_IS1013_test.pickle', 'rb'))
-            chalearn_test_ds = None
+            chalearn_train_ds = pickle.load(open(f"{data}/{config.load_path}/chalearn_IS1013_1_train.pickle", "rb"))
+            chalearn_dev_ds = pickle.load(open(f"{data}/{config.load_path}/chalearn_IS1013_dev.pickle", "rb"))
+            chalearn_test_ds = pickle.load(open(f'{data}/{config.load_path}/chalearn_IS1013_test.pickle', 'rb'))
 
             print("ChaLearn data loaded")
 
-            # load glove
-            glove = pickle.load(open("data/glove.pickle", "rb"))
+            # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
+            glove_dict = make_glove_dict(config.glove_file)
+            glove = Glove(glove_dict)
+            print("Glove object created")
+
+            # # load glove
+            # glove = pickle.load(open("data/glove.pickle", "rb"))
 
             print("GloVe object loaded")
 

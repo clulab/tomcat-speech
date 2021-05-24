@@ -6,15 +6,16 @@ import os
 # DEBUG = True # no saving of files; output in the terminal; first random seed from the list
 
 # do you want to save dataset files?
-save_dataset = True
+save_dataset = False
 
 # do you want to load pre-saved dataset files?
 load_dataset = False
-load_path = "data/IS13_GOLD_HIGH_LOW"
+load_path = "IS13_KALDI_HIGH_MED_LOW_EQUAL"
 
 EXPERIMENT_ID = 3
 # this is the name of the parent directory for different models saved from an experiment
-EXPERIMENT_DESCRIPTION = "Chalearn-high-low_25perc-cutoff_15secMax_noClassWeights_IS1076_"
+# EXPERIMENT_DESCRIPTION = "Chalearn-high-low_25perc-cutoff_15secMax_noClassWeights_IS1376_"
+EXPERIMENT_DESCRIPTION = "DELETE"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 
@@ -40,7 +41,7 @@ data_type = "multitask"
 fusion_type = "early"
 
 #set type of predictions to make for chalearn
-chalearn_predtype = "high-low" #"max_class" # high-med-low # max_class
+chalearn_predtype = "high-med-low" #"high-low" # high-med-low # max_class
 
 # set the acoustic feature set
 feature_set = "IS13"
@@ -114,7 +115,7 @@ model_params = Namespace(
     out_channels=20,
     text_cnn_hidden_dim=100,
     # text_output_dim=30,   # 100,   # 50, 300,
-    text_gru_hidden_dim=[100],  # 30,  # 50,  # 20
+    text_gru_hidden_dim=[300],  # 30,  # 50,  # 20
     # acoustic NN
     avgd_acoustic=False,  # set true to use avgd acoustic feat vectors without RNN
     add_avging=True,  # set to true if you want to avg acoustic feature vecs upon input
@@ -128,7 +129,7 @@ model_params = Namespace(
     gender_emb_dim=4,
     # outputs
     output_dim=[100],  # output dimensions from last layer of base model
-    final_output_dim=5,  # output vec for each task
+    final_output_dim=3,  # output vec for each task
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,
     fc_hidden_dim=100,  # 20,  must match output_dim if final fc layer removed from base model

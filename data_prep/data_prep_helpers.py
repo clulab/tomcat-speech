@@ -11,6 +11,7 @@ from torch import nn
 from torch.utils.data import Dataset
 from sklearn.feature_selection import SelectKBest, chi2
 from sklearn.utils.class_weight import compute_class_weight
+from transformers import BertTokenizer, BertModel
 
 import statistics
 
@@ -758,3 +759,6 @@ def transform_acoustic_item(item, acoustic_means, acoustic_stdev):
     acoustic_stdev : the corresponding stdev vector
     """
     return (item - acoustic_means) / acoustic_stdev
+
+# def get_bert_embeddings(utterance):
+

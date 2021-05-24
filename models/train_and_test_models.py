@@ -436,19 +436,21 @@ def personality_as_multitask_train_and_predict(
             optimizer.zero_grad()
 
             # step 2. compute the output
-            gold_0 = batch[5].to(device)
-            ys_holder[0].extend(gold_0.tolist())
-
             if not max_class:
+                gold_0 = batch[5].to(device)
                 gold_1 = batch[6].to(device)
                 gold_2 = batch[7].to(device)
                 gold_3 = batch[8].to(device)
                 gold_4 = batch[9].to(device)
 
+                ys_holder[0].extend(gold_0.tolist())
                 ys_holder[1].extend(gold_1.tolist())
                 ys_holder[2].extend(gold_2.tolist())
                 ys_holder[3].extend(gold_3.tolist())
                 ys_holder[4].extend(gold_4.tolist())
+            else:
+                gold_0 = batch[4].to(device)
+                ys_holder[0].extend(gold_0.tolist())
 
             batch_acoustic = batch[0].to(device)
             batch_text = batch[1].to(device)
@@ -562,19 +564,22 @@ def personality_as_multitask_train_and_predict(
         # todo: what if there are different numbers of batches? (diff dataset sizes)
         for batch_index, batch in enumerate(val_batches):
             # step 2. compute the output
-            gold_0 = batch[5].to(device)
-            ys_holder[0].extend(gold_0.tolist())
-
             if not max_class:
+                gold_0 = batch[5].to(device)
                 gold_1 = batch[6].to(device)
                 gold_2 = batch[7].to(device)
                 gold_3 = batch[8].to(device)
                 gold_4 = batch[9].to(device)
 
+                ys_holder[0].extend(gold_0.tolist())
                 ys_holder[1].extend(gold_1.tolist())
                 ys_holder[2].extend(gold_2.tolist())
                 ys_holder[3].extend(gold_3.tolist())
                 ys_holder[4].extend(gold_4.tolist())
+
+            else:
+                gold_0 = batch[4].to(device)
+                ys_holder[0].extend(gold_0.tolist())
 
             batch_acoustic = batch[0].to(device)
             batch_text = batch[1].to(device)
@@ -1607,6 +1612,127 @@ def multitask_train_and_predict_with_gradnorm(
         # if it's time to stop, end the training process
         if train_state["stop_early"]:
             break
+
+def single_dataset_multitask_predict(
+classifier,
+    train_state,
+    datasets_list,
+    batch_size,
+    pickle_save_name,
+    device="cpu",
+    avgd_acoustic=True,
+    use_speaker=True,
+    use_gender=False,
+):
+    """
+    Train_ds_list and val_ds_list are lists of MultTaskObject objects!
+    Length of the list is the number of datasets used
+    """
+    num_tasks = len(datasets_list)
+    # get a list of the tasks by number
+    for dset in datasets_list:
+        train_state["tasks"].append(dset.task_num)
+        train_state["test_avg_f1"][dset.task_num] = []
+
+    # Iterate over validation set--put it in a dataloader
+    batches, tasks = get_all_batches(
+        datasets_list, batch_size=batch_size, shuffle=True, partition="test"
+    )
+
+    # set classifier to evaluation mode
+    classifier.eval()
+
+    # set holders to use for error analysis
+    ys_holder = {}
+    for i in range(num_tasks):
+        ys_holder[i] = []
+    preds_holder = {}
+    for i in range(num_tasks):
+        preds_holder[i] = []
+    ids_holder = {}
+    for i in range(num_tasks):
+        ids_holder[i] = []
+
+    # for each batch in the list of batches created by the dataloader
+    for batch_index, batch in enumerate(batches):
+        # get the task for this batch
+        batch_task = tasks[batch_index]
+
+        y_gold = batch[4].to(device)
+
+        batch_ids = batch[-3]
+        ids_holder[batch_task].extend(batch_ids)
+
+        batch_acoustic = batch[0].to(device)
+        batch_text = batch[1].to(device)
+        if use_speaker:
+            batch_speakers = batch[2].to(device)
+        else:
+            batch_speakers = None
+
+        if use_gender:
+            batch_genders = batch[3].to(device)
+        else:
+            batch_genders = None
+        batch_lengths = batch[-2].to(device)
+        batch_acoustic_lengths = batch[-1].to(device)
+
+        # compute the output
+        if avgd_acoustic:
+            y_pred = classifier(
+                acoustic_input=batch_acoustic,
+                text_input=batch_text,
+                speaker_input=batch_speakers,
+                length_input=batch_lengths,
+                gender_input=batch_genders,
+                task_num=tasks[batch_index],
+            )
+        else:
+            y_pred = classifier(
+                acoustic_input=batch_acoustic,
+                text_input=batch_text,
+                speaker_input=batch_speakers,
+                length_input=batch_lengths,
+                acoustic_len_input=batch_acoustic_lengths,
+                gender_input=batch_genders,
+                task_num=tasks[batch_index],
+            )
+
+        batch_pred = y_pred[batch_task]
+
+        if datasets_list[batch_task].binary:
+            batch_pred = batch_pred.float()
+            y_gold = y_gold.float()
+
+        # add ys to holder for error analysis
+        preds_holder[batch_task].extend(
+            [item.index(max(item)) for item in batch_pred.tolist()]
+        )
+        ys_holder[batch_task].extend(y_gold.tolist())
+
+    for task in preds_holder.keys():
+        task_avg_f1 = precision_recall_fscore_support(
+            ys_holder[task], preds_holder[task], average="weighted"
+        )
+        print(f"Test weighted f-score for task {task}: {task_avg_f1}")
+        train_state["test_avg_f1"][task].append(task_avg_f1[2])
+
+    for task in preds_holder.keys():
+        print(f"Classification report and confusion matrix for task {task}:")
+        print(confusion_matrix(ys_holder[task], preds_holder[task]))
+        print("======================================================")
+        print(classification_report(ys_holder[task], preds_holder[task], digits=4))
+
+    # combine
+    gold_preds_ids = {}
+    for task in preds_holder.keys():
+        gold_preds_ids[task] = list(
+            zip(ys_holder[task], preds_holder[task], ids_holder[task])
+        )
+
+    # save to pickle
+    with open(pickle_save_name, "wb") as pfile:
+        pickle.dump(gold_preds_ids, pfile)
 
 
 def multitask_predict(
