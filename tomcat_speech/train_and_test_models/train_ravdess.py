@@ -13,8 +13,6 @@ from tomcat_speech.data_prep.meld_data.meld_prep import *
 # import parameters for model
 from tomcat_speech.models.parameters.earlyfusion_params import params
 
-sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
-
 # set device
 cuda = False
 

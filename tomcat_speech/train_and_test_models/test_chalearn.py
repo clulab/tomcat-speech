@@ -7,9 +7,6 @@ from datetime import date
 import numpy as np
 import copy
 
-sys.path.append("/work/johnculnan/github/asist-speech")
-sys.path.append("/work/johnculnan")
-
 # from sklearn.model_selection import train_test_split
 from tomcat_speech.data_prep.chalearn_data.chalearn_prep import ChalearnPrep
 from tomcat_speech.models.train_and_test_models import *

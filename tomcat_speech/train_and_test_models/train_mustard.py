@@ -13,9 +13,6 @@ from tomcat_speech.models.plot_training import *
 from tomcat_speech.models.parameters.earlyfusion_params import params
 from tomcat_speech.data_prep.mustard_data.mustard_prep import *
 
-
-sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
-
 # set device
 cuda = False
 

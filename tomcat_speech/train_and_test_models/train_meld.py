@@ -6,8 +6,6 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 
-sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
-
 from tomcat_speech.models.train_and_test_models import *
 from tomcat_speech.models.plot_training import *
 

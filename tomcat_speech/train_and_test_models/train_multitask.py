@@ -7,9 +7,8 @@ from datetime import date
 import numpy as np
 import copy
 
-# sys.path.append("/net/kate/storage/work/bsharp/github/asist-speech")
-sys.path.append("/work/johnculnan/github/asist-speech")
-sys.path.append("/work/johnculnan")
+from sklearn.model_selection import train_test_split
+
 
 from tomcat_speech.models.train_and_test_models import *
 from tomcat_speech.models.plot_training import *
@@ -98,39 +97,39 @@ if __name__ == "__main__":
             print("Glove object created")
 
             # 2. MAKE DATASET
-            mustard_data = MustardPrep(
-                mustard_path=config.mustard_path,
+            # mustard_data = MustardPrep(
+            #     mustard_path=config.mustard_path,
+            #     acoustic_length=config.model_params.audio_dim,
+            #     glove=glove,
+            #     add_avging=config.model_params.add_avging,
+            #     use_cols=config.acoustic_columns,
+            #     avgd=config.model_params.avgd_acoustic,
+            #     f_end=f"_{config.feature_set}.csv",
+            #     # utts_file_name="mustard_google.tsv",
+            # )
+
+            meld_data = MeldPrep(
+                meld_path=config.meld_path,
                 acoustic_length=config.model_params.audio_dim,
                 glove=glove,
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
                 f_end=f"_{config.feature_set}.csv",
-                utts_file_name="mustard_google.tsv",
+                # utts_file_name="meld_kaldi.tsv"
             )
 
-            # meld_data = MeldPrep(
-            #     meld_path=config.meld_path,
-            #     acoustic_length=config.model_params.audio_dim,
-            #     glove=glove,
-            #     add_avging=config.model_params.add_avging,
-            #     use_cols=config.acoustic_columns,
-            #     avgd=config.model_params.avgd_acoustic,
-            #     f_end=f"_{config.feature_set}.csv",
-            #     utts_file_name="meld_kaldi.tsv"
-            # )
-
-            # chalearn_data = ChalearnPrep(
-            #     chalearn_path=config.chalearn_path,
-            #     acoustic_length=config.model_params.audio_dim,
-            #     glove=glove,
-            #     add_avging=config.model_params.add_avging,
-            #     use_cols=config.acoustic_columns,
-            #     avgd=config.model_params.avgd_acoustic,
-            #     pred_type=config.chalearn_predtype,
-            #     f_end=f"_{config.feature_set}.csv",
-            #     utts_file_name="chalearn_kaldi.tsv"
-            # )
+            chalearn_data = ChalearnPrep(
+                chalearn_path=config.chalearn_path,
+                acoustic_length=config.model_params.audio_dim,
+                glove=glove,
+                add_avging=config.model_params.add_avging,
+                use_cols=config.acoustic_columns,
+                avgd=config.model_params.avgd_acoustic,
+                pred_type=config.chalearn_predtype,
+                f_end=f"_{config.feature_set}.csv",
+                # utts_file_name="chalearn_kaldi.tsv"
+            )
 
             # ravdess_data = RavdessPrep(ravdess_path=config.ravdess_path, acoustic_length=params.audio_dim, glove=glove,
             #                      add_avging=params.add_avging,
@@ -140,51 +139,51 @@ if __name__ == "__main__":
             print("Data loaded")
 
             # add class weights to device
-            mustard_data.sarcasm_weights = mustard_data.sarcasm_weights.to(device)
-            # meld_data.emotion_weights = meld_data.emotion_weights.to(device)
-            # chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
+            # mustard_data.sarcasm_weights = mustard_data.sarcasm_weights.to(device)
+            meld_data.emotion_weights = meld_data.emotion_weights.to(device)
+            chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
             # ravdess_data.emotion_weights = ravdess_data.emotion_weights.to(device)
 
             # get train, dev, test partitions
-            mustard_train_ds = DatumListDataset(
-                mustard_data.train_data, "mustard", mustard_data.sarcasm_weights
-            )
-            mustard_dev_ds = DatumListDataset(
-                mustard_data.dev_data, "mustard", mustard_data.sarcasm_weights
-            )
-            mustard_test_ds = DatumListDataset(
-                mustard_data.test_data, "mustard", mustard_data.sarcasm_weights
+            # mustard_train_ds = DatumListDataset(
+            #     mustard_data.train_data, "mustard", mustard_data.sarcasm_weights
+            # )
+            # mustard_dev_ds = DatumListDataset(
+            #     mustard_data.dev_data, "mustard", mustard_data.sarcasm_weights
+            # )
+            # mustard_test_ds = DatumListDataset(
+            #     mustard_data.test_data, "mustard", mustard_data.sarcasm_weights
+            # )
+
+            meld_train_ds = DatumListDataset(
+                meld_data.train_data, "meld_emotion", meld_data.emotion_weights
             )
 
-            # meld_train_ds = DatumListDataset(
-            #     meld_data.train_data, "meld_emotion", meld_data.emotion_weights
-            # )
-            #
-            # meld_dev_ds = DatumListDataset(
-            #     meld_data.dev_data, "meld_emotion", meld_data.emotion_weights
-            # )
-            # meld_test_ds = DatumListDataset(
-            #     meld_data.test_data, "meld_emotion", meld_data.emotion_weights
-            # )
+            meld_dev_ds = DatumListDataset(
+                meld_data.dev_data, "meld_emotion", meld_data.emotion_weights
+            )
+            meld_test_ds = DatumListDataset(
+                meld_data.test_data, "meld_emotion", meld_data.emotion_weights
+            )
             #
             # # combine train and dev data to increase the number of items in dev set
-            # train_and_dev = meld_train_ds + meld_dev_ds
-            # meld_train_ds, meld_dev_ds = train_test_split(train_and_dev, test_size=0.2)
-            # print("MELD dataset rebalanced")
+            train_and_dev = meld_train_ds + meld_dev_ds
+            meld_train_ds, meld_dev_ds = train_test_split(train_and_dev, test_size=0.2)
+            print("MELD dataset rebalanced")
 
-            # del meld_data
-            #
+            del meld_data
+
             # # create chalearn train, dev, _ data
-            # chalearn_train_ds = DatumListDataset(
-            #     chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights
-            # )
-            # chalearn_dev_ds = DatumListDataset(
-            #     chalearn_data.dev_data, "chalearn_traits", chalearn_data.trait_weights
-            # )
-            # chalearn_test_ds = DatumListDataset(
-            #     chalearn_data.test_data, "chalearn_traits", chalearn_data.trait_weights
-            # )
-            # del chalearn_data
+            chalearn_train_ds = DatumListDataset(
+                chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights
+            )
+            chalearn_dev_ds = DatumListDataset(
+                chalearn_data.dev_data, "chalearn_traits", chalearn_data.trait_weights
+            )
+            chalearn_test_ds = DatumListDataset(
+                chalearn_data.test_data, "chalearn_traits", chalearn_data.trait_weights
+            )
+            del chalearn_data
 
             if config.save_dataset:
                 # save all data for faster loading
@@ -194,22 +193,21 @@ if __name__ == "__main__":
                 os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(save_path))
 
                 # save meld dataset
-                # pickle.dump(meld_train_ds, open(f"{save_path}/meld_IS13_train.pickle", "wb"))
-                # pickle.dump(meld_dev_ds, open(f"{save_path}/meld_IS13_dev.pickle", "wb"))
-                # pickle.dump(meld_test_ds, open(f"{save_path}/meld_IS3_test.pickle", "wb"))
+                pickle.dump(meld_train_ds, open(f"{save_path}/meld_IS13_train.pickle", "wb"))
+                pickle.dump(meld_dev_ds, open(f"{save_path}/meld_IS13_dev.pickle", "wb"))
+                pickle.dump(meld_test_ds, open(f"{save_path}/meld_IS3_test.pickle", "wb"))
 
                 # save mustard
-                # pickle.dump(mustard_train_ds, open(f"{save_path}/mustard_IS13_train.pickle", "wb"))
-                # pickle.dump(mustard_dev_ds, open(f"{save_path}/mustard_IS13_dev.pickle", "wb"))
-                # pickle.dump(mustard_test_ds, open(f"{save_path}/mustard_IS13_test.pickle", "wb"))
+                pickle.dump(mustard_train_ds, open(f"{save_path}/mustard_IS13_train.pickle", "wb"))
+                pickle.dump(mustard_dev_ds, open(f"{save_path}/mustard_IS13_dev.pickle", "wb"))
+                pickle.dump(mustard_test_ds, open(f"{save_path}/mustard_IS13_test.pickle", "wb"))
                 #
                 # save chalearn
-                # pickle.dump(chalearn_train_ds, open(f"{save_path}/chalearn_IS13_train.pickle", "wb"))
-                # pickle.dump(chalearn_dev_ds, open(f"{save_path}/chalearn_IS13_dev.pickle", "wb"))
-                # pickle.dump(chalearn_test_ds, open(f'{save_path}/chalearn_IS13_test.pickle', 'wb'))
+                pickle.dump(chalearn_train_ds, open(f"{save_path}/chalearn_IS13_train.pickle", "wb"))
+                pickle.dump(chalearn_dev_ds, open(f"{save_path}/chalearn_IS13_dev.pickle", "wb"))
+                pickle.dump(chalearn_test_ds, open(f'{save_path}/chalearn_IS13_test.pickle', 'wb'))
 
-                # pickle.dump(glove, open("data/chalearn_kaldi_glove.pickle", "wb"))  # todo: get different glove names
-                sys.exit()
+                pickle.dump(glove, open("data/glove.pickle", "wb"))  # todo: get different glove names
 
             print("Datasets created")
 
@@ -224,16 +222,16 @@ if __name__ == "__main__":
                 open(f"{data}/{load_dir}/meld_IS13_dev.pickle", "rb")
             )
             meld_test_ds = pickle.load(
-                open(f"{data}/{load_dir}/meld_IS13_train.pickle", "rb")
+                open(f"{data}/{load_dir}/meld_IS13_test.pickle", "rb")
             )
 
             print("MELD data loaded")
-            #
-            # # load mustard
-            # mustard_train_ds = pickle.load(open("data/IS1076-avgd_gold/mustard_IS1076feat_15sec_train.pickle", "rb"))
-            # mustard_dev_ds = pickle.load(open("data/IS1076-avgd_gold/mustard_IS1076feat_15sec_dev.pickle", "rb"))
-            # mustard_test_ds = pickle.load(open("data/IS1076-avgd_gold/mustard_IS1076feat_15sec_test.pickle", "rb"))
 
+            # # load mustard
+            # mustard_train_ds = pickle.load(open(f"{data}/{load_dir}/mustard_IS13_train.pickle", "rb"))
+            # mustard_dev_ds = pickle.load(open(f"{data}/{load_dir}/mustard_IS13_dev.pickle", "rb"))
+            # mustard_test_ds = pickle.load(open(f"{data}/{load_dir}/mustard_IS13_test.pickle", "rb"))
+            #
             # print("MUSTARD data loaded")
 
             # load chalearn
@@ -250,11 +248,7 @@ if __name__ == "__main__":
             print("ChaLearn data loaded")
 
             # load glove
-            # glove = pickle.load(open("data/glove.pickle", "rb"))
-            glove_dict = make_glove_dict(config.glove_file)
-            glove = Glove(glove_dict)
-            print("Glove object created")
-
+            glove = pickle.load(open("data/glove.pickle", "rb"))
             print("GloVe object loaded")
 
         # 3. CREATE NN
@@ -351,7 +345,7 @@ if __name__ == "__main__":
                                     #     # weight=mustard_train_ds.class_weights,
                                     #     reduction="mean"
                                     # )
-                                    # # # create multitask object
+                                    # # # # create multitask object
                                     # mustard_obj = MultitaskObject(
                                     #     mustard_train_ds,
                                     #     mustard_dev_ds,
@@ -393,10 +387,6 @@ if __name__ == "__main__":
                                         meld_obj,
                                         chalearn_obj,
                                     ]
-
-                                    # all_data_list = [
-                                    #     mustard_obj
-                                    # ]
 
                                     print(
                                         "Model, loss function, and optimization created"
