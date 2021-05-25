@@ -250,8 +250,7 @@ class PhonemicMagic:
 
             for domain_word in self.domain_word_map:  # if CMU pronunciation exists, expensive loop
                 pronunciation = self.domain_word_map[domain_word]
-                phonemic_domain = self.phoneme(
-                    pronunciation)  # this is expensive, store domain words in memory so this doesn't happen
+                phonemic_domain = self.phoneme(pronunciation)  # this is expensive, store domain words in memory so this doesn't happen
                 phonemic_original = self.phoneme(phonemic)
                 score = self.weighted_levenshtein(phonemic_original, phonemic_domain)
                 #simplify this, scoredTuple has too much redundancy (?)
