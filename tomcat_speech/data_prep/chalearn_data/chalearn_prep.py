@@ -1,8 +1,9 @@
 # prepare chalearn for input into the model
-
+import math
 import os
 import pickle
 import json
+import re
 import sys
 from collections import OrderedDict
 
@@ -10,17 +11,18 @@ import torch
 from torch import nn
 from torchtext.data import get_tokenizer
 
-from tomcat_speech.data_prep.audio_extraction import (
-    ExtractAudio,
-)
+from tomcat_speech.data_prep.audio_extraction import ExtractAudio
 import pandas as pd
 
 from tomcat_speech.data_prep.data_prep_helpers import (
+    get_class_weights,
     get_gender_avgs,
     clean_up_word,
-    get_max_num_acoustic_frames,
     transform_acoustic_item,
+    get_acoustic_means,
 )
+
+from tomcat_speech.data_prep.meld_data.meld_prep import run_feature_extraction
 
 
 class ChalearnPrep:
@@ -37,19 +39,23 @@ class ChalearnPrep:
         use_cols=None,
         add_avging=True,
         avgd=False,
+        pred_type="max_class",
+        utts_file_name="gold_and_utts.tsv",
     ):
         self.path = chalearn_path
         self.train_path = chalearn_path + "/train"
         self.dev_path = chalearn_path + "/val"
         self.test_path = chalearn_path + "/test"
-        self.train = "{0}/gold_and_utts.tsv".format(self.train_path)
-        self.dev = "{0}/gold_and_utts.tsv".format(self.dev_path)
-        # self.test = "{0}/gold_and_utts.tsv".format(self.test_path)
+        self.train = f"{self.train_path}/{utts_file_name}"
+        self.dev = f"{self.dev_path}/{utts_file_name}"
+        self.test = f"{self.test_path}/{utts_file_name}"
 
         # get files containing gold labels/data
         self.train_data_file = pd.read_csv(self.train, sep="\t")
         self.dev_data_file = pd.read_csv(self.dev, sep="\t")
-        # self.test_data_file = pd.read_csv(self.test)
+        self.test_data_file = pd.read_csv(self.test, sep="\t")
+        # get the type of prediction
+        self.pred_type = pred_type
 
         # get tokenizer
         self.tokenizer = get_tokenizer("basic_english")
@@ -60,20 +66,23 @@ class ChalearnPrep:
         # to determine whether incoming acoustic features are averaged
         self.avgd = avgd
 
-        self.avgd = False
-        self.train_dir = "IS10"
-        self.dev_dir = "IS10"
-        self.test_dir = "IS10"
+        if f_end != "_IS10.csv":
+            setname = re.search("_(.*)\.csv", f_end)
+            name = setname.group(1)
+            self.train_dir = name
+            self.dev_dir = name
+            self.test_dir = name
+        else:
+            self.train_dir = "IS10"
+            self.dev_dir = "IS10"
+            self.test_dir = "IS10"
 
         print("Collecting acoustic features")
 
+        # print("{0}/{1}".format(self.train_path, self.train_dir))
+        # print(f_end)
         # ordered dicts of acoustic data
-        # todo: is this screwed up?
-        #   ordered dict--is it same order as acoustic_lengths
-        (
-            self.train_dict,
-            self.train_acoustic_lengths,
-        ) = make_acoustic_dict_chalearn(
+        self.train_dict, self.train_acoustic_lengths = make_acoustic_dict_chalearn(
             "{0}/{1}".format(self.train_path, self.train_dir),
             f_end,
             use_cols=use_cols,
@@ -87,30 +96,28 @@ class ChalearnPrep:
             avgd=avgd,
         )
         self.dev_dict = OrderedDict(self.dev_dict)
-        # self.test_dict, self.test_acoustic_lengths = make_acoustic_dict_chalearn(
-        #     "{0}/{1}".format(self.test_path, self.test_dir),
-        #     f_end,
-        #     use_cols=use_cols,
-        #     avgd=avgd,
-        # )
-        # self.test_dict = OrderedDict(self.test_dict)
+        self.test_dict, self.test_acoustic_lengths = make_acoustic_dict_chalearn(
+            "{0}/{1}".format(self.test_path, self.test_dir),
+            f_end,
+            use_cols=use_cols,
+            avgd=avgd,
+        )
+        self.test_dict = OrderedDict(self.test_dict)
 
         # utterance-level dict
         self.longest_utt = self.get_longest_utt_chalearn()
 
         # get length of longest acoustic dataframe
-        self.longest_acoustic = get_max_num_acoustic_frames(
-            list(self.train_dict.values())
-            + list(self.dev_dict.values())
-            # + list(self.test_dict.values())
-        )
+        self.longest_acoustic = 1500  # set to 15 seconds
+        # self.longest_acoustic = get_max_num_acoustic_frames(
+        #     list(self.train_dict.values())
+        # + list(self.dev_dict.values())
+        # + list(self.test_dict.values())
+        # )
 
         print("Finalizing acoustic organization")
 
-        (
-            self.train_acoustic,
-            self.train_usable_utts,
-        ) = make_acoustic_set_chalearn(
+        self.train_acoustic, self.train_usable_utts = make_acoustic_set_chalearn(
             self.train,
             self.train_dict,
             acoustic_length=acoustic_length,
@@ -118,6 +125,7 @@ class ChalearnPrep:
             add_avging=add_avging,
             avgd=avgd,
         )
+        del self.train_dict
         self.dev_acoustic, self.dev_usable_utts = make_acoustic_set_chalearn(
             self.dev,
             self.dev_dict,
@@ -126,14 +134,16 @@ class ChalearnPrep:
             add_avging=add_avging,
             avgd=avgd,
         )
-        # self.test_acoustic, self.test_usable_utts = make_acoustic_set_chalearn(
-        #     self.test,
-        #     self.test_dict,
-        #     acoustic_length=acoustic_length,
-        #     longest_acoustic=self.longest_acoustic,
-        #     add_avging=add_avging,
-        #     avgd=avgd,
-        # )
+        del self.dev_dict
+        self.test_acoustic, self.test_usable_utts = make_acoustic_set_chalearn(
+            self.test,
+            self.test_dict,
+            acoustic_length=acoustic_length,
+            longest_acoustic=self.longest_acoustic,
+            add_avging=add_avging,
+            avgd=avgd,
+        )
+        del self.test_dict
 
         # get utterance, speaker, y matrices for train, dev, and test sets
         (
@@ -147,9 +157,8 @@ class ChalearnPrep:
             self.train_y_consc,
             self.train_y_inter,
             self.train_utt_lengths,
-        ) = self.make_data_tensors(
-            self.train_data_file, self.train_usable_utts, glove
-        )
+            self.train_audio_ids,
+        ) = self.make_data_tensors(self.train_data_file, self.train_usable_utts, glove)
 
         (
             self.dev_utts,
@@ -162,51 +171,216 @@ class ChalearnPrep:
             self.dev_y_consc,
             self.dev_y_inter,
             self.dev_utt_lengths,
-        ) = self.make_data_tensors(
-            self.dev_data_file, self.dev_usable_utts, glove
-        )
+            self.dev_audio_ids,
+        ) = self.make_data_tensors(self.dev_data_file, self.dev_usable_utts, glove)
 
-        # (
-        #     self.test_utts,
-        #     self.test_genders,
-        #     self.test_ethnicities,
-        #     self.test_y_extr,
-        #     self.test_y_neur,
-        #     self.test_y_agree,
-        #     self.test_y_openn,
-        #     self.test_y_consc,
-        #     self.test_y_inter,
-        #     self.test_utt_lengths,
-        # ) = self.make_data_tensors(
-        #     self.test_data_file, self.test_usable_utts, glove
-        # )
+        (
+            self.test_utts,
+            self.test_genders,
+            self.test_ethnicities,
+            self.test_y_extr,
+            self.test_y_neur,
+            self.test_y_agree,
+            self.test_y_openn,
+            self.test_y_consc,
+            self.test_y_inter,
+            self.test_utt_lengths,
+            self.test_audio_ids,
+        ) = self.make_data_tensors(self.test_data_file, self.test_usable_utts, glove)
 
         # set trait weights
         # todo: determine how we're binning and get class weights
         # self.median_openness = torch.median(self.train_y_openn)
         self.mean_openness = torch.mean(self.train_y_openn)
-        # print(self.mean_openness)
-        # sys.exit()
-        # self.openness_weights = get_class_weights()
 
         # acoustic feature normalization based on train
-        self.all_acoustic_means = self.train_acoustic.mean(
-            dim=0, keepdim=False
-        )
-        self.all_acoustic_deviations = self.train_acoustic.std(
-            dim=0, keepdim=False
+        print("starting acoustic means for chalearn")
+        self.all_acoustic_means, self.all_acoustic_deviations = get_acoustic_means(
+            self.train_acoustic
         )
 
+        print("starting male acoustic means for chalearn")
         self.male_acoustic_means, self.male_deviations = get_gender_avgs(
             self.train_acoustic, self.train_genders, gender=1
         )
+
+        print("starting female acoustic means for chalearn")
         self.female_acoustic_means, self.female_deviations = get_gender_avgs(
             self.train_acoustic, self.train_genders, gender=2
         )
+        print("All acoustic means calculated for chalearn")
+
+        # get the weights for chalearn personality traits
+        if pred_type == "max_class":
+            all_train_ys = [
+                [
+                    self.train_y_consc[i],
+                    self.train_y_openn[i],
+                    self.train_y_agree[i],
+                    self.train_y_neur[i],
+                    self.train_y_extr[i],
+                ]
+                for i in range(len(self.train_y_consc))
+            ]
+            self.train_ys = torch.tensor(
+                [item.index(max(item)) for item in all_train_ys]
+            )
+            self.trait_weights = get_class_weights(self.train_ys)
+
+        elif pred_type == "high-low" or pred_type == "binary":
+            # use the mean from train partition for each
+            consc_mean = torch.mean(self.train_y_consc)
+            openn_mean = torch.mean(self.train_y_openn)
+            agree_mean = torch.mean(self.train_y_agree)
+            extr_mean = torch.mean(self.train_y_extr)
+            neur_mean = torch.mean(self.train_y_neur)
+
+            self.train_y_consc = convert_ys(self.train_y_consc, pred_type, consc_mean)
+            self.train_y_openn = convert_ys(self.train_y_consc, pred_type, openn_mean)
+            self.train_y_agree = convert_ys(self.train_y_agree, pred_type, agree_mean)
+            self.train_y_extr = convert_ys(self.train_y_extr, pred_type, extr_mean)
+            self.train_y_neur = convert_ys(self.train_y_neur, pred_type, neur_mean)
+
+            self.dev_y_consc = convert_ys(self.dev_y_consc, pred_type, consc_mean)
+            self.dev_y_openn = convert_ys(self.dev_y_openn, pred_type, openn_mean)
+            self.dev_y_agree = convert_ys(self.dev_y_agree, pred_type, agree_mean)
+            self.dev_y_extr = convert_ys(self.dev_y_extr, pred_type, extr_mean)
+            self.dev_y_neur = convert_ys(self.dev_y_neur, pred_type, neur_mean)
+
+            self.test_y_consc = convert_ys(self.test_y_consc, pred_type, consc_mean)
+            self.test_y_openn = convert_ys(self.test_y_openn, pred_type, openn_mean)
+            self.test_y_agree = convert_ys(self.test_y_agree, pred_type, agree_mean)
+            self.test_y_extr = convert_ys(self.test_y_extr, pred_type, extr_mean)
+            self.test_y_neur = convert_ys(self.test_y_neur, pred_type, neur_mean)
+
+            # get weights for each trait
+            self.consc_weights = get_class_weights(self.train_y_consc)
+            self.openn_weights = get_class_weights(self.train_y_openn)
+            self.agree_weights = get_class_weights(self.train_y_agree)
+            self.extr_weights = get_class_weights(self.train_y_extr)
+            self.neur_weights = get_class_weights(self.train_y_neur)
+
+        elif pred_type == "high-med-low" or pred_type == "ternary":
+            # get the locations you want
+            # here we want 1/3 of the data and 2/3 of the data
+            q_measure = torch.tensor([0.33, 0.67])
+
+            # get the 1/3 and 2/3 quantiles
+            consc_onethird, consc_twothird = torch.quantile(
+                self.train_y_consc, q_measure
+            )
+            openn_onethird, openn_twothird = torch.quantile(
+                self.train_y_openn, q_measure
+            )
+            agree_onethird, agree_twothird = torch.quantile(
+                self.train_y_agree, q_measure
+            )
+            extr_onethird, extr_twothird = torch.quantile(self.train_y_extr, q_measure)
+            neur_onethird, neur_twothird = torch.quantile(self.train_y_neur, q_measure)
+
+            self.train_y_consc = convert_ys(
+                self.train_y_consc,
+                pred_type,
+                one_third=consc_onethird,
+                two_thirds=consc_twothird,
+            )
+            self.train_y_openn = convert_ys(
+                self.train_y_consc,
+                pred_type,
+                one_third=openn_onethird,
+                two_thirds=openn_twothird,
+            )
+            self.train_y_agree = convert_ys(
+                self.train_y_agree,
+                pred_type,
+                one_third=agree_onethird,
+                two_thirds=agree_twothird,
+            )
+            self.train_y_extr = convert_ys(
+                self.train_y_extr,
+                pred_type,
+                one_third=extr_onethird,
+                two_thirds=extr_twothird,
+            )
+            self.train_y_neur = convert_ys(
+                self.train_y_neur,
+                pred_type,
+                one_third=neur_onethird,
+                two_thirds=neur_twothird,
+            )
+
+            self.dev_y_consc = convert_ys(
+                self.dev_y_consc,
+                pred_type,
+                one_third=consc_onethird,
+                two_thirds=consc_twothird,
+            )
+            self.dev_y_openn = convert_ys(
+                self.dev_y_openn,
+                pred_type,
+                one_third=openn_onethird,
+                two_thirds=openn_twothird,
+            )
+            self.dev_y_agree = convert_ys(
+                self.dev_y_agree,
+                pred_type,
+                one_third=agree_onethird,
+                two_thirds=agree_twothird,
+            )
+            self.dev_y_extr = convert_ys(
+                self.dev_y_extr,
+                pred_type,
+                one_third=extr_onethird,
+                two_thirds=extr_twothird,
+            )
+            self.dev_y_neur = convert_ys(
+                self.dev_y_neur,
+                pred_type,
+                one_third=neur_onethird,
+                two_thirds=neur_twothird,
+            )
+
+            self.test_y_consc = convert_ys(
+                self.test_y_consc,
+                pred_type,
+                one_third=consc_onethird,
+                two_thirds=consc_twothird,
+            )
+            self.test_y_openn = convert_ys(
+                self.test_y_openn,
+                pred_type,
+                one_third=openn_onethird,
+                two_thirds=openn_twothird,
+            )
+            self.test_y_agree = convert_ys(
+                self.test_y_agree,
+                pred_type,
+                one_third=agree_onethird,
+                two_thirds=agree_twothird,
+            )
+            self.test_y_extr = convert_ys(
+                self.test_y_extr,
+                pred_type,
+                one_third=extr_onethird,
+                two_thirds=extr_twothird,
+            )
+            self.test_y_neur = convert_ys(
+                self.test_y_neur,
+                pred_type,
+                one_third=neur_onethird,
+                two_thirds=neur_twothird,
+            )
+
+            # get weights for each trait
+            self.consc_weights = get_class_weights(self.train_y_consc)
+            self.openn_weights = get_class_weights(self.train_y_openn)
+            self.agree_weights = get_class_weights(self.train_y_agree)
+            self.extr_weights = get_class_weights(self.train_y_extr)
+            self.neur_weights = get_class_weights(self.train_y_neur)
 
         # get the data organized for input into the NNs
         # self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
-        self.train_data, self.dev_data = self.combine_xs_and_ys()
+        self.train_data, self.dev_data, self.test_data = self.combine_xs_and_ys()
 
     def combine_xs_and_ys(self):
         """
@@ -214,90 +388,172 @@ class ChalearnPrep:
         """
         train_data = []
         dev_data = []
+        test_data = []
 
         for i, item in enumerate(self.train_acoustic):
             # normalize
-            if self.train_genders[i] == 2:
-                item_transformed = transform_acoustic_item(
-                    item, self.female_acoustic_means, self.female_deviations
+            # if self.train_genders[i] == 2:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.female_acoustic_means, self.female_deviations
+            #     )
+            # else:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.male_acoustic_means, self.male_deviations
+            #     )
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
+            if self.pred_type is not "max_class":
+                train_data.append(
+                    (
+                        item_transformed,
+                        self.train_utts[i],
+                        0,  # todo: eventually add speaker ?
+                        self.train_genders[i],
+                        self.train_ethnicities[i],
+                        self.train_y_extr[i],
+                        self.train_y_neur[i],
+                        self.train_y_agree[i],
+                        self.train_y_openn[i],
+                        self.train_y_consc[i],
+                        self.train_y_inter[i],
+                        self.train_audio_ids[i],
+                        self.train_utt_lengths[i],
+                        self.train_acoustic_lengths[i],
+                    )
                 )
             else:
-                item_transformed = transform_acoustic_item(
-                    item, self.male_acoustic_means, self.male_deviations
-                )
-            train_data.append(
-                (
-                    item_transformed,
-                    self.train_utts[i],
-                    0,  # todo: eventually add speaker ?
-                    self.train_genders[i],
-                    self.train_ethnicities[i],
+                ys = [
                     self.train_y_extr[i],
                     self.train_y_neur[i],
                     self.train_y_agree[i],
                     self.train_y_openn[i],
                     self.train_y_consc[i],
-                    self.train_y_inter[i],
-                    self.train_utt_lengths[i],
-                    self.train_acoustic_lengths[i],
+                ]
+                item_y = ys.index(max(ys))
+                train_data.append(
+                    (
+                        item_transformed,
+                        self.train_utts[i],
+                        0,
+                        self.train_genders[i],
+                        torch.tensor(item_y),
+                        self.train_ethnicities[i],
+                        self.train_audio_ids[i],
+                        self.train_utt_lengths[i],
+                        self.train_acoustic_lengths[i],
+                    )
                 )
-            )
 
         for i, item in enumerate(self.dev_acoustic):
-            if self.train_genders[i] == 2:
-                item_transformed = transform_acoustic_item(
-                    item, self.female_acoustic_means, self.female_deviations
+            # if self.dev_genders[i] == 2:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.female_acoustic_means, self.female_deviations
+            #     )
+            # else:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.male_acoustic_means, self.male_deviations
+            #     )
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
+            if self.pred_type is not "max_class":
+                dev_data.append(
+                    (
+                        item_transformed,
+                        self.dev_utts[i],
+                        0,  # todo: eventually add speaker ?
+                        self.dev_genders[i],
+                        self.dev_ethnicities[i],
+                        self.dev_y_extr[i],
+                        self.dev_y_neur[i],
+                        self.dev_y_agree[i],
+                        self.dev_y_openn[i],
+                        self.dev_y_consc[i],
+                        self.dev_y_inter[i],
+                        self.dev_audio_ids[i],
+                        self.dev_utt_lengths[i],
+                        self.dev_acoustic_lengths[i],
+                    )
                 )
             else:
-                item_transformed = transform_acoustic_item(
-                    item, self.male_acoustic_means, self.male_deviations
-                )
-            dev_data.append(
-                (
-                    item_transformed,
-                    self.dev_utts[i],
-                    0,  # todo: eventually add speaker ?
-                    self.dev_genders[i],
-                    self.dev_ethnicities[i],
+                ys = [
                     self.dev_y_extr[i],
                     self.dev_y_neur[i],
                     self.dev_y_agree[i],
                     self.dev_y_openn[i],
                     self.dev_y_consc[i],
-                    self.dev_y_inter[i],
-                    self.dev_utt_lengths[i],
-                    self.dev_acoustic_lengths[i],
+                ]
+                item_y = ys.index(max(ys))
+                dev_data.append(
+                    (
+                        item_transformed,
+                        self.dev_utts[i],
+                        0,  # todo: eventually add speaker ?
+                        self.dev_genders[i],
+                        torch.tensor(item_y),
+                        self.dev_ethnicities[i],
+                        self.dev_audio_ids[i],
+                        self.dev_utt_lengths[i],
+                        self.dev_acoustic_lengths[i],
+                    )
                 )
+
+        for i, item in enumerate(self.test_acoustic):
+            # if self.test_genders[i] == 2:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.female_acoustic_means, self.female_deviations
+            #     )
+            # else:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.male_acoustic_means, self.male_deviations
+            #     )
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
             )
+            if self.pred_type is not "max_class":
+                test_data.append(
+                    (
+                        item_transformed,
+                        self.test_utts[i],
+                        0,  # todo: eventually add speaker ?
+                        self.test_genders[i],
+                        self.test_ethnicities[i],
+                        self.test_y_extr[i],
+                        self.test_y_neur[i],
+                        self.test_y_agree[i],
+                        self.test_y_openn[i],
+                        self.test_y_consc[i],
+                        self.test_y_inter[i],
+                        self.test_audio_ids[i],
+                        self.test_utt_lengths[i],
+                        self.test_acoustic_lengths[i],
+                    )
+                )
+            else:
+                ys = [
+                    self.test_y_extr[i],
+                    self.test_y_neur[i],
+                    self.test_y_agree[i],
+                    self.test_y_openn[i],
+                    self.test_y_consc[i],
+                ]
+                item_y = ys.index(max(ys))
+                test_data.append(
+                    (
+                        item_transformed,
+                        self.test_utts[i],
+                        0,  # todo: eventually add speaker ?
+                        self.test_genders[i],
+                        torch.tensor(item_y),
+                        self.test_ethnicities[i],
+                        self.test_audio_ids[i],
+                        self.test_utt_lengths[i],
+                        self.test_acoustic_lengths[i],
+                    )
+                )
 
-        # for i, item in enumerate(self.test_acoustic):
-        #     if self.train_genders[i] == 2:
-        #         item_transformed = transform_acoustic_item(
-        #             item, self.female_acoustic_means, self.female_deviations
-        #         )
-        #     else:
-        #         item_transformed = transform_acoustic_item(
-        #             item, self.male_acoustic_means, self.male_deviations
-        #         )
-        #     test_data.append(
-        #         (
-        #             item_transformed,
-        #             self.test_utts[i],
-        #             0,  # todo: eventually add speaker ?
-        #             self.test_genders[i],
-        #             self.test_ethnicities[i],
-        #             self.test_y_extr[i],
-        #             self.test_y_neur[i],
-        #             self.test_y_agree[i],
-        #             self.test_y_openn[i],
-        #             self.test_y_consc[i],
-        #             self.test_y_inter[i],
-        #             self.test_utt_lengths[i],
-        #             self.test_acoustic_lengths[i],
-        #         )
-        #     )
-
-        return train_data, dev_data  # , test_data
+        return train_data, dev_data, test_data
 
     def get_longest_utt_chalearn(self):
         """
@@ -346,6 +602,7 @@ class ChalearnPrep:
         all_openness = []
         all_conscientiousness = []
         all_interview = []
+        all_audio_ids = []
 
         # create holder for sequence lengths information
         utt_lengths = []
@@ -356,6 +613,8 @@ class ChalearnPrep:
             audio_name = row["file"]
             audio_id = audio_name.split(".mp4")[0]
             if audio_id in all_utts_list:
+                # add audio id to list
+                all_audio_ids.append(audio_id)
 
                 # create utterance-level holders
                 utts = [0] * self.longest_utt
@@ -414,6 +673,7 @@ class ChalearnPrep:
             all_conscientiousness,
             all_interview,
             utt_lengths,
+            all_audio_ids,
         )
 
 
@@ -432,6 +692,46 @@ def convert_chalearn_pickle_to_json(path, file):
         json.dump(data, jfile)
 
 
+def convert_ys(ys, conversion="high-low", mean_y=None, one_third=None, two_thirds=None):
+    """
+    Convert a set of ys into binary high-low labels
+    or ternary high-medium-low labels
+    Uses the mean for binary and one-third and two-third
+        markers for ternary labels
+    """
+    new_ys = []
+    if conversion == "high-low" or conversion == "binary":
+        for item in ys:
+            if mean_y:
+                if item >= mean_y:
+                    new_ys.append(1)
+                else:
+                    new_ys.append(0)
+            else:
+                if item >= 0.5:
+                    new_ys.append(1)
+                else:
+                    new_ys.append(0)
+    elif conversion == "high-med-low" or conversion == "ternary":
+        if one_third and two_thirds:
+            for item in ys:
+                if item >= two_thirds:
+                    new_ys.append(2)
+                elif one_third <= item < two_thirds:
+                    new_ys.append(1)
+                else:
+                    new_ys.append(0)
+        else:
+            for item in ys:
+                if item >= 0.67:
+                    new_ys.append(2)
+                elif 0.34 <= item < 0.67:
+                    new_ys.append(1)
+                else:
+                    new_ys.append(0)
+    return new_ys
+
+
 def preprocess_chalearn_data(
     base_path, acoustic_save_dir, smile_path, acoustic_feature_set="IS10"
 ):
@@ -445,7 +745,9 @@ def preprocess_chalearn_data(
     """
     path_to_train = os.path.join(base_path, "train")
     path_to_dev = os.path.join(base_path, "val")
-    paths = [path_to_train, path_to_dev]
+    path_to_test = os.path.join(base_path, "test")
+    # paths = [path_to_train, path_to_dev, path_to_test]
+    paths = [path_to_test]
 
     for p in paths:
         # set path to audio files
@@ -459,9 +761,7 @@ def preprocess_chalearn_data(
         # extract features using opensmile
         for audio_file in os.listdir(path_to_files):
             audio_name = audio_file.split(".wav")[0]
-            audio_save_name = (
-                str(audio_name) + "_" + acoustic_feature_set + ".csv"
-            )
+            audio_save_name = f"{str(audio_name)}_{acoustic_feature_set}.csv"
             extractor = ExtractAudio(
                 path_to_files, audio_file, acoustic_save_path, smile_path
             )
@@ -483,7 +783,7 @@ def create_gold_tsv_chalearn(gold_file, utts_file, gender_file, save_name):
     with open(utts_file, "r") as j2file:
         utts_dict = json.load(j2file)
 
-    genders = pd.read_csv(gender_file)
+    genders = pd.read_csv(gender_file, sep=";")
     genders_dict = dict(zip(genders["VideoName"], genders["Gender"]))
     ethnicity_dict = dict(zip(genders["VideoName"], genders["Ethnicity"]))
 
@@ -493,9 +793,7 @@ def create_gold_tsv_chalearn(gold_file, utts_file, gender_file, save_name):
     if all_files != all_files_utts:
         print("utts dict and gold labels don't contain the same set of files")
     if all_files != sorted(genders_dict.keys()):
-        print(
-            "gold labels and gender labels don't contain the same set of files"
-        )
+        print("gold labels and gender labels don't contain the same set of files")
 
     with open(save_name, "w") as tsvfile:
         tsvfile.write(
@@ -550,17 +848,18 @@ def make_acoustic_dict_chalearn(
                     feats.drop(["name", "frameTime"], axis=1, inplace=True)
 
             # get the dialogue and utterance IDs
-            id = f.split("_IS10")[0]
+            id = f.split(f_end)[0]
 
             # save the dataframe to a dict with (dialogue, utt) as key
             if feats.shape[0] > 0:
                 acoustic_dict[id] = feats.values.tolist()
                 acoustic_lengths[id] = feats.shape[0]
 
+            # delete the features df bc it takes up masses of space
+            del feats
+
     # sort acoustic lengths so they are in the same order as other data
-    acoustic_lengths = [
-        value for key, value in sorted(acoustic_lengths.items())
-    ]
+    acoustic_lengths = [value for key, value in sorted(acoustic_lengths.items())]
 
     return acoustic_dict, acoustic_lengths
 
@@ -609,10 +908,11 @@ def make_acoustic_set_chalearn(
 
             if not avgd and not add_avging:
                 # set intermediate acoustic holder
-                acoustic_holder = [[0] * acoustic_length] * longest_acoustic
+                acoustic_holder = torch.zeros((longest_acoustic, acoustic_length))
 
                 # add the acoustic features to the holder of features
                 for i, feats in enumerate(acoustic_data):
+
                     # for now, using longest acoustic file in TRAIN only
                     if i >= longest_acoustic:
                         break
@@ -621,14 +921,18 @@ def make_acoustic_set_chalearn(
                         acoustic_holder[i][j] = feat
             else:
                 if avgd:
-                    acoustic_holder = acoustic_data
+                    acoustic_holder = torch.tensor(acoustic_data)
                 elif add_avging:
+                    data_len = len(acoustic_data)
+                    # try skipping first and last 25%
                     acoustic_holder = torch.mean(
-                        torch.tensor(acoustic_data), dim=0
+                        torch.tensor(acoustic_data)[
+                            math.floor(data_len * 0.25) : math.ceil(data_len * 0.75)
+                        ],
+                        dim=0,
                     )
-
             # add features as tensor to acoustic data
-            all_acoustic.append(torch.tensor(acoustic_holder))
+            all_acoustic.append(acoustic_holder)
 
     # pad the sequence and reshape it to proper format
     # this is here to keep the formatting for acoustic RNN
@@ -675,52 +979,76 @@ def reorganize_gender_annotations_chalearn(path, genderfile, transcriptfile):
 
 if __name__ == "__main__":
     # path to data
-    path = "../../datasets/multimodal_datasets/Chalearn/"
-    train_path = os.path.join(path, "train/mp4")
-    val_path = os.path.join(path, "val/mp4")
-    paths = [train_path, val_path]
+    path = "../../datasets/multimodal_datasets/Chalearn"
+    # train_path = os.path.join(path, "train/mp4")
+    # val_path = os.path.join(path, "val/mp4")
+    test_path = os.path.join(path, "test/mp4")
+    # pathd = [train_path, val_path]
+    paths = [test_path]
     # path to opensmile
-    smile_path = "~/opensmile-2.3.0"
+    smile_path = "../../opensmile-2.3.0"
     # acoustic set to extract
     acoustic_set = "IS10"
 
+    # #### WHEN RUNNING FOR THE FIRST TIME
     # # 1. convert pickle to json
-    # file_1 = "annotation_validation.pkl"
-    # file_2 = "transcription_validation.pkl"
+    # file_1 = "test/annotation_test.pkl"
+    # file_2 = "test/transcription_test.pkl"
     #
     # convert_chalearn_pickle_to_json(path, file_1)
     # convert_chalearn_pickle_to_json(path, file_2)
-
-    # # 2. convert mp4 to wav
-    # for p in paths:
-    #     print(p)
-    #     print("====================================")
-    #     for f in os.listdir(p):
-    #         if f.endswith(".mp4"):
-    #             print(f)
-    #             convert_mp4_to_wav(os.path.join(p, f))
-
-    # 3. preprocess files
-    # preprocess_chalearn_data(path, "IS10", smile_path, acoustic_set)
-
-    # 3.1 reorganize gender annotations file
-    # gender_file = os.path.join(path, "val/gender_anntoations_val.csv")
-    # anno_file = os.path.join(path, "val/transcription_validation.json")
-    # reorganize_gender_annotations_chalearn(path, gender_file, anno_file)
-
-    # 4. create a gold CSV to examine data more closely by hand
-    # dev_gold_json_path = os.path.join(path, "val/annotation_validation.json")
-    # dev_utts_json_path = os.path.join(path, "val/transcription_validation.json")
-    # dev_gender_file = os.path.join(path, "val/gender_annotations_val.csv")
-    # dev_save_name = os.path.join(path, "val/gold_and_utts.tsv")
-    # create_gold_tsv_chalearn(
-    #     dev_gold_json_path, dev_utts_json_path, dev_gender_file, dev_save_name
-    # )
     #
-    # train_gold_json_path = os.path.join(path, "train/annotation_training.json")
-    # train_utts_json_path = os.path.join(path, "train/transcription_training.json")
-    # train_gender_file = os.path.join(path, "train/gender_annotations_train.csv")
-    # train_save_name = os.path.join(path, "train/gold_and_utts.tsv")
+    # # 2. convert mp4 to wav
+    # # for p in paths:
+    # #     print(p)
+    # #     print("====================================")
+    # #     for f in os.listdir(p):
+    # #         if f.endswith(".mp4"):
+    # #             print(f)
+    # #             convert_mp4_to_wav(os.path.join(p, f))
+    #
+    # # 3. preprocess files
+    preprocess_chalearn_data(path, "IS10", smile_path, acoustic_set)
+    #
+    # # 3.1 reorganize gender annotations file
+    # gender_file = os.path.join(path, "test/gender_anntoations_test.csv")
+    # anno_file = os.path.join(path, "test/transcription_test.json")
+    # reorganize_gender_annotations_chalearn(path, gender_file, anno_file)
+    #
+    # # 4. create a gold CSV to examine data more closely by hand
+    # test_gold_json_path = os.path.join(path, "test/annotation_test.json")
+    # test_utts_json_path = os.path.join(path, "test/transcription_test.json")
+    # test_gender_file = os.path.join(path, "test/gender_anntoations_test.csv")
+    # test_save_name = os.path.join(path, "test/gold_and_utts.tsv")
     # create_gold_tsv_chalearn(
-    #     train_gold_json_path, train_utts_json_path, train_gender_file, train_save_name
+    #     test_gold_json_path, test_utts_json_path, test_gender_file, test_save_name
     # )
+    # #
+    # # dev_gold_json_path = os.path.join(path, "val/annotation_validation.json")
+    # # dev_utts_json_path = os.path.join(path, "val/transcription_validation.json")
+    # # dev_gender_file = os.path.join(path, "val/gender_annotations_val.csv")
+    # # dev_save_name = os.path.join(path, "val/gold_and_utts.tsv")
+    # # create_gold_tsv_chalearn(
+    # #     dev_gold_json_path, dev_utts_json_path, dev_gender_file, dev_save_name
+    # # )
+    # #
+    # # train_gold_json_path = os.path.join(path, "train/annotation_training.json")
+    # # train_utts_json_path = os.path.join(path, "train/transcription_training.json")
+    # # train_gender_file = os.path.join(path, "train/gender_annotations_train.csv")
+    # # train_save_name = os.path.join(path, "train/gold_and_utts.tsv")
+    # # create_gold_tsv_chalearn(
+    # #     train_gold_json_path, train_utts_json_path, train_gender_file, train_save_name
+    # # )
+
+    #### TO CREATE ADDITIONAL ACOUSTIC FEATURE SETS
+    train_audio_path = os.path.join(path, "train/wav")
+    dev_audio_path = os.path.join(path, "val/wav")
+    test_audio_path = os.path.join(path, "test/wav")
+
+    train_save_dir = os.path.join(path, "train/IS11")
+    dev_save_dir = os.path.join(path, "val/IS11")
+    test_save_dir = os.path.join(path, "test/IS11")
+
+    run_feature_extraction(train_audio_path, "IS11", train_save_dir)
+    run_feature_extraction(dev_audio_path, "IS11", dev_save_dir)
+    run_feature_extraction(test_audio_path, "IS11", test_save_dir)

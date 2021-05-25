@@ -10,9 +10,10 @@
 *egg-info
 pip-wheel-metadata
 
-# output directory
+# directories
 output/
 backup/
+data/
 
 #opensmile
 smile.log

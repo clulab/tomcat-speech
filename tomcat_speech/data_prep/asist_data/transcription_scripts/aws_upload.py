@@ -44,13 +44,7 @@ def upload_file(upload_file_path):
 
         # Convert video to wav
         subprocess.call(
-            [
-                "ffmpeg",
-                "-i",
-                f"{file_to_upload}",
-                "-vn",
-                f"{file_to_upload[:-4]}.wav",
-            ]
+            ["ffmpeg", "-i", f"{file_to_upload}", "-vn", f"{file_to_upload[:-4]}.wav",]
         )
 
         # Upload file to AWS
@@ -60,9 +54,7 @@ def upload_file(upload_file_path):
         save_name = f"{file_name[:-4]}.wav"
         try:
             response = s3.upload_file(
-                file_to_upload[:-4] + ".wav",
-                S3_BUCKET,
-                S3_PATH + "/" + save_name,
+                file_to_upload[:-4] + ".wav", S3_BUCKET, S3_PATH + "/" + save_name,
             )
         except ClientError as e:
             print(e)

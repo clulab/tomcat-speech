@@ -4,23 +4,21 @@
 from tomcat_speech.models.bimodal_models import BimodalCNN, MultichannelCNN
 from tomcat_speech.models.baselines import LRBaseline
 from tomcat_speech.models.train_and_test_models import *
+from tomcat_speech.models.plot_training import *
 
 from tomcat_speech.models.input_models import *
 from tomcat_speech.data_prep.lives_data.lives_prep import *
+
 from tomcat_speech.data_prep.data_prep_helpers import *
 
 # import parameters for model
 # comment or uncomment as needed
-# from tomcat_speech.models.parameters.bimodal_params import params
-from tomcat_speech.models.parameters.multitask_params import params
-
-# from tomcat_speech.models.parameters.lr_baseline_1_params import params
-# from tomcat_speech.models.parameters.multichannel_cnn_params import params
+# from models.parameters.bimodal_params import params
+from tomcat_speech.models.parameters.multitask_params import *
 
 import numpy as np
 import random
 import torch
-
 
 # set device
 cuda = True
@@ -94,9 +92,7 @@ if __name__ == "__main__":
     # get set of pretrained embeddings and their shape
     pretrained_embeddings = data.glove.data
     num_embeddings = pretrained_embeddings.size()[0]
-    print(
-        "shape of pretrained embeddings is: {0}".format(data.glove.data.size())
-    )
+    print(f"shape of pretrained embeddings is: {data.glove.data.size()}")
     # num_embeddings = None
     # pretrained_embeddings = None
 
@@ -117,11 +113,7 @@ if __name__ == "__main__":
 
         # use each train-val=test split in a separate training routine
         for split in range(data.splits):
-            print(
-                "Now starting training/tuning with split {0} held out".format(
-                    split
-                )
-            )
+            print(f"Now starting training/tuning with split {split} held out")
 
             # instantiate empty model holder
             bimodal_predictor = None
@@ -198,16 +190,14 @@ if __name__ == "__main__":
             training_data = data.remaining_splits
 
             # create a a save path and file for the model
-            model_save_file = (
-                "{0}_{1}_batch{2}_{3}hidden_{4}lyrs_lr{5}_{6}batch.pth".format(
-                    model_type,
-                    split,
-                    params.batch_size,
-                    params.hidden_dim,
-                    params.num_layers,
-                    lr,
-                    params.batch_size,
-                )
+            model_save_file = "{0}_{1}_batch{2}_{3}hidden_{4}lyrs_lr{5}_{6}batch.pth".format(
+                model_type,
+                split,
+                params.batch_size,
+                params.hidden_dim,
+                params.num_layers,
+                lr,
+                params.batch_size,
             )
 
             # create 2 save paths for models if using both encoder + decoder
@@ -231,15 +221,11 @@ if __name__ == "__main__":
                     params.batch_size,
                 )
 
-                train_state_2 = make_train_state(
-                    lr, model_save_path, model2_save_file
-                )
+                train_state_2 = make_train_state(lr, model_save_path, model2_save_file)
                 load_path2 = model_save_path + model2_save_file
 
             # make the train state to keep track of model training/development
-            train_state = make_train_state(
-                lr, model_save_path, model_save_file
-            )
+            train_state = make_train_state(lr, model_save_path, model_save_file)
 
             load_path = model_save_path + model_save_file
 
@@ -256,8 +242,6 @@ if __name__ == "__main__":
                     optimizer,
                     device,
                     scheduler=None,
-                    model2=bimodal_predictor,
-                    train_state2=train_state_2,
                 )
             else:
                 train_and_predict(

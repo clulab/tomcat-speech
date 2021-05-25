@@ -1,17 +1,19 @@
 # test the models created in models directory with MELD data
 # currently the main entry point into the system
-
 import pickle
+from random import random
+
+import numpy as np
 
 from tomcat_speech.data_prep.data_prep_helpers import DatumListDataset
 from tomcat_speech.models.train_and_test_models import *
+from tomcat_speech.models.plot_training import *
 
 from tomcat_speech.models.input_models import *
-from tomcat_speech.data_prep.data_prep import *
 from tomcat_speech.data_prep.meld_data.meld_prep import *
 
 # import parameters for model
-from tomcat_speech.models.parameters.multitask_params import params
+from tomcat_speech.models.parameters.earlyfusion_params import params
 
 # set device
 cuda = False

@@ -102,11 +102,7 @@ class SentimentScores:
         return score_text_dict
 
     def join_words_with_predictions(
-        self,
-        input_path,
-        utterance_input_names,
-        counts=True,
-        probabilities=True,
+        self, input_path, utterance_input_names, counts=True, probabilities=True,
     ):
         """
         Connects scores with the utterances they were predicted on
@@ -121,9 +117,7 @@ class SentimentScores:
         utterances_with_preds = {}
 
         # prepare to extract only the necessary columns
-        cols, colnames = set_cols_and_colnames(
-            counts, probabilities, include_utts=True
-        )
+        cols, colnames = set_cols_and_colnames(counts, probabilities, include_utts=True)
 
         # for each item in the output list
         for input_name in utterance_input_names:
@@ -146,9 +140,7 @@ class SentimentScores:
             if len(output_name) == 1:
                 output_path = os.path.join(self.path_to_scores, output_name[0])
             else:
-                sys.exit(
-                    "Multiple output files for the same study and participant"
-                )
+                sys.exit("Multiple output files for the same study and participant")
 
             # extract the columns needed into pandas DFs
             # we want one column per line, so sep should be something not found
@@ -187,9 +179,7 @@ def set_cols_and_colnames(counts=True, probabilities=True, include_utts=True):
         cols = [2, 3]
         colnames = ["pos_prob", "neg_prob"]
     else:
-        warnings.warn(
-            "no sentiment scores selected; defaulting to probabilities"
-        )
+        warnings.warn("no sentiment scores selected; defaulting to probabilities")
         cols = [2, 3]
         colnames = ["pos_prob", "neg_prob"]
 

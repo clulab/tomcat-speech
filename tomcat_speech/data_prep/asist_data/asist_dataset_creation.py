@@ -28,7 +28,7 @@ class AsistDataset(Dataset):
         sequence_prep=None,
         truncate_from="start",
         add_avging=False,
-        transcript_type="zoom"
+        transcript_type="zoom",
     ):
         """
         :param acoustic_dict: dict of {(sid, call) : data}
@@ -40,18 +40,27 @@ class AsistDataset(Dataset):
         :param truncate_from: whether to truncate from start or end of file
         """
         self.cols_to_skip = 2 if transcript_type.lower() == "zoom" else 4
-        self.acoustic_dict = OrderedDict({key: df[["speaker",
-                "utt",
-                "pcm_loudness_sma",
-                "F0finEnv_sma",
-                "voicingFinalUnclipped_sma",
-                "jitterLocal_sma",
-                "shimmerLocal_sma",
-                "pcm_loudness_sma_de",
-                "F0finEnv_sma_de",
-                "voicingFinalUnclipped_sma_de",
-                "jitterLocal_sma_de",
-                "shimmerLocal_sma_de"]] for key, df in acoustic_dict.items()})
+        self.acoustic_dict = OrderedDict(
+            {
+                key: df[
+                    [
+                        "speaker",
+                        "utt",
+                        "pcm_loudness_sma",
+                        "F0finEnv_sma",
+                        "voicingFinalUnclipped_sma",
+                        "jitterLocal_sma",
+                        "shimmerLocal_sma",
+                        "pcm_loudness_sma_de",
+                        "F0finEnv_sma_de",
+                        "voicingFinalUnclipped_sma_de",
+                        "jitterLocal_sma_de",
+                        "shimmerLocal_sma_de",
+                    ]
+                ]
+                for key, df in acoustic_dict.items()
+            }
+        )
         self.glove = glove
         if ys_path is not None:
             self.ys_df = pd.read_csv(ys_path)
@@ -72,19 +81,24 @@ class AsistDataset(Dataset):
             self.get_min_max_scales()
 
         self.skipped_files = []
-        #Tests gender classifier:print('start')
+        # Tests gender classifier:print('start')
 
         # self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove()
-        #Tests gender classifierprint('end')
+        # Tests gender classifierprint('end')
         if transcript_type.lower() == "zoom":
-            self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove_utt_level()
+            (
+                self.x_acoustic,
+                self.x_glove,
+                self.x_speaker,
+                self.x_utt_lengths,
+            ) = self.combine_acoustic_and_glove_utt_level()
         else:
             (
                 self.x_acoustic,
                 self.x_glove,
                 self.x_speaker,
                 self.x_utt_lengths,
-                #self.x_speaker_gender, #sa
+                # self.x_speaker_gender, #sa
             ) = self.combine_acoustic_and_glove_wd_level()
 
         # todo: we should get gender info on participants OR predict it
@@ -113,9 +127,7 @@ class AsistDataset(Dataset):
             for row in df_subset.itertuples():
                 for i, wd in enumerate(row):
                     if i >= self.cols_to_skip + 1:
-                        self.min_max_scaler.update(
-                            (i - (self.cols_to_skip + 1)), wd
-                        )
+                        self.min_max_scaler.update((i - (self.cols_to_skip + 1)), wd)
 
     def __len__(self):
         return len(self.current_split)
@@ -137,9 +149,7 @@ class AsistDataset(Dataset):
             for key, val in self.data_for_model_input.items()
             if (key != n and key != prev)
         ]
-        self.remaining_splits = functools.reduce(
-            operator.iconcat, remaining_splits, []
-        )
+        self.remaining_splits = functools.reduce(operator.iconcat, remaining_splits, [])
 
     def get_data_splits(self):
         data_dict = {}
@@ -522,9 +532,7 @@ class AsistDataset(Dataset):
                 else:
                     acoustic_data.append(torch.tensor(intermediate_acoustic))
                     ordered_words.append(torch.tensor(intermediate_wds))
-                    ordered_speakers.append(
-                        torch.tensor(intermediate_speakers)
-                    )
+                    ordered_speakers.append(torch.tensor(intermediate_speakers))
                     utt_lengths.append(torch.tensor(intermediate_utt_lengths))
 
         # use zero-padding to make all sequences the same length
@@ -545,15 +553,11 @@ class AsistDataset(Dataset):
             if self.truncate_from == "start":
                 acoustic_data = [item[-smallest:] for item in acoustic_data]
                 ordered_words = [item[-smallest:] for item in ordered_words]
-                ordered_speakers = [
-                    item[-smallest:] for item in ordered_speakers
-                ]
+                ordered_speakers = [item[-smallest:] for item in ordered_speakers]
             else:
                 acoustic_data = [item[:smallest] for item in acoustic_data]
                 ordered_words = [item[:smallest] for item in ordered_words]
-                ordered_speakers = [
-                    item[:smallest] for item in ordered_speakers
-                ]
+                ordered_speakers = [item[:smallest] for item in ordered_speakers]
 
             acoustic_data = torch.tensor(acoustic_data)
             ordered_words = torch.tensor(ordered_words)

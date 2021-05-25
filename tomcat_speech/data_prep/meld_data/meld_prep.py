@@ -1,11 +1,13 @@
 # prepare MELD input for usage in networks
 
 import os
+import re
 
 import pandas as pd
 
 import torch
 
+from tomcat_speech.data_prep.audio_extraction import ExtractAudio
 from tomcat_speech.data_prep.data_prep_helpers import (
     clean_up_word,
     get_max_num_acoustic_frames,
@@ -14,6 +16,7 @@ from tomcat_speech.data_prep.data_prep_helpers import (
     get_gender_avgs,
     make_acoustic_set,
     transform_acoustic_item,
+    get_acoustic_means,
 )
 from collections import OrderedDict
 
@@ -34,19 +37,31 @@ class MeldPrep:
         use_cols=None,
         add_avging=True,
         avgd=False,
+        utts_file_name=None,
     ):
         self.path = meld_path
         self.train_path = meld_path + "/train"
         self.dev_path = meld_path + "/dev"
         self.test_path = meld_path + "/test"
-        self.train = f"{self.train_path}/train_sent_emo.csv"
-        self.dev = f"{self.dev_path}/dev_sent_emo.csv"
-        self.test = f"{self.test_path}/test_sent_emo.csv"
 
-        # get files containing gold labels/data
-        self.train_data_file = pd.read_csv(self.train)
-        self.dev_data_file = pd.read_csv(self.dev)
-        self.test_data_file = pd.read_csv(self.test)
+        if utts_file_name is None:
+            self.train = f"{self.train_path}/train_sent_emo.csv"
+            self.dev = f"{self.dev_path}/dev_sent_emo.csv"
+            self.test = f"{self.test_path}/test_sent_emo.csv"
+
+            # get files containing gold labels/data
+            self.train_data_file = pd.read_csv(self.train)
+            self.dev_data_file = pd.read_csv(self.dev)
+            self.test_data_file = pd.read_csv(self.test)
+        else:
+            self.train = f"{self.train_path}/{utts_file_name}"
+            self.dev = f"{self.dev_path}/{utts_file_name}"
+            self.test = f"{self.test_path}/{utts_file_name}"
+
+            # get files containing gold labels/data
+            self.train_data_file = pd.read_csv(self.train, sep="\t")
+            self.dev_data_file = pd.read_csv(self.dev, sep="\t")
+            self.test_data_file = pd.read_csv(self.test, sep="\t")
 
         # get tokenizer
         self.tokenizer = get_tokenizer("basic_english")
@@ -55,9 +70,7 @@ class MeldPrep:
         self.acoustic_length = acoustic_length
 
         # get gender of speakers
-        self.speaker2gender = get_speaker_gender(
-            f"{self.path}/speaker2idx.csv"
-        )
+        self.speaker2gender = get_speaker_gender(f"{self.path}/speaker2idx.csv")
 
         # to determine whether incoming acoustic features are averaged
         self.avgd = avgd
@@ -68,22 +81,23 @@ class MeldPrep:
             self.dev_dir = "audios"
             self.test_dir = "audios"
         else:
+            setname = re.search("_(.*)\.csv", f_end)
+            name = setname.group(1)
             self.avgd = False
-            self.train_dir = "IS10_train"
-            self.dev_dir = "IS10_dev"
-            self.test_dir = "IS10_test"
+            self.train_dir = f"{name}_train"
+            self.dev_dir = f"{name}_dev"
+            self.test_dir = f"{name}_test"
 
-        print("Collecting acoustic features")
+        print("Collecting acoustic features for meld")
 
         # ordered dicts of acoustic data
-        # todo: is this screwed up?
-        #   ordered dict--is it same order as acoustic_lengths
         self.train_dict, self.train_acoustic_lengths = make_acoustic_dict_meld(
             "{0}/{1}".format(self.train_path, self.train_dir),
             f_end,
             use_cols=use_cols,
             avgd=avgd,
         )
+        # print(self.train_dict)
         self.train_dict = OrderedDict(self.train_dict)
         self.dev_dict, self.dev_acoustic_lengths = make_acoustic_dict_meld(
             "{0}/{1}".format(self.dev_path, self.dev_dir),
@@ -104,16 +118,17 @@ class MeldPrep:
         self.longest_utt, self.longest_dia = self.get_longest_utt_meld()
 
         # get length of longest acoustic dataframe
-        self.longest_acoustic = get_max_num_acoustic_frames(
-            list(self.train_dict.values())
-            + list(self.dev_dict.values())
-            + list(self.test_dict.values())
-        )
+        self.longest_acoustic = 1500
+        # self.longest_acoustic = get_max_num_acoustic_frames(
+        #     list(self.train_dict.values())
+        #     # + list(self.dev_dict.values())
+        #     # + list(self.test_dict.values())
+        # )
 
-        print("Finalizing acoustic organization")
+        print("Finalizing acoustic organization for meld")
 
         self.train_acoustic, self.train_usable_utts = make_acoustic_set(
-            self.train,
+            self.train_data_file,
             self.train_dict,
             data_type="meld",
             acoustic_length=acoustic_length,
@@ -122,7 +137,7 @@ class MeldPrep:
             avgd=avgd,
         )
         self.dev_acoustic, self.dev_usable_utts = make_acoustic_set(
-            self.dev,
+            self.dev_data_file,
             self.dev_dict,
             data_type="meld",
             acoustic_length=acoustic_length,
@@ -131,7 +146,7 @@ class MeldPrep:
             avgd=avgd,
         )
         self.test_acoustic, self.test_usable_utts = make_acoustic_set(
-            self.test,
+            self.test_data_file,
             self.test_dict,
             data_type="meld",
             acoustic_length=acoustic_length,
@@ -148,6 +163,7 @@ class MeldPrep:
             self.train_y_emo,
             self.train_y_sent,
             self.train_utt_lengths,
+            self.train_audio_ids,
         ) = self.make_meld_data_tensors(
             self.train_data_file, self.train_usable_utts, glove
         )
@@ -159,9 +175,8 @@ class MeldPrep:
             self.dev_y_emo,
             self.dev_y_sent,
             self.dev_utt_lengths,
-        ) = self.make_meld_data_tensors(
-            self.dev_data_file, self.dev_usable_utts, glove
-        )
+            self.dev_audio_ids,
+        ) = self.make_meld_data_tensors(self.dev_data_file, self.dev_usable_utts, glove)
 
         (
             self.test_utts,
@@ -170,35 +185,42 @@ class MeldPrep:
             self.test_y_emo,
             self.test_y_sent,
             self.test_utt_lengths,
+            self.test_audio_ids,
         ) = self.make_meld_data_tensors(
             self.test_data_file, self.test_usable_utts, glove
         )
+
+        # print(len(self.train_y_emo))
+        # print(len(self.train_y_sent))
+        # print(self.train_y_emo[0])
+        # print(self.train_y_sent[0])
 
         # set emotion and sentiment weights
         self.emotion_weights = get_class_weights(self.train_y_emo)
         self.sentiment_weights = get_class_weights(self.train_y_sent)
 
         # acoustic feature normalization based on train
-        self.all_acoustic_means = self.train_acoustic.mean(
-            dim=0, keepdim=False
+        print("starting acoustic means for meld")
+        self.all_acoustic_means, self.all_acoustic_deviations = get_acoustic_means(
+            self.train_acoustic
         )
-        self.all_acoustic_deviations = self.train_acoustic.std(
-            dim=0, keepdim=False
-        )
+        # self.all_acoustic_means = self.train_acoustic.mean(dim=0, keepdim=False)
+        # self.all_acoustic_deviations = self.train_acoustic.std(dim=0, keepdim=False)
 
+        print("starting male acoustic means for meld")
         self.male_acoustic_means, self.male_deviations = get_gender_avgs(
             self.train_acoustic, self.train_genders, gender=2
         )
+
+        print("starting female acoustic means for meld")
         self.female_acoustic_means, self.female_deviations = get_gender_avgs(
             self.train_acoustic, self.train_genders, gender=1
         )
 
+        print("all acoustic means calculated for meld")
+
         # get the data organized for input into the NNs
-        (
-            self.train_data,
-            self.dev_data,
-            self.test_data,
-        ) = self.combine_xs_and_ys()
+        (self.train_data, self.dev_data, self.test_data,) = self.combine_xs_and_ys()
 
     def combine_xs_and_ys(self):
         """
@@ -210,18 +232,21 @@ class MeldPrep:
 
         for i, item in enumerate(self.train_acoustic):
             # normalize
-            if self.train_genders[i] == 0:
-                item_transformed = transform_acoustic_item(
-                    item, self.all_acoustic_means, self.all_acoustic_deviations
-                )
-            elif self.train_genders[i] == 1:
-                item_transformed = transform_acoustic_item(
-                    item, self.female_acoustic_means, self.female_deviations
-                )
-            else:
-                item_transformed = transform_acoustic_item(
-                    item, self.male_acoustic_means, self.male_deviations
-                )
+            # if self.train_genders[i] == 0:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.all_acoustic_means, self.all_acoustic_deviations
+            #     )
+            # elif self.train_genders[i] == 1:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.female_acoustic_means, self.female_deviations
+            #     )
+            # else:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.male_acoustic_means, self.male_deviations
+            #     )
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
             train_data.append(
                 (
                     item_transformed,
@@ -230,24 +255,28 @@ class MeldPrep:
                     self.train_genders[i],
                     self.train_y_emo[i],
                     self.train_y_sent[i],
+                    self.train_audio_ids[i],
                     self.train_utt_lengths[i],
                     self.train_acoustic_lengths[i],
                 )
             )
 
         for i, item in enumerate(self.dev_acoustic):
-            if self.train_genders[i] == 0:
-                item_transformed = transform_acoustic_item(
-                    item, self.all_acoustic_means, self.all_acoustic_deviations
-                )
-            elif self.train_genders[i] == 1:
-                item_transformed = transform_acoustic_item(
-                    item, self.female_acoustic_means, self.female_deviations
-                )
-            else:
-                item_transformed = transform_acoustic_item(
-                    item, self.male_acoustic_means, self.male_deviations
-                )
+            # if self.dev_genders[i] == 0:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.all_acoustic_means, self.all_acoustic_deviations
+            #     )
+            # elif self.dev_genders[i] == 1:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.female_acoustic_means, self.female_deviations
+            #     )
+            # else:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.male_acoustic_means, self.male_deviations
+            #     )
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
             dev_data.append(
                 (
                     item_transformed,
@@ -256,24 +285,28 @@ class MeldPrep:
                     self.dev_genders[i],
                     self.dev_y_emo[i],
                     self.dev_y_sent[i],
+                    self.dev_audio_ids[i],
                     self.dev_utt_lengths[i],
                     self.dev_acoustic_lengths[i],
                 )
             )
 
         for i, item in enumerate(self.test_acoustic):
-            if self.train_genders[i] == 0:
-                item_transformed = transform_acoustic_item(
-                    item, self.all_acoustic_means, self.all_acoustic_deviations
-                )
-            elif self.train_genders[i] == 1:
-                item_transformed = transform_acoustic_item(
-                    item, self.female_acoustic_means, self.female_deviations
-                )
-            else:
-                item_transformed = transform_acoustic_item(
-                    item, self.male_acoustic_means, self.male_deviations
-                )
+            # if self.test_genders[i] == 0:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.all_acoustic_means, self.all_acoustic_deviations
+            #     )
+            # elif self.test_genders[i] == 1:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.female_acoustic_means, self.female_deviations
+            #     )
+            # else:
+            #     item_transformed = transform_acoustic_item(
+            #         item, self.male_acoustic_means, self.male_deviations
+            #     )
+            item_transformed = transform_acoustic_item(
+                item, self.all_acoustic_means, self.all_acoustic_deviations
+            )
             test_data.append(
                 (
                     item_transformed,
@@ -282,6 +315,7 @@ class MeldPrep:
                     self.test_genders[i],
                     self.test_y_emo[i],
                     self.test_y_sent[i],
+                    self.test_audio_ids[i],
                     self.test_utt_lengths[i],
                     self.test_acoustic_lengths[i],
                 )
@@ -302,21 +336,20 @@ class MeldPrep:
         test_utts_df = self.test_data_file
 
         # concatenate them and put utterances in array
-        all_utts_df = pd.concat(
-            [train_utts_df, dev_utts_df, test_utts_df], axis=0
-        )
-        all_utts = all_utts_df["Utterance"].tolist()
+        all_utts_df = pd.concat([train_utts_df, dev_utts_df, test_utts_df], axis=0)
+        try:
+            all_utts = all_utts_df["Utterance"].tolist()
+        except KeyError:
+            all_utts = all_utts_df["utterance"].tolist()
 
         for i, item in enumerate(all_utts):
-            item = clean_up_word(item)
+            item = clean_up_word(str(item))
             item = self.tokenizer(item)
             if len(item) > longest:
                 longest = len(item)
 
         # get longest dialogue length
-        longest_dia = (
-            max(all_utts_df["Utterance_ID"].tolist()) + 1
-        )  # because 0-indexed
+        longest_dia = max(all_utts_df["Utterance_ID"].tolist()) + 1  # because 0-indexed
 
         return longest, longest_dia
 
@@ -334,6 +367,7 @@ class MeldPrep:
         all_genders = []
         all_emotions = []
         all_sentiments = []
+        all_audio_ids = []
 
         # create holder for sequence lengths information
         utt_lengths = []
@@ -343,12 +377,17 @@ class MeldPrep:
             # check to make sure this utterance is used
             dia_num, utt_num = row["DiaID_UttID"].split("_")[:2]
             if (dia_num, utt_num) in all_utts_list:
+                # add to all ids
+                all_audio_ids.append("_".join([dia_num, utt_num]))
 
                 # create utterance-level holders
                 utts = [0] * self.longest_utt
 
                 # get values from row
-                utt = clean_up_word(row["Utterance"])
+                try:
+                    utt = clean_up_word(str(row["Utterance"]))
+                except KeyError:
+                    utt = clean_up_word(str(row["utterance"]))
                 utt = self.tokenizer(utt)
                 utt_lengths.append(len(utt))
 
@@ -382,11 +421,10 @@ class MeldPrep:
             all_emotions,
             all_sentiments,
             utt_lengths,
+            all_audio_ids,
         )
 
-    def make_dialogue_aware_meld_data_tensors(
-        self, text_path, all_utts_list, glove
-    ):
+    def make_dialogue_aware_meld_data_tensors(self, text_path, all_utts_list, glove):
         """
         Prepare the tensors of utterances + speakers, emotion and sentiment scores
         This preserves dialogue structure for use within networks
@@ -471,11 +509,7 @@ class MeldPrep:
 
 # helper functions
 def make_acoustic_dict_meld(
-    acoustic_path,
-    f_end="_IS10.csv",
-    files_to_get=None,
-    use_cols=None,
-    avgd=True,
+    acoustic_path, f_end="_IS10.csv", files_to_get=None, use_cols=None, avgd=True,
 ):
     """
     makes a dict of (dia, utt): data for use in MELD objects
@@ -496,15 +530,10 @@ def make_acoustic_dict_meld(
                 separator = ";"
 
             # read in the file as a dataframe
-            if (
-                files_to_get is None
-                or "_".join(f.split("_")[:2]) in files_to_get
-            ):
+            if files_to_get is None or "_".join(f.split("_")[:2]) in files_to_get:
                 if use_cols is not None:
                     feats = pd.read_csv(
-                        acoustic_path + "/" + f,
-                        usecols=use_cols,
-                        sep=separator,
+                        acoustic_path + "/" + f, usecols=use_cols, sep=separator,
                     )
                 else:
                     feats = pd.read_csv(acoustic_path + "/" + f, sep=separator)
@@ -521,9 +550,7 @@ def make_acoustic_dict_meld(
                     acoustic_lengths[(dia_id, utt_id)] = feats.shape[0]
 
     # sort acoustic lengths so they are in the same order as other data
-    acoustic_lengths = [
-        value for key, value in sorted(acoustic_lengths.items())
-    ]
+    acoustic_lengths = [value for key, value in sorted(acoustic_lengths.items())]
 
     return acoustic_dict, acoustic_lengths
 
@@ -583,3 +610,49 @@ def make_acoustic_dict_meld(
 #             all_acoustic.append(torch.tensor(acoustic_holder))
 #
 #     return all_acoustic, usable_utts
+
+
+def run_feature_extraction(audio_path, feature_set, save_dir, dataset="mustard"):
+    """
+    Run feature extraction from audio_extraction.py for meld
+    """
+    # save all files in the directory
+    for wfile in os.listdir(audio_path):
+        if dataset == "meld":
+            save_name = str(wfile.split("_2.wav")[0]) + f"_{feature_set}.csv"
+            meld_extractor = ExtractAudio(
+                audio_path, wfile, save_dir, "../../opensmile-2.3.0"
+            )
+            meld_extractor.save_acoustic_csv(feature_set, save_name)
+        else:
+            save_name = str(wfile.split(".wav")[0]) + f"_{feature_set}.csv"
+            meld_extractor = ExtractAudio(
+                audio_path, wfile, save_dir, "../../opensmile-2.3.0"
+            )
+            meld_extractor.save_acoustic_csv(feature_set, save_name)
+
+
+if __name__ == "__main__":
+    # path to meld
+    meld_train_path = "../../datasets/multimodal_datasets/MELD_formatted/train"
+    meld_dev_path = "../../datasets/multimodal_datasets/MELD_formatted/dev"
+    meld_test_path = "../../datasets/multimodal_datasets/MELD_formatted/test"
+
+    train_extension = "train_audio_mono"
+    dev_extension = "dev_audio_mono"
+    test_extension = "test_audio_mono"
+
+    full_train_path = os.path.join(meld_train_path, train_extension)
+    train_save_dir = os.path.join(meld_train_path, "IS11_train")
+
+    run_feature_extraction(full_train_path, "IS11", train_save_dir, dataset="meld")
+
+    full_dev_path = os.path.join(meld_dev_path, dev_extension)
+    dev_save_dir = os.path.join(meld_dev_path, "IS11_dev")
+
+    run_feature_extraction(full_dev_path, "IS11", dev_save_dir, dataset="meld")
+
+    full_test_path = os.path.join(meld_test_path, test_extension)
+    test_save_dir = os.path.join(meld_test_path, "IS11_test")
+
+    run_feature_extraction(full_test_path, "IS11", test_save_dir, dataset="meld")

@@ -3,24 +3,23 @@
 import shutil
 import sys
 from datetime import date
-import pickle
 
 import numpy as np
 import copy
+
 from sklearn.model_selection import train_test_split
 
-from tomcat_speech.models.chalearn_models import OCEANPersonalityModel
 
-# from sklearn.model_selection import train_test_split
-
-from tomcat_speech.data_prep.chalearn_data.chalearn_prep import ChalearnPrep
 from tomcat_speech.models.train_and_test_models import *
 from tomcat_speech.models.plot_training import *
+from tomcat_speech.models.input_models import *
 from tomcat_speech.data_prep.data_prep_helpers import *
 from tomcat_speech.data_prep.meld_data.meld_prep import *
+from tomcat_speech.data_prep.mustard_data.mustard_prep import MustardPrep
+from tomcat_speech.data_prep.chalearn_data.chalearn_prep import ChalearnPrep
 
 # import parameters for model
-import tomcat_speech.models.parameters.chalearn_config as config
+import tomcat_speech.models.parameters.multitask_config as config
 
 # from models.parameters.multitask_params import model_params
 
@@ -66,6 +65,8 @@ if __name__ == "__main__":
         + str(date.today()),
     )
 
+    print(f"OUTPUT PATH:\n{output_path}")
+
     # set location for pickled data (saving or loading)
     if config.USE_SERVER:
         data = "/data/nlp/corpora/MM/pickled_data"
@@ -91,9 +92,33 @@ if __name__ == "__main__":
             # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
             glove_dict = make_glove_dict(config.glove_file)
             glove = Glove(glove_dict)
+            # # load glove
+            # glove = pickle.load(open("data/glove.pickle", "rb"))
             print("Glove object created")
 
             # 2. MAKE DATASET
+            # mustard_data = MustardPrep(
+            #     mustard_path=config.mustard_path,
+            #     acoustic_length=config.model_params.audio_dim,
+            #     glove=glove,
+            #     add_avging=config.model_params.add_avging,
+            #     use_cols=config.acoustic_columns,
+            #     avgd=config.model_params.avgd_acoustic,
+            #     f_end=f"_{config.feature_set}.csv",
+            #     # utts_file_name="mustard_google.tsv",
+            # )
+
+            meld_data = MeldPrep(
+                meld_path=config.meld_path,
+                acoustic_length=config.model_params.audio_dim,
+                glove=glove,
+                add_avging=config.model_params.add_avging,
+                use_cols=config.acoustic_columns,
+                avgd=config.model_params.avgd_acoustic,
+                f_end=f"_{config.feature_set}.csv",
+                # utts_file_name="meld_kaldi.tsv"
+            )
+
             chalearn_data = ChalearnPrep(
                 chalearn_path=config.chalearn_path,
                 acoustic_length=config.model_params.audio_dim,
@@ -101,28 +126,54 @@ if __name__ == "__main__":
                 add_avging=config.model_params.add_avging,
                 use_cols=config.acoustic_columns,
                 avgd=config.model_params.avgd_acoustic,
-                f_end=f"_{config.feature_set}.csv",
                 pred_type=config.chalearn_predtype,
+                f_end=f"_{config.feature_set}.csv",
                 # utts_file_name="chalearn_kaldi.tsv"
             )
 
+            # ravdess_data = RavdessPrep(ravdess_path=config.ravdess_path, acoustic_length=params.audio_dim, glove=glove,
+            #                      add_avging=params.add_avging,
+            #                      use_cols=config.acoustic_columns,
+            #                      avgd=avgd_acoustic)
+
+            print("Data loaded")
+
             # add class weights to device
-            if config.chalearn_predtype == "max_class":
-                chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
-            elif (
-                config.chalearn_predtype == "high-low"
-                or config.chalearn_predtype == "high-med-low"
-                or config.chalearn_predtype == "binary"
-                or config.chalearn_predtype == "ternary"
-            ):
-                chalearn_data.neur_weights = chalearn_data.neur_weights.to(device)
-                chalearn_data.openn_weights = chalearn_data.openn_weights.to(device)
-                chalearn_data.extr_weights = chalearn_data.extr_weights.to(device)
-                chalearn_data.agree_weights = chalearn_data.agree_weights.to(device)
-                chalearn_data.consc_weights = chalearn_data.consc_weights.to(device)
-                chalearn_data.trait_weights = None
+            # mustard_data.sarcasm_weights = mustard_data.sarcasm_weights.to(device)
+            meld_data.emotion_weights = meld_data.emotion_weights.to(device)
+            chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
+            # ravdess_data.emotion_weights = ravdess_data.emotion_weights.to(device)
 
             # get train, dev, test partitions
+            # mustard_train_ds = DatumListDataset(
+            #     mustard_data.train_data, "mustard", mustard_data.sarcasm_weights
+            # )
+            # mustard_dev_ds = DatumListDataset(
+            #     mustard_data.dev_data, "mustard", mustard_data.sarcasm_weights
+            # )
+            # mustard_test_ds = DatumListDataset(
+            #     mustard_data.test_data, "mustard", mustard_data.sarcasm_weights
+            # )
+
+            meld_train_ds = DatumListDataset(
+                meld_data.train_data, "meld_emotion", meld_data.emotion_weights
+            )
+
+            meld_dev_ds = DatumListDataset(
+                meld_data.dev_data, "meld_emotion", meld_data.emotion_weights
+            )
+            meld_test_ds = DatumListDataset(
+                meld_data.test_data, "meld_emotion", meld_data.emotion_weights
+            )
+            #
+            # # combine train and dev data to increase the number of items in dev set
+            train_and_dev = meld_train_ds + meld_dev_ds
+            meld_train_ds, meld_dev_ds = train_test_split(train_and_dev, test_size=0.2)
+            print("MELD dataset rebalanced")
+
+            del meld_data
+
+            # # create chalearn train, dev, _ data
             chalearn_train_ds = DatumListDataset(
                 chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights
             )
@@ -132,60 +183,7 @@ if __name__ == "__main__":
             chalearn_test_ds = DatumListDataset(
                 chalearn_data.test_data, "chalearn_traits", chalearn_data.trait_weights
             )
-
-            chalearn_train_ds_5000, _ = train_test_split(
-                chalearn_train_ds, train_size=5000
-            )
-            chalearn_train_ds_4000, _ = train_test_split(
-                chalearn_train_ds_5000, train_size=4000
-            )
-            chalearn_train_ds_3000, _ = train_test_split(
-                chalearn_train_ds_4000, train_size=3000
-            )
-            chalearn_train_ds_2000, _ = train_test_split(
-                chalearn_train_ds_3000, train_size=2000
-            )
-            chalearn_train_ds_1000, _ = train_test_split(
-                chalearn_train_ds_2000, train_size=1000
-            )
-            chalearn_train_ds_900, _ = train_test_split(
-                chalearn_train_ds_1000, train_size=900
-            )
-            chalearn_train_ds_800, _ = train_test_split(
-                chalearn_train_ds_900, train_size=800
-            )
-            chalearn_train_ds_700, _ = train_test_split(
-                chalearn_train_ds_900, train_size=700
-            )
-            chalearn_train_ds_600, _ = train_test_split(
-                chalearn_train_ds_900, train_size=600
-            )
-            chalearn_train_ds_500, _ = train_test_split(
-                chalearn_train_ds_900, train_size=500
-            )
-            chalearn_train_ds_400, _ = train_test_split(
-                chalearn_train_ds_900, train_size=400
-            )
-            chalearn_train_ds_300, _ = train_test_split(
-                chalearn_train_ds_900, train_size=300
-            )
-            chalearn_train_ds_200, _ = train_test_split(
-                chalearn_train_ds_900, train_size=200
-            )
-            chalearn_train_ds_100, _ = train_test_split(
-                chalearn_train_ds_900, train_size=100
-            )
-            chalearn_train_ds_50, _ = train_test_split(
-                chalearn_train_ds_900, train_size=50
-            )
-            chalearn_train_ds_10, _ = train_test_split(
-                chalearn_train_ds_50, train_size=10
-            )
-            chalearn_train_ds_5, _ = train_test_split(
-                chalearn_train_ds_10, train_size=5
-            )
-            chalearn_train_ds_1, _ = train_test_split(chalearn_train_ds_5, train_size=1)
-            print("CHALEARN data split")
+            del chalearn_data
 
             if config.save_dataset:
                 # save all data for faster loading
@@ -194,121 +192,63 @@ if __name__ == "__main__":
                 # make sure the full save path exists; if not, create it
                 os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(save_path))
 
-                # save all data for faster loading
-                pickle.dump(
-                    chalearn_train_ds_5000,
-                    open(f"{save_path}/chalearn_IS1013_5000_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_4000,
-                    open(f"{save_path}/chalearn_IS1013_4000_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_3000,
-                    open(f"{save_path}/chalearn_IS1013_3000_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_2000,
-                    open(f"{save_path}/chalearn_IS1013_2000_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_1000,
-                    open(f"{save_path}/chalearn_IS1013_1000_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_900,
-                    open(f"{save_path}/chalearn_IS1013_900_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_800,
-                    open(f"{save_path}/chalearn_IS1013_800_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_700,
-                    open(f"{save_path}/chalearn_IS1013_700_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_600,
-                    open(f"{save_path}/chalearn_IS1013_600_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_500,
-                    open(f"{save_path}/chalearn_IS1013_500_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_400,
-                    open(f"{save_path}/chalearn_IS1013_400_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_300,
-                    open(f"{save_path}/chalearn_IS1013_300_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_200,
-                    open(f"{save_path}/chalearn_IS1013_200_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_100,
-                    open(f"{save_path}/chalearn_IS1013_100_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_50,
-                    open(f"{save_path}/chalearn_IS1013_50_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_10,
-                    open(f"{save_path}/chalearn_IS1013_10_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_5,
-                    open(f"{save_path}/chalearn_IS1013_5_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds_1,
-                    open(f"{save_path}/chalearn_IS1013_1_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_train_ds,
-                    open(f"{save_path}/chalearn_IS1013_train.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_dev_ds,
-                    open(f"{save_path}/chalearn_IS1013_dev.pickle", "wb"),
-                )
-                pickle.dump(
-                    chalearn_test_ds,
-                    open(f"{save_path}/chalearn_IS1013_test.pickle", "wb"),
-                )
+                # save meld dataset
+                pickle.dump(meld_train_ds, open(f"{save_path}/meld_IS13_train.pickle", "wb"))
+                pickle.dump(meld_dev_ds, open(f"{save_path}/meld_IS13_dev.pickle", "wb"))
+                pickle.dump(meld_test_ds, open(f"{save_path}/meld_IS3_test.pickle", "wb"))
 
-                # pickle.dump(
-                #     glove, open("data/glove.pickle", "wb")
-                # )
-                exit()
+                # save mustard
+                pickle.dump(mustard_train_ds, open(f"{save_path}/mustard_IS13_train.pickle", "wb"))
+                pickle.dump(mustard_dev_ds, open(f"{save_path}/mustard_IS13_dev.pickle", "wb"))
+                pickle.dump(mustard_test_ds, open(f"{save_path}/mustard_IS13_test.pickle", "wb"))
+                #
+                # save chalearn
+                pickle.dump(chalearn_train_ds, open(f"{save_path}/chalearn_IS13_train.pickle", "wb"))
+                pickle.dump(chalearn_dev_ds, open(f"{save_path}/chalearn_IS13_dev.pickle", "wb"))
+                pickle.dump(chalearn_test_ds, open(f'{save_path}/chalearn_IS13_test.pickle', 'wb'))
+
+                pickle.dump(glove, open("data/glove.pickle", "wb"))  # todo: get different glove names
 
             print("Datasets created")
 
         else:
             # 1. Load datasets + glove object
+            load_dir = config.load_path
+            # uncomment if loading saved data
+            meld_train_ds = pickle.load(
+                open(f"{data}/{load_dir}/meld_IS13_train.pickle", "rb")
+            )
+            meld_dev_ds = pickle.load(
+                open(f"{data}/{load_dir}/meld_IS13_dev.pickle", "rb")
+            )
+            meld_test_ds = pickle.load(
+                open(f"{data}/{load_dir}/meld_IS13_test.pickle", "rb")
+            )
+
+            print("MELD data loaded")
+
+            # # load mustard
+            # mustard_train_ds = pickle.load(open(f"{data}/{load_dir}/mustard_IS13_train.pickle", "rb"))
+            # mustard_dev_ds = pickle.load(open(f"{data}/{load_dir}/mustard_IS13_dev.pickle", "rb"))
+            # mustard_test_ds = pickle.load(open(f"{data}/{load_dir}/mustard_IS13_test.pickle", "rb"))
+            #
+            # print("MUSTARD data loaded")
+
+            # load chalearn
             chalearn_train_ds = pickle.load(
-                open(f"{data}/{config.load_path}/chalearn_IS1013_1_train.pickle", "rb")
+                open(f"{data}/{load_dir}/chalearn_IS13_train.pickle", "rb")
             )
             chalearn_dev_ds = pickle.load(
-                open(f"{data}/{config.load_path}/chalearn_IS1013_dev.pickle", "rb")
+                open(f"{data}/{load_dir}/chalearn_IS13_dev.pickle", "rb")
             )
             chalearn_test_ds = pickle.load(
-                open(f"{data}/{config.load_path}/chalearn_IS1013_test.pickle", "rb")
+                open(f"{data}/{load_dir}/chalearn_IS13_test.pickle", "rb")
             )
 
             print("ChaLearn data loaded")
 
-            # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
-            glove_dict = make_glove_dict(config.glove_file)
-            glove = Glove(glove_dict)
-            print("Glove object created")
-
-            # # load glove
-            # glove = pickle.load(open("data/glove.pickle", "rb"))
-
+            # load glove
+            glove = pickle.load(open("data/glove.pickle", "rb"))
             print("GloVe object loaded")
 
         # 3. CREATE NN
@@ -366,11 +306,28 @@ if __name__ == "__main__":
 
                                     # this uses train-dev-test folds
                                     # create instance of model
-                                    multitask_model = OCEANPersonalityModel(
-                                        params=this_model_params,
-                                        num_embeddings=num_embeddings,
-                                        pretrained_embeddings=pretrained_embeddings,
-                                    )
+                                    if config.model_type.lower() == "concat_multitask":
+                                        multitask_model = MultitaskDuplicateInputModel(
+                                            params=this_model_params,
+                                            num_embeddings=num_embeddings,
+                                            pretrained_embeddings=pretrained_embeddings,
+                                            num_tasks=config.num_tasks,
+                                        )
+                                    elif config.model_type.lower() == "multitask":
+                                        multitask_model = MultitaskModel(
+                                            params=this_model_params,
+                                            num_embeddings=num_embeddings,
+                                            pretrained_embeddings=pretrained_embeddings,
+                                        )
+                                    elif (
+                                        config.model_type.lower()
+                                        == "acoustic_multitask"
+                                    ):
+                                        multitask_model = MultitaskAcousticShared(
+                                            params=this_model_params,
+                                            num_embeddings=num_embeddings,
+                                            pretrained_embeddings=pretrained_embeddings,
+                                        )
 
                                     optimizer = torch.optim.Adam(
                                         lr=lr,
@@ -381,6 +338,35 @@ if __name__ == "__main__":
                                     # set the classifier(s) to the right device
                                     multitask_model = multitask_model.to(device)
                                     print(multitask_model)
+
+                                    # # add loss function for mustard
+                                    # # NOTE: multitask training doesn't work with BCELoss for mustard
+                                    # mustard_loss_func = nn.CrossEntropyLoss(
+                                    #     # weight=mustard_train_ds.class_weights,
+                                    #     reduction="mean"
+                                    # )
+                                    # # # # create multitask object
+                                    # mustard_obj = MultitaskObject(
+                                    #     mustard_train_ds,
+                                    #     mustard_dev_ds,
+                                    #     mustard_test_ds,
+                                    #     mustard_loss_func,
+                                    #     task_num=0,
+                                    # )
+
+                                    # # add loss function for meld
+                                    meld_loss_func = nn.CrossEntropyLoss(
+                                        # weight=meld_data.emotion_weights,
+                                        reduction="mean"
+                                    )
+                                    # create multitask object
+                                    meld_obj = MultitaskObject(
+                                        meld_train_ds,
+                                        meld_dev_ds,
+                                        meld_test_ds,
+                                        meld_loss_func,
+                                        task_num=0,
+                                    )
 
                                     # add loss function for chalearn
                                     chalearn_loss_func = nn.CrossEntropyLoss(
@@ -393,8 +379,14 @@ if __name__ == "__main__":
                                         chalearn_dev_ds,
                                         chalearn_test_ds,
                                         chalearn_loss_func,
-                                        task_num=0,
+                                        task_num=1,
                                     )
+
+                                    # set all data list
+                                    all_data_list = [
+                                        meld_obj,
+                                        chalearn_obj,
+                                    ]
 
                                     print(
                                         "Model, loss function, and optimization created"
@@ -411,32 +403,36 @@ if __name__ == "__main__":
                                     train_state = make_train_state(lr, model_save_file)
 
                                     # train the model and evaluate on development set
-                                    if config.chalearn_predtype == "max_class":
-                                        max_class = True
+                                    if this_model_params.use_gradnorm:
+                                        multitask_train_and_predict_with_gradnorm(
+                                            multitask_model,
+                                            train_state,
+                                            all_data_list,
+                                            this_model_params.batch_size,
+                                            this_model_params.num_epochs,
+                                            optimizer,
+                                            device,
+                                            avgd_acoustic=avgd_acoustic_in_network,
+                                            use_speaker=this_model_params.use_speaker,
+                                            use_gender=this_model_params.use_gender,
+                                            optimizer2_learning_rate=lr,
+                                        )
                                     else:
-                                        max_class = False
-                                    #
-                                    # print(max_class)
-                                    # print(config.chalearn_predtype)
-                                    # sys.exit()
+                                        multitask_train_and_predict(
+                                            multitask_model,
+                                            train_state,
+                                            all_data_list,
+                                            this_model_params.batch_size,
+                                            this_model_params.num_epochs,
+                                            optimizer,
+                                            device,
+                                            scheduler=None,
+                                            sampler=sampler,
+                                            avgd_acoustic=avgd_acoustic_in_network,
+                                            use_speaker=this_model_params.use_speaker,
+                                            use_gender=this_model_params.use_gender,
+                                        )
 
-                                    personality_as_multitask_train_and_predict(
-                                        multitask_model,
-                                        train_state,
-                                        chalearn_train_ds,
-                                        chalearn_dev_ds,
-                                        this_model_params.batch_size,
-                                        this_model_params.num_epochs,
-                                        chalearn_loss_func,
-                                        optimizer,
-                                        device,
-                                        scheduler=None,
-                                        sampler=sampler,
-                                        avgd_acoustic=avgd_acoustic_in_network,
-                                        use_speaker=this_model_params.use_speaker,
-                                        use_gender=this_model_params.use_gender,
-                                        max_class=max_class,
-                                    )
                                     # plot the loss and accuracy curves
                                     # set plot titles
                                     loss_title = f"Training and Dev loss for model {config.model_type} with lr {lr}"

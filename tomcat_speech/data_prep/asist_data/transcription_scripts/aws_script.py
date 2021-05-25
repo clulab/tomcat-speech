@@ -51,9 +51,7 @@ def transcribe_file(file_path, output_dir_path="."):
             LanguageCode="en-US",
         )
 
-        transcription_filepath = (
-            f"{output_dir_path}/{job_name[:-4]}_transcript"
-        )
+        transcription_filepath = f"{output_dir_path}/{job_name[:-4]}_transcript"
 
         while True:
             status = transcribe_client.get_transcription_job(
@@ -63,18 +61,14 @@ def transcribe_file(file_path, output_dir_path="."):
             if job_status in ["COMPLETED", "FAILED"]:
                 break
             sleep(1)
-        result_url = status["TranscriptionJob"]["Transcript"][
-            "TranscriptFileUri"
-        ]
+        result_url = status["TranscriptionJob"]["Transcript"]["TranscriptFileUri"]
 
         req = requests.get(url=result_url)
         result_json = req.json()
         with open(transcription_filepath + "_full.txt", "w") as out_file:
             out_file.write(str(result_json))
         with open(transcription_filepath + ".txt", "w") as out_file:
-            out_file.write(
-                str(result_json["results"]["transcripts"][0]["transcript"])
-            )
+            out_file.write(str(result_json["results"]["transcripts"][0]["transcript"]))
         print(f"Collected transcript for file {job_name}")
 
 

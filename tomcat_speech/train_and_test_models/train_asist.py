@@ -2,21 +2,21 @@
 # currently the main entry point into the system
 # add "prep_data" as an argument when running this from command line
 #       if your acoustic features have not been extracted from audio
-from tomcat_speech.data_prep.asist_data.asist_dataset_creation import (
-    AsistDataset,
-)
+
+from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDataset
 from tomcat_speech.models.train_and_test_models import *
+from tomcat_speech.models.plot_training import *
 from tomcat_speech.models.input_models import *
 
 from tomcat_speech.data_prep.data_prep_helpers import *
 from tomcat_speech.data_prep.data_prep_helpers import make_acoustic_dict
-import data_prep.asist_data.sentiment_score_prep as score_prep
-import data_prep.asist_data.asist_prep as asist_prep
+
+import tomcat_speech.data_prep.asist_data.sentiment_score_prep as score_prep
+import tomcat_speech.data_prep.asist_data.asist_prep as asist_prep
 
 # import parameters for model
 # comment or uncomment as needed
-from tomcat_speech.models.parameters.bimodal_params import params
-from tomcat_speech.models.parameters.multitask_params import params
+from tomcat_speech.models.parameters.multitask_params import *
 
 # from tomcat_speech.models.parameters.multitask_params import params
 # from tomcat_speech.models.parameters.lr_baseline_1_params import params
@@ -39,7 +39,7 @@ if not torch.cuda.is_available():
 device = torch.device("cuda" if cuda else "cpu")
 
 # set random seed
-seed = params.seed
+seed = model_params.seed
 torch.manual_seed(seed)
 np.random.seed(seed)
 random.seed(seed)
@@ -54,7 +54,7 @@ y_path = "output/asist_audio/asist_ys/all_ys.csv"
 # set number of splits
 num_splits = 3
 # set model name and model type
-model = params.model
+model = model_params.model
 model_type = "BimodalCNN_k=4"
 # set number of columns to skip in data input files
 cols_to_skip = 5
@@ -81,17 +81,13 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "prep_data":
         os.system("time python data_prep/asist_data/asist_prep.py")
     elif len(sys.argv) > 1 and sys.argv[1] == "mp4_data":
-        os.system(
-            "time python data_prep/asist_data/asist_prep.py mp4_data"
-        )  # fixme
+        os.system("time python data_prep/asist_data/asist_prep.py mp4_data")  # fixme
     # elif len(sys.argv) > 1 and sys.argv[1] == "use_sentiment_analyzer":
     #     os.system("time python data_prep/asist_data/asist_prep.py prep_for_sentiment_analyzer")
 
     # 1. IMPORT AUDIO AND TEXT
     # make acoustic dict
-    acoustic_dict = make_acoustic_dict(
-        input_dir, "_avgd.csv", data_type="asist"
-    )
+    acoustic_dict = make_acoustic_dict(input_dir, "_avgd.csv", data_type="asist")
 
     print("Acoustic dict created")
 
@@ -135,7 +131,6 @@ if __name__ == "__main__":
     data = AsistDataset(
         acoustic_dict,
         glove,
-        cols_to_skip=cols_to_skip,
         ys_path=y_path,
         splits=3,
         sequence_prep="pad",
@@ -148,9 +143,7 @@ if __name__ == "__main__":
     # get set of pretrained embeddings and their shape
     pretrained_embeddings = glove.data
     num_embeddings = pretrained_embeddings.size()[0]
-    print(
-        "shape of pretrained embeddings is: {0}".format(data.glove.data.size())
-    )
+    print(f"shape of pretrained embeddings is: {data.glove.data.size()}")
 
     # get the number of utterances per data point
     num_utts = data.x_acoustic.shape[1]
@@ -160,8 +153,8 @@ if __name__ == "__main__":
     all_test_accs = []
 
     # mini search through different learning_rate values
-    for lr in params.lrs:
-        for wd in params.weight_decay:
+    for lr in model_params.lrs:
+        for wd in model_params.weight_decay:
 
             # prep intermediate loss and acc holders
             # feed these into all_test_losses/accs
@@ -170,15 +163,11 @@ if __name__ == "__main__":
 
             # use each train-val=test split in a separate training routine
             for split in range(data.splits):
-                print(
-                    "Now starting training/tuning with split {0} held out".format(
-                        split
-                    )
-                )
+                print(f"Now starting training/tuning with split {split} held out")
 
                 # create instance of model
                 bimodal_trial = EarlyFusionMultimodalModel(
-                    params=params,
+                    params=model_params,
                     num_embeddings=num_embeddings,
                     pretrained_embeddings=pretrained_embeddings,
                 )
@@ -187,9 +176,7 @@ if __name__ == "__main__":
                 loss_func = nn.BCELoss()
                 # loss_func = nn.CrossEntropyLoss()
                 optimizer = torch.optim.Adam(
-                    lr=lr,
-                    params=bimodal_trial.parameters(),
-                    weight_decay=wd,
+                    lr=lr, params=bimodal_trial.parameters(), weight_decay=wd,
                 )
 
                 print("Model, loss function, and optimization created")
@@ -202,16 +189,12 @@ if __name__ == "__main__":
                 training_data = data.remaining_splits
 
                 # create a a save path and file for the model
-                model_save_file = (
-                    "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
-                        model_type, params.batch_size, params.fc_hidden_dim, lr
-                    )
+                model_save_file = "{0}_batch{1}_{2}hidden_2lyrs_lr{3}.pth".format(
+                    model_type, params.batch_size, params.fc_hidden_dim, lr
                 )
 
                 # make the train state to keep track of model training/development
-                train_state = make_train_state(
-                    lr, model_save_path, model_save_file
-                )
+                train_state = make_train_state(lr, model_save_path, model_save_file)
 
                 load_path = model_save_path + model_save_file
 
@@ -221,15 +204,14 @@ if __name__ == "__main__":
                     train_state,
                     training_data,
                     val_split,
-                    params.batch_size,
-                    params.num_epochs,
+                    model_params.batch_size,
+                    model_params.num_epochs,
                     loss_func,
                     optimizer,
                     device,
-                    use_speaker=params.use_speaker,
-                    use_gender=params.use_gender,
+                    use_speaker=model_params.use_speaker,
+                    use_gender=model_params.use_gender,
                     scheduler=None,
-                    binary=True,
                 )
 
                 # plot the loss and accuracy curves
@@ -274,9 +256,9 @@ if __name__ == "__main__":
 
     # print the best model losses and accuracies for each development set in the cross-validation
     for i, item in enumerate(all_test_losses):
-        print("Losses for model with lr={0}: {1}".format(params.lrs[i], item))
+        print("Losses for model with lr={0}: {1}".format(model_params.lrs[i], item))
         print(
             "Accuracy for model with lr={0}: {1}".format(
-                params.lrs[i], all_test_accs[i]
+                model_params.lrs[i], all_test_accs[i]
             )
         )
