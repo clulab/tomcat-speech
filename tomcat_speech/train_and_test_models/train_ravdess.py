@@ -32,8 +32,6 @@ random.seed(seed)
 
 # set parameters for data prep
 # todo: should be updated later to a glove subset appropriate for this task
-# glove_file = "/work/bsharp/glove.short.300d.punct.txt"
-# glove_file = "/data/nlp/corpora/glove/glove.840B.300d.no_proc_header.txt"
 glove_file = "../../glove.short.300d.punct.txt"
 # glove_file = "../../glove.42B.300d.txt"
 

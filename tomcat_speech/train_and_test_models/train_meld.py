@@ -37,8 +37,6 @@ random.seed(seed)
 # todo: should be updated later to a glove subset appropriate for this task
 glove_file = sys.argv[1]
 
-# meld_path = "/data/nlp/corpora/MM/MELD_five_dialogues"
-# meld_path = "/data/nlp/corpora/MM/MELD_formatted"
 meld_path = "../../datasets/multimodal_datasets/MELD_formatted"
 # meld_path = "../../datasets/multimodal_datasets/MELD_five_utterances"
 # meld_path = "../../datasets/multimodal_datasets/MUStARD"
