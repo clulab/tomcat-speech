@@ -726,13 +726,16 @@ class PredictionLayer(nn.Module):
         self.fc1 = nn.Linear(self.input_dim, self.inter_fc_prediction_dim)
         self.fc2 = nn.Linear(self.inter_fc_prediction_dim, self.output_dim)
 
-    def forward(self, combined_inputs):
+    def forward(self, combined_inputs, get_prob_dist=False):
         out = torch.relu(F.dropout(self.fc1(combined_inputs), self.dropout))
         out = torch.relu(self.fc2(out))
         # out = torch.relu(self.fc1(F.dropout(combined_inputs, self.dropout)))
 
         if self.output_dim == 1:
             out = torch.sigmoid(out)
+        elif get_prob_dist:
+            prob = nn.Softmax(dim=1)
+            out = prob(out)
 
         return out
 
@@ -795,6 +798,7 @@ class MultitaskModel(nn.Module):
         acoustic_len_input=None,
         gender_input=None,
         task_num=0,
+        get_prob_dist=False
     ):
         # call forward on base model
         if self.text_only:
@@ -821,19 +825,19 @@ class MultitaskModel(nn.Module):
         task_3_out = None
 
         if not self.multi_dataset:
-            task_0_out = self.task_0_predictor(final_base_layer)
-            task_1_out = self.task_1_predictor(final_base_layer)
-            task_2_out = self.task_2_predictor(final_base_layer)
-            task_3_out = self.task_3_predictor(final_base_layer)
+            task_0_out = self.task_0_predictor(final_base_layer, get_prob_dist)
+            task_1_out = self.task_1_predictor(final_base_layer, get_prob_dist)
+            task_2_out = self.task_2_predictor(final_base_layer, get_prob_dist)
+            task_3_out = self.task_3_predictor(final_base_layer, get_prob_dist)
         else:
             if task_num == 0:
-                task_0_out = self.task_0_predictor(final_base_layer)
+                task_0_out = self.task_0_predictor(final_base_layer, get_prob_dist)
             elif task_num == 1:
-                task_1_out = self.task_1_predictor(final_base_layer)
+                task_1_out = self.task_1_predictor(final_base_layer, get_prob_dist)
             elif task_num == 2:
-                task_2_out = self.task_2_predictor(final_base_layer)
+                task_2_out = self.task_2_predictor(final_base_layer, get_prob_dist)
             elif task_num == 3:
-                task_3_out = self.task_3_predictor(final_base_layer)
+                task_3_out = self.task_3_predictor(final_base_layer, get_prob_dist)
             else:
                 sys.exit(f"Task {task_num} not defined")
 
