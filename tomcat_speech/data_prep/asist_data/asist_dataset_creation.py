@@ -39,25 +39,10 @@ class AsistDataset(Dataset):
         :param sequence_prep: the way sequences are handled, options: truncate, pad, None
         :param truncate_from: whether to truncate from start or end of file
         """
-        self.cols_to_skip = 2 if transcript_type.lower() == "zoom" else 4
+        self.cols_to_skip = 3 if transcript_type.lower() == "zoom" else 4
         self.acoustic_dict = OrderedDict(
             {
-                key: df[
-                    [
-                        "speaker",
-                        "utt",
-                        "pcm_loudness_sma",
-                        "F0finEnv_sma",
-                        "voicingFinalUnclipped_sma",
-                        "jitterLocal_sma",
-                        "shimmerLocal_sma",
-                        "pcm_loudness_sma_de",
-                        "F0finEnv_sma_de",
-                        "voicingFinalUnclipped_sma_de",
-                        "jitterLocal_sma_de",
-                        "shimmerLocal_sma_de",
-                    ]
-                ]
+                key: df
                 for key, df in acoustic_dict.items()
             }
         )
