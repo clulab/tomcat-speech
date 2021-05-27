@@ -214,11 +214,11 @@ class ChalearnPrep:
         if pred_type == "max_class":
             all_train_ys = [
                 [
-                    self.train_y_consc[i],
-                    self.train_y_openn[i],
-                    self.train_y_agree[i],
-                    self.train_y_neur[i],
                     self.train_y_extr[i],
+                    self.train_y_neur[i],
+                    self.train_y_agree[i],
+                    self.train_y_openn[i],
+                    self.train_y_consc[i],
                 ]
                 for i in range(len(self.train_y_consc))
             ]
