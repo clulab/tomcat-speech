@@ -11,53 +11,13 @@ import os
 import argparse
 import spacy
 import spacy
-
-nlp = spacy.load('en_core_web_sm')
-
-# Returns frequencies for content words in text, but not for stop words.
-class ParseUtt:
-    def __init__(self, freq_path, utt, opt):  # add input requirements here
-        # open these files
-        self.nlp = spacy.load('en_core_web_sm')
-        self.frequencies = self.find_freq(self.remove_stops(utt, option=opt))
-
-    def find_freq(self, list, words):
-        output = {}
-        missing = {}
-        for word in words:
-            if word not in output:
-                if word in list:
-                    output[word] = int(list[word])
-                else:
-                    missing[word] = None
-            else:
-                pass
-        return dict(sorted(output.items(), key=lambda item: item[1])), missing
-
-    def remove_stops(string_of_text, option="text"):
-        if option == "file":
-            if os.path.isfile(string_of_text):
-                input = open(string_of_text, "r").read()
-            else:
-                print("filepath error")
-        elif option == "text":
-            input = string_of_text
-        transcripts = nlp(input)
-        output = []
-        bag = []
-        for token in transcripts:
-            if not token.is_space and not token.is_punct and not token.is_stop:
-                bag.append(token)
-
-        return bag
-
-
 ##################################################################
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('utt')
     parser.add_argument('--thresh', type=float, default=1)
+    parser.add_argument('input_type', default= "text") #ensure only "text" or "file" are accepted
     args = parser.parse_args()
     return args
 
@@ -260,7 +220,42 @@ class PhonemicMagic:
 
         dfs(0, len(graph) - 1)
         return paths
+# Returns frequencies for content words in text, but not for stop words.
+class ParseUtt:
+    def __init__(self, freq_path, utt, opt):  # add input requirements here
+        # open these files
+        self.nlp = spacy.load('en_core_web_sm')
+        self.frequencies = self.find_freq(self.remove_stops(utt, option=opt))
 
+    def find_freq(self, list, words):
+        output = {}
+        missing = {}
+        for word in words:
+            if word not in output:
+                if word in list:
+                    output[word] = int(list[word])
+                else:
+                    missing[word] = None
+            else:
+                pass
+        return dict(sorted(output.items(), key=lambda item: item[1])), missing
+
+    def remove_stops(string_of_text, option="text"):
+        if option == "file":
+            if os.path.isfile(string_of_text):
+                input = open(string_of_text, "r").read()
+            else:
+                print("filepath error")
+        elif option == "text":
+            input = string_of_text
+        transcripts = nlp(input)
+        output = []
+        bag = []
+        for token in transcripts:
+            if not token.is_space and not token.is_punct and not token.is_stop:
+                bag.append(token)
+
+        return bag
 
 # dfs("start", "end", 0, len(graph)-1, graph)
 EditScore = collections.namedtuple('EditScore', 'asr_token asr_phonemes domain_token domain_phonemes score')
@@ -271,7 +266,8 @@ def main(args):
     # load utterances, loop through them here
     phonemic_helper = PhonemicMagic("cmu_feature_key.csv", "cmudict-0.7b.txt", "stb_files/CELEXEnglish.fea.stb",
                                     "domain_words.csv")
-    word_cleanup = ParseUtt("gigaword_lean.txt")
+    # Todo: add arg to argparse to define ParseUtt options
+    word_cleanup = ParseUtt("gigaword_lean.txt", utt = args.utt, option = input_type)
     utt = "Rubble revel bow"
     # processed_utt = word_cleanup.
     phonemic_helper.process_utterance(args.utt, args.thresh)
@@ -283,10 +279,10 @@ def main(args):
     # make all possible combinations of candidates
     # dump
     pass
-    # TO DO:
+    # TODO:
     # 1. we don't want to lose stop words: so, let Phonemic Magic decide if its a stop word or not [DONE]
-    # 2. maybe incorporate elements in PhonemicMagic, not separate class
-    # 3. Find an aggregate score based on gigaword
+    # 2. maybe incorporate elements in PhonemicMagic, not separate class [DONE?]
+    # 3. Find an aggregate score based on gigaword [added class, need to integrate]
     # 4. Output: an ordered list of all repaired transcripts, in all combinations, sorted by frequency.
 
 
