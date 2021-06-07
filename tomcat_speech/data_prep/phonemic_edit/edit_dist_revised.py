@@ -11,13 +11,15 @@ import os
 import argparse
 import spacy
 import spacy
+
+
 ##################################################################
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('utt')
     parser.add_argument('--thresh', type=float, default=1)
-    parser.add_argument('input_type', default= "text") #ensure only "text" or "file" are accepted
+    parser.add_argument('input_type', default="text")  # ensure only "text" or "file" are accepted
     args = parser.parse_args()
     return args
 
@@ -121,7 +123,7 @@ class PhonemicMagic:
         else:
             print("input not formatted")
 
-    #ToDo: Maybe we can return this as a bag of phones?
+    # ToDo: Maybe we can return this as a bag of phones?
     def cmu_lookup(self, token):
         token = token.upper()
         return self.cmu_dict[token]
@@ -173,7 +175,7 @@ class PhonemicMagic:
     def process_utterance(self, utterance, thresh=1):
 
         candidates = []
-        asr_tokens = ParseUtt.remove_stops(utterance)
+        asr_tokens = Gigaword.remove_stops(utterance)
         # asr_tokens = self.tokenize(utterance)
         out, missing = self.cmudict_search(asr_tokens)
         for original, phonemic in out:
@@ -220,8 +222,10 @@ class PhonemicMagic:
 
         dfs(0, len(graph) - 1)
         return paths
+
+
 # Returns frequencies for content words in text, but not for stop words.
-class ParseUtt:
+class Gigaword:
     def __init__(self, freq_path, utt, opt):  # add input requirements here
         # open these files
         self.nlp = spacy.load('en_core_web_sm')
@@ -257,6 +261,7 @@ class ParseUtt:
 
         return bag
 
+
 # dfs("start", "end", 0, len(graph)-1, graph)
 EditScore = collections.namedtuple('EditScore', 'asr_token asr_phonemes domain_token domain_phonemes score')
 
@@ -266,13 +271,13 @@ def main(args):
     # load utterances, loop through them here
     phonemic_helper = PhonemicMagic("cmu_feature_key.csv", "cmudict-0.7b.txt", "stb_files/CELEXEnglish.fea.stb",
                                     "domain_words.csv")
-    # Todo: add arg to argparse to define ParseUtt options
-    word_cleanup = ParseUtt("gigaword_lean.txt", utt = args.utt, option = input_type)
+    # Todo: add arg to argparse to define Gigaword options
+    word_cleanup = Gigaword("gigaword_lean.txt", utt=args.utt, option=input_type)
     utt = "Rubble revel bow"
     # processed_utt = word_cleanup.
     phonemic_helper.process_utterance(args.utt, args.thresh)
 
-    # TODO: instead of utt, run on output of class ParseUtt: a dict with the utterance as key, and a dict with word: frequency as item.
+    # TODO: instead of utt, run on output of class Gigaword: a dict with the utterance as key, and a dict with word: frequency as item.
     # TODO: server/client interface
 
     # if you process at the utterance level...
