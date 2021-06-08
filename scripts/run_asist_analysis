@@ -4,32 +4,37 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "output_filepath",
+    "--output_filepath",
     help="Path to output file",
     default="output/asist_output.txt",
     nargs="?"
 )
 parser.add_argument(
-    "glove_file",
+    "--glove_file",
     help="Path to Glove file",
     default="data/glove.short.300d.punct.txt",
     nargs="?"
 )
 parser.add_argument(
-    "emotion_model",
+    "--emotion_model",
     help="Path to saved model you would like to use in testing",
     default="data/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth",
     nargs="?"
 )
 parser.add_argument(
-    "config_path",
+    "--config_path",
     help="Path to config file you would like to use for testing",
     default="tomcat_speech/train_and_test_models/testing_parameters/config.py",
     nargs="?"
 )
 parser.add_argument(
-    "input_csvfiles",
-    help="Input CSV files for training and testing the model.",
+    "--input_utterance_json",
+    help="Input json file with utterance to get predictions on",
+    nargs="+"
+)
+parser.add_argument(
+    "--input_aligned_json",
+    help="Input json file(s) to get predictions on",
     nargs="+"
 )
 
@@ -91,20 +96,55 @@ if __name__ == "__main__":
     acoustic_dict_cols = params.acoustic_columns
     acoustic_dict_cols[:0] = ["speaker", "utt", "timestart"]
 
-    acoustic_dict = {
-        (filepath, 0): pd.read_table(
-            filepath,
-            usecols=acoustic_dict_cols,
-            sep=","
-        )
-        for filepath in args.input_csvfiles
-    }
+    # get utterances
+    utts_dict = {}
+
+    for utt_file in args.input_utterance_json:
+        with open(utt_file) as uttfile:
+            utt_json = json.load(uttfile)
+
+        utterance = utt_json["data"]["text"]
+        speaker = utt_json["data"]["participant_id"]
+        utt_id = utt_json["data"]["id"]
+        start_time = utt_json["data"]["start_timestamp"]
+        # utts_dict[(utt_id, speaker, start_time)] = utterance
+        utts_dict[utt_id] = utt_json
+
+    # get the acoustic features from json
+    acoustic_dict = {}
+    for jf in args.input_aligned_json:
+        with open(jf) as jfile:
+            jdata = json.load(jfile)
+            # todo: the name of id might change
+            utt_id = jdata["data"]["id"]
+
+            # get the acoustic info
+            item_acoustic = pd.DataFrame.from_dict(jdata["data"]["features"])
+
+            # concat if needed
+            if (utt_id, 0) in acoustic_dict.keys():
+                acoustic_dict[(utt_id, 0)] = pd.concat([acoustic_dict[(utt_id, 0)], item_acoustic], ignore_index=True)
+            else:
+                acoustic_dict[(utt_id, 0)] = item_acoustic
+
+    # average if needed
+    if avgd_acoustic:
+        for item in acoustic_dict.keys():
+            acoustic_dict[item] = pd.DataFrame(acoustic_dict[item].mean(axis=0)).transpose()
+            print(acoustic_dict[item])
+
+    # add speaker, utterance, start time to the acoustic dict
+    for k in utts_dict.keys():
+        # add speaker
+        acoustic_dict[(k, 0)]["speaker"] = utts_dict[k]["data"]["participant_id"]
+
+        # add utt
+        acoustic_dict[(k, 0)]["utt"] = utts_dict[k]["data"]["text"]
+
+        # add timestart
+        acoustic_dict[(k, 0)]["timestart"] = utts_dict[k]["data"]["start_timestamp"]
+
     print("Acoustic dict created")
-    # metadata
-    meta_dict = {
-        filepath_tuple[0]: dataframe["timestart"]
-        for filepath_tuple, dataframe in acoustic_dict.items()
-    }
 
     # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
     glove_dict = make_glove_dict(args.glove_file)
@@ -113,7 +153,6 @@ if __name__ == "__main__":
 
     # 3. MAKE DATASET
     data = AsistDataset(
-        # meta_dict,
         acoustic_dict,
         glove,
         splits=1,
@@ -159,7 +198,6 @@ if __name__ == "__main__":
 
     print(ordered_predictions)
 
-
     # dict for printing emotions associated with model predictions:
     emotions = {
         "0" : "anger",
@@ -194,22 +232,14 @@ if __name__ == "__main__":
             df1 = pd.concat([df1, sub])
         return df1
 
-        # get metadata : memberID, version, filename
-    def metadata(input):
-        nm = re.split('\s|/', input)[-1]
-        w = re.split('(\..+|_)', nm)
-        for e in w:
-            member = re.match("[Mm]em.*", e)
-            version = re.match("[Vv]ers.*", e)
-            if member:
-                p = e
-            elif version:
-                # regex to find version number, based on present data
-                if re.findall(r'[0-9]',e)[0] != None:
-                    q = re.findall(r'[0-9]',e)[0]
-                else:
-                    q = e
-        return p, q, nm
+    def get_metadata(input_json):
+        # get the input from utterance json
+        # version
+        version = input_json['msg']['version']
+        # experiment id
+        exp_id = input_json['msg']['experiment_id']
+
+        return version, exp_id
 
     g = []
     df = printdict(g, acoustic_dict)
@@ -222,7 +252,7 @@ if __name__ == "__main__":
     output_dict = {}
     with open(args.output_filepath, "w") as f:
         for index, row in df.iterrows():
-            mem, vers, filen = metadata(row["filename"])
+            vers, exp = get_metadata(utts_dict[row["filename"]])
             output_dict = {
                 "header": {
                     "timestamp": row["timestart"],
@@ -232,11 +262,11 @@ if __name__ == "__main__":
                     },
                 "msg": {
                     "source": "TomcatSpeechAnalyzer",
-                    "experiment_id": mem,
+                    "experiment_id": exp,
                     "timestamp": row["timestart"],
                     "sub_type": "Event:speech_feature",
                     "version": vers,
-                    "filename": filen
+                    "filename": row["filename"]
                 },
                 "data":
                         {
