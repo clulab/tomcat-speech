@@ -217,8 +217,6 @@ class AsistDataset(Dataset):
                     # get the speaker
                     spkr = str(row["speaker"])
 
-                    # todo: this also includes all researchers
-                    #   should we remove them later?
                     ordered_speakers.append(all_speakers.index(spkr))
 
                     # get the word
@@ -234,7 +232,8 @@ class AsistDataset(Dataset):
                             utt_wds[i] = self.glove.wd2idx["<UNK>"]
 
                     # save the acoustic information in remaining columns
-                    row_vals = row.values[start_idx:].tolist()
+                    # todo: verify this works
+                    row_vals = row.values[:-start_idx].tolist()
 
                     if self.sequence_prep == "truncate":
                         ordered_words.append(utt_wds)
