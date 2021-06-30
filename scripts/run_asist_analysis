@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
         utterance = utt_json["data"]["text"]
         speaker = utt_json["data"]["participant_id"]
-        utt_id = utt_json["data"]["id"]
+        utt_id = utt_json["data"]["utterance_id"]
         start_time = utt_json["data"]["start_timestamp"]
         # utts_dict[(utt_id, speaker, start_time)] = utterance
         utts_dict[utt_id] = utt_json
@@ -116,10 +116,10 @@ if __name__ == "__main__":
         with open(jf) as jfile:
             jdata = json.load(jfile)
             # todo: the name of id might change
-            utt_id = jdata["data"]["id"]
+            utt_id = jdata["data"]["utterance_id"]
 
             # get the acoustic info
-            item_acoustic = pd.DataFrame.from_dict(jdata["data"]["features"])
+            item_acoustic = pd.DataFrame.from_dict(eval(jdata["data"]["features"]))
 
             # concat if needed
             if (utt_id, 0) in acoustic_dict.keys():
