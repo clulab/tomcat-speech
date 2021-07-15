@@ -291,7 +291,7 @@ def main(args):
     # input_utterances = "Doesn't simplify the mission file. understand Find the first flower. dig rebel"
     # load utterances, loop through them here
     phonemic_helper = PhonemicMagic("cmu_feature_key.csv", "cmudict-0.7b.txt", "stb_files/CELEXEnglish.fea.stb",
-                                    "domain_words.csv")
+                                    "domain_words.tsv")
     word_cleanup = ParseUtt("gigaword_lean.txt")
     utt = "Rubble revel bow"
     # processed_utt = word_cleanup.
