@@ -176,7 +176,7 @@ class PhonemicMagic:
 
         candidates = []
         asr_tokens = Gigaword.remove_stops(utterance)
-        # asr_tokens = self.tokenize(utterance)
+        # asr_tokens = self.tokenize(utterance)gi
         out, missing = self.cmudict_search(asr_tokens)
         for original, phonemic in out:
             c = [original]  # find original utterance, score
