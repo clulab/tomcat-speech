@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 import argparse
+import json
+import re
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -23,15 +26,15 @@ parser.add_argument(
 )
 parser.add_argument(
     "--config_path",
-    help="Path to config file you would like to use for testing",
-    default="tomcat_speech/train_and_test_models/testing_parameters/config.py",
+    help="Path to config file you would like to use for testing; expects file named config.py",
+    default="tomcat_speech/train_and_test_models/testing_parameters/",
     nargs="?"
 )
-parser.add_argument(
-    "--input_utterance_json",
-    help="Input json file with utterance to get predictions on",
-    nargs="+"
-)
+# parser.add_argument(
+#     "--input_utterance_json",
+#     help="Input json file with utterance- and word-level data to get predictions on",
+#     nargs="+"
+# )
 parser.add_argument(
     "--input_aligned_json",
     help="Input json file(s) to get predictions on",
@@ -40,21 +43,47 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+
+def decode_stacked(document, pos=0, decoder=json.JSONDecoder()):
+    """
+    Decode stacked json messages within a single file
+    Adapted from: https://stackoverflow.com/questions/27907633/how-to-extract-multiple-json-objects-from-one-file/50384432
+    """
+    start_of_json = re.compile(r'[\S]')
+    doc = document.read()
+    while True:
+        match = start_of_json.search(doc, pos)
+        if not match:
+            return
+        pos = match.start()
+
+        try:
+            obj, pos = decoder.raw_decode(doc, pos)
+        except json.JSONDecodeError as e:
+            ex = e
+            break
+        else:
+            ex = None
+            yield obj
+
+    if ex is not None:
+        raise ex
+
+
 if __name__ == "__main__":
     import random
     import json
     import re
     import numpy as np
     import torch
+    import sys
     from tomcat_speech.data_prep.asist_data.asist_dataset_creation import (
         AsistDataset,
     )
     from tomcat_speech.models.train_and_test_models import (
-        predict_without_gold_labels,
         multitask_predict_without_gold_labels
     )
     from tomcat_speech.models.input_models import (
-        EarlyFusionMultimodalModel,
         MultitaskModel
     )
 
@@ -65,8 +94,13 @@ if __name__ == "__main__":
     )
 
     # Import parameters for model
-    import tomcat_speech.train_and_test_models.testing_parameters.config as params
+    # import tomcat_speech.train_and_test_models.testing_parameters.config as params
     import pandas as pd
+
+    # import config file by adding its path
+    sys.path.append(args.config_path)
+    import config as params
+
 
     # Set device, checking CUDA
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -84,65 +118,66 @@ if __name__ == "__main__":
 
     # set model name and model type
     model = params.model_params.model
-    # set number of columns to skip in data input files
-    # cols_to_skip = 2  # 2 for Zoom, 4 for AWS
 
     # decide if you want to use avgd feats
     avgd_acoustic = params.model_params.avgd_acoustic or params.model_params.add_avging
-
-    # set the path to the trained model
 
     # add speaker and utterance to acoustic features extracted
     acoustic_dict_cols = params.acoustic_columns
     acoustic_dict_cols[:0] = ["speaker", "utt", "timestart"]
 
-    # get utterances
+    # create the acoustic dict
+    acoustic_dict = {}
+    # create utts dict for metadata
     utts_dict = {}
 
-    for utt_file in args.input_utterance_json:
-        with open(utt_file) as uttfile:
-            utt_json = json.load(uttfile)
+    # for file in files (in case more than one)
+    for json_file in args.input_aligned_json:
 
-        utterance = utt_json["data"]["text"]
-        speaker = utt_json["data"]["participant_id"]
-        utt_id = utt_json["data"]["utterance_id"]
-        start_time = utt_json["data"]["start_timestamp"]
-        # utts_dict[(utt_id, speaker, start_time)] = utterance
-        utts_dict[utt_id] = utt_json
+        # open the file with multiple jsons
+        with open(json_file, 'r') as j_file:
+            # get the data from all jsons in this file
+            all_jsons = decode_stacked(j_file)
 
-    # get the acoustic features from json
-    acoustic_dict = {}
-    for jf in args.input_aligned_json:
-        with open(jf) as jfile:
-            jdata = json.load(jfile)
-            # todo: the name of id might change
-            utt_id = jdata["data"]["utterance_id"]
+            # for each utterance
+            for utt_json in all_jsons:
+                # get the text, speaker id, utt id, and start time
+                utterance = utt_json["data"]["text"]
+                speaker = utt_json["data"]["id"]
+                utt_id = utt_json["data"]["utterance_id"]
+                start_time = utt_json["data"]["word_messages"][0]["start_time"]
 
-            # get the acoustic info
-            item_acoustic = pd.DataFrame.from_dict(eval(jdata["data"]["features"]))
+                # create features var
+                utt_feats = None
 
-            # concat if needed
-            if (utt_id, 0) in acoustic_dict.keys():
-                acoustic_dict[(utt_id, 0)] = pd.concat([acoustic_dict[(utt_id, 0)], item_acoustic], ignore_index=True)
-            else:
-                acoustic_dict[(utt_id, 0)] = item_acoustic
+                # iterate through utterance, get acoustic feats
+                for wd_message in utt_json["data"]["word_messages"]:
+                    # todo: if we ever want to split by word (e.g. for wd-level RNN)
+                    #   add that possibility here
+                    try:
+                        if utt_feats is None:
+                            utt_feats = pd.DataFrame.from_dict(eval(wd_message["features"]))
+                        else:
+                            # get the acoustic info
+                            item_feats = pd.DataFrame.from_dict(eval(wd_message["features"]))
+                            utt_feats = pd.concat([utt_feats, item_feats], ignore_index=True)
+                    # sometimes the features data is null
+                    # in these cases, just skip this data
+                    except NameError:
+                        continue
+                # average acoustic feats, if required
+                if avgd_acoustic:
+                    utt_feats = pd.DataFrame(utt_feats.mean(axis=0)).transpose()
 
-    # average if needed
-    if avgd_acoustic:
-        for item in acoustic_dict.keys():
-            acoustic_dict[item] = pd.DataFrame(acoustic_dict[item].mean(axis=0)).transpose()
-            print(acoustic_dict[item])
+                # add metadata to utts dict
+                utts_dict[utt_id] = {"speaker": speaker, "utt": utterance, "timestart": start_time,
+                                     "msg": utt_json["msg"]}
 
-    # add speaker, utterance, start time to the acoustic dict
-    for k in utts_dict.keys():
-        # add speaker
-        acoustic_dict[(k, 0)]["speaker"] = utts_dict[k]["data"]["participant_id"]
-
-        # add utt
-        acoustic_dict[(k, 0)]["utt"] = utts_dict[k]["data"]["text"]
-
-        # add timestart
-        acoustic_dict[(k, 0)]["timestart"] = utts_dict[k]["data"]["start_timestamp"]
+                # add acoustic data to acoustic dict
+                acoustic_dict[utt_id] = utt_feats
+                acoustic_dict[utt_id]["speaker"] = speaker
+                acoustic_dict[utt_id]["utt"] = utterance
+                acoustic_dict[utt_id]["timestart"] = start_time
 
     print("Acoustic dict created")
 
@@ -222,10 +257,10 @@ if __name__ == "__main__":
 
     def printdict(nm, directory):
         df1 = pd.DataFrame()
-        for item, key in directory:
+        for item in directory:
             file = [str(item)]
             nm.extend(file)
-            y = directory[item, key] #this is a pandas dataframe
+            y = directory[item] #this is a pandas dataframe
             # y["Filename"] = file
             sub = y[["speaker", "utt", "timestart"]].copy(deep=False)
             sub.insert(0, "filename", str(item))
@@ -278,4 +313,4 @@ if __name__ == "__main__":
                         "trait_confidence_level": row["confidence_level_personality"]
                         }
                     }
-            f.write(json.dumps(output_dict)+"\n")
+            f.write(json.dumps(output_dict) + "\n")
