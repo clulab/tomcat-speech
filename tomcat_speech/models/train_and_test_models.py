@@ -1287,6 +1287,7 @@ def multitask_predict_without_gold_labels(
     use_speaker=True,
     use_gender=False,
     get_prob_dist=False,
+    return_penultimate_layer=False
 ):
     """
     Test a pretrained model
@@ -1298,6 +1299,11 @@ def multitask_predict_without_gold_labels(
     preds_holder = {}
     for i in range(num_tasks):
         preds_holder[i] = []
+
+    if return_penultimate_layer:
+        penult_holder = {}
+        for i in range(num_tasks):
+            penult_holder[i] = []
 
     # Iterate over validation set--put it in a dataloader
     test_batches = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
@@ -1330,6 +1336,7 @@ def multitask_predict_without_gold_labels(
                 length_input=batch_lengths,
                 gender_input=batch_genders,
                 get_prob_dist=get_prob_dist,
+                return_penultimate_layer=return_penultimate_layer
             )
         else:
             y_pred = classifier(
@@ -1340,15 +1347,34 @@ def multitask_predict_without_gold_labels(
                 acoustic_len_input=batch_acoustic_lengths,
                 gender_input=batch_genders,
                 get_prob_dist=get_prob_dist,
+                return_penultimate_layer=return_penultimate_layer
             )
 
-        # add ys to holder for error analysis
-        for i in range(num_tasks):
-            preds_holder[i].extend(
-                [(item.index(max(item)), max(item)) for item in y_pred[i].tolist()]
-            )
+        # separate predictions and penultimate layers if needed
+        # add penultimates to a penult holder equivalent to preds_holder
+        if return_penultimate_layer:
+            penults = [item[1] for item in y_pred]
+            y_pred = [item[0] for item in y_pred]
 
-    return preds_holder
+            for i in range(num_tasks):
+                penult_holder[i].extend([penults[i].tolist()])
+
+        if get_prob_dist:
+            for i in range(num_tasks):
+                preds_holder[i].extend(
+                    [y_pred[i].tolist()]
+                )
+        else:
+            # add ys to holder for error analysis
+            for i in range(num_tasks):
+                preds_holder[i].extend(
+                    [(item.index(max(item)), max(item)) for item in y_pred[i].tolist()]
+                )
+
+    if not return_penultimate_layer:
+        return preds_holder
+    else:
+        return preds_holder, penult_holder
 
 
 def multitask_train_and_predict_with_gradnorm(

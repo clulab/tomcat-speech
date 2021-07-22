@@ -219,7 +219,7 @@ if __name__ == "__main__":
     classifier.load_state_dict(torch.load(args.emotion_model))
     classifier.to(device)
     # test the model
-    ordered_predictions = multitask_predict_without_gold_labels(
+    ordered_predictions, ordered_penult_lyrs = multitask_predict_without_gold_labels(
         classifier,
         test_ds,
         params.model_params.batch_size,
@@ -228,29 +228,9 @@ if __name__ == "__main__":
         avgd_acoustic=avgd_acoustic,
         use_speaker=params.model_params.use_speaker,
         use_gender=params.model_params.use_gender,
-        get_prob_dist=True
+        get_prob_dist=True,
+        return_penultimate_layer=True
     )
-
-    print(ordered_predictions)
-
-    # dict for printing emotions associated with model predictions:
-    emotions = {
-        "0" : "anger",
-        "1" : "disgust",
-        "2" : "fear",
-        "3" : "joy",
-        "4" : "neutral",
-        "5" : "sadness",
-        "6" : "surprise"
-    }
-
-    traits = {
-        "0" : "extroversion",
-        "1" : "neuroticism",
-        "2" : "agreeableness",
-        "3" : "openness",
-        "4" : "conscientiousness"
-    }
 
     # subset of the full dataset for the final output. Here, all rows from all datasets are combined,
     # just like the dataset with the predictions:
@@ -278,11 +258,32 @@ if __name__ == "__main__":
 
     g = []
     df = printdict(g, acoustic_dict)
+
     # add columns with predictions to dataframe:
-    df["model_prediction_emotion"] = [i[0] for i in ordered_predictions[0]]
-    df["confidence_level_emotion"] = [i[1] for i in ordered_predictions[0]]
-    df["model_prediction_personality"] = [i[0] for i in ordered_predictions[1]]
-    df["confidence_level_personality"] = [i[1] for i in ordered_predictions[1]]
+    df["emotion_anger"] = [i[0] for i in ordered_predictions[0][0]]
+    df["emotion_disgust"] = [i[1] for i in ordered_predictions[0][0]]
+    df["emotion_fear"] = [i[2] for i in ordered_predictions[0][0]]
+    df["emotion_joy"] = [i[3] for i in ordered_predictions[0][0]]
+    df["emotion_neutral"] = [i[4] for i in ordered_predictions[0][0]]
+    df["emotion_sadness"] = [i[5] for i in ordered_predictions[0][0]]
+    df["emotion_surprise"] = [i[6] for i in ordered_predictions[0][0]]
+
+    # df["penultimate_layer_emotion"] = [i for i in ordered_penult_lyrs[0]]
+    df["penultimate_layer_emotion"] = [i for i in ordered_penult_lyrs[0]][0]
+
+    # print(penult_lyr_emo)
+    # print(len(penult_lyr_emo))
+    # # print(penult_lyr_emo)
+    # exit()
+
+    df["trait_extroversion"] = [i[0] for i in ordered_predictions[1][0]]
+    df["trait_neuroticism"] = [i[1] for i in ordered_predictions[1][0]]
+    df["trait_agreeableness"] = [i[2] for i in ordered_predictions[1][0]]
+    df["trait_openness"] = [i[3] for i in ordered_predictions[1][0]]
+    df["trait_conscientiousness"] = [i[4] for i in ordered_predictions[1][0]]
+
+    df["penultimate_layer_trait"] = [i for i in ordered_penult_lyrs[1]][0]
+
     # Final output:
     output_dict = {}
     with open(args.output_filepath, "w") as f:
@@ -307,10 +308,17 @@ if __name__ == "__main__":
                         {
                         "speaker": row["speaker"],
                         "utterance": row["utt"],
-                        "emotion_detected": emotions[str(row["model_prediction_emotion"])],
-                        "emotion_confidence_level": row["confidence_level_emotion"],
-                        "dominant_trait_detected": traits[str(row["model_prediction_personality"])],
-                        "trait_confidence_level": row["confidence_level_personality"]
+                        "emotions": {"anger": row["emotion_anger"], "disgust": row["emotion_disgust"],
+                                     "fear": row["emotion_fear"], "joy": row["emotion_joy"],
+                                     "neutral": row["emotion_neutral"], "sadness": row["emotion_sadness"],
+                                     "surprise": row["emotion_surprise"]},
+                        "traits": {"extroversion": row["trait_extroversion"],
+                                   "neuroticism": row["trait_neuroticism"],
+                                   "agreeableness": row["trait_agreeableness"],
+                                   "openness": row["trait_openness"],
+                                   "conscientiousness": row["trait_conscientiousness"]},
+                        "penultimate_layer_emotions": row["penultimate_layer_emotion"],
+                        "penultimate_layer_traits": row["penultimate_layer_trait"]
                         }
                     }
             f.write(json.dumps(output_dict) + "\n")
