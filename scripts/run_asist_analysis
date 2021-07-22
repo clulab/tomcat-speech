@@ -10,25 +10,25 @@ parser.add_argument(
     "--output_filepath",
     help="Path to output file",
     default="output/asist_output.txt",
-    nargs="?"
+    nargs="?",
 )
 parser.add_argument(
     "--glove_file",
     help="Path to Glove file",
     default="data/glove.short.300d.punct.txt",
-    nargs="?"
+    nargs="?",
 )
 parser.add_argument(
     "--emotion_model",
     help="Path to saved model you would like to use in testing",
     default="data/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth",
-    nargs="?"
+    nargs="?",
 )
 parser.add_argument(
     "--config_path",
     help="Path to config file you would like to use for testing; expects file named config.py",
     default="tomcat_speech/train_and_test_models/testing_parameters/",
-    nargs="?"
+    nargs="?",
 )
 # parser.add_argument(
 #     "--input_utterance_json",
@@ -36,9 +36,7 @@ parser.add_argument(
 #     nargs="+"
 # )
 parser.add_argument(
-    "--input_aligned_json",
-    help="Input json file(s) to get predictions on",
-    nargs="+"
+    "--input_aligned_json", help="Input json file(s) to get predictions on", nargs="+"
 )
 
 args = parser.parse_args()
@@ -49,7 +47,7 @@ def decode_stacked(document, pos=0, decoder=json.JSONDecoder()):
     Decode stacked json messages within a single file
     Adapted from: https://stackoverflow.com/questions/27907633/how-to-extract-multiple-json-objects-from-one-file/50384432
     """
-    start_of_json = re.compile(r'[\S]')
+    start_of_json = re.compile(r"[\S]")
     doc = document.read()
     while True:
         match = start_of_json.search(doc, pos)
@@ -77,15 +75,11 @@ if __name__ == "__main__":
     import numpy as np
     import torch
     import sys
-    from tomcat_speech.data_prep.asist_data.asist_dataset_creation import (
-        AsistDataset,
-    )
+    from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDataset
     from tomcat_speech.models.train_and_test_models import (
-        multitask_predict_without_gold_labels
+        multitask_predict_without_gold_labels,
     )
-    from tomcat_speech.models.input_models import (
-        MultitaskModel
-    )
+    from tomcat_speech.models.input_models import MultitaskModel
 
     from tomcat_speech.data_prep.data_prep_helpers import (
         make_glove_dict,
@@ -100,7 +94,6 @@ if __name__ == "__main__":
     # import config file by adding its path
     sys.path.append(args.config_path)
     import config as params
-
 
     # Set device, checking CUDA
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -135,7 +128,7 @@ if __name__ == "__main__":
     for json_file in args.input_aligned_json:
 
         # open the file with multiple jsons
-        with open(json_file, 'r') as j_file:
+        with open(json_file, "r") as j_file:
             # get the data from all jsons in this file
             all_jsons = decode_stacked(j_file)
 
@@ -156,11 +149,17 @@ if __name__ == "__main__":
                     #   add that possibility here
                     try:
                         if utt_feats is None:
-                            utt_feats = pd.DataFrame.from_dict(eval(wd_message["features"]))
+                            utt_feats = pd.DataFrame.from_dict(
+                                eval(wd_message["features"])
+                            )
                         else:
                             # get the acoustic info
-                            item_feats = pd.DataFrame.from_dict(eval(wd_message["features"]))
-                            utt_feats = pd.concat([utt_feats, item_feats], ignore_index=True)
+                            item_feats = pd.DataFrame.from_dict(
+                                eval(wd_message["features"])
+                            )
+                            utt_feats = pd.concat(
+                                [utt_feats, item_feats], ignore_index=True
+                            )
                     # sometimes the features data is null
                     # in these cases, just skip this data
                     except NameError:
@@ -170,8 +169,12 @@ if __name__ == "__main__":
                     utt_feats = pd.DataFrame(utt_feats.mean(axis=0)).transpose()
 
                 # add metadata to utts dict
-                utts_dict[utt_id] = {"speaker": speaker, "utt": utterance, "timestart": start_time,
-                                     "msg": utt_json["msg"]}
+                utts_dict[utt_id] = {
+                    "speaker": speaker,
+                    "utt": utterance,
+                    "timestart": start_time,
+                    "msg": utt_json["msg"],
+                }
 
                 # add acoustic data to acoustic dict
                 acoustic_dict[utt_id] = utt_feats
@@ -195,7 +198,7 @@ if __name__ == "__main__":
         truncate_from="start",
         norm=None,
         add_avging=params.model_params.add_avging,
-        transcript_type="zoom"
+        transcript_type="zoom",
     )
 
     # get data for testing
@@ -213,7 +216,7 @@ if __name__ == "__main__":
         params=params.model_params,
         num_embeddings=num_embeddings,
         pretrained_embeddings=pretrained_embeddings,
-        multi_dataset=False
+        multi_dataset=False,
     )
     # get saved parameters
     classifier.load_state_dict(torch.load(args.emotion_model))
@@ -229,7 +232,7 @@ if __name__ == "__main__":
         use_speaker=params.model_params.use_speaker,
         use_gender=params.model_params.use_gender,
         get_prob_dist=True,
-        return_penultimate_layer=True
+        return_penultimate_layer=True,
     )
 
     # subset of the full dataset for the final output. Here, all rows from all datasets are combined,
@@ -240,7 +243,7 @@ if __name__ == "__main__":
         for item in directory:
             file = [str(item)]
             nm.extend(file)
-            y = directory[item] #this is a pandas dataframe
+            y = directory[item]  # this is a pandas dataframe
             # y["Filename"] = file
             sub = y[["speaker", "utt", "timestart"]].copy(deep=False)
             sub.insert(0, "filename", str(item))
@@ -250,9 +253,9 @@ if __name__ == "__main__":
     def get_metadata(input_json):
         # get the input from utterance json
         # version
-        version = input_json['msg']['version']
+        version = input_json["msg"]["version"]
         # experiment id
-        exp_id = input_json['msg']['experiment_id']
+        exp_id = input_json["msg"]["experiment_id"]
 
         return version, exp_id
 
@@ -268,13 +271,7 @@ if __name__ == "__main__":
     df["emotion_sadness"] = [i[5] for i in ordered_predictions[0][0]]
     df["emotion_surprise"] = [i[6] for i in ordered_predictions[0][0]]
 
-    # df["penultimate_layer_emotion"] = [i for i in ordered_penult_lyrs[0]]
     df["penultimate_layer_emotion"] = [i for i in ordered_penult_lyrs[0]][0]
-
-    # print(penult_lyr_emo)
-    # print(len(penult_lyr_emo))
-    # # print(penult_lyr_emo)
-    # exit()
 
     df["trait_extroversion"] = [i[0] for i in ordered_predictions[1][0]]
     df["trait_neuroticism"] = [i[1] for i in ordered_predictions[1][0]]
@@ -294,31 +291,37 @@ if __name__ == "__main__":
                     "timestamp": row["timestart"],
                     # "timestamp": "some_time_stamp",
                     "message_type": "event",
-                    "version": vers
-                    },
+                    "version": vers,
+                },
                 "msg": {
                     "source": "TomcatSpeechAnalyzer",
                     "experiment_id": exp,
                     "timestamp": row["timestart"],
                     "sub_type": "Event:speech_feature",
                     "version": vers,
-                    "filename": row["filename"]
+                    "filename": row["filename"],
                 },
-                "data":
-                        {
-                        "speaker": row["speaker"],
-                        "utterance": row["utt"],
-                        "emotions": {"anger": row["emotion_anger"], "disgust": row["emotion_disgust"],
-                                     "fear": row["emotion_fear"], "joy": row["emotion_joy"],
-                                     "neutral": row["emotion_neutral"], "sadness": row["emotion_sadness"],
-                                     "surprise": row["emotion_surprise"]},
-                        "traits": {"extroversion": row["trait_extroversion"],
-                                   "neuroticism": row["trait_neuroticism"],
-                                   "agreeableness": row["trait_agreeableness"],
-                                   "openness": row["trait_openness"],
-                                   "conscientiousness": row["trait_conscientiousness"]},
-                        "penultimate_layer_emotions": row["penultimate_layer_emotion"],
-                        "penultimate_layer_traits": row["penultimate_layer_trait"]
-                        }
-                    }
+                "data": {
+                    "speaker": row["speaker"],
+                    "utterance": row["utt"],
+                    "emotions": {
+                        "anger": row["emotion_anger"],
+                        "disgust": row["emotion_disgust"],
+                        "fear": row["emotion_fear"],
+                        "joy": row["emotion_joy"],
+                        "neutral": row["emotion_neutral"],
+                        "sadness": row["emotion_sadness"],
+                        "surprise": row["emotion_surprise"],
+                    },
+                    "traits": {
+                        "extroversion": row["trait_extroversion"],
+                        "neuroticism": row["trait_neuroticism"],
+                        "agreeableness": row["trait_agreeableness"],
+                        "openness": row["trait_openness"],
+                        "conscientiousness": row["trait_conscientiousness"],
+                    },
+                    "penultimate_layer_emotions": row["penultimate_layer_emotion"],
+                    "penultimate_layer_traits": row["penultimate_layer_trait"],
+                },
+            }
             f.write(json.dumps(output_dict) + "\n")
