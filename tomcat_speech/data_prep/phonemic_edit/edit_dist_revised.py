@@ -377,13 +377,14 @@ def main(args):
     phonemic_helper.set_frequency_threshold()
 
     # Todo: add arg to argparse to define Gigaword options
-
-    utt = "Rubble revel bow"
+    with open("test_data.txt") as f:
+        for utt in f:
+    # utt = "Rubble revel bow"
     # processed_utt = word_cleanup.
 
-    processed_tokens = phonemic_helper.process_utterance(utt)
-    output = list(enumerate_utterance_options(processed_tokens))
-    print(output)
+            processed_tokens = phonemic_helper.process_utterance(utt)
+            output = list(enumerate_utterance_options(processed_tokens))
+            print(output)
 
     # TODO: server/client interface
 
