@@ -21,8 +21,9 @@ from tomcat_speech.data_prep.data_prep_helpers import (
 import pandas as pd
 
 
-def get_json_output_asist_analysis(input_aligned_json, trained_model,
-                                   glove_file, output_filepath, params):
+def get_json_output_asist_analysis(
+    input_aligned_json, trained_model, glove_file, output_filepath, params
+):
     """
     Use this function to take a json input and a trained model
     and return a new json with metadata and model predictions
@@ -309,7 +310,9 @@ if __name__ == "__main__":
         nargs="?",
     )
     parser.add_argument(
-        "--input_aligned_json", help="Input json file(s) to get predictions on", nargs="+"
+        "--input_aligned_json",
+        help="Input json file(s) to get predictions on",
+        nargs="+",
     )
 
     args = parser.parse_args()
@@ -322,5 +325,5 @@ if __name__ == "__main__":
         args.emotion_model,
         args.glove_file,
         args.output_filepath,
-        params
+        params,
     )
