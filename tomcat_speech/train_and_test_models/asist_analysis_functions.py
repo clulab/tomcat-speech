@@ -21,7 +21,7 @@ from tomcat_speech.data_prep.data_prep_helpers import (
 import pandas as pd
 
 
-def get_json_output_asist_analysis(
+def get_json_output_of_speech_analysis(
     input_aligned_json, trained_model, glove_file, output_filepath, params
 ):
     """
