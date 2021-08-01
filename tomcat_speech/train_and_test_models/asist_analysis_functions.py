@@ -320,7 +320,7 @@ if __name__ == "__main__":
     # the current parameters file is saved as testing_parameters/config.py
     import tomcat_speech.train_and_test_models.testing_parameters.config as params
 
-    get_json_output_asist_analysis(
+    get_json_output_of_speech_analysis(
         args.input_aligned_json,
         args.emotion_model,
         args.glove_file,
