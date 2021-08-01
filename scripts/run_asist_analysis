@@ -42,32 +42,6 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-def decode_stacked(document, pos=0, decoder=json.JSONDecoder()):
-    """
-    Decode stacked json messages within a single file
-    Adapted from: https://stackoverflow.com/questions/27907633/how-to-extract-multiple-json-objects-from-one-file/50384432
-    """
-    start_of_json = re.compile(r"[\S]")
-    doc = document.read()
-    while True:
-        match = start_of_json.search(doc, pos)
-        if not match:
-            return
-        pos = match.start()
-
-        try:
-            obj, pos = decoder.raw_decode(doc, pos)
-        except json.JSONDecodeError as e:
-            ex = e
-            break
-        else:
-            ex = None
-            yield obj
-
-    if ex is not None:
-        raise ex
-
-
 if __name__ == "__main__":
     import random
     import json
@@ -87,13 +61,15 @@ if __name__ == "__main__":
         DatumListDataset,
     )
 
+    from tomcat_speech.train_and_test_models.asist_analysis_functions import decode_stacked
+
     # Import parameters for model
-    # import tomcat_speech.train_and_test_models.testing_parameters.config as params
+    import tomcat_speech.train_and_test_models.testing_parameters.config as params
     import pandas as pd
 
     # import config file by adding its path
-    sys.path.append(args.config_path)
-    import config as params
+    # sys.path.append(args.config_path)
+    # import config as params
 
     # Set device, checking CUDA
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
