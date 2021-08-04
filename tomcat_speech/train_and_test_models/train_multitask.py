@@ -156,38 +156,46 @@ if __name__ == "__main__":
             # )
 
             meld_train_ds = DatumListDataset(
-                meld_data.train_data, "meld_emotion", meld_data.emotion_weights
+                meld_data.train_data,
+                "meld_emotion",
+                meld_data.emotion_weights.clone().detach()
             )
 
             meld_dev_ds = DatumListDataset(
-                meld_data.dev_data, "meld_emotion", meld_data.emotion_weights
+                meld_data.dev_data, "meld_emotion",
+                meld_data.emotion_weights.clone().detach()
             )
+
             meld_test_ds = DatumListDataset(
-                meld_data.test_data, "meld_emotion", meld_data.emotion_weights
+                meld_data.test_data, "meld_emotion",
+                meld_data.emotion_weights.clone().detach()
             )
-            #
+
             # # combine train and dev data to increase the number of items in dev set
             train_and_dev = meld_train_ds + meld_dev_ds
             meld_train_ds, meld_dev_ds = train_test_split(train_and_dev, test_size=0.2)
             print("MELD dataset rebalanced")
 
-            del meld_data
+            # del meld_data
 
             # # create chalearn train, dev, _ data
             chalearn_train_ds = DatumListDataset(
-                chalearn_data.train_data, "chalearn_traits", chalearn_data.trait_weights
+                chalearn_data.train_data, "chalearn_traits",
+                chalearn_data.trait_weights.clone().detach()
             )
             chalearn_dev_ds = DatumListDataset(
-                chalearn_data.dev_data, "chalearn_traits", chalearn_data.trait_weights
+                chalearn_data.dev_data, "chalearn_traits",
+                chalearn_data.trait_weights.clone().detach()
             )
             chalearn_test_ds = DatumListDataset(
-                chalearn_data.test_data, "chalearn_traits", chalearn_data.trait_weights
+                chalearn_data.test_data, "chalearn_traits",
+                chalearn_data.trait_weights.clone().detach()
             )
-            del chalearn_data
+            # del chalearn_data
 
             if config.save_dataset:
                 # save all data for faster loading
-                save_path = data + "/" + config.load_path
+                save_path = data + "/" + config.pickle_dir
 
                 # make sure the full save path exists; if not, create it
                 os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(save_path))
@@ -195,17 +203,21 @@ if __name__ == "__main__":
                 # save meld dataset
                 pickle.dump(meld_train_ds, open(f"{save_path}/meld_IS13_train.pickle", "wb"))
                 pickle.dump(meld_dev_ds, open(f"{save_path}/meld_IS13_dev.pickle", "wb"))
-                pickle.dump(meld_test_ds, open(f"{save_path}/meld_IS3_test.pickle", "wb"))
+                pickle.dump(meld_test_ds, open(f"{save_path}/meld_IS13_test.pickle", "wb"))
+
+                pickle.dump(meld_data.emotion_weights, open(f"{save_path}/meld_emotion_weights.pickle", "wb"))
 
                 # save mustard
-                pickle.dump(mustard_train_ds, open(f"{save_path}/mustard_IS13_train.pickle", "wb"))
-                pickle.dump(mustard_dev_ds, open(f"{save_path}/mustard_IS13_dev.pickle", "wb"))
-                pickle.dump(mustard_test_ds, open(f"{save_path}/mustard_IS13_test.pickle", "wb"))
+                # pickle.dump(mustard_train_ds, open(f"{save_path}/mustard_IS13_train.pickle", "wb"))
+                # pickle.dump(mustard_dev_ds, open(f"{save_path}/mustard_IS13_dev.pickle", "wb"))
+                # pickle.dump(mustard_test_ds, open(f"{save_path}/mustard_IS13_test.pickle", "wb"))
                 #
                 # save chalearn
                 pickle.dump(chalearn_train_ds, open(f"{save_path}/chalearn_IS13_train.pickle", "wb"))
                 pickle.dump(chalearn_dev_ds, open(f"{save_path}/chalearn_IS13_dev.pickle", "wb"))
                 pickle.dump(chalearn_test_ds, open(f'{save_path}/chalearn_IS13_test.pickle', 'wb'))
+
+                pickle.dump(chalearn_data.trait_weights, open(f"{save_path}/chalearn_trait_weights.pickle", "wb"))
 
                 pickle.dump(glove, open("data/glove.pickle", "wb"))  # todo: get different glove names
 
@@ -213,7 +225,7 @@ if __name__ == "__main__":
 
         else:
             # 1. Load datasets + glove object
-            load_dir = config.load_path
+            load_dir = config.pickle_dir
             # uncomment if loading saved data
             meld_train_ds = pickle.load(
                 open(f"{data}/{load_dir}/meld_IS13_train.pickle", "rb")
@@ -223,6 +235,10 @@ if __name__ == "__main__":
             )
             meld_test_ds = pickle.load(
                 open(f"{data}/{load_dir}/meld_IS13_test.pickle", "rb")
+            )
+
+            meld_weights = pickle.load(
+                open(f"{data}/{load_dir}/meld_emotion_weights.pickle", "rb")
             )
 
             print("MELD data loaded")
@@ -243,6 +259,11 @@ if __name__ == "__main__":
             )
             chalearn_test_ds = pickle.load(
                 open(f"{data}/{load_dir}/chalearn_IS13_test.pickle", "rb")
+            )
+
+            # todo: this is only for max_class right now
+            chalearn_weights = pickle.load(
+                open(f"{data}/{load_dir}/chalearn_trait_weights.pickle", "rb")
             )
 
             print("ChaLearn data loaded")
@@ -356,7 +377,7 @@ if __name__ == "__main__":
 
                                     # # add loss function for meld
                                     meld_loss_func = nn.CrossEntropyLoss(
-                                        # weight=meld_data.emotion_weights,
+                                        weight=meld_weights,
                                         reduction="mean"
                                     )
                                     # create multitask object
@@ -370,7 +391,7 @@ if __name__ == "__main__":
 
                                     # add loss function for chalearn
                                     chalearn_loss_func = nn.CrossEntropyLoss(
-                                        # weight=chalearn_train_ds.class_weights,
+                                        weight=chalearn_weights,
                                         reduction="mean"
                                     )
                                     # create multitask object

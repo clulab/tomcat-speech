@@ -343,6 +343,9 @@ def multitask_train_and_predict(
                 print(
                     classification_report(ys_holder[task], preds_holder[task], digits=4)
                 )
+        # todo: test me
+        # flush stdout
+        sys.stdout.flush()
 
         # add loss and accuracy to train state
         train_state["val_loss"].append(running_loss)
@@ -1272,6 +1275,106 @@ def predict_without_gold_labels(
         )
 
     return preds_holder
+
+
+def multitask_predict_without_gold_labels(
+    classifier,
+    test_ds,
+    batch_size,
+    device="cpu",
+    num_predictions=2,
+    avgd_acoustic=True,
+    use_speaker=True,
+    use_gender=False,
+    get_prob_dist=False,
+    return_penultimate_layer=False
+):
+    """
+    Test a pretrained model
+    """
+    # get number of tasks
+    num_tasks = num_predictions
+
+    # get holder for predictions
+    preds_holder = {}
+    for i in range(num_tasks):
+        preds_holder[i] = []
+
+    if return_penultimate_layer:
+        penult_holder = {}
+        for i in range(num_tasks):
+            penult_holder[i] = []
+
+    # Iterate over validation set--put it in a dataloader
+    test_batches = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
+
+    # set classifier to evaluation mode
+    classifier.eval()
+
+    # for each batch in the dataloader
+    for batch_index, batch in enumerate(test_batches):
+        # compute the output
+        batch_acoustic = batch[0].to(device)
+        batch_text = batch[1].to(device)
+        batch_lengths = batch[-2].to(device)
+        batch_acoustic_lengths = batch[-1].to(device)
+        if use_speaker:
+            batch_speakers = batch[2].to(device)
+        else:
+            batch_speakers = None
+
+        if use_gender:
+            batch_genders = batch[3].to(device)
+        else:
+            batch_genders = None
+
+        if avgd_acoustic:
+            y_pred = classifier(
+                acoustic_input=batch_acoustic,
+                text_input=batch_text,
+                speaker_input=batch_speakers,
+                length_input=batch_lengths,
+                gender_input=batch_genders,
+                get_prob_dist=get_prob_dist,
+                return_penultimate_layer=return_penultimate_layer
+            )
+        else:
+            y_pred = classifier(
+                acoustic_input=batch_acoustic,
+                text_input=batch_text,
+                speaker_input=batch_speakers,
+                length_input=batch_lengths,
+                acoustic_len_input=batch_acoustic_lengths,
+                gender_input=batch_genders,
+                get_prob_dist=get_prob_dist,
+                return_penultimate_layer=return_penultimate_layer
+            )
+
+        # separate predictions and penultimate layers if needed
+        # add penultimates to a penult holder equivalent to preds_holder
+        if return_penultimate_layer:
+            penults = [item[1] for item in y_pred]
+            y_pred = [item[0] for item in y_pred]
+
+            for i in range(num_tasks):
+                penult_holder[i].extend([penults[i].tolist()])
+
+        if get_prob_dist:
+            for i in range(num_tasks):
+                preds_holder[i].extend(
+                    [y_pred[i].tolist()]
+                )
+        else:
+            # add ys to holder for error analysis
+            for i in range(num_tasks):
+                preds_holder[i].extend(
+                    [(item.index(max(item)), max(item)) for item in y_pred[i].tolist()]
+                )
+
+    if not return_penultimate_layer:
+        return preds_holder
+    else:
+        return preds_holder, penult_holder
 
 
 def multitask_train_and_predict_with_gradnorm(

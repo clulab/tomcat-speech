@@ -436,7 +436,7 @@ def get_gender_avgs(acoustic_data, gender_set, gender=1):
 
     for i, item in enumerate(acoustic_data):
         if gender_set[i] == gender:
-            all_items.append(torch.tensor(item))
+            all_items.append(item.clone().detach())
 
     all_items = torch.stack(all_items)
 

@@ -84,9 +84,9 @@ class MeldPrep:
             setname = re.search("_(.*)\.csv", f_end)
             name = setname.group(1)
             self.avgd = False
-            self.train_dir = f"{name}_train"
-            self.dev_dir = f"{name}_dev"
-            self.test_dir = f"{name}_test"
+            self.train_dir = f"{name}"
+            self.dev_dir = f"{name}"
+            self.test_dir = f"{name}"
 
         print("Collecting acoustic features for meld")
 

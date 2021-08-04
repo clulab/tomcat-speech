@@ -1,229 +1,45 @@
-#!/usr/bin/env python
-
-import argparse
-
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "output_filepath",
-    help="Path to output file",
-    default="asist_output.txt",
-    nargs="?"
-)
-parser.add_argument(
-    "glove_file",
-    help="Path to Glove file",
-    default="data/glove.short.300d.punct.txt",
-    nargs="?"
-)
-parser.add_argument(
-    "emotion_model",
-    help="Path to saved model you would like to use in testing",
-    default="data/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth",
-    nargs="?"
-)
-parser.add_argument(
-    "config_path",
-    help="Path to config file you would like to use for testing",
-    default="tomcat_speech/train_and_test_models/testing_parameters/config.py",
-    nargs="?"
-)
-parser.add_argument(
-    "input_csvfiles",
-    help="Input CSV files for training and testing the model.",
-    nargs="+"
-)
-
-args = parser.parse_args()
+from tomcat_speech.train_and_test_models.asist_analysis_functions import *
 
 if __name__ == "__main__":
-    import random
-    import json
-    import re
-    import numpy as np
-    import torch
-    from tomcat_speech.data_prep.asist_data.asist_dataset_creation import (
-        AsistDataset,
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--output_filepath",
+        help="Path to output file",
+        default="output/asist_output.txt",
+        nargs="?",
     )
-    from tomcat_speech.models.train_and_test_models import (
-        predict_without_gold_labels,
+    parser.add_argument(
+        "--glove_file",
+        help="Path to Glove file",
+        default="data/glove.short.300d.punct.txt",
+        nargs="?",
     )
-    from tomcat_speech.models.input_models import (
-        EarlyFusionMultimodalModel,
-        MultitaskModel
+    parser.add_argument(
+        "--emotion_model",
+        help="Path to saved model you would like to use in testing",
+        default="data/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth",
+        nargs="?",
     )
-
-    from tomcat_speech.data_prep.data_prep_helpers import (
-        make_glove_dict,
-        Glove,
-        DatumListDataset,
-    )
-
-    # Import parameters for model
-    import tomcat_speech.models.parameters.multitask_config as params
-    import pandas as pd
-
-    # Set device, checking CUDA
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # set random seed
-    seed = params.seed
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-
-    # set number of splits
-    num_splits = 1
-
-    # set model name and model type
-    model = params.model_type
-    # set number of columns to skip in data input files
-    # cols_to_skip = 2  # 2 for Zoom, 4 for AWS
-
-    # decide if you want to use avgd feats
-    avgd_acoustic = params.model_params.avgd_acoustic or params.model_params.add_avging
-
-    # set the path to the trained model
-
-    acoustic_dict = {
-        (filepath, 0): pd.read_table(
-            filepath,
-            usecols=params.acoustic_columns,
-        )
-        for filepath in args.input_csvfiles
-    }
-    print("Acoustic dict created")
-    # metadata
-    meta_dict = {
-        filepath_tuple[0]: dataframe["timestart"]
-        for filepath_tuple, dataframe in acoustic_dict.items()
-    }
-
-    # 2. IMPORT GLOVE + MAKE GLOVE OBJECT
-    glove_dict = make_glove_dict(args.glove_file)
-    glove = Glove(glove_dict)
-    print("Glove object created")
-
-    # 3. MAKE DATASET
-    data = AsistDataset(
-        # meta_dict,
-        acoustic_dict,
-        glove,
-        splits=1,
-        sequence_prep="pad",
-        truncate_from="start",
-        norm=None,
-        add_avging=params.model_params.add_avging,
-        transcript_type="zoom"
+    parser.add_argument(
+        "--input_aligned_json",
+        help="Input json file(s) to get predictions on",
+        nargs="+",
     )
 
-    # get data for testing
-    test_data = data.current_split
-    test_ds = DatumListDataset(test_data, None)
+    args = parser.parse_args()
 
-    # 6. CREATE NN
-    # get set of pretrained embeddings and their shape
-    pretrained_embeddings = glove.data
-    num_embeddings = pretrained_embeddings.size()[0]
-    print(f"shape of pretrained embeddings is: {data.glove.data.size()}")
+    # the current parameters file is saved as testing_parameters/config.py
+    import tomcat_speech.train_and_test_models.testing_parameters.config as params
 
-    # create test model
-    classifier = MultitaskModel(
-        params=params.model_params,
-        num_embeddings=num_embeddings,
-        pretrained_embeddings=pretrained_embeddings,
-        multi_dataset=False
-    )
-    # get saved parameters
-    classifier.load_state_dict(torch.load(args.emotion_model))
-    classifier.to(device)
-    # test the model
-    ordered_predictions = predict_without_gold_labels(
-        classifier,
-        test_ds,
-        params.model_params.batch_size,
-        device,
-        avgd_acoustic=avgd_acoustic,
-        use_speaker=params.model_params.use_speaker,
-        use_gender=params.model_params.use_gender,
-        get_prob_dist=True
-    )
+    all_json = read_in_aligned_json(args.input_aligned_json)
 
+    prediction_json = get_json_output_of_speech_analysis(
+                        all_json,
+                        args.emotion_model,
+                        args.glove_file,
+                        params,
+                    )
 
-    # dict for printing emotions associated with model predictions:
-    emotions = {
-        "0" : "anger",
-        "1" : "disgust",
-        "2" : "fear",
-        "3" : "joy",
-        "4" : "neutral",
-        "5" : "sadness",
-        "6" : "surprise" }
-
-    # subset of the full dataset for the final output. Here, all rows from all datasets are combined,
-    # just like the dataset with the predictions:
-
-    def printdict(nm, directory):
-        df1 = pd.DataFrame()
-        for item, key in directory:
-            file = [str(item)]
-            nm.extend(file)
-            y = directory[item, key] #this is a pandas dataframe
-            # y["Filename"] = file
-            sub = y[["speaker", "utt", "timestart"]].copy(deep=False)
-            sub.insert(0, "filename", str(item))
-            df1 = pd.concat([df1, sub])
-        return df1
-
-        # get metadata : memberID, version, filename
-    def metadata(input):
-        nm = re.split('\s|/', input)[-1]
-        w = re.split('(\..+|_)', nm)
-        for e in w:
-            member = re.match("[Mm]em.*", e)
-            version = re.match("[Vv]ers.*", e)
-            if member:
-                p = e
-            elif version:
-                # regex to find version number, based on present data
-                if re.findall(r'[0-9]',e)[0] != None:
-                    q = re.findall(r'[0-9]',e)[0]
-                else:
-                    q = e
-        return p, q, nm
-
-    g = []
-    df = printdict(g, acoustic_dict)
-    # add columns with predictions to dataframe:
-    df["model_prediction"] = [i[0] for i in ordered_predictions]
-    df["confidence_level"] = [i[1] for i in ordered_predictions]
-    # Final output:
-    output_dict = {}
-    with open(args.output_filepath, "w") as f:
-        for index, row in df.iterrows():
-            mem, vers, filen = metadata(row["filename"])
-            output_dict = {
-                "header": {
-                    "timestamp": row["timestart"],
-                    # "timestamp": "some_time_stamp",
-                    "message_type": "event",
-                    "version": vers
-                    },
-                "msg": {
-                    "source": "TomcatSpeechAnalyzer",
-                    "experiment_id": mem,
-                    "timestamp": row["timestart"],
-                    "sub_type": "Event:speech_feature",
-                    "version": vers,
-                    "filename": filen
-                },
-                "data":
-                        {
-                        "speaker": row["speaker"],
-                        "utterance": row["utt"],
-                        "emotion_detected": emotions[str(row["model_prediction"])],
-                        "confidence_level": row["confidence_level"]
-                        }
-                    }
-            f.write(json.dumps(output_dict)+"\n")
+    save_json_predictions(prediction_json, args.output_filepath)

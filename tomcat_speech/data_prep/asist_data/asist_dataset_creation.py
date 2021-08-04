@@ -31,7 +31,7 @@ class AsistDataset(Dataset):
         transcript_type="zoom",
     ):
         """
-        :param acoustic_dict: dict of {(sid, call) : data}
+        :param acoustic_dict: dict of {utt_id : data}
         :param glove: an instance of class Glove
         :param ys_path: path to dataframe of sid + ys
         :param splits: number of splits for CV
@@ -39,25 +39,10 @@ class AsistDataset(Dataset):
         :param sequence_prep: the way sequences are handled, options: truncate, pad, None
         :param truncate_from: whether to truncate from start or end of file
         """
-        self.cols_to_skip = 2 if transcript_type.lower() == "zoom" else 4
+        self.cols_to_skip = 9 if transcript_type.lower() == "zoom" else 10
         self.acoustic_dict = OrderedDict(
             {
-                key: df[
-                    [
-                        "speaker",
-                        "utt",
-                        "pcm_loudness_sma",
-                        "F0finEnv_sma",
-                        "voicingFinalUnclipped_sma",
-                        "jitterLocal_sma",
-                        "shimmerLocal_sma",
-                        "pcm_loudness_sma_de",
-                        "F0finEnv_sma_de",
-                        "voicingFinalUnclipped_sma_de",
-                        "jitterLocal_sma_de",
-                        "shimmerLocal_sma_de",
-                    ]
-                ]
+                key: df
                 for key, df in acoustic_dict.items()
             }
         )
@@ -67,7 +52,7 @@ class AsistDataset(Dataset):
             self.valid_files = self.ys_df["sid"].tolist()
         else:
             self.ys_df = None
-            self.valid_files = [key[0] for key in self.acoustic_dict.keys()]
+            self.valid_files = [key for key in self.acoustic_dict.keys()]
         self.norm = norm
         self.sequence_prep = sequence_prep
         self.truncate_from = truncate_from
@@ -210,13 +195,13 @@ class AsistDataset(Dataset):
             [
                 item
                 for key, item in self.acoustic_dict.items()
-                if key[0] in self.valid_files
+                if key in self.valid_files
             ]
         )
 
         speaker_list = []
         for key, item in self.acoustic_dict.items():
-            if key[0] in self.valid_files:
+            if key in self.valid_files:
                 speakers = set(item["speaker"])
                 speaker_list.extend([str(item) for item in speakers])
 
@@ -225,15 +210,13 @@ class AsistDataset(Dataset):
         # iterate through items in the acoustic dict
         for key, item in self.acoustic_dict.items():
             # if the item has gold data
-            if key[0] in self.valid_files:
+            if key in self.valid_files:
 
                 # for each row in that item's dataframe
                 for idx, row in item.iterrows():
                     # get the speaker
                     spkr = str(row["speaker"])
 
-                    # todo: this also includes all researchers
-                    #   should we remove them later?
                     ordered_speakers.append(all_speakers.index(spkr))
 
                     # get the word
@@ -249,7 +232,8 @@ class AsistDataset(Dataset):
                             utt_wds[i] = self.glove.wd2idx["<UNK>"]
 
                     # save the acoustic information in remaining columns
-                    row_vals = row.values[start_idx:].tolist()
+                    # todo: verify this works
+                    row_vals = row.values[:-start_idx].tolist()
 
                     if self.sequence_prep == "truncate":
                         ordered_words.append(utt_wds)
@@ -320,13 +304,13 @@ class AsistDataset(Dataset):
             [
                 item
                 for key, item in self.acoustic_dict.items()
-                if key[0] in self.valid_files
+                if key in self.valid_files
             ]
         )
 
         speaker_list = []
         for key, item in self.acoustic_dict.items():
-            if key[0] in self.valid_files:
+            if key in self.valid_files:
                 speakers = set(item["speaker"])
                 speaker_list.extend([str(item) for item in speakers])
 
@@ -337,7 +321,7 @@ class AsistDataset(Dataset):
         for key, item in self.acoustic_dict.items():
             print(f"key is: {key}")
             # if the item has gold data
-            if key[0] in self.valid_files:
+            if key in self.valid_files:
                 # set holders
                 utt_wds = [0] * longest_utt
                 utt_acoustic = []
@@ -462,14 +446,14 @@ class AsistDataset(Dataset):
             [
                 item
                 for key, item in self.acoustic_dict.items()
-                if key[0] in self.valid_files
+                if key in self.valid_files
             ]
         )
 
         # iterate through items in the acoustic dict
         for key, item in self.acoustic_dict.items():
             # if the item has gold data
-            if key[0] in self.valid_files:
+            if key in self.valid_files:
                 speaker_set = set(item["speaker"])
                 all_speakers = sorted([str(item) for item in speaker_set])
                 # print(all_speakers)
@@ -584,13 +568,13 @@ class AsistDataset(Dataset):
         # set index for ys dataframe to sid to use it in search
         ys = self.ys_df.set_index(["sid"])
 
-        # for each (sid, callid) pair in acoustic dict's keys
-        for tup in self.acoustic_dict.keys():
+        # for each key in acoustic dict's keys
+        for key in self.acoustic_dict.keys():
             # if the sid has gold data, add it
-            if tup[0] in self.valid_files:
-                print(tup)
-                if tup not in self.skipped_files:
-                    y = ys[ys.index == tup[0]].overall.item()
+            if key in self.valid_files:
+                print(key)
+                if key not in self.skipped_files:
+                    y = ys[ys.index == key].overall.item()
                     ordered_ys.append(y)
 
         # return ordered list
