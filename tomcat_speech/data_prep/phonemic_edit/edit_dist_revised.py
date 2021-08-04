@@ -10,6 +10,7 @@ import os
 import argparse
 import spacy
 import itertools
+import pandas as pd
 
 
 ##################################################################
@@ -107,8 +108,8 @@ class PhonemicMagic:
             # skip the first line, just labels
             f.readline()
             for line in f:
-                if (len(line.strip().split("\t")) != 2):
-                    print(line.strip().split("\t"))
+                # if (len(line.strip().split("\t")) != 2):
+                #     print(line.strip().split("\t"))
                 domain_word, cmu_pronunciation = line.strip().split("\t")
                 phonemic = self.cmu_to_phonemes(cmu_pronunciation)
                 freq = self.gigaword.find_freq(domain_word)
@@ -122,6 +123,7 @@ class PhonemicMagic:
 
     # given an orthographic word, return the phonemic "spelling"
     def get_phonemic(self, original):
+
         cmu = self._cmu_lookup(original)
         converted = self.cmu_to_phonemes(cmu)
         return converted
@@ -129,7 +131,10 @@ class PhonemicMagic:
     # gives the CMU entry
     def _cmu_lookup(self, token):
         token = token.upper()
-        return self.cmu_dict[token]
+        if token == "N'T":
+            return "N T"
+        else:
+            return self.cmu_dict[token]
 
     # takes cmu entry and gives the phonemic spelling
     def cmu_to_phonemes(self, token):
@@ -377,14 +382,17 @@ def main(args):
     phonemic_helper.set_frequency_threshold()
 
     # Todo: add arg to argparse to define Gigaword options
-    with open("test_data.txt") as f:
-        for utt in f:
+    df = pd.read_csv("~/study-2_2021.06/output/transcript.tsv", sep=',', header=0)
+    count = 0
+    for utt in df["text"]:
+        if count < 5:
+            print(utt)
     # utt = "Rubble revel bow"
     # processed_utt = word_cleanup.
-
             processed_tokens = phonemic_helper.process_utterance(utt)
             output = list(enumerate_utterance_options(processed_tokens))
             print(output)
+            count += 1
 
     # TODO: server/client interface
 
