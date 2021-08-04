@@ -11,7 +11,10 @@ import argparse
 import spacy
 import itertools
 import pandas as pd
+import numpy as np
 
+
+epsilon = 0.001
 
 ##################################################################
 
@@ -113,7 +116,7 @@ class PhonemicMagic:
                 domain_word, cmu_pronunciation = line.strip().split("\t")
                 phonemic = self.cmu_to_phonemes(cmu_pronunciation)
                 freq = self.gigaword.find_freq(domain_word)
-                domain_word_set.add(Token(original=domain_word, phonemic=phonemic, frequency=freq, is_domain=True))
+                domain_word_set.add(Token(original=domain_word, phonemic=phonemic, frequency=freq, is_domain=True, is_stop=False))
 
         return domain_word_set
 
@@ -131,10 +134,9 @@ class PhonemicMagic:
     # gives the CMU entry
     def _cmu_lookup(self, token):
         token = token.upper()
-        if token == "N'T":
-            return "N T"
-        else:
-            return self.cmu_dict[token]
+        # return self.cmu_dict[token]
+
+        return self.cmu_dict.get(token, None)
 
     # takes cmu entry and gives the phonemic spelling
     def cmu_to_phonemes(self, token):
@@ -235,8 +237,9 @@ class PhonemicMagic:
         else:
             for domain_word in self.domain_words:  # if CMU pronunciation exists, expensive loop
                 cost = self.weighted_levenshtein(token.phonemic, domain_word.phonemic)
+
                 # if a good enough match and not identical:
-                if cost <= self.thresh and cost > 0:
+                if cost <= self.thresh and domain_word.original.lower() != token.original.lower():
                     print(f"considering '{token.original}' and '{domain_word.original}")
                     print(f"   cost: {cost}")
                     # store as one of the viable matches
@@ -267,8 +270,13 @@ class PhonemicMagic:
     # Convert a spacy token into one of our local Token objects
     def convert_spacy_token(self, spacy_token):
         original = spacy_token.text
+        is_stop = spacy_token.is_space or spacy_token.is_punct or spacy_token.is_stop
         frequency = self.gigaword.find_freq(original)
-        return Token(original, self.get_phonemic(original), frequency)
+        if is_stop:
+            phonemic = None
+        else:
+            phonemic = self.get_phonemic(original)
+        return Token(original, phonemic, frequency, is_stop=is_stop)
 
 
 
@@ -293,7 +301,7 @@ class PhonemicMagic:
 
 
 class Token():
-    def __init__(self, original, phonemic, frequency, is_domain=False):
+    def __init__(self, original, phonemic, frequency, is_domain=False, is_stop=False):
         self.original = original
         self.phonemic = phonemic
         self.frequency = frequency
@@ -301,6 +309,7 @@ class Token():
         self.domain_matches = [] # list of (domain_word: Token, cost: Double) tuples
         self.best_domain_match = None
         self.best_cost = None
+        self.is_stop = is_stop
 
     def add_match(self, matched_word, cost):
         self.domain_matches.append((matched_word, cost))
@@ -316,6 +325,24 @@ class Token():
         self.domain_matches.sort(key=lambda x: x[1], reverse=False)
         return self.domain_matches[:k]
 
+
+class ScoredCandidate():
+    def __init__(self, token, score):
+        self.token = token
+        self.score = score
+
+#
+# class Utterance():
+#     def __init__(self, tokens):
+#         self.tokens = tokens
+#         self.score = self.score_tokens(self.tokens)
+#
+#     def noisy_or(self, values):
+#         epsilon = 0.00001
+#         return np.prod([1.0 - (value - epsilon) for value in values])
+#
+#     def score_tokens(self):
+#         values = [tok.]
 
 
 class Gigaword:
@@ -346,28 +373,38 @@ class Gigaword:
     #     return not (spacy_token.is_space or spacy_token.is_punct or spacy_token.is_stop)
 
 
+def noisy_or(values):
+    return 1.0 - np.prod([1.0 - (value - epsilon) for value in values])
+
+def product(values):
+    return np.prod(values)
+
 
 # tokens is List[Token]
 def enumerate_utterance_options(tokens, topk=2):
     # [token1(match1, match2, ...), token2(), token3(match1, match2), ...]
 
     # candidates for each token in the utterance
-    # List[List[String]]
+    # List[List[(String, Double)]]
     utterance_token_candidates = []
     for token in tokens:
-        # List[String]
-        curr_candidates = [token.original]
-        for match, _ in token.top_matches(topk, include_self=False):
+
+        # List[(String, Double)]
+        curr_candidates = [(token.original, 1.0)]
+
+        for match, cost in token.top_matches(topk, include_self=False):
             # append the original string for the domain word matched
             # to the current candidates for this token
-            curr_candidates.append(match.original)
+            score = (1 / (cost + 1 + epsilon))
+            curr_candidates.append((match.original, score))
+
         # Once done, add the cadidates for this token to the overall list for the utterance
         utterance_token_candidates.append(curr_candidates)
 
     # cartesian product of all the options
-    # List[List[String]]
+    # List[List[(String, Double)]]
     for combination in itertools.product(*utterance_token_candidates):
-        yield ' '.join(combination)
+        yield combination
 
 
 
@@ -393,6 +430,21 @@ def main(args):
             output = list(enumerate_utterance_options(processed_tokens))
             print(output)
             count += 1
+    # with open("test_data.txt") as f:
+    #     for utt in f:
+            scored = []
+
+            for candidate in output:
+                tokens, token_scores = list(zip(*candidate))
+                # candidate_score = noisy_or(token_scores)
+                candidate_score = product(token_scores)
+                # print(candidate_score)
+                # print(candidate)
+                scored.append((' '.join(tokens), candidate_score))
+
+            scored.sort(key=lambda x: x[1], reverse=True)
+            for candidate in scored:
+                print(candidate)
 
     # TODO: server/client interface
 
