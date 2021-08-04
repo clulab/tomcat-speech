@@ -39,7 +39,7 @@ class AsistDataset(Dataset):
         :param sequence_prep: the way sequences are handled, options: truncate, pad, None
         :param truncate_from: whether to truncate from start or end of file
         """
-        self.cols_to_skip = 3 if transcript_type.lower() == "zoom" else 4
+        self.cols_to_skip = 9 if transcript_type.lower() == "zoom" else 10
         self.acoustic_dict = OrderedDict(
             {
                 key: df
