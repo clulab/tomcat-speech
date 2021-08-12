@@ -35,10 +35,16 @@ if __name__ == "__main__":
 
     all_json = read_in_aligned_json(args.input_aligned_json)
 
+    # IMPORT GLOVE + MAKE GLOVE OBJECT
+    glove_dict = make_glove_dict(args.glove_file)
+    glove = Glove(glove_dict)
+
+    print("Glove object created")
+
     prediction_json = get_json_output_of_speech_analysis(
                         all_json,
                         args.emotion_model,
-                        args.glove_file,
+                        glove,
                         params,
                     )
 

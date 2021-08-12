@@ -6,7 +6,7 @@ set -euo pipefail
 
 # Set the ROOT environment variable, assuming that the directory structure
 # mirrors that of the git repository.
-export ROOT="$(cd "$( dirname "${BASH_SOURCE[0]}" )/../" >/dev/null 2>&1 && pwd)"
+export ROOT="$(cd "$( dirname "${BASH_SOURCE[0]}" )/../../mmc_server/" >/dev/null 2>&1 && pwd)"
 
 pushd ${ROOT} > /dev/null
     # The `--reload` flag reloads the app whenever there is a change to the program,
