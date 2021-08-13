@@ -422,7 +422,7 @@ def main(args):
     df = pd.read_csv("~/study-2_2021.06/output/transcript.tsv", sep=',', header=0)
     count = 0
     for utt in df["text"]:
-        if count < 5:
+        if count < 51:
             print(utt)
     # utt = "Rubble revel bow"
     # processed_utt = word_cleanup.
