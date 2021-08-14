@@ -13,7 +13,7 @@ import itertools
 import pandas as pd
 import numpy as np
 
-
+DEBUG = False
 epsilon = 0.001
 
 ##################################################################
@@ -240,8 +240,9 @@ class PhonemicMagic:
 
                 # if a good enough match and not identical:
                 if cost <= self.thresh and domain_word.original.lower() != token.original.lower():
-                    print(f"considering '{token.original}' and '{domain_word.original}")
-                    print(f"   cost: {cost}")
+                    if DEBUG:
+                        print(f"considering '{token.original}' and '{domain_word.original}")
+                        print(f"   cost: {cost}")
                     # store as one of the viable matches
                     token.add_match(domain_word, cost)
 
@@ -405,6 +406,32 @@ def enumerate_utterance_options(tokens, topk=2):
     # List[List[(String, Double)]]
     for combination in itertools.product(*utterance_token_candidates):
         yield combination
+
+
+def mk_eval_rows(utt, phonemic_helper, n_cands):
+    processed_tokens = phonemic_helper.process_utterance(utt)
+    output = list(enumerate_utterance_options(processed_tokens))
+    # count += 1
+
+    scored = []
+
+    for candidate in output:
+        tokens, token_scores = list(zip(*candidate))
+        # candidate_score = noisy_or(token_scores)
+        candidate_score = product(token_scores)
+        # print(candidate_score)
+        # print(candidate)
+        scored.append((' '.join(tokens), candidate_score))
+
+    scored.sort(key=lambda x: x[1], reverse=True)
+    outrows = []
+    for candidate in scored[1:n_cands+1]:
+        cand, score = candidate
+        cand_row = [utt, cand, score]
+        outrows.append(cand_row)
+        # print(cand_row)
+
+    return outrows
 
 
 
