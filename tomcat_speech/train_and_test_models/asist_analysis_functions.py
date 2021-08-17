@@ -40,20 +40,10 @@ def read_in_aligned_json(input_aligned_json):
     return list_of_json
 
 
-def get_json_output_of_speech_analysis(
-    list_of_json_objs, trained_model, glove_file, params
-):
-    """
-    Use this function to take a list of json input objects
-    and a trained model
-    and return a new json with metadata and model predictions
-    :param list_of_json_objs: a list of json objects
-    :param trained_model: a trained pytorch model
-    :param glove_file: a saved glove file
-    :param params: the parameters used with the trained model
-    """
-    # Set device, checking CUDA
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# make new version with Glove Obj
+
+
+def predict_with_model(list_of_json_objs, trained_model, glove, device, params):
 
     # set random seed
     seed = params.model_params.seed
@@ -63,18 +53,13 @@ def get_json_output_of_speech_analysis(
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
+
     # decide if you want to use avgd feats
     avgd_acoustic = params.model_params.avgd_acoustic or params.model_params.add_avging
 
     # get acoustic dict and utts dict
     acoustic_dict = get_data_from_json(list_of_json_objs, avgd_acoustic)
     print("Acoustic dict created")
-
-    # IMPORT GLOVE + MAKE GLOVE OBJECT
-    glove_dict = make_glove_dict(glove_file)
-    glove = Glove(glove_dict)
-    print("Glove object created")
-
     # MAKE DATASET
     data = AsistDataset(
         acoustic_dict,
@@ -91,26 +76,9 @@ def get_json_output_of_speech_analysis(
     test_data = data.current_split
     test_ds = DatumListDataset(test_data, None)
 
-    # CREATE NN
-    # get set of pretrained embeddings and their shape
-    pretrained_embeddings = glove.data
-    num_embeddings = pretrained_embeddings.size()[0]
-    print(f"shape of pretrained embeddings is: {data.glove.data.size()}")
-
-    # create test model
-    classifier = MultitaskModel(
-        params=params.model_params,
-        num_embeddings=num_embeddings,
-        pretrained_embeddings=pretrained_embeddings,
-        multi_dataset=False,
-    )
-    # get saved parameters
-    classifier.load_state_dict(torch.load(trained_model))
-    classifier.to(device)
-
-    # test the model
+    # predict
     ordered_predictions, ordered_penult_lyrs = multitask_predict_without_gold_labels(
-        classifier,
+        trained_model,
         test_ds,
         params.model_params.batch_size,
         device,
@@ -127,8 +95,44 @@ def get_json_output_of_speech_analysis(
 
     # create and save new json
     prediction_json = create_new_json(df)
-
     return prediction_json
+
+
+def get_json_output_of_speech_analysis(
+    list_of_json_objs, trained_model_file, glove, params
+):
+    """
+    Use this function to take a list of json input objects
+    and a trained model
+    and return a new json with metadata and model predictions
+    :param list_of_json_objs: a list of json objects
+    :param trained_model: a trained pytorch model
+    :param glove: an instance of Glove
+    :param params: the parameters used with the trained model
+    """
+    # # Set device, checking CUDA
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # CREATE NN
+    # get set of pretrained embeddings and their shape
+    pretrained_embeddings = glove.data
+    num_embeddings = pretrained_embeddings.size()[0]
+    print(f"shape of pretrained embeddings is: {data.glove.data.size()}")
+
+    # create test model
+    classifier = MultitaskModel(
+        params=params.model_params,
+        num_embeddings=num_embeddings,
+        pretrained_embeddings=pretrained_embeddings,
+        multi_dataset=False,
+    )
+    # get saved parameters
+    classifier.load_state_dict(torch.load(trained_model_file))
+    classifier.to(device)
+
+    prediction_json = predict_with_model(list_of_json_objs, classifier, glove, device, params)
+    return prediction_json
+
 
 
 def save_json_predictions(prediction_json_list, savepath):
