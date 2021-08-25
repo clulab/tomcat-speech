@@ -1,0 +1,19 @@
+# .dockerignore taken from https://stackoverflow.com/a/51429852
+
+# Ignore everything
+**
+
+# Allow files and directories
+!/mmc_server_requirements.txt
+!/setup.py
+!/mmc_server.py
+!/tomcat_speech
+!/scripts/**
+
+# Ignore unnecessary files inside allowed directories
+# This should go after the allowed directories
+**/*~
+**/*.log
+**/*.swp
+**/.DS_Store
+**/Thumbs.db

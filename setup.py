@@ -2,12 +2,11 @@
 
 from setuptools import setup, find_packages
 
-from setuptools import setup, Extension
-from setuptools.command.build_ext import build_ext
+from setuptools import setup
 
 setup(
     name="tomcat_speech",
-    version="0.1",
+    version="0.2",
     description="Speech analysis tools for the ToMCAT project",
     url="https://github.com/clulab/tomcat-speech",
     packages = find_packages(),
@@ -29,6 +28,6 @@ setup(
         "tqdm",
         "webvtt-py"
     ],
+    extras_require={"mmc_server": ["uvicorn", "fastapi"]},
     python_requires=">=3.7",
 )
-

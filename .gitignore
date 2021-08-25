@@ -13,7 +13,6 @@ pip-wheel-metadata
 # directories
 output/
 backup/
-data/
 
 #opensmile
 smile.log
@@ -28,7 +27,6 @@ smile.log
 *.p
 *.m4a
 *.json
-*.txt
 
 # Ignore raw audio files
 *.raw
@@ -41,7 +39,6 @@ glove.short.300d.punct.txt
 python_readme.md
 external/opensmile*
 data/*
-requirements.txt
 
 
 # R code

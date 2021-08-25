@@ -4,11 +4,10 @@
 
 # Set the ROOT environment variable, assuming that the directory structure
 # mirrors that of the git repository.
-export ROOT="$(cd "$( dirname "${BASH_SOURCE[0]}" )/../../mmc_server/" >/dev/null 2>&1 && pwd)"
-echo ${ROOT}/data/test_message.json
+export ROOT="$(cd "$( dirname "${BASH_SOURCE[0]}" )/../../" >/dev/null 2>&1 && pwd)"
 # Test utterance encoding
 curl \
-    -X GET localhost:8000/encode \
+    -X GET localhost:8001/encode \
     -H "Content-Type: application/json" \
     -d @${ROOT}/data/test_message.json
 

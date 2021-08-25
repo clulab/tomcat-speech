@@ -2,10 +2,6 @@ import os
 from typing import Optional, Dict, List
 import torch
 
-# Mmmm.... smells like code smell! Feel free to make this work the right way, I tried.
-import sys
-sys.path.insert(0, "../")
-
 from fastapi import FastAPI
 from pydantic import BaseModel
 
