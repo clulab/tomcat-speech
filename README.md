@@ -88,13 +88,13 @@ You can install the dependencies and download the pretrained model by running
 
 ##### Without Docker
 
-You can run the dialogue act classifier as a web service by running the
+You can run the encoder as a web service by running the
 following script:
 
     ./scripts/mmc/run_mmc_server
 
-The app will run on `http://localhost:8000` by default. To see the
-automatically generated API documentation, visit `http://localhost:8000/docs`.
+The app will run on `http://localhost:8001` by default. To see the
+automatically generated API documentation, visit `http://localhost:8001/docs`.
 
 ##### With Docker
 
@@ -102,7 +102,7 @@ To run the classifier as a Dockerized service, run the following invocation:
 
     docker-compose up --build
 
-This will run the service on localhost:8000 by default. You can change the port
+This will run the service on localhost:8001 by default. You can change the port
 by changing the port mapping in the `docker-compose.yml` file.
 
 ##### Testing web service
