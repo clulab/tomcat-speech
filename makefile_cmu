@@ -1,0 +1,23 @@
+# Makefile to generate OpenSMILE CSVs
+DATA_DIR = ~/scratch/studies.aptima.com/study-2_2021.06
+OPENSMILE_DIR = ~/git/clulab/tomcat-speech/external/opensmile-3.0
+OPENSMILE_CONFIG = is09-13/IS10_paraling.conf
+
+WAV_FILES = $(wildcard $(DATA_DIR)/*.wav)
+
+
+# Recipe to create an OpenSMILE output CSV from a .wav file
+build/opensmile_output/%.csv: $(DATA_DIR)/%.wav\
+							$(OPENSMILE_DIR)
+	@mkdir -p $(@D)
+	@echo "Extracting features from $< ..."
+	$(OPENSMILE_DIR)/bin/SMILExtract\
+		-C $(OPENSMILE_DIR)/config/$(OPENSMILE_CONFIG)\
+		-I $<\
+		-lldcsvoutput\
+		$@
+
+OPENSMILE_CSV_FILES = $(patsubst /Users/adarsh/scratch/studies.aptima.com/study-2_2021.06/%.wav, build/opensmile_output/%.csv, $(WAV_FILES))
+
+all: $(OPENSMILE_CSV_FILES)
+	echo $(OPENSMILE_CSV_FILES)
