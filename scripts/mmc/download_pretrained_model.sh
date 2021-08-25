@@ -16,7 +16,7 @@ pushd ${ROOT}/data > /dev/null
     curl -O $MODEL_URL
 popd > /dev/null
 
-echo "Downloaded pretrained MMC model downloaded from ${MODEL_URL}"
+echo "Downloaded pretrained MMC model from ${MODEL_URL}"
 
 
 # Path on vanga for a subsetted GloVe file

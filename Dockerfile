@@ -3,6 +3,7 @@
 from python:latest
 
 WORKDIR /tomcat_speech
+
 COPY mmc_server_requirements.txt .
 RUN pip install -r mmc_server_requirements.txt
 COPY setup.py .

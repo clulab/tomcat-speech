@@ -10,5 +10,5 @@ services:
     ports:
       # Change the line below if you want to use a different port mapping. The
       # format is "host_port:container_port".
-      - "8000:8000"
-    entrypoint: uvicorn mmc_server:app --host 0.0.0.0
+      - "8001:8001"
+    entrypoint: uvicorn mmc_server:app --host 0.0.0.0 --port 8001
