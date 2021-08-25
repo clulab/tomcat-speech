@@ -1,0 +1,10 @@
+wheel
+torch
+torchtext
+pandas
+numpy
+sklearn
+tqdm
+uvicorn
+fastapi
+transformers
