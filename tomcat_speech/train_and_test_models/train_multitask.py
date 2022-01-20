@@ -1,31 +1,27 @@
 # train the models created in models directory with MUStARD data
 # currently the main entry point into the system
+import pickle
 import shutil
 import sys
-from datetime import date
-
+import os
+import torch
 import numpy as np
-import copy
+from datetime import date
+import random
 
-from sklearn.model_selection import train_test_split
-
-
-from tomcat_speech.models.train_and_test_models import *
+from tomcat_speech.models.train_and_test_models import multitask_train_and_predict, make_train_state
+from tomcat_speech.models.input_models import MultitaskModel
 from tomcat_speech.models.plot_training import *
-from tomcat_speech.models.input_models import *
-from tomcat_speech.data_prep.data_prep_helpers import *
-from tomcat_speech.data_prep.meld_data.meld_prep import *
-from tomcat_speech.data_prep.mustard_data.mustard_prep import MustardPrep
-from tomcat_speech.data_prep.chalearn_data.chalearn_prep import ChalearnPrep
 
 # import parameters for model
 import tomcat_speech.models.parameters.multitask_config as config
 
-# from models.parameters.multitask_params import model_params
+# import MultitaskObject and Glove from preprocessing code
+sys.path.append("../multimodal_data_preprocessing")
+from utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict
 
-# set device
+# set cuda
 cuda = False
-
 if torch.cuda.is_available():
     cuda = True
 
@@ -36,7 +32,6 @@ if torch.cuda.is_available():
     torch.cuda.set_device(2)
 
 # set random seed
-
 torch.manual_seed(config.model_params.seed)
 np.random.seed(config.model_params.seed)
 random.seed(config.model_params.seed)
@@ -80,405 +75,255 @@ if __name__ == "__main__":
     shutil.copyfile(config.CONFIG_FILE, os.path.join(output_path, "config.py"))
 
     # add stdout to a log file
-    with open(os.path.join(output_path, "log"), "w") as f:
-        # todo: make this flush more frequently so you can check the bottom of the log file
-        #   or make a new function e.g. print_both and have it both print and save to file
-        sys.stdout = f
+    with open(os.path.join(output_path, "log"), "a") as f:
+        if not config.DEBUG:
+            sys.stdout = f
 
-        if not config.load_dataset:
-            # 0. CHECK TO MAKE SURE DATA DIRECTORY EXISTS
-            os.system(f'if [ ! -d "{data}" ]; then mkdir -p {data}; fi')
-
-            # 1. IMPORT GLOVE + MAKE GLOVE OBJECT
-            glove_dict = make_glove_dict(config.glove_file)
-            glove = Glove(glove_dict)
-            # # load glove
-            # glove = pickle.load(open("data/glove.pickle", "rb"))
-            print("Glove object created")
-
-            # 2. MAKE DATASET
-            # mustard_data = MustardPrep(
-            #     mustard_path=config.mustard_path,
-            #     acoustic_length=config.model_params.audio_dim,
-            #     glove=glove,
-            #     add_avging=config.model_params.add_avging,
-            #     use_cols=config.acoustic_columns,
-            #     avgd=config.model_params.avgd_acoustic,
-            #     f_end=f"_{config.feature_set}.csv",
-            #     # utts_file_name="mustard_google.tsv",
-            # )
-
-            meld_data = MeldPrep(
-                meld_path=config.meld_path,
-                acoustic_length=config.model_params.audio_dim,
-                glove=glove,
-                add_avging=config.model_params.add_avging,
-                use_cols=config.acoustic_columns,
-                avgd=config.model_params.avgd_acoustic,
-                f_end=f"_{config.feature_set}.csv",
-                # utts_file_name="meld_kaldi.tsv"
-            )
-
-            chalearn_data = ChalearnPrep(
-                chalearn_path=config.chalearn_path,
-                acoustic_length=config.model_params.audio_dim,
-                glove=glove,
-                add_avging=config.model_params.add_avging,
-                use_cols=config.acoustic_columns,
-                avgd=config.model_params.avgd_acoustic,
-                pred_type=config.chalearn_predtype,
-                f_end=f"_{config.feature_set}.csv",
-                # utts_file_name="chalearn_kaldi.tsv"
-            )
-
-            # ravdess_data = RavdessPrep(ravdess_path=config.ravdess_path, acoustic_length=params.audio_dim, glove=glove,
-            #                      add_avging=params.add_avging,
-            #                      use_cols=config.acoustic_columns,
-            #                      avgd=avgd_acoustic)
-
-            print("Data loaded")
-
-            # add class weights to device
-            # mustard_data.sarcasm_weights = mustard_data.sarcasm_weights.to(device)
-            meld_data.emotion_weights = meld_data.emotion_weights.to(device)
-            chalearn_data.trait_weights = chalearn_data.trait_weights.to(device)
-            # ravdess_data.emotion_weights = ravdess_data.emotion_weights.to(device)
-
-            # get train, dev, test partitions
-            # mustard_train_ds = DatumListDataset(
-            #     mustard_data.train_data, "mustard", mustard_data.sarcasm_weights
-            # )
-            # mustard_dev_ds = DatumListDataset(
-            #     mustard_data.dev_data, "mustard", mustard_data.sarcasm_weights
-            # )
-            # mustard_test_ds = DatumListDataset(
-            #     mustard_data.test_data, "mustard", mustard_data.sarcasm_weights
-            # )
-
-            meld_train_ds = DatumListDataset(
-                meld_data.train_data,
-                "meld_emotion",
-                meld_data.emotion_weights.clone().detach()
-            )
-
-            meld_dev_ds = DatumListDataset(
-                meld_data.dev_data, "meld_emotion",
-                meld_data.emotion_weights.clone().detach()
-            )
-
-            meld_test_ds = DatumListDataset(
-                meld_data.test_data, "meld_emotion",
-                meld_data.emotion_weights.clone().detach()
-            )
-
-            # # combine train and dev data to increase the number of items in dev set
-            train_and_dev = meld_train_ds + meld_dev_ds
-            meld_train_ds, meld_dev_ds = train_test_split(train_and_dev, test_size=0.2)
-            print("MELD dataset rebalanced")
-
-            # del meld_data
-
-            # # create chalearn train, dev, _ data
-            chalearn_train_ds = DatumListDataset(
-                chalearn_data.train_data, "chalearn_traits",
-                chalearn_data.trait_weights.clone().detach()
-            )
-            chalearn_dev_ds = DatumListDataset(
-                chalearn_data.dev_data, "chalearn_traits",
-                chalearn_data.trait_weights.clone().detach()
-            )
-            chalearn_test_ds = DatumListDataset(
-                chalearn_data.test_data, "chalearn_traits",
-                chalearn_data.trait_weights.clone().detach()
-            )
-            # del chalearn_data
-
-            if config.save_dataset:
-                # save all data for faster loading
-                save_path = data + "/" + config.pickle_dir
-
-                # make sure the full save path exists; if not, create it
-                os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(save_path))
-
-                # save meld dataset
-                pickle.dump(meld_train_ds, open(f"{save_path}/meld_IS13_train.pickle", "wb"))
-                pickle.dump(meld_dev_ds, open(f"{save_path}/meld_IS13_dev.pickle", "wb"))
-                pickle.dump(meld_test_ds, open(f"{save_path}/meld_IS13_test.pickle", "wb"))
-
-                pickle.dump(meld_data.emotion_weights, open(f"{save_path}/meld_emotion_weights.pickle", "wb"))
-
-                # save mustard
-                # pickle.dump(mustard_train_ds, open(f"{save_path}/mustard_IS13_train.pickle", "wb"))
-                # pickle.dump(mustard_dev_ds, open(f"{save_path}/mustard_IS13_dev.pickle", "wb"))
-                # pickle.dump(mustard_test_ds, open(f"{save_path}/mustard_IS13_test.pickle", "wb"))
-                #
-                # save chalearn
-                pickle.dump(chalearn_train_ds, open(f"{save_path}/chalearn_IS13_train.pickle", "wb"))
-                pickle.dump(chalearn_dev_ds, open(f"{save_path}/chalearn_IS13_dev.pickle", "wb"))
-                pickle.dump(chalearn_test_ds, open(f'{save_path}/chalearn_IS13_test.pickle', 'wb'))
-
-                pickle.dump(chalearn_data.trait_weights, open(f"{save_path}/chalearn_trait_weights.pickle", "wb"))
-
-                pickle.dump(glove, open("data/glove.pickle", "wb"))  # todo: get different glove names
-
-            print("Datasets created")
-
-        else:
             # 1. Load datasets + glove object
-            load_dir = config.pickle_dir
-            # uncomment if loading saved data
-            meld_train_ds = pickle.load(
-                open(f"{data}/{load_dir}/meld_IS13_train.pickle", "rb")
-            )
-            meld_dev_ds = pickle.load(
-                open(f"{data}/{load_dir}/meld_IS13_dev.pickle", "rb")
-            )
-            meld_test_ds = pickle.load(
-                open(f"{data}/{load_dir}/meld_IS13_test.pickle", "rb")
-            )
+            load_path = config.load_path
+            feature_set = config.feature_set
 
-            meld_weights = pickle.load(
-                open(f"{data}/{load_dir}/meld_emotion_weights.pickle", "rb")
-            )
+            # import cdc data
+            cdc_train_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_train.pickle", "rb"))
+            cdc_dev_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_dev.pickle", "rb"))
+            cdc_test_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_test.pickle", "rb"))
+            cdc_weights = pickle.load(open(f"{load_path}/cdc_{feature_set}_clsswts.pickle", "rb"))
+            print("CDC data loaded")
 
+            # import cmu mosi data
+            mosi_train_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_train.pickle", "rb"))
+            mosi_dev_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_dev.pickle", "rb"))
+            mosi_test_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_test.pickle", "rb"))
+            mosi_weights = pickle.load(open(f"{load_path}/mosi_{feature_set}_clsswts.pickle", "rb"))
+            print("CMU MOSI data loaded")
+
+            # import firstimpr data
+            firstimpr_train_ds = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_train.pickle", "rb"))
+            firstimpr_dev_ds = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_dev.pickle", "rb"))
+            firstimpr_test_ds = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_test.pickle", "rb"))
+            firstimpr_weights = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_clsswts.pickle", "rb"))
+            print("FirstImpr data loaded")
+
+            # import meld data
+            meld_train_ds = pickle.load(open(f"{load_path}/meld_{feature_set}_train.pickle", "rb"))
+            meld_dev_ds = pickle.load(open(f"{load_path}/meld_{feature_set}_dev.pickle", "rb"))
+            meld_test_ds = pickle.load(open(f"{load_path}/meld_{feature_set}_test.pickle", "rb"))
+            meld_weights = pickle.load(open(f"{load_path}/meld_{feature_set}_clsswts.pickle", "rb"))
             print("MELD data loaded")
 
-            # # load mustard
-            # mustard_train_ds = pickle.load(open(f"{data}/{load_dir}/mustard_IS13_train.pickle", "rb"))
-            # mustard_dev_ds = pickle.load(open(f"{data}/{load_dir}/mustard_IS13_dev.pickle", "rb"))
-            # mustard_test_ds = pickle.load(open(f"{data}/{load_dir}/mustard_IS13_test.pickle", "rb"))
-            #
-            # print("MUSTARD data loaded")
+            # import ravdess data
+            ravdess_train_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_train.pickle", "rb"))
+            ravdess_dev_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_dev.pickle", "rb"))
+            ravdess_test_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_test.pickle", "rb"))
+            ravdess_weights = pickle.load(open(f"{load_path}/ravdess_{feature_set}_clsswts.pickle", "rb"))
+            print("RAVDESS data loaded")
 
-            # load chalearn
-            chalearn_train_ds = pickle.load(
-                open(f"{data}/{load_dir}/chalearn_IS13_train.pickle", "rb")
+            # if not using distilbert embeddings
+            if not config.model_params.use_distilbert:
+                # make glove
+                glove_dict = make_glove_dict(config.glove_path)
+                glove = Glove(glove_dict)
+
+                # get set of pretrained embeddings and their shape
+                pretrained_embeddings = glove.data
+                num_embeddings = pretrained_embeddings.size()[0]
+                print(f"shape of pretrained embeddings is: {glove.data.size()}")
+
+            # 3. CREATE NN
+            print(config.model_params)
+
+            item_output_path = os.path.join(
+                output_path,
+                f"LR{config.model_params.lr}_BATCH{config.model_params.batch_size}_"
+                f"NUMLYR{config.model_params.num_gru_layers}_"
+                f"SHORTEMB{config.model_params.short_emb_dim}_"
+                f"INT-OUTPUT{config.model_params.output_dim}_"
+                f"DROPOUT{config.model_params.dropout}",
             )
-            chalearn_dev_ds = pickle.load(
-                open(f"{data}/{load_dir}/chalearn_IS13_dev.pickle", "rb")
-            )
-            chalearn_test_ds = pickle.load(
-                open(f"{data}/{load_dir}/chalearn_IS13_test.pickle", "rb")
-            )
 
-            # todo: this is only for max_class right now
-            chalearn_weights = pickle.load(
-                open(f"{data}/{load_dir}/chalearn_trait_weights.pickle", "rb")
+            # make sure the full save path exists; if not, create it
+            os.system(
+                'if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(
+                    item_output_path
+                )
             )
 
-            print("ChaLearn data loaded")
+            # this uses train-dev-test folds
+            # create instance of model
+            if config.model_params.use_distilbert:
+                multitask_model = MultitaskModel(
+                    params=config.model_params,
+                    use_distilbert=config.model_params.use_distilbert
+                )
+            else:
+                multitask_model = MultitaskModel(
+                    params=config.model_params,
+                    use_distilbert=config.model_params.use_distilbert,
+                    num_embeddings=num_embeddings,
+                    pretrained_embeddings=pretrained_embeddings
+                )
 
-            # load glove
-            glove = pickle.load(open("data/glove.pickle", "rb"))
-            print("GloVe object loaded")
+            optimizer = torch.optim.Adam(
+                lr=config.model_params.lr,
+                params=multitask_model.parameters(),
+                weight_decay=config.model_params.weight_decay,
+            )
 
-        # 3. CREATE NN
-        # get set of pretrained embeddings and their shape
-        pretrained_embeddings = glove.data
-        num_embeddings = pretrained_embeddings.size()[0]
-        print("shape of pretrained embeddings is: {0}".format(glove.data.size()))
+            # set the classifier(s) to the right device
+            multitask_model = multitask_model.to(device)
+            print(multitask_model)
 
-        # prepare holders for loss and accuracy of best model versions
-        all_test_losses = []
-        all_test_accs = []
+            # get number of items in all datasets
+            total_data_size = len(cdc_train_ds) + len(mosi_train_ds) + len(firstimpr_train_ds) + \
+                len(meld_train_ds) + len(ravdess_train_ds)
 
-        # mini search through different learning_rate values etc.
-        for lr in config.model_params.lrs:
-            for b_size in config.model_params.batch_size:
-                for num_gru_layer in config.model_params.num_gru_layers:
-                    for short_emb_size in config.model_params.short_emb_dim:
-                        for output_d in config.model_params.output_dim:
-                            for dout in config.model_params.dropout:
-                                for (
-                                    txt_hidden_dim
-                                ) in config.model_params.text_gru_hidden_dim:
+            # add loss function for cdc
+            cdc_loss_func = torch.nn.CrossEntropyLoss(
+                weight=cdc_weights.to(device),
+                reduction="mean"
+            )
 
-                                    this_model_params = copy.deepcopy(
-                                        config.model_params
-                                    )
+            cdc_obj = MultitaskObject(
+                cdc_train_ds,
+                cdc_dev_ds,
+                cdc_test_ds,
+                cdc_loss_func,
+                task_num=0
+            )
 
-                                    this_model_params.batch_size = b_size
-                                    this_model_params.num_gru_layers = num_gru_layer
-                                    this_model_params.short_emb_dim = short_emb_size
-                                    this_model_params.output_dim = output_d
-                                    this_model_params.dropout = dout
-                                    this_model_params.text_gru_hidden_dim = (
-                                        txt_hidden_dim
-                                    )
+            # cdc_obj.change_loss_multiplier(2)
+            # cdc_obj.change_loss_multiplier(len(cdc_train_ds) / float(total_data_size))
 
-                                    print(this_model_params)
+            # add loss func, multitask obj for cmu mosi
+            mosi_loss_func = torch.nn.CrossEntropyLoss(
+                weight=mosi_weights.to(device),
+                reduction="mean"
+            )
 
-                                    item_output_path = os.path.join(
-                                        output_path,
-                                        f"LR{lr}_BATCH{b_size}_"
-                                        f"NUMLYR{num_gru_layer}_"
-                                        f"SHORTEMB{short_emb_size}_"
-                                        f"INT-OUTPUT{output_d}_"
-                                        f"DROPOUT{dout}_"
-                                        f"TEXTHIDDEN{txt_hidden_dim}",
-                                    )
+            mosi_obj = MultitaskObject(
+                mosi_train_ds,
+                mosi_dev_ds,
+                mosi_test_ds,
+                mosi_loss_func,
+                task_num=1
+            )
 
-                                    # make sure the full save path exists; if not, create it
-                                    os.system(
-                                        'if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(
-                                            item_output_path
-                                        )
-                                    )
+            # mosi_obj.change_loss_multiplier(7)
+            # mosi_obj.change_loss_multiplier(len(mosi_train_ds) / float(total_data_size))
 
-                                    # this uses train-dev-test folds
-                                    # create instance of model
-                                    if config.model_type.lower() == "concat_multitask":
-                                        multitask_model = MultitaskDuplicateInputModel(
-                                            params=this_model_params,
-                                            num_embeddings=num_embeddings,
-                                            pretrained_embeddings=pretrained_embeddings,
-                                            num_tasks=config.num_tasks,
-                                        )
-                                    elif config.model_type.lower() == "multitask":
-                                        multitask_model = MultitaskModel(
-                                            params=this_model_params,
-                                            num_embeddings=num_embeddings,
-                                            pretrained_embeddings=pretrained_embeddings,
-                                        )
-                                    elif (
-                                        config.model_type.lower()
-                                        == "acoustic_multitask"
-                                    ):
-                                        multitask_model = MultitaskAcousticShared(
-                                            params=this_model_params,
-                                            num_embeddings=num_embeddings,
-                                            pretrained_embeddings=pretrained_embeddings,
-                                        )
+            # add loss function for firstimpr
+            firstimpr_loss_func = torch.nn.CrossEntropyLoss(
+                weight=firstimpr_weights.to(device),
+                reduction="mean"
+            )
+            # create multitask object
+            firstimpr_obj = MultitaskObject(
+                firstimpr_train_ds,
+                firstimpr_dev_ds,
+                firstimpr_test_ds,
+                firstimpr_loss_func,
+                task_num=2,
+            )
 
-                                    optimizer = torch.optim.Adam(
-                                        lr=lr,
-                                        params=multitask_model.parameters(),
-                                        weight_decay=this_model_params.weight_decay,
-                                    )
+            # firstimpr_obj.change_loss_multiplier(5)
+            # firstimpr_obj.change_loss_multiplier(len(firstimpr_train_ds) / float(total_data_size))
 
-                                    # set the classifier(s) to the right device
-                                    multitask_model = multitask_model.to(device)
-                                    print(multitask_model)
+            # # add loss function for meld
+            meld_loss_func = torch.nn.CrossEntropyLoss(
+                weight=meld_weights.to(device),
+                reduction="mean"
+            )
+            # create multitask object
+            meld_obj = MultitaskObject(
+                meld_train_ds,
+                meld_dev_ds,
+                meld_test_ds,
+                meld_loss_func,
+                task_num=3,
+            )
 
-                                    # # add loss function for mustard
-                                    # # NOTE: multitask training doesn't work with BCELoss for mustard
-                                    # mustard_loss_func = nn.CrossEntropyLoss(
-                                    #     # weight=mustard_train_ds.class_weights,
-                                    #     reduction="mean"
-                                    # )
-                                    # # # # create multitask object
-                                    # mustard_obj = MultitaskObject(
-                                    #     mustard_train_ds,
-                                    #     mustard_dev_ds,
-                                    #     mustard_test_ds,
-                                    #     mustard_loss_func,
-                                    #     task_num=0,
-                                    # )
+            # meld_obj.change_loss_multiplier(7)
+            # meld_obj.change_loss_multiplier(len(meld_train_ds) / float(total_data_size))
 
-                                    # # add loss function for meld
-                                    meld_loss_func = nn.CrossEntropyLoss(
-                                        weight=meld_weights,
-                                        reduction="mean"
-                                    )
-                                    # create multitask object
-                                    meld_obj = MultitaskObject(
-                                        meld_train_ds,
-                                        meld_dev_ds,
-                                        meld_test_ds,
-                                        meld_loss_func,
-                                        task_num=0,
-                                    )
+            # add loss function, multitask obj for ravdess
+            ravdess_loss_func = torch.nn.CrossEntropyLoss(
+                weight=ravdess_weights.to(device),
+                reduction="mean"
+            )
 
-                                    # add loss function for chalearn
-                                    chalearn_loss_func = nn.CrossEntropyLoss(
-                                        weight=chalearn_weights,
-                                        reduction="mean"
-                                    )
-                                    # create multitask object
-                                    chalearn_obj = MultitaskObject(
-                                        chalearn_train_ds,
-                                        chalearn_dev_ds,
-                                        chalearn_test_ds,
-                                        chalearn_loss_func,
-                                        task_num=1,
-                                    )
+            ravdess_obj = MultitaskObject(
+                ravdess_train_ds,
+                ravdess_dev_ds,
+                ravdess_test_ds,
+                ravdess_loss_func,
+                task_num=4
+            )
 
-                                    # set all data list
-                                    all_data_list = [
-                                        meld_obj,
-                                        chalearn_obj,
-                                    ]
+            # ravdess_obj.change_loss_multiplier(2)
+            # ravdess_obj.change_loss_multiplier(len(ravdess_train_ds) / float(total_data_size))
 
-                                    print(
-                                        "Model, loss function, and optimization created"
-                                    )
+            # set all data list
+            all_data_list = [
+                cdc_obj,
+                mosi_obj,
+                firstimpr_obj,
+                meld_obj,
+                ravdess_obj
+            ]
 
-                                    # todo: set data sampler?
-                                    sampler = None
-                                    # sampler = BatchSchedulerSampler()
+            print(
+                "Model, loss function, and optimization created"
+            )
 
-                                    # create a a save path and file for the model
-                                    model_save_file = f"{item_output_path}/{config.EXPERIMENT_DESCRIPTION}.pth"
+            # todo: set data sampler?
+            sampler = None
+            # sampler = BatchSchedulerSampler()
 
-                                    # make the train state to keep track of model training/development
-                                    train_state = make_train_state(lr, model_save_file)
+            # create a a save path and file for the model
+            model_save_file = f"{item_output_path}/{config.EXPERIMENT_DESCRIPTION}.pt"
 
-                                    # train the model and evaluate on development set
-                                    if this_model_params.use_gradnorm:
-                                        multitask_train_and_predict_with_gradnorm(
-                                            multitask_model,
-                                            train_state,
-                                            all_data_list,
-                                            this_model_params.batch_size,
-                                            this_model_params.num_epochs,
-                                            optimizer,
-                                            device,
-                                            avgd_acoustic=avgd_acoustic_in_network,
-                                            use_speaker=this_model_params.use_speaker,
-                                            use_gender=this_model_params.use_gender,
-                                            optimizer2_learning_rate=lr,
-                                        )
-                                    else:
-                                        multitask_train_and_predict(
-                                            multitask_model,
-                                            train_state,
-                                            all_data_list,
-                                            this_model_params.batch_size,
-                                            this_model_params.num_epochs,
-                                            optimizer,
-                                            device,
-                                            scheduler=None,
-                                            sampler=sampler,
-                                            avgd_acoustic=avgd_acoustic_in_network,
-                                            use_speaker=this_model_params.use_speaker,
-                                            use_gender=this_model_params.use_gender,
-                                        )
+            # make the train state to keep track of model training/development
+            train_state = make_train_state(config.model_params.lr, model_save_file,
+                                           config.model_params.early_stopping_criterion)
 
-                                    # plot the loss and accuracy curves
-                                    # set plot titles
-                                    loss_title = f"Training and Dev loss for model {config.model_type} with lr {lr}"
-                                    loss_save = f"{item_output_path}/loss.png"
+            # train the model and evaluate on development set
+            multitask_train_and_predict(
+                multitask_model,
+                train_state,
+                all_data_list,
+                config.model_params.batch_size,
+                config.model_params.num_epochs,
+                optimizer,
+                device,
+                scheduler=None,
+                sampler=sampler,
+                avgd_acoustic=avgd_acoustic_in_network,
+                use_speaker=config.model_params.use_speaker,
+                use_gender=config.model_params.use_gender,
+            )
 
-                                    # plot the loss from model
-                                    plot_train_dev_curve(
-                                        train_state["train_loss"],
-                                        train_state["val_loss"],
-                                        x_label="Epoch",
-                                        y_label="Loss",
-                                        title=loss_title,
-                                        save_name=loss_save,
-                                        set_axis_boundaries=False,
-                                    )
+            # plot the loss and accuracy curves
+            # set plot titles
+            loss_title = f"Training and Dev loss for model {config.model_params.model} with lr {config.model_params.lr}"
+            loss_save = f"{item_output_path}/loss.png"
 
-                                    # plot the avg f1 curves for each dataset
-                                    for item in train_state["tasks"]:
-                                        plot_train_dev_curve(
-                                            train_state["train_avg_f1"][item],
-                                            train_state["val_avg_f1"][item],
-                                            x_label="Epoch",
-                                            y_label="Weighted AVG F1",
-                                            title=f"Average f-scores for task {item} for model {config.model_type} with lr {lr}",
-                                            save_name=f"{item_output_path}/avg-f1_task-{item}.png",
-                                            losses=False,
-                                            set_axis_boundaries=False,
-                                        )
+            # plot the loss from model
+            plot_train_dev_curve(
+                train_state["train_loss"],
+                train_state["val_loss"],
+                x_label="Epoch",
+                y_label="Loss",
+                title=loss_title,
+                save_name=loss_save
+            )
+
+            # plot the avg f1 curves for each dataset
+            for item in train_state["tasks"]:
+                plot_train_dev_curve(
+                    train_state["train_avg_f1"][item],
+                    train_state["val_avg_f1"][item],
+                    x_label="Epoch",
+                    y_label="Weighted AVG F1",
+                    title=f"Average f-scores for task {item} for model {config.model_params.model} with lr {config.model_params.lr}",
+                    save_name=f"{item_output_path}/avg-f1_task-{item}.png",
+                )
