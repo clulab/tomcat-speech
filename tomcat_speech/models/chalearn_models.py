@@ -7,35 +7,6 @@ from tomcat_speech.models.input_models import (
 )
 
 
-# class RegressionLayer(nn.Module):
-#     """
-#     A final layer for regression predictions
-#     """
-#
-#     def __init__(self, params, out_dim):
-#         super(RegressionLayer, self).__init__()
-#         self.input_dim = params.output_dim
-#         self.inter_fc_prediction_dim = params.final_hidden_dim
-#         self.dropout = params.dropout
-#
-#         # specify out_dim explicity so we can do multiple tasks at once
-#         self.output_dim = out_dim
-#
-#         self.fc1 = nn.Linear(self.input_dim, self.inter_fc_prediction_dim)
-#         self.fc2 = nn.Linear(self.inter_fc_prediction_dim, 1)
-#
-#     def forward(self, combined_inputs):
-#         out = torch.relu(F.dropout(self.fc1(combined_inputs), self.dropout))
-#         out = torch.relu(self.fc2(out))
-#         # out = torch.relu(self.fc1(F.dropout(combined_inputs, self.dropout)))
-#
-#         # because
-#         if self.output_dim == 1:
-#             out = torch.sigmoid(out)
-#
-#         return out
-
-
 class OCEANPersonalityModel(nn.Module):
     """
     A model combining base + output layers for learning OCEAN personality traits

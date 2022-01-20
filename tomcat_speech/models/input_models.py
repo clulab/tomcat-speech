@@ -47,10 +47,11 @@ class BaseGRU(nn.Module):
             inputs, input_lengths, batch_first=True, enforce_sorted=False
         )
 
-        # todo: look at this--make sure we're taking hidden from the right place
         packed_output, (hidden, cell) = self.GRU(inputs)
         # rnn_feats, hidden = self.GRU(inputs)
 
+        # todo: test this model somewhere
+        #   other RNNs use hidden[-1] bc of batch_first=True
         output = hidden[:, -1, :]
 
         # output is NOT fed through softmax or sigmoid layer here
