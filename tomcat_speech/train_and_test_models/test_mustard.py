@@ -80,7 +80,7 @@ if __name__ == "__main__":
     test_ds = DatumListDataset(test_data, data.sarcasm_weights)
 
     # create test model
-    classifier = EarlyFusionMultimodalModel(
+    classifier = IntermediateFusionMultimodalModel(
         params=params,
         num_embeddings=num_embeddings,
         pretrained_embeddings=pretrained_embeddings,

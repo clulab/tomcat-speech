@@ -59,15 +59,16 @@ class BaseGRU(nn.Module):
         return output
 
 
-class EarlyFusionMultimodalModel(nn.Module):
+class IntermediateFusionMultimodalModel(nn.Module):
     """
     An encoder to take a sequence of inputs and produce a sequence of intermediate representations
     Can include convolutions over text input and/or acoustic input--BUT NOT TOGETHER bc MELD isn't
     aligned at the word-level
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None):
-        super(EarlyFusionMultimodalModel, self).__init__()
+    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None,
+                 use_distilbert=False):
+        super(IntermediateFusionMultimodalModel, self).__init__()
         # input text + acoustic + speaker
         self.text_dim = params.text_dim
         self.audio_dim = params.audio_dim
@@ -79,13 +80,19 @@ class EarlyFusionMultimodalModel(nn.Module):
         self.out_dims = params.output_dim
 
         # if we feed text through additional layer(s)
+        if not use_distilbert:
+            self.text_input_size = params.text_dim + params.short_emb_dim
+        else:
+            self.text_input_size = params.text_dim
+
         self.text_rnn = nn.LSTM(
-            input_size=params.text_dim + params.short_emb_dim,
+            input_size=self.text_input_size,
             hidden_size=params.text_gru_hidden_dim,
             num_layers=params.num_gru_layers,
             batch_first=True,
             bidirectional=True,
         )
+        # self.text_batch_norm = nn.BatchNorm1d(num_features=params.text_gru_hidden_dim)
 
         self.acoustic_rnn = nn.LSTM(
             input_size=params.audio_dim,
@@ -103,6 +110,7 @@ class EarlyFusionMultimodalModel(nn.Module):
             self.fc_hidden = 50
             # set acoustic fc layer 1
             self.acoustic_fc_1 = nn.Linear(params.audio_dim, self.fc_hidden)
+            # self.ac_fc_batch_norm = nn.BatchNorm1d(self.fc_hidden)
         else:
             # set size of input dim
             self.fc_input_dim = (
@@ -116,10 +124,19 @@ class EarlyFusionMultimodalModel(nn.Module):
         # set acoustic fc layer 2
         self.acoustic_fc_2 = nn.Linear(self.fc_hidden, params.audio_dim)
 
+        # initialize speaker, gender embeddings
+        self.speaker_embedding = None
+        self.gender_embedding = None
+
         if params.use_speaker:
             self.fc_input_dim = self.fc_input_dim + params.speaker_emb_dim
+            self.speaker_embedding = nn.Embedding(
+                params.num_speakers, params.speaker_emb_dim
+            )
+
         elif params.use_gender:
             self.fc_input_dim = self.fc_input_dim + params.gender_emb_dim
+            self.gender_embedding = nn.Embedding(3, params.gender_emb_dim)
 
         # set number of classes
         self.output_dim = params.output_dim
@@ -127,32 +144,19 @@ class EarlyFusionMultimodalModel(nn.Module):
         # set number of layers and dropout
         self.dropout = params.dropout
 
-        # initialize word embeddings
-        self.embedding = nn.Embedding(
-            num_embeddings, self.text_dim, _weight=pretrained_embeddings
-        )
-        self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
-        # self.text_batch_norm = nn.BatchNorm1d(self.text_dim + params.short_emb_dim)
+        # distilbert vs glove initialization
+        self.use_distilbert = use_distilbert
 
-        # initialize speaker embeddings
-        self.speaker_embedding = nn.Embedding(
-            params.num_speakers, params.speaker_emb_dim
-        )
-
-        # self.speaker_batch_norm = nn.BatchNorm1d(params.speaker_emb_dim)
-
-        self.gender_embedding = nn.Embedding(3, params.gender_emb_dim)
-
-        # acoustic batch normalization
-        # self.acoustic_batch_norm = nn.BatchNorm1d(params.audio_dim)
-        # self.acoustic_unk_norm = nn.BatchNorm1d(params.audio_dim)
-        # self.acoustic_female_norm = nn.BatchNorm1d(params.audio_dim)
-        # self.acoustic_male_norm = nn.BatchNorm1d(params.audio_dim)
+        if not use_distilbert:
+            # initialize word embeddings
+            self.embedding = nn.Embedding(
+                num_embeddings, self.text_dim, _weight=pretrained_embeddings
+            )
+            self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
 
         # initialize fully connected layers
         self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
-
-        # self.interfc_batch_norm = nn.BatchNorm1d(params.fc_hidden_dim)
+        # self.fc_batch_norm = nn.BatchNorm1d(params.fc_hidden_dim)
 
         self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
 
@@ -165,20 +169,27 @@ class EarlyFusionMultimodalModel(nn.Module):
         acoustic_len_input=None,
         gender_input=None,
         get_prob_dist=False,
+        save_encoded_data=False
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
-        embs = F.dropout(self.embedding(text_input), 0.1).detach()
+        if not self.use_distilbert:
+            embs = F.dropout(self.embedding(text_input), 0.1).detach()
 
-        short_embs = F.dropout(self.short_embedding(text_input), 0.1)
+            short_embs = F.dropout(self.short_embedding(text_input), 0.1)
 
-        all_embs = torch.cat((embs, short_embs), dim=2)
+            all_embs = torch.cat((embs, short_embs), dim=2)
+        else:
+            all_embs = text_input
 
         # get speaker embeddings, if needed
         if speaker_input is not None:
             speaker_embs = self.speaker_embedding(speaker_input).squeeze(dim=1)
         if gender_input is not None:
             gender_embs = self.gender_embedding(gender_input)
+
+        # flatten_parameters() decreases memory usage
+        self.text_rnn.flatten_parameters()
 
         packed = nn.utils.rnn.pack_padded_sequence(
             all_embs, length_input, batch_first=True, enforce_sorted=False
@@ -187,6 +198,7 @@ class EarlyFusionMultimodalModel(nn.Module):
         # feed embeddings through GRU
         packed_output, (hidden, cell) = self.text_rnn(packed)
         encoded_text = F.dropout(hidden[-1], 0.3)
+        # encoded_text = self.text_batch_norm(encoded_text)
 
         if acoustic_len_input is not None:
             packed_acoustic = nn.utils.rnn.pack_padded_sequence(
@@ -232,7 +244,10 @@ class EarlyFusionMultimodalModel(nn.Module):
             output = prob(output)
 
         # return the output
-        return output
+        if save_encoded_data:
+            return output, encoded_acoustic, encoded_text
+        else:
+            return output
 
 
 class LateFusionMultimodalModel(nn.Module):
@@ -757,6 +772,7 @@ class MultitaskModel(nn.Module):
         num_embeddings=None,
         pretrained_embeddings=None,
         multi_dataset=True,
+        use_distilbert=False
     ):
         super(MultitaskModel, self).__init__()
         # save whether there are multiple datasets
@@ -769,16 +785,18 @@ class MultitaskModel(nn.Module):
         # # set base of model
         # comment this out and uncomment the below to try late fusion model
         if params.audio_only is True:
+            # todo: update EarlyFusionAcousticOnlyModel to work with distilbert
             self.base = EarlyFusionAcousticOnlyModel(
-                params, num_embeddings, pretrained_embeddings
+                params, num_embeddings, pretrained_embeddings, use_distilbert
             )
         elif params.text_only is False:
-            self.base = EarlyFusionMultimodalModel(
-                params, num_embeddings, pretrained_embeddings
+            self.base = IntermediateFusionMultimodalModel(
+                params, num_embeddings, pretrained_embeddings, use_distilbert
             )
         else:
+            # todo: update EarlyFusionTextOnlyModel to work with distilbert
             self.base = EarlyFusionTextOnlyModel(
-                params, num_embeddings, pretrained_embeddings
+                params, num_embeddings, pretrained_embeddings, use_distilbert
             )
             # self.base = TextOnlyRNN(
             #     params, num_embeddings, pretrained_embeddings
@@ -794,6 +812,7 @@ class MultitaskModel(nn.Module):
         self.task_1_predictor = PredictionLayer(params, params.output_1_dim)
         self.task_2_predictor = PredictionLayer(params, params.output_2_dim)
         self.task_3_predictor = PredictionLayer(params, params.output_3_dim)
+        self.task_4_predictor = PredictionLayer(params, params.output_4_dim)
 
     def forward(
         self,
@@ -805,7 +824,8 @@ class MultitaskModel(nn.Module):
         gender_input=None,
         task_num=0,
         get_prob_dist=False,
-        return_penultimate_layer=False
+        return_penultimate_layer=False,
+        save_encoded_data=False
     ):
         # NOTE: if return_penultimate_layer, forward returns a (preds, penult) double
 
@@ -832,12 +852,14 @@ class MultitaskModel(nn.Module):
         task_1_out = None
         task_2_out = None
         task_3_out = None
+        task_4_out = None
 
         if not self.multi_dataset:
             task_0_out = self.task_0_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
             task_1_out = self.task_1_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
             task_2_out = self.task_2_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
             task_3_out = self.task_3_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+            task_4_out = self.task_3_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
         else:
             if task_num == 0:
                 task_0_out = self.task_0_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
@@ -847,10 +869,15 @@ class MultitaskModel(nn.Module):
                 task_2_out = self.task_2_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
             elif task_num == 3:
                 task_3_out = self.task_3_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+            elif task_num == 4:
+                task_4_out = self.task_4_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
             else:
                 sys.exit(f"Task {task_num} not defined")
 
-        return task_0_out, task_1_out, task_2_out, task_3_out
+        if save_encoded_data:
+            return task_0_out, task_1_out, task_2_out, task_3_out, task_4_out, final_base_layer
+        else:
+            return task_0_out, task_1_out, task_2_out, task_3_out, task_4_out
 
 
 class AcousticOnlyForMultitask(nn.Module):

@@ -166,7 +166,7 @@ if __name__ == "__main__":
                 print(f"Now starting training/tuning with split {split} held out")
 
                 # create instance of model
-                bimodal_trial = EarlyFusionMultimodalModel(
+                bimodal_trial = IntermediateFusionMultimodalModel(
                     params=model_params,
                     num_embeddings=num_embeddings,
                     pretrained_embeddings=pretrained_embeddings,

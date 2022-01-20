@@ -363,7 +363,7 @@ def multitask_train_and_predict(
 
 
 # adapted from https://github.com/joosthub/PyTorchNLPBook/blob/master/chapters/chapter_6/classifying-surnames/Chapter-6-Surname-Classification-with-RNNs.ipynb
-def make_train_state(learning_rate, model_save_file):
+def make_train_state(learning_rate, model_save_file, early_stopping_criterion):
     # makes a train state to save information on model during training/testing
     return {
         "stop_early": False,
@@ -385,6 +385,7 @@ def make_train_state(learning_rate, model_save_file):
         "test_loss": -1,
         "test_acc": -1,
         "model_filename": model_save_file,
+        "early_stopping_criterion": early_stopping_criterion
     }
 
 

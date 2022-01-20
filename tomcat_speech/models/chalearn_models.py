@@ -2,7 +2,7 @@
 
 import torch.nn as nn
 from tomcat_speech.models.input_models import (
-    EarlyFusionMultimodalModel,
+    IntermediateFusionMultimodalModel,
     PredictionLayer,
 )
 
@@ -21,7 +21,7 @@ class OCEANPersonalityModel(nn.Module):
 
         # # set base of model
         # comment this out and uncomment the below to try late fusion model
-        self.base = EarlyFusionMultimodalModel(
+        self.base = IntermediateFusionMultimodalModel(
             params, num_embeddings, pretrained_embeddings
         )
 

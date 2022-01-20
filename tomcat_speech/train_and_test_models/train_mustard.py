@@ -146,7 +146,7 @@ if __name__ == "__main__":
                 # optimizer = torch.optim.Adadelta(lr=lr, params=bimodal_trial.parameters(),
                 # weight_decay=wd)
             else:
-                bimodal_trial = EarlyFusionMultimodalModel(
+                bimodal_trial = IntermediateFusionMultimodalModel(
                     params=params,
                     num_embeddings=num_embeddings,
                     pretrained_embeddings=pretrained_embeddings,
