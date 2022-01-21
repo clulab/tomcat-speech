@@ -2,6 +2,7 @@
 import pickle
 import sys
 import random
+from datetime import datetime
 
 import torch
 import torch.nn as nn
@@ -127,12 +128,15 @@ def multitask_train_and_predict(
     avgd_acoustic=True,
     use_speaker=True,
     use_gender=False,
+    save_encoded_output=False,
 ):
     """
     Train_ds_list and val_ds_list are lists of MultTaskObject objects!
     Length of the list is the number of datasets used
     """
     num_tasks = len(datasets_list)
+
+    print(f"Number of tasks: {num_tasks}")
     # get a list of the tasks by number
     for dset in datasets_list:
         train_state["tasks"].append(dset.task_num)
@@ -141,200 +145,63 @@ def multitask_train_and_predict(
 
     for epoch_index in range(num_epochs):
 
-        print("Now starting epoch {0}".format(epoch_index))
+        first = datetime.now()
+        print(f"Starting epoch {epoch_index} at {first}")
 
         train_state["epoch_index"] = epoch_index
 
-        # Iterate over training dataset
-        running_loss = 0.0
-
-        # set classifier(s) to training mode
-        classifier.train()
-
-        batches, tasks = get_all_batches(
-            datasets_list, batch_size=batch_size, shuffle=True
+        # get running loss, holders of ys and predictions on training partition
+        running_loss, ys_holder, preds_holder = run_model(
+            datasets_list,
+            classifier,
+            batch_size,
+            num_tasks,
+            device,
+            use_speaker,
+            use_gender,
+            avgd_acoustic,
+            optimizer,
+            train_state,
+            mode="training",
         )
 
-        # set holders to use for error analysis
-        ys_holder = {}
-        for i in range(num_tasks):
-            ys_holder[i] = []
-        preds_holder = {}
-        for i in range(num_tasks):
-            preds_holder[i] = []
-
-        # for each batch in the list of batches created by the dataloader
-        for batch_index, batch in enumerate(batches):
-            # find the task for this batch
-            batch_task = tasks[batch_index]
-
-            # step 1. zero the gradients
-            optimizer.zero_grad()
-
-            y_gold = batch[4].to(device)
-
-            batch_acoustic = batch[0].to(device)
-            batch_text = batch[1].to(device)
-            if use_speaker:
-                batch_speakers = batch[2].to(device)
-            else:
-                batch_speakers = None
-
-            if use_gender:
-                batch_genders = batch[3].to(device)
-            else:
-                batch_genders = None
-            batch_lengths = batch[-2].to(device)
-            batch_acoustic_lengths = batch[-1].to(device)
-
-            if avgd_acoustic:
-                y_pred = classifier(
-                    acoustic_input=batch_acoustic,
-                    text_input=batch_text,
-                    speaker_input=batch_speakers,
-                    length_input=batch_lengths,
-                    gender_input=batch_genders,
-                    task_num=tasks[batch_index],
-                )
-            else:
-                y_pred = classifier(
-                    acoustic_input=batch_acoustic,
-                    text_input=batch_text,
-                    speaker_input=batch_speakers,
-                    length_input=batch_lengths,
-                    acoustic_len_input=batch_acoustic_lengths,
-                    gender_input=batch_genders,
-                    task_num=tasks[batch_index],
-                )
-
-            batch_pred = y_pred[batch_task]
-
-            if datasets_list[batch_task].binary:
-                batch_pred = batch_pred.float()
-                y_gold = y_gold.float()
-
-            # calculate loss
-            loss = (
-                datasets_list[batch_task].loss_fx(batch_pred, y_gold)
-                * datasets_list[batch_task].loss_multiplier
-            )
-            loss_t = loss.item()
-
-            # calculate running loss
-            running_loss += (loss_t - running_loss) / (batch_index + 1)
-
-            # use loss to produce gradients
-            loss.backward()
-
-            # add ys to holder for error analysis
-            preds_holder[batch_task].extend(
-                [item.index(max(item)) for item in batch_pred.tolist()]
-            )
-            ys_holder[batch_task].extend(y_gold.tolist())
-
-            # increment optimizer
-            optimizer.step()
-
-        # add loss and accuracy information to the train state
+        # add loss and accuracy to train state
         train_state["train_loss"].append(running_loss)
 
+        # get precision, recall, f1 info
         for task in preds_holder.keys():
             task_avg_f1 = precision_recall_fscore_support(
                 ys_holder[task], preds_holder[task], average="weighted"
             )
             print(f"Training weighted f-score for task {task}: {task_avg_f1}")
+            # add training f1 to train state
             train_state["train_avg_f1"][task].append(task_avg_f1[2])
 
-        # Iterate over validation set--put it in a dataloader
-        batches, tasks = get_all_batches(
-            datasets_list, batch_size=batch_size, shuffle=True, partition="dev"
+        # get running loss, holders of ys and predictions on dev partition
+        running_loss, ys_holder, preds_holder = run_model(
+            datasets_list,
+            classifier,
+            batch_size,
+            num_tasks,
+            device,
+            use_speaker,
+            use_gender,
+            avgd_acoustic,
+            optimizer,
+            train_state,
+            mode="eval",
         )
 
-        # reset loss and accuracy to zero
-        running_loss = 0.0
-
-        # set classifier to evaluation mode
-        classifier.eval()
-
-        # set holders to use for error analysis
-        ys_holder = {}
-        for i in range(num_tasks):
-            ys_holder[i] = []
-        preds_holder = {}
-        for i in range(num_tasks):
-            preds_holder[i] = []
-
-        # for each batch in the list of batches created by the dataloader
-        for batch_index, batch in enumerate(batches):
-            # get the task for this batch
-            batch_task = tasks[batch_index]
-
-            y_gold = batch[4].to(device)
-
-            batch_acoustic = batch[0].to(device)
-            batch_text = batch[1].to(device)
-            if use_speaker:
-                batch_speakers = batch[2].to(device)
-            else:
-                batch_speakers = None
-
-            if use_gender:
-                batch_genders = batch[3].to(device)
-            else:
-                batch_genders = None
-            batch_lengths = batch[-2].to(device)
-            batch_acoustic_lengths = batch[-1].to(device)
-
-            # compute the output
-            if avgd_acoustic:
-                y_pred = classifier(
-                    acoustic_input=batch_acoustic,
-                    text_input=batch_text,
-                    speaker_input=batch_speakers,
-                    length_input=batch_lengths,
-                    gender_input=batch_genders,
-                    task_num=tasks[batch_index],
-                )
-            else:
-                y_pred = classifier(
-                    acoustic_input=batch_acoustic,
-                    text_input=batch_text,
-                    speaker_input=batch_speakers,
-                    length_input=batch_lengths,
-                    acoustic_len_input=batch_acoustic_lengths,
-                    gender_input=batch_genders,
-                    task_num=tasks[batch_index],
-                )
-
-            batch_pred = y_pred[batch_task]
-
-            if datasets_list[batch_task].binary:
-                batch_pred = batch_pred.float()
-                y_gold = y_gold.float()
-
-            # calculate loss
-            loss = (
-                datasets_list[batch_task].loss_fx(batch_pred, y_gold)
-                * datasets_list[batch_task].loss_multiplier
-            )
-            loss_t = loss.item()
-
-            # calculate running loss
-            running_loss += (loss_t - running_loss) / (batch_index + 1)
-
-            # add ys to holder for error analysis
-            preds_holder[batch_task].extend(
-                [item.index(max(item)) for item in batch_pred.tolist()]
-            )
-            ys_holder[batch_task].extend(y_gold.tolist())
-
+        # get precision, recall, f1 info
         for task in preds_holder.keys():
             task_avg_f1 = precision_recall_fscore_support(
                 ys_holder[task], preds_holder[task], average="weighted"
             )
             print(f"Val weighted f-score for task {task}: {task_avg_f1}")
+            # add val f1 to train state
             train_state["val_avg_f1"][task].append(task_avg_f1[2])
 
+        # every 5 epochs, print out a classification report on validation set
         if epoch_index % 5 == 0:
             for task in preds_holder.keys():
                 print(f"Classification report and confusion matrix for task {task}:")
@@ -343,9 +210,6 @@ def multitask_train_and_predict(
                 print(
                     classification_report(ys_holder[task], preds_holder[task], digits=4)
                 )
-        # todo: test me
-        # flush stdout
-        sys.stdout.flush()
 
         # add loss and accuracy to train state
         train_state["val_loss"].append(running_loss)
@@ -360,6 +224,220 @@ def multitask_train_and_predict(
         # if it's time to stop, end the training process
         if train_state["stop_early"]:
             break
+
+        # print out how long this epoch took
+        last = datetime.now()
+        print(f"Epoch {epoch_index} completed at {last}")
+        print(f"This epoch took {last - first}")
+        sys.stdout.flush()
+
+
+def run_model(
+    datasets_list,
+    classifier,
+    batch_size,
+    num_tasks,
+    device,
+    use_speaker,
+    use_gender,
+    avgd_acoustic,
+    optimizer,
+    train_state,
+    mode="training",
+):
+    """
+    Run the model in either training or testing within a single epoch
+    Returns running_loss, gold labels, and predictions
+    """
+    first = datetime.now()
+
+    # Iterate over training dataset
+    running_loss = 0.0
+
+    # set classifier(s) to appropriate mode
+    if mode.lower() == "training" or mode.lower() == "train":
+        classifier.train()
+        batches, tasks = get_all_batches(
+            datasets_list, batch_size=batch_size, shuffle=True
+        )
+    else:
+        classifier.eval()
+        batches, tasks = get_all_batches(
+            datasets_list, batch_size=batch_size, shuffle=True, partition="dev"
+        )
+
+    next_time = datetime.now()
+    print(f"Batches organized at {next_time - first}")
+
+    # set holders to use for error analysis
+    ys_holder = {}
+    for i in range(num_tasks):
+        ys_holder[i] = []
+    preds_holder = {}
+    for i in range(num_tasks):
+        preds_holder[i] = []
+
+    # for each batch in the list of batches created by the dataloader
+    for batch_index, batch in enumerate(batches):
+        # find the task for this batch
+        batch_task = tasks[batch_index]
+
+        # zero gradients
+        if mode.lower() == "training" or mode.lower() == "train":
+            optimizer.zero_grad()
+
+        # get ys and predictions for the batch
+        y_gold, batch_pred = get_predictions(
+            batch,
+            batch_index,
+            batch_task,
+            classifier,
+            device,
+            use_speaker,
+            use_gender,
+            avgd_acoustic,
+            tasks,
+            datasets_list,
+        )
+
+        # calculate loss
+        loss = (
+            datasets_list[batch_task].loss_fx(batch_pred, y_gold)
+            * datasets_list[batch_task].loss_multiplier
+        )
+        loss_t = loss.item()
+
+        # calculate running loss
+        running_loss += (loss_t - running_loss) / (batch_index + 1)
+
+        # use loss to produce gradients
+        if mode.lower() == "training" or mode.lower() == "train":
+            loss.backward()
+
+        # add ys to holder for error analysis
+        preds_holder[batch_task].extend(
+            [item.index(max(item)) for item in batch_pred.detach().tolist()]
+        )
+        ys_holder[batch_task].extend(y_gold.detach().tolist())
+
+        # increment optimizer
+        if mode.lower() == "training" or mode.lower() == "train":
+            optimizer.step()
+
+    then_time = datetime.now()
+    print(f"Train set finished for epoch at {then_time - next_time}")
+
+    return running_loss, ys_holder, preds_holder
+
+
+def get_predictions(
+    batch,
+    batch_index,
+    batch_task,
+    classifier,
+    device,
+    use_speaker,
+    use_gender,
+    avgd_acoustic,
+    tasks,
+    datasets_list,
+):
+    """
+    Get predictions from data
+    This should abstract train and dev into a single function
+    Used with multitask and prototypical networks so far
+    """
+    # get parts of batches
+    # get data
+    # todo add flexibilty for other tasks in same dataset
+    y_gold = batch["ys"][0].detach().to(device)
+
+    batch_acoustic = batch["x_acoustic"].detach().to(device)
+    batch_text = batch["x_utt"].detach().to(device)
+    if use_speaker:
+        batch_speakers = batch["x_speaker"].to(device)
+    else:
+        batch_speakers = None
+
+    if use_gender:
+        batch_genders = batch["x_gender"].to(device)
+    else:
+        batch_genders = None
+    batch_lengths = batch["utt_length"].to(device)
+    batch_acoustic_lengths = batch["acoustic_length"].to(device)
+
+    # feed these parts into classifier
+    # compute the output
+    if avgd_acoustic:
+        y_pred = classifier(
+            acoustic_input=batch_acoustic,
+            text_input=batch_text,
+            speaker_input=batch_speakers,
+            length_input=batch_lengths,
+            gender_input=batch_genders,
+            task_num=tasks[batch_index],
+        )
+    else:
+        y_pred = classifier(
+            acoustic_input=batch_acoustic,
+            text_input=batch_text,
+            speaker_input=batch_speakers,
+            length_input=batch_lengths,
+            acoustic_len_input=batch_acoustic_lengths,
+            gender_input=batch_genders,
+            task_num=tasks[batch_index],
+        )
+
+    batch_pred = y_pred[batch_task]
+
+    if datasets_list[batch_task].binary:
+        batch_pred = batch_pred.float()
+        y_gold = y_gold.float()
+
+    return y_gold, batch_pred
+
+
+def separate_data(batch_of_data, device):
+    """
+    Separate data into the useable parts
+    Accepts data as a list of tensors/lists or as a dict
+    If data is a list:
+    data[0] == acoustic features
+    data[1] == text features
+    data[2] == speakers
+    data[3] == speaker genders
+    data[4] == gold labels
+    data[-1] == acoustic lengths
+    data[-2] == text lengths
+    Depending on dataset, total length of list may vary
+    """
+    if type(batch_of_data) is not dict:
+        batch_acoustic = batch_of_data[0].detach().to(device)
+        batch_text = batch_of_data[1].detach().to(device)
+        batch_speakers = batch_of_data[2].to(device)
+        batch_genders = batch_of_data[3].to(device)
+        y_gold = batch_of_data[4].detach().to(device)
+        batch_lengths = batch_of_data[-2].to(device)
+        batch_acoustic_lengths = batch_of_data[-1].to(device)
+    else:
+        batch_acoustic = batch_of_data["x_acoustic"].detach().to(device)
+        batch_text = batch_of_data["x_utt"].detach().to(device)
+        batch_speakers = batch_of_data["x_speaker"].to(device)
+        batch_genders = batch_of_data["x_gender"].to(device)
+        # todo add flexibilty for other tasks in same dataset
+        y_gold = batch_of_data["ys"][0].detach().to(device)
+        batch_lengths = batch_of_data["utt_length"].to(device)
+        batch_acoustic_lengths = batch_of_data["acoustic_length"].to(device)
+
+    return (
+        batch_acoustic,
+        batch_text,
+        batch_speakers,
+        batch_genders,
+        y_gold,
+        batch_lengths,
+        batch_acoustic_lengths,
+    )
 
 
 # adapted from https://github.com/joosthub/PyTorchNLPBook/blob/master/chapters/chapter_6/classifying-surnames/Chapter-6-Surname-Classification-with-RNNs.ipynb
@@ -385,7 +463,7 @@ def make_train_state(learning_rate, model_save_file, early_stopping_criterion):
         "test_loss": -1,
         "test_acc": -1,
         "model_filename": model_save_file,
-        "early_stopping_criterion": early_stopping_criterion
+        "early_stopping_criterion": early_stopping_criterion,
     }
 
 
@@ -1288,7 +1366,7 @@ def multitask_predict_without_gold_labels(
     use_speaker=True,
     use_gender=False,
     get_prob_dist=False,
-    return_penultimate_layer=False
+    return_penultimate_layer=False,
 ):
     """
     Test a pretrained model
@@ -1337,7 +1415,7 @@ def multitask_predict_without_gold_labels(
                 length_input=batch_lengths,
                 gender_input=batch_genders,
                 get_prob_dist=get_prob_dist,
-                return_penultimate_layer=return_penultimate_layer
+                return_penultimate_layer=return_penultimate_layer,
             )
         else:
             y_pred = classifier(
@@ -1348,7 +1426,7 @@ def multitask_predict_without_gold_labels(
                 acoustic_len_input=batch_acoustic_lengths,
                 gender_input=batch_genders,
                 get_prob_dist=get_prob_dist,
-                return_penultimate_layer=return_penultimate_layer
+                return_penultimate_layer=return_penultimate_layer,
             )
 
         # separate predictions and penultimate layers if needed
@@ -1362,9 +1440,7 @@ def multitask_predict_without_gold_labels(
 
         if get_prob_dist:
             for i in range(num_tasks):
-                preds_holder[i].extend(
-                    [y_pred[i].tolist()]
-                )
+                preds_holder[i].extend([y_pred[i].tolist()])
         else:
             # add ys to holder for error analysis
             for i in range(num_tasks):
