@@ -9,7 +9,7 @@ import numpy as np
 from datetime import date
 import random
 
-from tomcat_speech.models.train_and_test_models import multitask_predict, multitask_train_and_predict, make_train_state
+from tomcat_speech.models.train_and_test_models import evaluate, train_and_predict, make_train_state
 from tomcat_speech.models.input_models import MultitaskModel
 from tomcat_speech.models.plot_training import *
 
@@ -255,7 +255,7 @@ if __name__ == "__main__":
                                            config.model_params.early_stopping_criterion)
 
             # train the model and evaluate on development set
-            multitask_predict(
+            evaluate(
                 multitask_model,
                 train_state,
                 all_data_list,

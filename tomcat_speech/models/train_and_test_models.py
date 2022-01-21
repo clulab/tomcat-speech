@@ -15,7 +15,7 @@ from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
 
 
-def multitask_predict(
+def evaluate(
     classifier,
     train_state,
     datasets_list,
@@ -145,7 +145,7 @@ def multitask_predict(
             pickle.dump(preds_to_viz, pf)
 
 
-def multitask_train_and_predict(
+def train_and_predict(
     classifier,
     train_state,
     datasets_list,
@@ -549,7 +549,7 @@ def update_train_state(model, train_state):
     return train_state
 
 
-def train_and_predict(
+def asist_train_and_predict(
     classifier,
     train_state,
     train_ds,
@@ -1937,7 +1937,7 @@ def single_dataset_multitask_predict(
         pickle.dump(gold_preds_ids, pfile)
 
 
-def multitask_predict(
+def old_evaluate(
     classifier,
     train_state,
     datasets_list,

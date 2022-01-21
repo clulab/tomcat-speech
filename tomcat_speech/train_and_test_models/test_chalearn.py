@@ -215,7 +215,7 @@ if __name__ == "__main__":
                                     train_state = make_train_state(lr, None)
 
                                     # train the model and evaluate on development set
-                                    multitask_predict(
+                                    evaluate(
                                         multitask_model,
                                         train_state,
                                         all_data_list,

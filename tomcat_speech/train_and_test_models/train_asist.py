@@ -199,7 +199,7 @@ if __name__ == "__main__":
                 load_path = model_save_path + model_save_file
 
                 # train the model and evaluate on development split
-                train_and_predict(
+                asist_train_and_predict(
                     bimodal_trial,
                     train_state,
                     training_data,
