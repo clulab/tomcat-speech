@@ -10,57 +10,71 @@ import torch.nn as nn
 # import parameters for model
 from torch.utils.data import DataLoader, RandomSampler
 
-from tomcat_speech.models.parameters.earlyfusion_params import *
-
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
 
 
-def test_model(
+def multitask_predict(
     classifier,
-    test_ds,
+    train_state,
+    datasets_list,
     batch_size,
-    loss_func,
+    pickle_save_name,
     device="cpu",
     avgd_acoustic=True,
     use_speaker=True,
     use_gender=False,
+    save_encoded_data=False
 ):
     """
-    Test a pretrained model
+    Train_ds_list and val_ds_list are lists of MultTaskObject objects!
+    Length of the list is the number of datasets used
     """
-    # Iterate over validation set--put it in a dataloader
-    val_batches = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
+    num_tasks = len(datasets_list)
+    # get a list of the tasks by number
+    for dset in datasets_list:
+        train_state["tasks"].append(dset.task_num)
+        train_state["test_avg_f1"][dset.task_num] = []
 
-    # reset loss and accuracy to zero
-    running_loss = 0.0
-    running_acc = 0.0
+    # Iterate over validation set--put it in a dataloader
+    batches, tasks = get_all_batches(
+        datasets_list, batch_size=batch_size, shuffle=True, partition="test"
+    )
 
     # set classifier to evaluation mode
     classifier.eval()
 
     # set holders to use for error analysis
-    ys_holder = []
-    preds_holder = []
+    ys_holder = {}
+    for i in range(num_tasks):
+        ys_holder[i] = []
+    preds_holder = {}
+    for i in range(num_tasks):
+        preds_holder[i] = []
+    ids_holder = {}
+    for i in range(num_tasks):
+        ids_holder[i] = []
+    preds_to_viz = {}
+    for i in range(num_tasks):
+        preds_to_viz[i] = []
 
-    # for each batch in the dataloader
-    for batch_index, batch in enumerate(val_batches):
-        # compute the output
-        batch_acoustic = batch[0].to(device)
-        batch_text = batch[1].to(device)
-        batch_lengths = batch[-2].to(device)
-        batch_acoustic_lengths = batch[-1].to(device)
-        if use_speaker:
-            batch_speakers = batch[2].to(device)
-        else:
+    # for each batch in the list of batches created by the dataloader
+    for batch_index, batch in enumerate(batches):
+        # get the task for this batch
+        batch_task = tasks[batch_index]
+
+        batch_ids = batch['audio_id']
+        ids_holder[batch_task].extend(batch_ids)
+
+        batch_acoustic, batch_text, batch_speakers, batch_genders, y_gold, batch_lengths, batch_acoustic_lengths = separate_data(batch, device)
+
+        if not use_speaker:
             batch_speakers = None
-
-        if use_gender:
-            batch_genders = batch[3].to(device)
-        else:
+        if not use_gender:
             batch_genders = None
 
+        # compute the output
         if avgd_acoustic:
             y_pred = classifier(
                 acoustic_input=batch_acoustic,
@@ -68,6 +82,8 @@ def test_model(
                 speaker_input=batch_speakers,
                 length_input=batch_lengths,
                 gender_input=batch_genders,
+                task_num=tasks[batch_index],
+                save_encoded_data=save_encoded_data
             )
         else:
             y_pred = classifier(
@@ -77,42 +93,56 @@ def test_model(
                 length_input=batch_lengths,
                 acoustic_len_input=batch_acoustic_lengths,
                 gender_input=batch_genders,
+                task_num=tasks[batch_index],
+                save_encoded_data=save_encoded_data
             )
 
-        # get the gold labels
-        y_gold = batch[4].to(device)
+        if save_encoded_data:
+            encoded_data = y_pred[-1]
+
+        batch_pred = y_pred[batch_task]
+
+        if datasets_list[batch_task].binary:
+            batch_pred = batch_pred.float()
+            y_gold = y_gold.float()
+
+        # add preds vector to holder for pca visualization
+        if save_encoded_data:
+            preds_to_viz[batch_task].extend(encoded_data.tolist())
 
         # add ys to holder for error analysis
-        preds_holder.extend([item.index(max(item)) for item in y_pred.tolist()])
-        ys_holder.extend(y_gold.tolist())
+        preds_holder[batch_task].extend(
+            [item.index(max(item)) for item in batch_pred.tolist()]
+        )
+        ys_holder[batch_task].extend(y_gold.tolist())
 
-        y_pred = y_pred.float()
-        y_gold = y_gold.float()
+    for task in preds_holder.keys():
+        task_avg_f1 = precision_recall_fscore_support(
+            ys_holder[task], preds_holder[task], average="weighted"
+        )
+        print(f"Test weighted f-score for task {task}: {task_avg_f1}")
+        train_state["test_avg_f1"][task].append(task_avg_f1[2])
 
-        loss = loss_func(y_pred, y_gold)
-        running_loss += (loss.item() - running_loss) / (batch_index + 1)
+    for task in preds_holder.keys():
+        print(f"Classification report and confusion matrix for task {task}:")
+        print(confusion_matrix(ys_holder[task], preds_holder[task]))
+        print("======================================================")
+        print(classification_report(ys_holder[task], preds_holder[task], digits=4))
 
-        # compute the loss
-        if len(list(y_pred.size())) > 1:
-            y_pred = torch.tensor([item.index(max(item)) for item in y_pred.tolist()])
-        else:
-            y_pred = torch.round(y_pred)
+    # combine
+    gold_preds_ids = {}
+    for task in preds_holder.keys():
+        gold_preds_ids[task] = list(
+            zip(ys_holder[task], preds_holder[task], ids_holder[task])
+        )
 
-        # compute the accuracy
-        acc_t = torch.eq(y_pred, y_gold).sum().item() / len(y_gold)
-        running_acc += (acc_t - running_acc) / (batch_index + 1)
+    # save to pickle
+    with open(pickle_save_name, "wb") as pfile:
+        pickle.dump(gold_preds_ids, pfile)
 
-    # print("Overall val loss: {0}, overall val acc: {1}".format(running_loss, running_acc))
-    avg_f1 = precision_recall_fscore_support(
-        ys_holder, preds_holder, average="weighted"
-    )
-
-    print("Weighted F=score: " + str(avg_f1))
-
-    # get confusion matrix
-    print(confusion_matrix(ys_holder, preds_holder))
-    print("Classification report: ")
-    print(classification_report(ys_holder, preds_holder, digits=4))
+    if save_encoded_data:
+        with open("output/encoded_output.pickle", 'wb') as pf:
+            pickle.dump(preds_to_viz, pf)
 
 
 def multitask_train_and_predict(
@@ -513,7 +543,7 @@ def update_train_state(model, train_state):
 
         # Stop early ?
         train_state["stop_early"] = (
-            train_state["early_stopping_step"] >= params.early_stopping_criteria
+            train_state["early_stopping_step"] >= train_state["early_stopping_criterion"]
         )
 
     return train_state
