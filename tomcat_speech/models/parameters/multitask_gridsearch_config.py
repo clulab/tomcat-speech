@@ -18,7 +18,7 @@ EXPERIMENT_ID = 1
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
 # EXPERIMENT_DESCRIPTION = "IntermediateFusion_test_paramsfromMMML_ClassWts_"
-EXPERIMENT_DESCRIPTION = "Testing_reworked_code_"
+EXPERIMENT_DESCRIPTION = "Testing_gridsearch_code_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 
@@ -65,7 +65,7 @@ model_params = Namespace(
     # overall model parameters
     model="Multitask",
     num_epochs=200,
-    batch_size=100,  # 128,  # 32
+    batch_size=[10, 100],  # 128,  # 32
     early_stopping_criterion=5,
     num_gru_layers=2,  # 1,  # 3,  # 1,  # 4, 2,
     bidirectional=False,
@@ -105,10 +105,10 @@ model_params = Namespace(
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,
     fc_hidden_dim=100,  # 20,  must match output_dim if final fc layer removed from base model
-    final_hidden_dim=50,  # the out size of dset-specific fc1 and input of fc2
-    dropout=0.2,  # 0.2, 0.3
+    final_hidden_dim=[50, 250, 10],  # the out size of dset-specific fc1 and input of fc2
+    dropout=[0.2, 0.3, 0.4],  # 0.2, 0.3
     # optimizer parameters
-    lr=1e-4,
+    lr=[1e-3, 1e-4, 1e-5],
     beta_1=0.9,
     beta_2=0.999,
     weight_decay=0.0001,
