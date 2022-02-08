@@ -1,9 +1,6 @@
 # incorporates elements from https://github.com/marcovzla/discobert/blob/master/config.py
 
 from argparse import Namespace
-import os  # incorporates elements from https://github.com/marcovzla/discobert/blob/master/config.py
-
-from argparse import Namespace
 import os
 
 DEBUG = False # no saving of files; output in the terminal; first random seed from the list
@@ -20,7 +17,7 @@ EXPERIMENT_ID = 1
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
-EXPERIMENT_DESCRIPTION = "DELETE_ME_"
+EXPERIMENT_DESCRIPTION = "EarlyFusion_test_separatelosses_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 
@@ -39,7 +36,7 @@ else:
     load_path = "../../datasets/pickled_data/distilbert_custom_feats"
 
 # set dir to save full experiments
-exp_save_path = "output/multitask/DELETE"
+exp_save_path = "output/multitask"
 
 # todo: reincorporate this implementation?
 # set type of predictions to make for chalearn
@@ -57,6 +54,8 @@ elif "combined_features" in feature_set.lower() or "custom" in feature_set.lower
 model_params = Namespace(
     # use gradnorm for loss normalization
     use_gradnorm=False,
+    # decide whether to use early, intermediate, or late fusion
+    fusion_type="early",  # int, late
     # consistency parameters
     seed=88,  # 1007
     # trying text only model or not
@@ -70,6 +69,8 @@ model_params = Namespace(
     num_gru_layers=2,  # 1,  # 3,  # 1,  # 4, 2,
     bidirectional=False,
     use_distilbert=True,
+    # set whether to have a single loss function
+    single_loss=False,
     # input dimension parameters
     text_dim=768,  # text vector length # 768 for bert/distilbert, 300 for glove
     short_emb_dim=30,  # length of trainable embeddings vec
@@ -94,7 +95,7 @@ model_params = Namespace(
     use_gender=False,
     gender_emb_dim=4,
     # outputs
-    output_dim=100,  # output dimensions from last layer of base model
+    output_dim=20,  # output dimensions from last layer of base model
     output_0_dim=2,  # output vec for first task
     output_1_dim=7,  # output vec for second task
     output_2_dim=5,  # output vec for third task

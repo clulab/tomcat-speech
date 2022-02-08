@@ -158,7 +158,8 @@ def train_and_predict(
     avgd_acoustic=True,
     use_speaker=True,
     use_gender=False,
-    save_encoded_output=False,
+    save_encoded_data=False,
+    loss_fx=None
 ):
     """
     Train_ds_list and val_ds_list are lists of MultTaskObject objects!
@@ -193,6 +194,8 @@ def train_and_predict(
             optimizer,
             train_state,
             mode="training",
+            save_encoded_data=save_encoded_data,
+            loss_fx=loss_fx
         )
 
         # add loss and accuracy to train state
@@ -220,6 +223,8 @@ def train_and_predict(
             optimizer,
             train_state,
             mode="eval",
+            save_encoded_data=save_encoded_data,
+            loss_fx=loss_fx
         )
 
         # get precision, recall, f1 info
@@ -274,6 +279,8 @@ def run_model(
     optimizer,
     train_state,
     mode="training",
+    save_encoded_data=False,
+    loss_fx=None
 ):
     """
     Run the model in either training or testing within a single epoch
@@ -328,13 +335,17 @@ def run_model(
             avgd_acoustic,
             tasks,
             datasets_list,
+            #save_encoded_data=save_encoded_data #todo: add me
         )
 
         # calculate loss
-        loss = (
-            datasets_list[batch_task].loss_fx(batch_pred, y_gold)
-            * datasets_list[batch_task].loss_multiplier
-        )
+        if loss_fx:
+            loss = loss_fx(batch_pred, y_gold) * datasets_list[batch_task].loss_multiplier
+        else:
+            loss = (
+                datasets_list[batch_task].loss_fx(batch_pred, y_gold)
+                * datasets_list[batch_task].loss_multiplier
+            )
         loss_t = loss.item()
 
         # calculate running loss
@@ -371,6 +382,7 @@ def get_predictions(
     avgd_acoustic,
     tasks,
     datasets_list,
+    save_encoded_data=False
 ):
     """
     Get predictions from data
@@ -406,6 +418,7 @@ def get_predictions(
             length_input=batch_lengths,
             gender_input=batch_genders,
             task_num=tasks[batch_index],
+            save_encoded_data=save_encoded_data
         )
     else:
         y_pred = classifier(
@@ -416,6 +429,7 @@ def get_predictions(
             acoustic_len_input=batch_acoustic_lengths,
             gender_input=batch_genders,
             task_num=tasks[batch_index],
+            save_encoded_data=save_encoded_data
         )
 
     batch_pred = y_pred[batch_task]

@@ -271,6 +271,12 @@ if __name__ == "__main__":
                 ravdess_obj
             ]
 
+            # create a single loss function
+            if config.model_params.single_loss:
+                loss_fx = torch.nn.CrossEntropyLoss(reduction="mean")
+            else:
+                loss_fx = None
+
             print(
                 "Model, loss function, and optimization created"
             )
@@ -300,6 +306,7 @@ if __name__ == "__main__":
                 avgd_acoustic=avgd_acoustic_in_network,
                 use_speaker=config.model_params.use_speaker,
                 use_gender=config.model_params.use_gender,
+                loss_fx=loss_fx
             )
 
             # plot the loss and accuracy curves
