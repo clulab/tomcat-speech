@@ -59,6 +59,126 @@ class BaseGRU(nn.Module):
         return output
 
 
+class EarlyFusionMultimodalModel(nn.Module):
+    """
+    An encoder to take a sequence of inputs and produce a sequence of intermediate representations
+    Fuses data prior to entry into the first neural layer;
+    Uses averaging of text tensors to do this
+    """
+
+    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None,
+                 use_distilbert=False):
+        super(EarlyFusionMultimodalModel, self).__init__()
+        # input text + acoustic + speaker
+        self.text_dim = params.text_dim
+        self.audio_dim = params.audio_dim
+        self.num_embeddings = num_embeddings
+        self.num_speakers = params.num_speakers
+        self.text_gru_hidden_dim = params.text_gru_hidden_dim
+
+        # get number of output dims
+        self.out_dims = params.output_dim
+
+        # if we feed text through additional layer(s)
+        if not use_distilbert:
+            self.text_input_size = params.text_dim + params.short_emb_dim
+        else:
+            self.text_input_size = params.text_dim
+
+        # set size of input dim
+        self.fc_input_dim = self.text_input_size + params.audio_dim
+
+        # initialize speaker, gender embeddings
+        self.speaker_embedding = None
+        self.gender_embedding = None
+
+        if params.use_speaker:
+            self.fc_input_dim = self.fc_input_dim + params.speaker_emb_dim
+            self.speaker_embedding = nn.Embedding(
+                params.num_speakers, params.speaker_emb_dim
+            )
+
+        elif params.use_gender:
+            self.fc_input_dim = self.fc_input_dim + params.gender_emb_dim
+            self.gender_embedding = nn.Embedding(3, params.gender_emb_dim)
+
+        # set number of classes
+        self.output_dim = params.output_dim
+
+        # set number of layers and dropout
+        self.dropout = params.dropout
+
+        # distilbert vs glove initialization
+        self.use_distilbert = use_distilbert
+
+        if not use_distilbert:
+            # initialize word embeddings
+            self.embedding = nn.Embedding(
+                num_embeddings, self.text_dim, _weight=pretrained_embeddings
+            )
+            self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
+
+        # initialize fully connected layers
+        self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
+        self.fc2 = nn.Linear(params.fc_hidden_dim, self.output_dim)
+
+    def forward(
+        self,
+        acoustic_input,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        acoustic_len_input=None,
+        gender_input=None,
+        get_prob_dist=False,
+        save_encoded_data=False
+    ):
+        # using pretrained embeddings, so detach to not update weights
+        # embs: (batch_size, seq_len, emb_dim)
+        if not self.use_distilbert:
+            embs = F.dropout(self.embedding(text_input), 0.1).detach()
+
+            short_embs = F.dropout(self.short_embedding(text_input), 0.1)
+
+            all_embs = torch.cat((embs, short_embs), dim=2)
+        else:
+            all_embs = text_input
+
+        all_embs = torch.mean(all_embs, dim=1)
+
+        # get speaker embeddings, if needed
+        if speaker_input is not None:
+            speaker_embs = self.speaker_embedding(speaker_input).squeeze(dim=1)
+        if gender_input is not None:
+            gender_embs = self.gender_embedding(gender_input)
+
+        if len(acoustic_input.shape) > 2:
+            encoded_acoustic = acoustic_input.squeeze()
+        else:
+            encoded_acoustic = acoustic_input
+
+        # combine modalities as required by architecture
+        if speaker_input is not None:
+            inputs = torch.cat((encoded_acoustic, all_embs, speaker_embs), 1)
+        elif gender_input is not None:
+            inputs = torch.cat((encoded_acoustic, all_embs, gender_embs), 1)
+        else:
+            inputs = torch.cat((encoded_acoustic, all_embs), 1)
+
+        # use pooled, squeezed feats as input into fc layers
+        output = torch.tanh(F.dropout(self.fc1(inputs), self.dropout))
+        output = torch.tanh(F.dropout(self.fc2(output), self.dropout))
+
+        if self.out_dims == 1:
+            output = torch.sigmoid(output)
+        elif get_prob_dist:
+            prob = nn.Softmax(dim=1)
+            output = prob(output)
+
+        # return the output
+        return output
+
+
 class IntermediateFusionMultimodalModel(nn.Module):
     """
     An encoder to take a sequence of inputs and produce a sequence of intermediate representations
@@ -785,17 +905,26 @@ class MultitaskModel(nn.Module):
         # # set base of model
         # comment this out and uncomment the below to try late fusion model
         if params.audio_only is True:
-            # todo: update EarlyFusionAcousticOnlyModel to work with distilbert
-            self.base = EarlyFusionAcousticOnlyModel(
+            # todo: update IntermediateFusionAcousticOnlyModel to work with distilbert
+            self.base = IntermediateFusionAcousticOnlyModel(
                 params, num_embeddings, pretrained_embeddings, use_distilbert
             )
         elif params.text_only is False:
-            self.base = IntermediateFusionMultimodalModel(
-                params, num_embeddings, pretrained_embeddings, use_distilbert
-            )
+            if params.fusion_type.lower() == "early":
+                self.base = EarlyFusionMultimodalModel(
+                    params, num_embeddings, pretrained_embeddings, use_distilbert
+                )
+            elif params.fusion_type.lower() == "late":
+                self.base = LateFusionMultimodalModel(
+                    params, num_embeddings, pretrained_embeddings, use_distilbert
+                )
+            else:
+                self.base = IntermediateFusionMultimodalModel(
+                    params, num_embeddings, pretrained_embeddings, use_distilbert
+                )
         else:
-            # todo: update EarlyFusionTextOnlyModel to work with distilbert
-            self.base = EarlyFusionTextOnlyModel(
+            # todo: update IntermediateFusionTextOnlyModel to work with distilbert
+            self.base = IntermediateFusionTextOnlyModel(
                 params, num_embeddings, pretrained_embeddings, use_distilbert
             )
             # self.base = TextOnlyRNN(
@@ -1259,7 +1388,7 @@ class MultitaskAcousticOnly(nn.Module):
         return task_0_out, task_1_out, task_2_out, task_3_out
 
 
-class EarlyFusionAcousticOnlyModel(nn.Module):
+class IntermediateFusionAcousticOnlyModel(nn.Module):
     """
     An encoder to take a sequence of inputs and produce a sequence of intermediate representations
     Can include convolutions over text input and/or acoustic input--BUT NOT TOGETHER bc MELD isn't
@@ -1267,7 +1396,7 @@ class EarlyFusionAcousticOnlyModel(nn.Module):
     """
 
     def __init__(self, params, num_embeddings=None, pretrained_embeddings=None):
-        super(EarlyFusionAcousticOnlyModel, self).__init__()
+        super(IntermediateFusionAcousticOnlyModel, self).__init__()
         # input text + acoustic + speaker
         self.text_dim = params.text_dim
         self.audio_dim = params.audio_dim
@@ -1376,7 +1505,7 @@ class EarlyFusionAcousticOnlyModel(nn.Module):
         return output
 
 
-class EarlyFusionTextOnlyModel(nn.Module):
+class IntermediateFusionTextOnlyModel(nn.Module):
     """
     An encoder to take a sequence of inputs and produce a sequence of intermediate representations
     Can include convolutions over text input and/or acoustic input--BUT NOT TOGETHER bc MELD isn't
@@ -1384,7 +1513,7 @@ class EarlyFusionTextOnlyModel(nn.Module):
     """
 
     def __init__(self, params, num_embeddings=None, pretrained_embeddings=None):
-        super(EarlyFusionTextOnlyModel, self).__init__()
+        super(IntermediateFusionTextOnlyModel, self).__init__()
         # input text + acoustic + speaker
         self.text_dim = params.text_dim
         self.num_embeddings = num_embeddings
