@@ -242,61 +242,51 @@ class TextPlusPredictionLayer(nn.Module):
         out_dim,
         num_embeddings=None,
         pretrained_embeddings=None,
-        multi_dataset=True,
+        use_distilbert=False
     ):
         super(TextPlusPredictionLayer, self).__init__()
 
         # specify out_dim explicity so we can do multiple tasks at once
         self.output_dim = out_dim
 
-        # save whether there are multiple datasets
-        self.multi_dataset = multi_dataset
+        # distilbert vs glove initialization
+        self.use_distilbert = use_distilbert
+
+        # set text input size
+        if not use_distilbert:
+            self.text_input_size = params.text_dim + params.short_emb_dim
+        else:
+            # don't use short embedding if using bert
+            self.text_input_size = params.text_dim
 
         # if we feed text through additional layer(s)
         self.text_rnn = nn.LSTM(
-            input_size=params.text_dim + params.short_emb_dim,
+            input_size=self.text_input_size,
             hidden_size=params.text_gru_hidden_dim,
             num_layers=params.num_gru_layers,
             batch_first=True,
             bidirectional=True,
         )
 
-        # input text + acoustic + speaker
-        self.text_dim = params.text_dim
-        self.num_embeddings = num_embeddings
-        self.text_gru_hidden_dim = params.text_gru_hidden_dim
-
         # get number of output dims
         self.acoustic_input_dim = params.output_dim
 
-        # set the size of the input into the fc layers
-        # if params.use_speaker:
-        #     self.fc_input_dim = self.acoustic_input_dim + params.text_gru_hidden_dim + params.speaker_emb_dim
-        # elif params.use_gender:
-        #     self.fc_input_dim = self.acoustic_input_dim + params.text_gru_hidden_dim + params.gender_emb_dim
-
-        self.fc_input_dim = self.acoustic_input_dim
+        self.fc_input_dim = self.acoustic_input_dim + params.text_gru_hidden_dim
 
         # set number of layers and dropout
         self.dropout = params.dropout
 
-        # initialize word embeddings
-        self.embedding = nn.Embedding(
-            num_embeddings, self.text_dim, _weight=pretrained_embeddings
-        )
-        self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
-        # self.text_batch_norm = nn.BatchNorm1d(self.text_dim + params.short_emb_dim)
-
-        # initialize speaker embeddings
-        self.speaker_embedding = nn.Embedding(
-            params.num_speakers, params.speaker_emb_dim
-        )
-
-        self.gender_embedding = nn.Embedding(3, params.gender_emb_dim)
+        if not use_distilbert:
+            # initialize word embeddings
+            self.embedding = nn.Embedding(
+                num_embeddings, self.text_dim, _weight=pretrained_embeddings
+            )
+            self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
+            # self.text_batch_norm = nn.BatchNorm1d(self.text_dim + params.short_emb_dim)
 
         # initialize fully connected layers
         self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
-        self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
+        self.fc2 = nn.Linear(params.fc_hidden_dim, self.output_dim)
 
     def forward(
         self,
@@ -305,45 +295,45 @@ class TextPlusPredictionLayer(nn.Module):
         speaker_input=None,
         length_input=None,
         gender_input=None,
+        get_prob_dist=False,
+        save_encoded_data=False
     ):
         # here, acoustic_input is the output of the acoustic layers
 
-        # # using pretrained embeddings, so detach to not update weights
-        # # embs: (batch_size, seq_len, emb_dim)
-        # embs = F.dropout(self.embedding(text_input), 0.1).detach()
-        # short_embs = F.dropout(self.short_embedding(text_input), 0.1)
-        #
-        # all_embs = torch.cat((embs, short_embs), dim=2)
-        #
-        # packed = nn.utils.rnn.pack_padded_sequence(
-        #     all_embs, length_input, batch_first=True, enforce_sorted=False
-        # )
-        #
-        # # feed embeddings through GRU
-        # packed_output, (hidden, cell) = self.text_rnn(packed)
-        # encoded_text = F.dropout(hidden[-1], 0.3)
-        #
-        # # get speaker embeddings, if needed
-        # if speaker_input is not None:
-        #     speaker_embs = self.speaker_embedding(speaker_input).squeeze(dim=1)
-        #     encoded_text = torch.cat((encoded_text, speaker_embs), dim=1)
-        # elif gender_input is not None:
-        #     gend_embs = self.gender_embedding(gender_input)
-        #     encoded_text = torch.cat((encoded_text, gend_embs), dim=1)
-        #
-        # # combine all
-        # encoded_data = torch.cat((encoded_text, acoustic_input), dim=1)
-        #
-        encoded_data = acoustic_input
+        # using pretrained embeddings, so detach to not update weights
+        # embs: (batch_size, seq_len, emb_dim)
+        if not self.use_distilbert:
+            embs = F.dropout(self.embedding(text_input), 0.1).detach()
+            short_embs = F.dropout(self.short_embedding(text_input), 0.1)
+            all_embs = torch.cat((embs, short_embs), dim=2)
+        else:
+            all_embs = text_input
+
+        packed = nn.utils.rnn.pack_padded_sequence(
+            all_embs, length_input, batch_first=True, enforce_sorted=False
+        )
+
+        # feed embeddings through GRU
+        packed_output, (hidden, cell) = self.text_rnn(packed)
+        encoded_text = F.dropout(hidden[-1], 0.3)
+
+        # combine all
+        encoded_data = torch.cat((encoded_text, acoustic_input), dim=1)
 
         intermediate = torch.tanh(F.dropout(self.fc1(encoded_data), self.dropout))
         predictions = torch.relu(self.fc2(intermediate))
 
         if self.output_dim == 1:
             predictions = torch.sigmoid(predictions)
+        elif get_prob_dist:
+            prob = nn.Softmax(dim=1)
+            predictions = prob(predictions)
 
         # return the output
-        return predictions
+        if save_encoded_data:
+            return predictions, acoustic_input, encoded_text
+        else:
+            return predictions
 
 
 class TextOnlyModel(nn.Module):

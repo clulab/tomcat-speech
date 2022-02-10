@@ -3,7 +3,7 @@ import sys
 
 import torch.nn as nn
 
-from tomcat_speech.models.audio_model_bases import AcousticOnlyForMultitask, AcousticOnlyModel
+from tomcat_speech.models.audio_model_bases import AcousticOnlyModel
 from tomcat_speech.models.model_prediction_layers import PredictionLayer
 from tomcat_speech.models.multimodal_model_bases import IntermediateFusionMultimodalModel, EarlyFusionMultimodalModel, LateFusionMultimodalModel, MultimodalBaseDuplicateInput
 from tomcat_speech.models.text_model_bases import TextPlusPredictionLayer, TextOnlyModel
@@ -34,7 +34,11 @@ class MultitaskModel(nn.Module):
         # comment this out and uncomment the below to try late fusion model
         if params.audio_only is True:
             self.base = AcousticOnlyModel(params)
-        elif params.text_only is False:
+        elif params.text_only is True:
+            self.base = TextOnlyModel(
+                params, num_embeddings, pretrained_embeddings, use_distilbert
+            )
+        else:
             if params.fusion_type.lower() == "early":
                 self.base = EarlyFusionMultimodalModel(
                     params, num_embeddings, pretrained_embeddings, use_distilbert
@@ -47,18 +51,9 @@ class MultitaskModel(nn.Module):
                 self.base = IntermediateFusionMultimodalModel(
                     params, num_embeddings, pretrained_embeddings, use_distilbert
                 )
-        else:
-            self.base = TextOnlyModel(
-                params, num_embeddings, pretrained_embeddings, use_distilbert
-            )
             # self.base = TextOnlyRNN(
             #     params, num_embeddings, pretrained_embeddings
             # )
-
-        # uncomment this and comment the above to try the late fusion model
-        # self.base = LateFusionMultimodalModel(
-        #     params, num_embeddings, pretrained_embeddings
-        # )
 
         # set output layers
         self.task_0_predictor = PredictionLayer(params, params.output_0_dim)
@@ -144,6 +139,7 @@ class MultitaskAcousticShared(nn.Module):
         num_embeddings=None,
         pretrained_embeddings=None,
         multi_dataset=True,
+        use_distilbert=False
     ):
         super(MultitaskAcousticShared, self).__init__()
         # save whether there are multiple datasets
@@ -152,11 +148,7 @@ class MultitaskAcousticShared(nn.Module):
 
         # # set base of model
         # comment this out and uncomment the below to try late fusion model
-        self.acoustic_base = AcousticOnlyForMultitask(
-            params,
-            multi_dataset,
-            use_rnn=(not (params.avgd_acoustic or params.add_avging)),
-        )
+        self.acoustic_base = AcousticOnlyModel(params)
 
         # set output layers
         self.task_0_predictor = TextPlusPredictionLayer(
@@ -164,28 +156,35 @@ class MultitaskAcousticShared(nn.Module):
             params.output_0_dim,
             num_embeddings=num_embeddings,
             pretrained_embeddings=pretrained_embeddings,
-            multi_dataset=multi_dataset,
+            use_distilbert=use_distilbert
         )
         self.task_1_predictor = TextPlusPredictionLayer(
             params,
             params.output_1_dim,
             num_embeddings=num_embeddings,
             pretrained_embeddings=pretrained_embeddings,
-            multi_dataset=multi_dataset,
+            use_distilbert=use_distilbert
         )
         self.task_2_predictor = TextPlusPredictionLayer(
             params,
             params.output_2_dim,
             num_embeddings=num_embeddings,
             pretrained_embeddings=pretrained_embeddings,
-            multi_dataset=multi_dataset,
+            use_distilbert=use_distilbert
         )
         self.task_3_predictor = TextPlusPredictionLayer(
             params,
             params.output_3_dim,
             num_embeddings=num_embeddings,
             pretrained_embeddings=pretrained_embeddings,
-            multi_dataset=multi_dataset,
+            use_distilbert=use_distilbert
+        )
+        self.task_4_predictor = TextPlusPredictionLayer(
+            params,
+            params.output_4_dim,
+            num_embeddings=num_embeddings,
+            pretrained_embeddings=pretrained_embeddings,
+            use_distilbert=use_distilbert
         )
 
     def forward(
@@ -197,29 +196,36 @@ class MultitaskAcousticShared(nn.Module):
         acoustic_len_input=None,
         gender_input=None,
         task_num=0,
+        get_prob_dist=False,
+        return_penultimate_layer=False,
+        save_encoded_data=False
     ):
         # call forward on base model
         final_base_layer = self.acoustic_base(
-            acoustic_input, length_input=acoustic_len_input,
+            acoustic_input, acoustic_len_input=acoustic_len_input,
         )
 
         task_0_out = None
         task_1_out = None
         task_2_out = None
         task_3_out = None
+        task_4_out = None
 
         if not self.multi_dataset:
             task_0_out = self.task_0_predictor(
-                final_base_layer, text_input, speaker_input, length_input, gender_input
+                final_base_layer, text_input, speaker_input, length_input, gender_input, get_prob_dist, return_penultimate_layer
             )
             task_1_out = self.task_1_predictor(
-                final_base_layer, text_input, speaker_input, length_input, gender_input
+                final_base_layer, text_input, speaker_input, length_input, gender_input, get_prob_dist, return_penultimate_layer
             )
             task_2_out = self.task_2_predictor(
-                final_base_layer, text_input, speaker_input, length_input, gender_input
+                final_base_layer, text_input, speaker_input, length_input, gender_input, get_prob_dist, return_penultimate_layer
             )
             task_3_out = self.task_3_predictor(
-                final_base_layer, text_input, speaker_input, length_input, gender_input
+                final_base_layer, text_input, speaker_input, length_input, gender_input, get_prob_dist, return_penultimate_layer
+            )
+            task_4_out = self.task_4_predictor(
+                final_base_layer, text_input, speaker_input, length_input, gender_input, get_prob_dist, return_penultimate_layer
             )
         else:
             if task_num == 0:
@@ -229,6 +235,8 @@ class MultitaskAcousticShared(nn.Module):
                     speaker_input,
                     length_input,
                     gender_input,
+                    get_prob_dist,
+                    return_penultimate_layer
                 )
             elif task_num == 1:
                 task_1_out = self.task_1_predictor(
@@ -237,6 +245,8 @@ class MultitaskAcousticShared(nn.Module):
                     speaker_input,
                     length_input,
                     gender_input,
+                    get_prob_dist,
+                    return_penultimate_layer
                 )
             elif task_num == 2:
                 task_2_out = self.task_2_predictor(
@@ -245,6 +255,8 @@ class MultitaskAcousticShared(nn.Module):
                     speaker_input,
                     length_input,
                     gender_input,
+                    get_prob_dist,
+                    return_penultimate_layer
                 )
             elif task_num == 3:
                 task_3_out = self.task_3_predictor(
@@ -253,11 +265,26 @@ class MultitaskAcousticShared(nn.Module):
                     speaker_input,
                     length_input,
                     gender_input,
+                    get_prob_dist,
+                    return_penultimate_layer
+                )
+            elif task_num == 4:
+                task_4_out = self.task_4_predictor(
+                    final_base_layer,
+                    text_input,
+                    speaker_input,
+                    length_input,
+                    gender_input,
+                    get_prob_dist,
+                    return_penultimate_layer
                 )
             else:
                 sys.exit(f"Task {task_num} not defined")
 
-        return task_0_out, task_1_out, task_2_out, task_3_out
+        if save_encoded_data:
+            return task_0_out, task_1_out, task_2_out, task_3_out, task_4_out, final_base_layer
+        else:
+            return task_0_out, task_1_out, task_2_out, task_3_out, task_4_out
 
 
 class MultitaskDuplicateInputModel(nn.Module):

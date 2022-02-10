@@ -63,9 +63,7 @@ class AcousticOnlyModel(nn.Module):
     def forward(
         self,
         acoustic_input,
-        text_input,
         speaker_input=None,
-        length_input=None,
         acoustic_len_input=None,
         gender_input=None,
     ):

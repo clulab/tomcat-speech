@@ -3,6 +3,8 @@ import torch
 import numpy as np
 import random
 
+from tomcat_speech.models.multimodal_models import MultitaskModel, MultitaskAcousticShared
+
 
 def set_cuda_and_seeds(config):
     # set cuda
@@ -31,3 +33,28 @@ def set_cuda_and_seeds(config):
         print(torch.cuda.current_device())
 
     return device
+
+
+def select_model(model_params, num_embeddings, pretrained_embeddings):
+    """
+    Use model parameters to select the appropriate model
+    Return this model for training
+    """
+    # set embeddings to None if using bert -- they are calculated
+    #   anyway, so if you don't do this, it will ALWAYS use embeddings
+    if model_params.use_distilbert:
+        num_embeddings = None
+        pretrained_embeddings = None
+
+    if "acoustic_shared" in model_params.model.lower():
+        model = MultitaskAcousticShared(params=model_params,
+                                        use_distilbert=model_params.use_distilbert,
+                                        num_embeddings=num_embeddings,
+                                        pretrained_embeddings=pretrained_embeddings)
+    else:
+        model = MultitaskModel(params=model_params,
+                               use_distilbert=model_params.use_distilbert,
+                               num_embeddings=num_embeddings,
+                               pretrained_embeddings=pretrained_embeddings)
+
+    return model

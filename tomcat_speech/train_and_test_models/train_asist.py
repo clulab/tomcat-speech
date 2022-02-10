@@ -16,7 +16,7 @@ import tomcat_speech.data_prep.asist_data.asist_prep as asist_prep
 
 # import parameters for model
 # comment or uncomment as needed
-from tomcat_speech.models.parameters.multitask_params import *
+from tomcat_speech.models.parameters.multitask_config import *
 
 # from tomcat_speech.models.parameters.multitask_params import params
 # from tomcat_speech.models.parameters.lr_baseline_1_params import params
