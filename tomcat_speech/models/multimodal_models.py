@@ -3,10 +3,10 @@ import sys
 
 import torch.nn as nn
 
-from tomcat_speech.models.audio_model_bases import AcousticOnlyForMultitask, IntermediateFusionAcousticOnlyModel
+from tomcat_speech.models.audio_model_bases import AcousticOnlyForMultitask, AcousticOnlyModel
 from tomcat_speech.models.model_prediction_layers import PredictionLayer
 from tomcat_speech.models.multimodal_model_bases import IntermediateFusionMultimodalModel, EarlyFusionMultimodalModel, LateFusionMultimodalModel, MultimodalBaseDuplicateInput
-from tomcat_speech.models.text_model_bases import TextPlusPredictionLayer, IntermediateFusionTextOnlyModel
+from tomcat_speech.models.text_model_bases import TextPlusPredictionLayer, TextOnlyModel
 
 
 class MultitaskModel(nn.Module):
@@ -33,10 +33,7 @@ class MultitaskModel(nn.Module):
         # # set base of model
         # comment this out and uncomment the below to try late fusion model
         if params.audio_only is True:
-            # todo: update IntermediateFusionAcousticOnlyModel to work with distilbert
-            self.base = IntermediateFusionAcousticOnlyModel(
-                params, num_embeddings, pretrained_embeddings, use_distilbert
-            )
+            self.base = AcousticOnlyModel(params)
         elif params.text_only is False:
             if params.fusion_type.lower() == "early":
                 self.base = EarlyFusionMultimodalModel(
@@ -51,8 +48,7 @@ class MultitaskModel(nn.Module):
                     params, num_embeddings, pretrained_embeddings, use_distilbert
                 )
         else:
-            # todo: update IntermediateFusionTextOnlyModel to work with distilbert
-            self.base = IntermediateFusionTextOnlyModel(
+            self.base = TextOnlyModel(
                 params, num_embeddings, pretrained_embeddings, use_distilbert
             )
             # self.base = TextOnlyRNN(

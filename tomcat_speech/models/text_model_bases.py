@@ -346,15 +346,15 @@ class TextPlusPredictionLayer(nn.Module):
         return predictions
 
 
-class IntermediateFusionTextOnlyModel(nn.Module):
+class TextOnlyModel(nn.Module):
     """
     An encoder to take a sequence of inputs and produce a sequence of intermediate representations
     Can include convolutions over text input and/or acoustic input--BUT NOT TOGETHER bc MELD isn't
     aligned at the word-level
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None):
-        super(IntermediateFusionTextOnlyModel, self).__init__()
+    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None, use_distilbert=False):
+        super(TextOnlyModel, self).__init__()
         # input text + acoustic + speaker
         self.text_dim = params.text_dim
         self.num_embeddings = num_embeddings
@@ -365,8 +365,14 @@ class IntermediateFusionTextOnlyModel(nn.Module):
         self.out_dims = params.output_dim
 
         # if we feed text through additional layer(s)
+        if not use_distilbert:
+            self.text_input_size = params.text_dim + params.short_emb_dim
+        else:
+            self.text_input_size = params.text_dim
+
+        # if we feed text through additional layer(s)
         self.text_rnn = nn.LSTM(
-            input_size=params.text_dim + params.short_emb_dim,
+            input_size=self.text_input_size,
             hidden_size=params.text_gru_hidden_dim,
             num_layers=params.num_gru_layers,
             batch_first=True,
@@ -394,11 +400,15 @@ class IntermediateFusionTextOnlyModel(nn.Module):
         # set number of layers and dropout
         self.dropout = params.dropout
 
-        # initialize word embeddings
-        self.embedding = nn.Embedding(
-            num_embeddings, self.text_dim, _weight=pretrained_embeddings
-        )
-        self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
+        # distilbert vs glove initialization
+        self.use_distilbert = use_distilbert
+
+        if not use_distilbert:
+            # initialize word embeddings
+            self.embedding = nn.Embedding(
+                num_embeddings, self.text_dim, _weight=pretrained_embeddings
+            )
+            self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
 
         # initialize speaker embeddings
         self.speaker_embedding = nn.Embedding(
@@ -419,14 +429,19 @@ class IntermediateFusionTextOnlyModel(nn.Module):
         length_input=None,
         acoustic_len_input=None,
         gender_input=None,
+        get_prob_dist=False,
+        save_encoded_data=False
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
-        embs = F.dropout(self.embedding(text_input), 0.1).detach()
+        if not self.use_distilbert:
+            embs = F.dropout(self.embedding(text_input), 0.1).detach()
 
-        short_embs = F.dropout(self.short_embedding(text_input), 0.1)
+            short_embs = F.dropout(self.short_embedding(text_input), 0.1)
 
-        all_embs = torch.cat((embs, short_embs), dim=2)
+            all_embs = torch.cat((embs, short_embs), dim=2)
+        else:
+            all_embs = text_input
 
         # get speaker embeddings, if needed
         if speaker_input is not None:
@@ -455,6 +470,9 @@ class IntermediateFusionTextOnlyModel(nn.Module):
 
         if self.out_dims == 1:
             output = torch.sigmoid(output)
+        elif get_prob_dist:
+            prob = nn.Softmax(dim=1)
+            output = prob(output)
 
         # return the output
         return output
