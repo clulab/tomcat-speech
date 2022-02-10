@@ -17,12 +17,12 @@ load_dataset = True
 # set the task
 task = "firstimpr"
 
-EXPERIMENT_ID = 1
+EXPERIMENT_ID = 2
 # during training: enter a brief description that will make the experiment easy to identify
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
-EXPERIMENT_DESCRIPTION = f"{task}_DELETE_ME_"
+EXPERIMENT_DESCRIPTION = f"{task}_ReworkedCodeTest_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 
@@ -41,7 +41,7 @@ else:
     load_path = "../../datasets/pickled_data/distilbert_custom_feats"
 
 # set dir to save full experiments
-exp_save_path = "output/single_task/DELETE"
+exp_save_path = f"output/single_task/{task}"
 
 # set the acoustic feature set
 feature_set = "combined_features_distilbert_dict"
@@ -55,16 +55,18 @@ elif "combined_features" in feature_set.lower() or "custom" in feature_set.lower
 model_params = Namespace(
     # use gradnorm for loss normalization
     use_gradnorm=False,
+    # decide whether to use early, intermediate, or late fusion
+    fusion_type="early",  # int, late, early
     # consistency parameters
     seed=88,  # 1007
     # trying text only model or not
     text_only=False,
     audio_only=False,
     # overall model parameters
-    model="Multitask-mustard",
+    model=f"Single-task_{task}",
     num_epochs=200,
     batch_size=100,  # 128,  # 32
-    early_stopping_criterion=5,
+    early_stopping_criterion=50,
     num_gru_layers=2,  # 1,  # 3,  # 1,  # 4, 2,
     bidirectional=False,
     use_distilbert=True,
@@ -79,7 +81,7 @@ model_params = Namespace(
     out_channels=20,
     text_cnn_hidden_dim=100,
     # text_output_dim=30,   # 100,   # 50, 300,
-    text_gru_hidden_dim=100,  # 30,  # 50,  # 20
+    text_gru_hidden_dim=300,  # 30,  # 50,  # 20
     # acoustic NN
     avgd_acoustic=False,  # set true to use avgd acoustic feat vectors without RNN
     add_avging=True,  # set to true if you want to avg acoustic feature vecs upon input
@@ -101,10 +103,10 @@ model_params = Namespace(
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,
     fc_hidden_dim=100,  # 20,  must match output_dim if final fc layer removed from base model
-    final_hidden_dim=50,  # the out size of dset-specific fc1 and input of fc2
-    dropout=0.2,  # 0.2, 0.3
+    final_hidden_dim=200,  # the out size of dset-specific fc1 and input of fc2
+    dropout=0.4,  # 0.2, 0.3
     # optimizer parameters
-    lr=1e-4,
+    lr=1e-6,
     beta_1=0.9,
     beta_2=0.999,
     weight_decay=0.0001,
