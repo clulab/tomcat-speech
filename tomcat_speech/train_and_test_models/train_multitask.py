@@ -12,45 +12,14 @@ import random
 from tomcat_speech.models.train_and_test_models import train_and_predict, make_train_state
 from tomcat_speech.models.input_models import MultitaskModel
 from tomcat_speech.models.plot_training import *
-
-# import parameters for model
-import tomcat_speech.models.parameters.multitask_config as config
+from tomcat_speech.train_and_test_models.train_and_test_utils import set_cuda_and_seeds
 
 # import MultitaskObject and Glove from preprocessing code
 sys.path.append("../multimodal_data_preprocessing")
 from utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict
 
 
-def set_cuda_and_seeds():
-    # set cuda
-    cuda = False
-    if torch.cuda.is_available():
-        cuda = True
-
-    device = torch.device("cuda" if cuda else "cpu")
-
-    # # Check CUDA
-    if torch.cuda.is_available():
-        torch.cuda.set_device(2)
-
-    # set random seed
-    torch.manual_seed(config.model_params.seed)
-    np.random.seed(config.model_params.seed)
-    random.seed(config.model_params.seed)
-    if cuda:
-        torch.cuda.manual_seed_all(config.model_params.seed)
-
-    # check if cuda
-    print(cuda)
-
-    if cuda:
-        # check which GPU used
-        print(torch.cuda.current_device())
-
-    return device
-
-
-def load_data(device):
+def load_data(device, config):
     # 1. Load datasets + glove object
     load_path = config.load_path
     feature_set = config.feature_set
@@ -219,7 +188,7 @@ def load_data(device):
         return all_data_list, loss_fx, sampler
 
 
-def train_multitask(all_data_list, loss_fx, sampler, device, output_path,
+def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config,
                     num_embeddings=None, pretrained_embeddings=None, extra_params=None):
     if extra_params:
         model_params = extra_params
@@ -328,12 +297,15 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path,
 
 
 if __name__ == "__main__":
-    device = set_cuda_and_seeds()
+    # import parameters for model
+    import tomcat_speech.models.parameters.multitask_config as config
+
+    device = set_cuda_and_seeds(config)
 
     if not config.model_params.use_distilbert:
-        data, loss_fx, sampler, num_embeddings, pretrained_embeddings = load_data(device)
+        data, loss_fx, sampler, num_embeddings, pretrained_embeddings = load_data(device, config)
     else:
-        data, loss_fx, sampler = load_data(device)
+        data, loss_fx, sampler = load_data(device, config)
         num_embeddings = None
         pretrained_embeddings = None
 
@@ -359,4 +331,4 @@ if __name__ == "__main__":
         if not config.DEBUG:
             sys.stdout = f
 
-            train_multitask(data, loss_fx, sampler, device, output_path, num_embeddings, pretrained_embeddings)
+            train_multitask(data, loss_fx, sampler, device, output_path, config, num_embeddings, pretrained_embeddings)
