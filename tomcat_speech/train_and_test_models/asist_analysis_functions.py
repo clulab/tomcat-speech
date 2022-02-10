@@ -8,7 +8,7 @@ from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDatas
 from tomcat_speech.models.train_and_test_models import (
     multitask_predict_without_gold_labels,
 )
-from tomcat_speech.models.input_models import MultitaskModel
+from tomcat_speech.models.multimodal_models import MultitaskModel
 
 from tomcat_speech.data_prep.data_prep_helpers import (
     make_glove_dict,

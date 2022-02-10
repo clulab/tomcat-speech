@@ -6,7 +6,7 @@
 from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDataset
 from tomcat_speech.models.train_and_test_models import *
 from tomcat_speech.models.plot_training import *
-from tomcat_speech.models.input_models import *
+from tomcat_speech.models.multimodal_models import *
 
 from tomcat_speech.data_prep.data_prep_helpers import *
 from tomcat_speech.data_prep.data_prep_helpers import make_acoustic_dict

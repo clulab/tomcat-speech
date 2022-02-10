@@ -17,7 +17,7 @@ from tomcat_speech.models.train_and_test_models import (
     train_and_predict,
     make_train_state,
 )
-from tomcat_speech.models.input_models import MultitaskModel
+from tomcat_speech.models.multimodal_models import MultitaskModel
 from tomcat_speech.models.plot_training import *
 
 # import MultitaskObject and Glove from preprocessing code

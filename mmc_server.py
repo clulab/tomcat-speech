@@ -5,7 +5,7 @@ import torch
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from tomcat_speech.models.input_models import MultitaskModel # fixme
+from tomcat_speech.models.multimodal_models import MultitaskModel # fixme
 from tomcat_speech.data_prep.data_prep_helpers import (
     make_glove_dict,
     Glove,

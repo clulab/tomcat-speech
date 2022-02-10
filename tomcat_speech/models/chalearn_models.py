@@ -1,7 +1,7 @@
 # models to be used specifically with the personality trait data from chalearn
 
 import torch.nn as nn
-from tomcat_speech.models.input_models import (
+from tomcat_speech.models.multimodal_models import (
     IntermediateFusionMultimodalModel,
     PredictionLayer,
 )
