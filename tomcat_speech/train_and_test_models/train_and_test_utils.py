@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import random
 
-from tomcat_speech.models.multimodal_models import MultitaskModel, MultitaskAcousticShared
+from tomcat_speech.models.multimodal_models import MultitaskModel, MultitaskAcousticShared, MultitaskDuplicateInputModel
 
 
 def set_cuda_and_seeds(config):
@@ -51,6 +51,11 @@ def select_model(model_params, num_embeddings, pretrained_embeddings):
                                         use_distilbert=model_params.use_distilbert,
                                         num_embeddings=num_embeddings,
                                         pretrained_embeddings=pretrained_embeddings)
+    elif "duplicate_input" in model_params.model.lower():
+        model = MultitaskDuplicateInputModel(params=model_params,
+                                             use_distilbert=model_params.use_distilbert,
+                                             num_embeddings=num_embeddings,
+                                             pretrained_embeddings=pretrained_embeddings)
     else:
         model = MultitaskModel(params=model_params,
                                use_distilbert=model_params.use_distilbert,

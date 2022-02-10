@@ -489,7 +489,7 @@ class MultimodalBaseDuplicateInput(nn.Module):
     """
 
     def __init__(
-        self, params, num_embeddings=None, pretrained_embeddings=None, num_tasks=2
+        self, params, num_embeddings=None, pretrained_embeddings=None, num_tasks=2, use_distilbert=False
     ):
         super(MultimodalBaseDuplicateInput, self).__init__()
         # get the number of duplicates
@@ -507,9 +507,19 @@ class MultimodalBaseDuplicateInput(nn.Module):
         # get number of output dims
         self.out_dims = params.output_dim
 
+        # distilbert vs glove initialization
+        self.use_distilbert = use_distilbert
+
+        # set text input size
+        if not use_distilbert:
+            self.text_input_size = params.text_dim + params.short_emb_dim
+        else:
+            # don't use short embedding if using bert
+            self.text_input_size = params.text_dim
+
         # if we feed text through additional layer(s)
         self.text_rnn = nn.LSTM(
-            input_size=self.text_dim + self.short_dim,
+            input_size=self.text_input_size * self.mult_size,
             hidden_size=params.text_gru_hidden_dim,
             num_layers=params.num_gru_layers,
             batch_first=True,
@@ -533,10 +543,11 @@ class MultimodalBaseDuplicateInput(nn.Module):
         self.dropout = params.dropout
 
         # initialize word embeddings
-        self.embedding = nn.Embedding(
-            num_embeddings, params.text_dim, _weight=pretrained_embeddings
-        )
-        self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
+        if not use_distilbert:
+            self.embedding = nn.Embedding(
+                num_embeddings, params.text_dim, _weight=pretrained_embeddings
+            )
+            self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
 
         # initialize speaker embeddings
         self.speaker_embedding = nn.Embedding(
@@ -555,35 +566,55 @@ class MultimodalBaseDuplicateInput(nn.Module):
         length_input=None,
         gender_input=None,
         task_num=0,
+        get_prob_dist=False,
+        save_encoded_data=False
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
-        embs = self.embedding(text_input).detach()
-        temp_embs = torch.clone(embs).detach()
+        if not self.use_distilbert:
+            embs = self.embedding(text_input).detach()
+            temp_embs = torch.clone(embs).detach()
 
-        # do the same with trainable short embeddings
-        short_embs = self.short_embedding(text_input)
+            # do the same with trainable short embeddings
+            short_embs = self.short_embedding(text_input)
 
-        # add a tensor for each task; if not the tensor for this task,
-        # fill it with zeros; otherwise, just copy the tensor
-        for num in range(1, self.mult_size):
-            # don't want to detach so recalculating short embs here
-            # for safety; may not be necessary
-            temp_short_embs = self.short_embedding(text_input)
+            # add a tensor for each task; if not the tensor for this task,
+            # fill it with zeros; otherwise, just copy the tensor
+            for num in range(1, self.mult_size):
+                # don't want to detach so recalculating short embs here
+                # for safety; may not be necessary
+                temp_short_embs = self.short_embedding(text_input)
 
-            if num != task_num + 1:
-                temp_embs = torch.zeros_like(temp_embs).detach()
-                temp_short_embs = torch.zeros_like(temp_short_embs)
+                if num != task_num + 1:
+                    temp_embs = torch.zeros_like(temp_embs).detach()
+                    temp_short_embs = torch.zeros_like(temp_short_embs)
 
-            embs = torch.cat((embs, temp_embs), dim=2)
-            short_embs = torch.cat((short_embs, temp_short_embs), dim=2)
+                embs = torch.cat((embs, temp_embs), dim=2)
+                short_embs = torch.cat((short_embs, temp_short_embs), dim=2)
 
-        # add dropout
-        embs = F.dropout(embs, 0.1)
-        short_embs = F.dropout(short_embs, 0.1)
+            # add dropout
+            embs = F.dropout(embs, 0.1)
+            short_embs = F.dropout(short_embs, 0.1)
 
-        # concatenate short and regular embeddings
-        all_embs = torch.cat((embs, short_embs), dim=2)
+            # concatenate short and regular embeddings
+            all_embs = torch.cat((embs, short_embs), dim=2)
+
+        # if we are using distilbert, however:
+        else:
+            embs = text_input.detach()
+            temp_embs = torch.clone(embs).detach()
+
+            # add a tensor for each task; if not the tensor for this task,
+            # fill it with zeros; otherwise, just copy the tensor
+            for num in range(1, self.mult_size):
+                if num != task_num + 1:
+                    temp_embs = torch.zeros_like(temp_embs).detach()
+
+                embs = torch.cat((embs, temp_embs), dim=2)
+
+            # add dropout
+            embs = F.dropout(embs, 0.1)
+            all_embs = embs
 
         # get gender embeddings, if needed
         if gender_input is not None:
@@ -637,6 +668,13 @@ class MultimodalBaseDuplicateInput(nn.Module):
 
         if self.out_dims == 1:
             output = torch.sigmoid(output)
+        elif get_prob_dist:
+            prob = nn.Softmax(dim=1)
+            output = prob(output)
 
         # return the output
-        return output
+        if save_encoded_data:
+            return output, acoustic_input, encoded_text
+        else:
+            return output
+
