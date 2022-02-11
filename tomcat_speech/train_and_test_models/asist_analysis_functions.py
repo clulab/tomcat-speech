@@ -10,11 +10,9 @@ from tomcat_speech.models.train_and_test_models import (
 )
 from tomcat_speech.models.multimodal_models import MultitaskModel
 
-from tomcat_speech.data_prep.data_prep_helpers import (
-    make_glove_dict,
-    Glove,
-    DatumListDataset,
-)
+# import MultitaskObject and Glove from preprocessing code
+sys.path.append("../multimodal_data_preprocessing")
+from utils.data_prep_helpers import Glove, make_glove_dict, DatumListDataset
 
 import pandas as pd
 
