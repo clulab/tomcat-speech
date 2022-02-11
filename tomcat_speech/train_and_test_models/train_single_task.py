@@ -1,5 +1,6 @@
-# train the models created in models directory with MUStARD data
-# currently the main entry point into the system
+# train a single-task model for any of the five tasks
+# combining the training of the separate train_task models into one
+
 import pickle
 import shutil
 import sys
@@ -24,40 +25,11 @@ def load_data(device, config):
     load_path = config.load_path
     feature_set = config.feature_set
 
-    # import cdc data
-    cdc_train_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_train.pickle", "rb"))
-    cdc_dev_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_dev.pickle", "rb"))
-    cdc_test_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_test.pickle", "rb"))
-    cdc_weights = pickle.load(open(f"{load_path}/cdc_{feature_set}_clsswts.pickle", "rb"))
-    print("CDC data loaded")
-
-    # import cmu mosi data
-    mosi_train_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_train.pickle", "rb"))
-    mosi_dev_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_dev.pickle", "rb"))
-    mosi_test_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_test.pickle", "rb"))
-    mosi_weights = pickle.load(open(f"{load_path}/mosi_{feature_set}_clsswts.pickle", "rb"))
-    print("CMU MOSI data loaded")
-
-    # import firstimpr data
-    firstimpr_train_ds = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_train.pickle", "rb"))
-    firstimpr_dev_ds = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_dev.pickle", "rb"))
-    firstimpr_test_ds = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_test.pickle", "rb"))
-    firstimpr_weights = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_clsswts.pickle", "rb"))
-    print("FirstImpr data loaded")
-
-    # import meld data
-    meld_train_ds = pickle.load(open(f"{load_path}/meld_{feature_set}_train.pickle", "rb"))
-    meld_dev_ds = pickle.load(open(f"{load_path}/meld_{feature_set}_dev.pickle", "rb"))
-    meld_test_ds = pickle.load(open(f"{load_path}/meld_{feature_set}_test.pickle", "rb"))
-    meld_weights = pickle.load(open(f"{load_path}/meld_{feature_set}_clsswts.pickle", "rb"))
-    print("MELD data loaded")
-
-    # import ravdess data
-    ravdess_train_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_train.pickle", "rb"))
-    ravdess_dev_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_dev.pickle", "rb"))
-    ravdess_test_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_test.pickle", "rb"))
-    ravdess_weights = pickle.load(open(f"{load_path}/ravdess_{feature_set}_clsswts.pickle", "rb"))
-    print("RAVDESS data loaded")
+    # import data
+    train_ds = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_train.pickle", "rb"))
+    dev_ds = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_dev.pickle", "rb"))
+    test_ds = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_test.pickle", "rb"))
+    class_weights = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_clsswts.pickle", "rb"))
 
     # if not using distilbert embeddings
     if not config.model_params.use_distilbert:
@@ -70,109 +42,25 @@ def load_data(device, config):
         num_embeddings = pretrained_embeddings.size()[0]
         print(f"shape of pretrained embeddings is: {glove.data.size()}")
 
-    # get number of items in all datasets
-    total_data_size = len(cdc_train_ds) + len(mosi_train_ds) + len(firstimpr_train_ds) + \
-                      len(meld_train_ds) + len(ravdess_train_ds)
-
     # add loss function for cdc
-    cdc_loss_func = torch.nn.CrossEntropyLoss(
-        weight=cdc_weights.to(device),
+    loss_func = torch.nn.CrossEntropyLoss(
+        weight=class_weights.to(device),
         reduction="mean"
     )
 
-    cdc_obj = MultitaskObject(
-        cdc_train_ds,
-        cdc_dev_ds,
-        cdc_test_ds,
-        cdc_loss_func,
-        task_num=0
-    )
-
-    # cdc_obj.change_loss_multiplier(2)
-    # cdc_obj.change_loss_multiplier(len(cdc_train_ds) / float(total_data_size))
-
-    # add loss func, multitask obj for cmu mosi
-    mosi_loss_func = torch.nn.CrossEntropyLoss(
-        weight=mosi_weights.to(device),
-        reduction="mean"
-    )
-
-    mosi_obj = MultitaskObject(
-        mosi_train_ds,
-        mosi_dev_ds,
-        mosi_test_ds,
-        mosi_loss_func,
-        task_num=1
-    )
-
-    # mosi_obj.change_loss_multiplier(7)
-    # mosi_obj.change_loss_multiplier(len(mosi_train_ds) / float(total_data_size))
-
-    # add loss function for firstimpr
-    firstimpr_loss_func = torch.nn.CrossEntropyLoss(
-        weight=firstimpr_weights.to(device),
-        reduction="mean"
-    )
     # create multitask object
-    firstimpr_obj = MultitaskObject(
-        firstimpr_train_ds,
-        firstimpr_dev_ds,
-        firstimpr_test_ds,
-        firstimpr_loss_func,
-        task_num=2,
+    task_obj = MultitaskObject(
+        train_ds,
+        dev_ds,
+        test_ds,
+        loss_func,
+        task_num=0,
     )
-
-    # firstimpr_obj.change_loss_multiplier(5)
-    # firstimpr_obj.change_loss_multiplier(len(firstimpr_train_ds) / float(total_data_size))
-
-    # # add loss function for meld
-    meld_loss_func = torch.nn.CrossEntropyLoss(
-        weight=meld_weights.to(device),
-        reduction="mean"
-    )
-    # create multitask object
-    meld_obj = MultitaskObject(
-        meld_train_ds,
-        meld_dev_ds,
-        meld_test_ds,
-        meld_loss_func,
-        task_num=3,
-    )
-
-    # meld_obj.change_loss_multiplier(7)
-    # meld_obj.change_loss_multiplier(len(meld_train_ds) / float(total_data_size))
-
-    # add loss function, multitask obj for ravdess
-    ravdess_loss_func = torch.nn.CrossEntropyLoss(
-        weight=ravdess_weights.to(device),
-        reduction="mean"
-    )
-
-    ravdess_obj = MultitaskObject(
-        ravdess_train_ds,
-        ravdess_dev_ds,
-        ravdess_test_ds,
-        ravdess_loss_func,
-        task_num=4
-    )
-
-    # ravdess_obj.change_loss_multiplier(2)
-    # ravdess_obj.change_loss_multiplier(len(ravdess_train_ds) / float(total_data_size))
 
     # set all data list
     all_data_list = [
-        cdc_obj,
-        mosi_obj,
-        firstimpr_obj,
-        meld_obj,
-        ravdess_obj
+        task_obj
     ]
-
-    # create a single loss function
-    if config.model_params.single_loss:
-        loss_fx = torch.nn.CrossEntropyLoss(reduction="mean")
-    else:
-        loss_fx = None
 
     print(
         "Model, loss function, and optimization created"
@@ -183,12 +71,12 @@ def load_data(device, config):
     # sampler = BatchSchedulerSampler()
 
     if not config.model_params.use_distilbert:
-        return all_data_list, loss_fx, sampler, num_embeddings, pretrained_embeddings
+        return all_data_list, loss_func, sampler, num_embeddings, pretrained_embeddings
     else:
-        return all_data_list, loss_fx, sampler
+        return all_data_list, loss_func, sampler
 
 
-def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config,
+def train_single_task(all_data_list, loss_fx, sampler, device, output_path, config,
                     num_embeddings=None, pretrained_embeddings=None, extra_params=None):
     if extra_params:
         model_params = extra_params
@@ -220,19 +108,18 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
         )
     )
 
-
     # this uses train-dev-test folds
     # create instance of model
-    multitask_model = select_model(model_params, num_embeddings, pretrained_embeddings)
+    task_model = select_model(model_params, num_embeddings, pretrained_embeddings)
 
     optimizer = torch.optim.Adam(
         lr=model_params.lr,
-        params=multitask_model.parameters(),
+        params=task_model.parameters(),
         weight_decay=model_params.weight_decay,
     )
 
     # set the classifier(s) to the right device
-    multitask_model = multitask_model.to(device)
+    multitask_model = task_model.to(device)
     print(multitask_model)
 
     # create a a save path and file for the model
@@ -288,10 +175,12 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
 
 if __name__ == "__main__":
     # import parameters for model
-    import tomcat_speech.models.parameters.multitask_config as config
+    import tomcat_speech.models.parameters.singletask_config as config
 
+    # set cuda and random seeds
     device = set_cuda_and_seeds(config)
 
+    # get data
     if not config.model_params.use_distilbert:
         data, loss_fx, sampler, num_embeddings, pretrained_embeddings = load_data(device, config)
     else:
@@ -307,7 +196,6 @@ if __name__ == "__main__":
         + config.EXPERIMENT_DESCRIPTION
         + str(date.today()),
     )
-
     print(f"OUTPUT PATH:\n{output_path}")
 
     # make sure the full save path exists; if not, create it
@@ -321,4 +209,4 @@ if __name__ == "__main__":
         if not config.DEBUG:
             sys.stdout = f
 
-            train_multitask(data, loss_fx, sampler, device, output_path, config, num_embeddings, pretrained_embeddings)
+            train_single_task(data, loss_fx, sampler, device, output_path, config, num_embeddings, pretrained_embeddings)

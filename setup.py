@@ -26,7 +26,8 @@ setup(
         "sklearn",
         "matplotlib",
         "tqdm",
-        "webvtt-py"
+        "webvtt-py",
+        "transformers"
     ],
     extras_require={"mmc_server": ["uvicorn", "fastapi"]},
     python_requires=">=3.7",

@@ -1,4 +1,6 @@
 # create a class with basic model architecture for bimodal data
+# todo: these models are saved as CNNs might be useful to incorporate
+#   but as of 2022-02-10 this script is unused
 
 import torch
 import torch.nn as nn
@@ -260,62 +262,6 @@ class BimodalCNN(nn.Module):
         # return the output
         # squeeze to 1 dimension for binary categorization
         return output
-
-
-# # not currently used
-# will need to be updated if used--written at the very beginning
-# class BimodalRNN(nn.Module):
-#     """
-#     An RNN for bimodal (text, audio) data
-#     text_dim : length of each input text vector
-#     audio_dim : length of each input audio vector
-#     hidden_dim : size of hidden layer todo: why is there only one hidden layer?
-#     output_dim : length of output vector
-#     """
-#     def __init__(self, text_dim, audio_dim, hidden_dim, output_dim, num_layers, dropout,
-#                  rnn_type='lstm'):
-#         super(BimodalRNN, self).__init__()
-#         self.text_dim = text_dim
-#         self.audio_dim = audio_dim
-#         self.data_shape = text_dim + audio_dim
-#         self.hidden_dim = hidden_dim
-#         self.output_dim = output_dim
-#         self.num_layers = num_layers
-#         self.dropout = dropout
-#         self.rnn_type = rnn_type
-#
-#         # create model layers
-#         # lstm layers
-#         if self.rnn_type == "lstm":
-#             self.lstm = nn.LSTM(self.data_shape, hidden_dim, self.num_layers, dropout=self.dropout)  # may be data_shape[1:]
-#         elif self.rnn_type == "gru":
-#             self.gru = nn.GRU(self.data_shape, hidden_dim, self.num_layers, dropout=self.dropout)
-#
-#         # output layer
-#         self.output_layer = nn.Linear(hidden_dim, output_dim)
-#
-#     def init_hidden(self, batch_size):
-#         # initialize the hidden layer
-#         return torch.zeros(self.num_layers, batch_size, self.hidden_dim)
-#
-#     def forward(self, inputs):
-#         # set lstm_out, hidden using the lstm layer
-#         if self.rnn_type == "lstm":
-#             lstm_out = F.relu(self.lstm(inputs)) # fixme: something isn't right here
-#         elif self.rnn_type == "gru":
-#             lstm_out = F.relu(self.gru(inputs))
-#
-#         # get last output only
-#         last_out = lstm_out[:, -1, :]
-#
-#         # can apply dropout if needed in lstm layer
-#         # last_out = F.dropout(last_out, 0.5)
-#         # get output predictions
-#         output = F.relu(self.output_layer(last_out))
-#
-#         # apply softmax and return most likely as prediction
-#         output_distribution = self.softmax(output)
-#         return max(output_distribution)
 
 ##########################################################################
 #                                                                        #

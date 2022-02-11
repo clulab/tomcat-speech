@@ -6,7 +6,7 @@
 from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDataset
 from tomcat_speech.models.train_and_test_models import *
 from tomcat_speech.models.plot_training import *
-from tomcat_speech.models.input_models import *
+from tomcat_speech.models.multimodal_models import *
 
 from tomcat_speech.data_prep.data_prep_helpers import *
 from tomcat_speech.data_prep.data_prep_helpers import make_acoustic_dict
@@ -16,7 +16,7 @@ import tomcat_speech.data_prep.asist_data.asist_prep as asist_prep
 
 # import parameters for model
 # comment or uncomment as needed
-from tomcat_speech.models.parameters.multitask_params import *
+from tomcat_speech.models.parameters.multitask_config import *
 
 # from tomcat_speech.models.parameters.multitask_params import params
 # from tomcat_speech.models.parameters.lr_baseline_1_params import params
@@ -166,7 +166,7 @@ if __name__ == "__main__":
                 print(f"Now starting training/tuning with split {split} held out")
 
                 # create instance of model
-                bimodal_trial = EarlyFusionMultimodalModel(
+                bimodal_trial = IntermediateFusionMultimodalModel(
                     params=model_params,
                     num_embeddings=num_embeddings,
                     pretrained_embeddings=pretrained_embeddings,
@@ -199,7 +199,7 @@ if __name__ == "__main__":
                 load_path = model_save_path + model_save_file
 
                 # train the model and evaluate on development split
-                train_and_predict(
+                asist_train_and_predict(
                     bimodal_trial,
                     train_state,
                     training_data,
