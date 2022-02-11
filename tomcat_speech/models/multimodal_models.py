@@ -3,10 +3,10 @@ import sys
 
 import torch.nn as nn
 
-from tomcat_speech.models.audio_model_bases import AcousticOnlyModel, AcousticPlusPredictionLayer
-from tomcat_speech.models.model_prediction_layers import PredictionLayer
+from tomcat_speech.models.audio_model_bases import AcousticOnlyModel
+from tomcat_speech.models.model_prediction_layers import PredictionLayer, TextPlusPredictionLayer, AcousticPlusPredictionLayer
 from tomcat_speech.models.multimodal_model_bases import IntermediateFusionMultimodalModel, EarlyFusionMultimodalModel, LateFusionMultimodalModel, MultimodalBaseDuplicateInput
-from tomcat_speech.models.text_model_bases import TextPlusPredictionLayer, TextOnlyModel
+from tomcat_speech.models.text_model_bases import TextOnlyModel
 
 
 class MultitaskModel(nn.Module):
