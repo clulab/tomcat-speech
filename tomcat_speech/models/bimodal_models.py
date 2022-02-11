@@ -1,4 +1,6 @@
 # create a class with basic model architecture for bimodal data
+# todo: these models are saved as CNNs might be useful to incorporate
+#   but as of 2022-02-10 this script is unused
 
 import torch
 import torch.nn as nn
