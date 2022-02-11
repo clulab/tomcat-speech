@@ -37,36 +37,32 @@ packages with the `--system-site-packages` flag, like shown below:
 
     python -m venv --system-site-packages path/to/venv
 
-## Contents of the tomcat_speech directory.
+## Training and testing multimodal, single- or multitask models
 
-Under the `tomcat_speech` directory, we have a few subdirectories, described
-below.
+Below is information on how to train and test models within the tomcat_speech repository.
 
-### data_prep contains:
-- audio_extraction.py : code to extract necessary features from audio +
-  corresponding transcriptions
-- data_prep.py : classes to prepare data for input into the models; mostly used
-  for health outcomes data currently
-- meld_input_formatting.py : Formats MELD dataset for input into models
-- subset_glove.py : code to create a subset of GloVe for faster loading at test
-  time
+### Preparation
+
+To make use of the data preparation modules or to run models, clone the repo `multimodal_data_preprocessing` at https://github.com/jmculnan/multimodal_data_preprocessing and place it in the same parent directory as this repo. 
+
+```
+E.g.: 
+.
+|__ mmml
+|__ multimodal_data_preprocessing
+    |__ datasets_to_use
+
+```
+
+### Running models 
+
+Models are trained using the training scripts in the `tomcat_speech/train_and_test_models` subdirectory. 
+
+The training scripts are associated with parameters files, which may be found in `tomcat_speech/models/parameters`. Alter the paths in the relevant parameters file as needed to run the training code of interest. 
+
+You may either train a model with a single set of parameters (using `train_multitask.py` or `train_single_task.py`) or you may run a grid search by training on multiple parameter values using `grid_search_train.py`.
 
 
-### models contains:
-- parameters/ : directory of parameters files used by the models
-- baselines.py : model classes to be used for baselines
-- bimodal_models.py : model classes to be used with bimodal data
-- input_models.py : model classes used for preparing input representations (not
-  yet implemented)
-- plot_training.py : initial plotting of training and dev loss/accuracy curves
-- train_and_test_models.py : code for training + evaluation of models
-
-
-### models_test contains:
-- glove_test.py : test usage of subset_glove.py
-- input_manipulation_test.py : test usage of audio_extraction.py
-- meld_test.py : test usage of running a model with MELD
-- model_test.py : the main file for running models with health outcomes data
 
 Multimodal Speech Encoder
 -------------------------
