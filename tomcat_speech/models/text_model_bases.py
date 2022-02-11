@@ -296,7 +296,7 @@ class TextPlusPredictionLayer(nn.Module):
         length_input=None,
         gender_input=None,
         get_prob_dist=False,
-        save_encoded_data=False
+        return_penultimate_layer=False
     ):
         # here, acoustic_input is the output of the acoustic layers
 
@@ -321,6 +321,8 @@ class TextPlusPredictionLayer(nn.Module):
         encoded_data = torch.cat((encoded_text, acoustic_input), dim=1)
 
         intermediate = torch.tanh(F.dropout(self.fc1(encoded_data), self.dropout))
+        if return_penultimate_layer:
+            penult = intermediate
         predictions = torch.relu(self.fc2(intermediate))
 
         if self.output_dim == 1:
@@ -330,10 +332,10 @@ class TextPlusPredictionLayer(nn.Module):
             predictions = prob(predictions)
 
         # return the output
-        if save_encoded_data:
-            return predictions, acoustic_input, encoded_text
-        else:
+        if not return_penultimate_layer:
             return predictions
+        else:
+            return predictions, penult
 
 
 class TextOnlyModel(nn.Module):
@@ -413,11 +415,9 @@ class TextOnlyModel(nn.Module):
 
     def forward(
         self,
-        acoustic_input,
         text_input,
         speaker_input=None,
         length_input=None,
-        acoustic_len_input=None,
         gender_input=None,
         get_prob_dist=False,
         save_encoded_data=False

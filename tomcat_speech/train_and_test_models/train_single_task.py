@@ -13,7 +13,7 @@ import random
 from tomcat_speech.models.train_and_test_models import train_and_predict, make_train_state
 from tomcat_speech.models.multimodal_models import MultitaskModel
 from tomcat_speech.models.plot_training import *
-from tomcat_speech.train_and_test_models.train_and_test_utils import set_cuda_and_seeds
+from tomcat_speech.train_and_test_models.train_and_test_utils import set_cuda_and_seeds, select_model
 
 # import MultitaskObject and Glove from preprocessing code
 sys.path.append("../multimodal_data_preprocessing")
@@ -110,18 +110,7 @@ def train_single_task(all_data_list, loss_fx, sampler, device, output_path, conf
 
     # this uses train-dev-test folds
     # create instance of model
-    if model_params.use_distilbert:
-        task_model = MultitaskModel(
-            params=model_params,
-            use_distilbert=model_params.use_distilbert
-        )
-    else:
-        task_model = MultitaskModel(
-            params=model_params,
-            use_distilbert=model_params.use_distilbert,
-            num_embeddings=num_embeddings,
-            pretrained_embeddings=pretrained_embeddings
-        )
+    task_model = select_model(model_params, num_embeddings, pretrained_embeddings)
 
     optimizer = torch.optim.Adam(
         lr=model_params.lr,

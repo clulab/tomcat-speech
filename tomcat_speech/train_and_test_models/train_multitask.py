@@ -224,19 +224,6 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
     # this uses train-dev-test folds
     # create instance of model
     multitask_model = select_model(model_params, num_embeddings, pretrained_embeddings)
-    #
-    # if model_params.use_distilbert:
-    #     multitask_model = MultitaskModel(
-    #         params=model_params,
-    #         use_distilbert=model_params.use_distilbert
-    #     )
-    # else:
-    #     multitask_model = MultitaskModel(
-    #         params=model_params,
-    #         use_distilbert=model_params.use_distilbert,
-    #         num_embeddings=num_embeddings,
-    #         pretrained_embeddings=pretrained_embeddings
-    #     )
 
     optimizer = torch.optim.Adam(
         lr=model_params.lr,

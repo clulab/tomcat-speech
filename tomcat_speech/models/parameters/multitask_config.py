@@ -18,7 +18,7 @@ EXPERIMENT_ID = 1
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
 # EXPERIMENT_DESCRIPTION = "IntermediateFusion_test_paramsfromMMML_ClassWts_"
-EXPERIMENT_DESCRIPTION = "Testing_duplicateInputModel_reworked_code_"
+EXPERIMENT_DESCRIPTION = "Testing_sharedTextModel_reworked_code_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 
@@ -63,7 +63,7 @@ model_params = Namespace(
     text_only=False,
     audio_only=False,
     # overall model parameters
-    model="Multitask_duplicate_input",
+    model="Multitask_text_shared",
     num_epochs=200,
     batch_size=100,  # 128,  # 32
     early_stopping_criterion=5,
