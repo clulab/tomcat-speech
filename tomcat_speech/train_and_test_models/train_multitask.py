@@ -9,6 +9,7 @@ import numpy as np
 from datetime import date
 import random
 
+from tomcat_speech.data_prep.samplers import RandomOversampler
 from tomcat_speech.models.train_and_test_models import train_and_predict, make_train_state
 from tomcat_speech.models.multimodal_models import MultitaskModel
 from tomcat_speech.models.plot_training import *
@@ -178,8 +179,11 @@ def load_data(device, config):
         "Model, loss function, and optimization created"
     )
 
-    # todo: set data sampler?
-    sampler = None
+    # sampler = None
+    if config.model_params.use_sampler:
+        sampler = RandomOversampler(config.model_params.seed)
+    else:
+        sampler = None
     # sampler = BatchSchedulerSampler()
 
     if not config.model_params.use_distilbert:
@@ -263,7 +267,6 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
     # set plot titles
     loss_title = f"Training and Dev loss for model {model_params.model} with lr {model_params.lr}"
     loss_save = f"{item_output_path}/loss.png"
-
     # plot the loss from model
     plot_train_dev_curve(
         train_state["train_loss"],

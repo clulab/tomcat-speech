@@ -18,7 +18,7 @@ EXPERIMENT_ID = 1
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
 # EXPERIMENT_DESCRIPTION = "IntermediateFusion_test_paramsfromMMML_ClassWts_"
-EXPERIMENT_DESCRIPTION = "Testing_sharedTextModel_reworked_code_"
+EXPERIMENT_DESCRIPTION = "Testing_earlyFusion_reworked_code_IS13_oversampled"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 
@@ -34,7 +34,8 @@ if USE_SERVER:
     load_path = "/data/nlp/corpora/MM/pickled_data/distilbert_custom_feats"
 else:
     # path from which to load pickled data files
-    load_path = "../../datasets/pickled_data/distilbert_custom_feats"
+    load_path = "../../datasets/pickled_data/IS13_Matching_GOLD"
+    # load_path = "../../datasets/pickled_data/distilbert_custom_feats"
 
 # set dir to save full experiments
 exp_save_path = "output/multitask"
@@ -44,7 +45,8 @@ exp_save_path = "output/multitask"
 chalearn_predtype = "max_class"
 
 # set the acoustic feature set
-feature_set = "combined_features_distilbert_dict"
+# feature_set = "combined_features_distilbert_dict"
+feature_set = "IS13_distilbert_dict"
 
 num_feats = 130
 if feature_set.lower() == "is13":
@@ -55,6 +57,8 @@ elif "combined_features" in feature_set.lower() or "custom" in feature_set.lower
 model_params = Namespace(
     # use gradnorm for loss normalization
     use_gradnorm=False,
+    # whether to use data sampler
+    use_sampler=True,
     # decide whether to use early, intermediate, or late fusion
     fusion_type="early",  # int, late, early
     # consistency parameters
@@ -63,7 +67,7 @@ model_params = Namespace(
     text_only=False,
     audio_only=False,
     # overall model parameters
-    model="Multitask_text_shared",
+    model="Multitask", # todo: what are the options for this? multitask_text_shared,
     num_epochs=200,
     batch_size=100,  # 128,  # 32
     early_stopping_criterion=5,

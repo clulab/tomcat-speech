@@ -195,7 +195,8 @@ def train_and_predict(
             train_state,
             mode="training",
             save_encoded_data=save_encoded_data,
-            loss_fx=loss_fx
+            loss_fx=loss_fx,
+            sampler=sampler
         )
 
         # add loss and accuracy to train state
@@ -280,7 +281,8 @@ def run_model(
     train_state,
     mode="training",
     save_encoded_data=False,
-    loss_fx=None
+    loss_fx=None,
+    sampler=None
 ):
     """
     Run the model in either training or testing within a single epoch
@@ -295,7 +297,7 @@ def run_model(
     if mode.lower() == "training" or mode.lower() == "train":
         classifier.train()
         batches, tasks = get_all_batches(
-            datasets_list, batch_size=batch_size, shuffle=True
+            datasets_list, batch_size=batch_size, shuffle=True, sampler=sampler
         )
     else:
         classifier.eval()
@@ -1188,7 +1190,7 @@ def get_batch_predictions(
     return y_pred, y_2_pred, y_3_pred, gold
 
 
-def get_all_batches(dataset_list, batch_size, shuffle, partition="train"):
+def get_all_batches(dataset_list, batch_size, shuffle, partition="train", sampler=None):
     """
     Create all batches and put them together as a single dataset
     """
@@ -1202,6 +1204,9 @@ def get_all_batches(dataset_list, batch_size, shuffle, partition="train"):
     # batch the data for each task
     for i in range(num_tasks):
         if partition == "train":
+            # (over)sample training data if needed
+            if sampler is not None:
+                dataset_list[i].train = sampler.prep_data_through_oversampling(dataset_list[i].train)
             data = DataLoader(
                 dataset_list[i].train, batch_size=batch_size, shuffle=shuffle
             )
