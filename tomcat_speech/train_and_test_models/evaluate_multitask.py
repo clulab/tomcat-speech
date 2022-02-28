@@ -1,9 +1,12 @@
 # train the models created in models directory with MUStARD data
 # currently the main entry point into the system
+import datetime
 import pickle
 import shutil
 import sys
 import os
+import time
+
 import torch
 import numpy as np
 from datetime import date
@@ -84,7 +87,7 @@ if __name__ == "__main__":
     # add stdout to a log file
     with open(os.path.join(output_path, "log"), "a") as f:
         if not config.DEBUG:
-            sys.stdout = f
+            # sys.stdout = f
 
             # separate from training/dev code
             print("\n")
@@ -152,14 +155,14 @@ if __name__ == "__main__":
 
             # 3. CREATE NN
             # output goes into same location as trained model
-            item_output_path = os.path.join(
-                output_path,
-                f"LR{config.model_params.lr}_BATCH{config.model_params.batch_size}_"
-                f"NUMLYR{config.model_params.num_gru_layers}_"
-                f"SHORTEMB{config.model_params.short_emb_dim}_"
-                f"INT-OUTPUT{config.model_params.output_dim}_"
-                f"DROPOUT{config.model_params.dropout}",
-            )
+            # item_output_path = os.path.join(
+            #     output_path,
+            #     f"LR{config.model_params.lr}_BATCH{config.model_params.batch_size}_"
+            #     f"NUMLYR{config.model_params.num_gru_layers}_"
+            #     f"SHORTEMB{config.model_params.short_emb_dim}_"
+            #     f"INT-OUTPUT{config.model_params.output_dim}_"
+            #     f"DROPOUT{config.model_params.dropout}",
+            # )
 
             # this uses train-dev-test folds
             # create instance of model
@@ -184,7 +187,7 @@ if __name__ == "__main__":
 
             # set the classifier(s) to the right device
             # get saved parameters
-            multitask_model.load_state_dict(torch.load(saved_model))
+            multitask_model.load_state_dict(torch.load(saved_model, map_location=device))
             multitask_model.to(device)
 
             # add loss function for cdc

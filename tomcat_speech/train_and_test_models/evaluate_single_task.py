@@ -134,7 +134,7 @@ if __name__ == "__main__":
 
             # set the classifier(s) to the right device
             # get saved parameters
-            task_model.load_state_dict(torch.load(saved_model))
+            task_model.load_state_dict(torch.load(saved_model, map_location=device))
             task_model.to(device)
 
             # add loss function for cdc
