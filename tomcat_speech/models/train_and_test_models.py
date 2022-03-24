@@ -1441,20 +1441,35 @@ def multitask_predict_without_gold_labels(
 
     # for each batch in the dataloader
     for batch_index, batch in enumerate(test_batches):
-        # compute the output
-        batch_acoustic = batch[0].to(device)
-        batch_text = batch[1].to(device)
-        batch_lengths = batch[-2].to(device)
-        batch_acoustic_lengths = batch[-1].to(device)
-        if use_speaker:
-            batch_speakers = batch[2].to(device)
-        else:
-            batch_speakers = None
+        if type(batch) == list:
+            # compute the output
+            batch_acoustic = batch[0].to(device)
+            batch_text = batch[1].to(device)
+            batch_lengths = batch[-2].to(device)
+            batch_acoustic_lengths = batch[-1].to(device)
+            if use_speaker:
+                batch_speakers = batch[2].to(device)
+            else:
+                batch_speakers = None
 
-        if use_gender:
-            batch_genders = batch[3].to(device)
+            if use_gender:
+                batch_genders = batch[3].to(device)
+            else:
+                batch_genders = None
         else:
-            batch_genders = None
+            batch_acoustic = batch['x_acoustic'].to(device)
+            batch_text = batch['x_utt'].to(device)
+            batch_lengths = batch['utt_length'].to(device)
+            batch_acoustic_lengths = batch['acoustic_length'].to(device)
+            if use_speaker:
+                batch_speakers = batch['x_speaker'].to(device)
+            else:
+                batch_speakers = None
+
+            if use_gender:
+                batch_genders = batch['x_gender'].to(device)
+            else:
+                batch_genders = None
 
         if avgd_acoustic:
             y_pred = classifier(

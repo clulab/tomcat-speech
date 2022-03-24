@@ -19,6 +19,15 @@ from tomcat_speech.train_and_test_models.train_and_test_utils import set_cuda_an
 sys.path.append("../multimodal_data_preprocessing")
 from utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict
 
+from tomcat_speech.data_prep.ingest_data import *
+
+
+def load_modality_data(device, config):
+    """
+    Load the modality-separated data
+    """
+    pass
+
 
 def load_data(device, config):
     # 1. Load datasets + glove object
@@ -26,39 +35,39 @@ def load_data(device, config):
     feature_set = config.feature_set
 
     # import cdc data
-    cdc_train_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_train.pickle", "rb"))
-    cdc_dev_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_dev.pickle", "rb"))
-    cdc_test_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_test.pickle", "rb"))
-    cdc_weights = pickle.load(open(f"{load_path}/cdc_{feature_set}_clsswts.pickle", "rb"))
-    print("CDC data loaded")
-
-    # import cmu mosi data
-    mosi_train_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_train.pickle", "rb"))
-    mosi_dev_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_dev.pickle", "rb"))
-    mosi_test_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_test.pickle", "rb"))
-    mosi_weights = pickle.load(open(f"{load_path}/mosi_{feature_set}_clsswts.pickle", "rb"))
-    print("CMU MOSI data loaded")
+    # cdc_train_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_train.pickle", "rb"))
+    # cdc_dev_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_dev.pickle", "rb"))
+    # cdc_test_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_test.pickle", "rb"))
+    # cdc_weights = pickle.load(open(f"{load_path}/cdc_{feature_set}_clsswts.pickle", "rb"))
+    # print("CDC data loaded")
+    #
+    # # import cmu mosi data
+    # mosi_train_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_train.pickle", "rb"))
+    # mosi_dev_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_dev.pickle", "rb"))
+    # mosi_test_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_test.pickle", "rb"))
+    # mosi_weights = pickle.load(open(f"{load_path}/mosi_{feature_set}_clsswts.pickle", "rb"))
+    # print("CMU MOSI data loaded")
 
     # import firstimpr data
     firstimpr_train_ds = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_train.pickle", "rb"))
     firstimpr_dev_ds = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_dev.pickle", "rb"))
     firstimpr_test_ds = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_test.pickle", "rb"))
-    firstimpr_weights = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_clsswts.pickle", "rb"))
+    # firstimpr_weights = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_clsswts.pickle", "rb"))
     print("FirstImpr data loaded")
 
     # import meld data
     meld_train_ds = pickle.load(open(f"{load_path}/meld_{feature_set}_train.pickle", "rb"))
     meld_dev_ds = pickle.load(open(f"{load_path}/meld_{feature_set}_dev.pickle", "rb"))
     meld_test_ds = pickle.load(open(f"{load_path}/meld_{feature_set}_test.pickle", "rb"))
-    meld_weights = pickle.load(open(f"{load_path}/meld_{feature_set}_clsswts.pickle", "rb"))
+    # meld_weights = pickle.load(open(f"{load_path}/meld_{feature_set}_clsswts.pickle", "rb"))
     print("MELD data loaded")
 
-    # import ravdess data
-    ravdess_train_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_train.pickle", "rb"))
-    ravdess_dev_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_dev.pickle", "rb"))
-    ravdess_test_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_test.pickle", "rb"))
-    ravdess_weights = pickle.load(open(f"{load_path}/ravdess_{feature_set}_clsswts.pickle", "rb"))
-    print("RAVDESS data loaded")
+    # # import ravdess data
+    # ravdess_train_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_train.pickle", "rb"))
+    # ravdess_dev_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_dev.pickle", "rb"))
+    # ravdess_test_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_test.pickle", "rb"))
+    # ravdess_weights = pickle.load(open(f"{load_path}/ravdess_{feature_set}_clsswts.pickle", "rb"))
+    # print("RAVDESS data loaded")
 
     # if not using distilbert embeddings
     if not config.model_params.use_distilbert:
@@ -72,46 +81,46 @@ def load_data(device, config):
         print(f"shape of pretrained embeddings is: {glove.data.size()}")
 
     # get number of items in all datasets
-    total_data_size = len(cdc_train_ds) + len(mosi_train_ds) + len(firstimpr_train_ds) + \
-                      len(meld_train_ds) + len(ravdess_train_ds)
+    # total_data_size = len(cdc_train_ds) + len(mosi_train_ds) + len(firstimpr_train_ds) + \
+    #                   len(meld_train_ds) + len(ravdess_train_ds)
 
-    # add loss function for cdc
-    cdc_loss_func = torch.nn.CrossEntropyLoss(
-        weight=cdc_weights.to(device),
-        reduction="mean"
-    )
-
-    cdc_obj = MultitaskObject(
-        cdc_train_ds,
-        cdc_dev_ds,
-        cdc_test_ds,
-        cdc_loss_func,
-        task_num=0
-    )
+    # # add loss function for cdc
+    # cdc_loss_func = torch.nn.CrossEntropyLoss(
+    #     weight=cdc_weights.to(device),
+    #     reduction="mean"
+    # )
+    #
+    # cdc_obj = MultitaskObject(
+    #     cdc_train_ds,
+    #     cdc_dev_ds,
+    #     cdc_test_ds,
+    #     cdc_loss_func,
+    #     task_num=0
+    # )
 
     # cdc_obj.change_loss_multiplier(2)
     # cdc_obj.change_loss_multiplier(len(cdc_train_ds) / float(total_data_size))
 
-    # add loss func, multitask obj for cmu mosi
-    mosi_loss_func = torch.nn.CrossEntropyLoss(
-        weight=mosi_weights.to(device),
-        reduction="mean"
-    )
-
-    mosi_obj = MultitaskObject(
-        mosi_train_ds,
-        mosi_dev_ds,
-        mosi_test_ds,
-        mosi_loss_func,
-        task_num=1
-    )
+    # # add loss func, multitask obj for cmu mosi
+    # mosi_loss_func = torch.nn.CrossEntropyLoss(
+    #     weight=mosi_weights.to(device),
+    #     reduction="mean"
+    # )
+    #
+    # mosi_obj = MultitaskObject(
+    #     mosi_train_ds,
+    #     mosi_dev_ds,
+    #     mosi_test_ds,
+    #     mosi_loss_func,
+    #     task_num=1
+    # )
 
     # mosi_obj.change_loss_multiplier(7)
     # mosi_obj.change_loss_multiplier(len(mosi_train_ds) / float(total_data_size))
 
     # add loss function for firstimpr
     firstimpr_loss_func = torch.nn.CrossEntropyLoss(
-        weight=firstimpr_weights.to(device),
+        # weight=firstimpr_weights.to(device),
         reduction="mean"
     )
     # create multitask object
@@ -120,7 +129,7 @@ def load_data(device, config):
         firstimpr_dev_ds,
         firstimpr_test_ds,
         firstimpr_loss_func,
-        task_num=2,
+        task_num=1,
     )
 
     # firstimpr_obj.change_loss_multiplier(5)
@@ -128,7 +137,7 @@ def load_data(device, config):
 
     # # add loss function for meld
     meld_loss_func = torch.nn.CrossEntropyLoss(
-        weight=meld_weights.to(device),
+        # weight=meld_weights.to(device),
         reduction="mean"
     )
     # create multitask object
@@ -137,36 +146,37 @@ def load_data(device, config):
         meld_dev_ds,
         meld_test_ds,
         meld_loss_func,
-        task_num=3,
+        task_num=0,
     )
 
     # meld_obj.change_loss_multiplier(7)
     # meld_obj.change_loss_multiplier(len(meld_train_ds) / float(total_data_size))
 
-    # add loss function, multitask obj for ravdess
-    ravdess_loss_func = torch.nn.CrossEntropyLoss(
-        weight=ravdess_weights.to(device),
-        reduction="mean"
-    )
-
-    ravdess_obj = MultitaskObject(
-        ravdess_train_ds,
-        ravdess_dev_ds,
-        ravdess_test_ds,
-        ravdess_loss_func,
-        task_num=4
-    )
+    # # add loss function, multitask obj for ravdess
+    # ravdess_loss_func = torch.nn.CrossEntropyLoss(
+    #     weight=ravdess_weights.to(device),
+    #     reduction="mean"
+    # )
+    #
+    # ravdess_obj = MultitaskObject(
+    #     ravdess_train_ds,
+    #     ravdess_dev_ds,
+    #     ravdess_test_ds,
+    #     ravdess_loss_func,
+    #     task_num=4
+    # )
 
     # ravdess_obj.change_loss_multiplier(2)
     # ravdess_obj.change_loss_multiplier(len(ravdess_train_ds) / float(total_data_size))
 
     # set all data list
     all_data_list = [
-        cdc_obj,
-        mosi_obj,
-        firstimpr_obj,
+        # cdc_obj,
+        # mosi_obj,
         meld_obj,
-        ravdess_obj
+        firstimpr_obj,
+        # meld_obj,
+        # ravdess_obj
     ]
 
     # create a single loss function
