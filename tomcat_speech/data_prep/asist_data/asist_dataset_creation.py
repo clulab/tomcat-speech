@@ -8,8 +8,10 @@ import numpy as np
 import functools
 import operator
 import random
+import sys
 
-from tomcat_speech.data_prep.data_prep_helpers import (
+sys.path.append("../multimodal_data_preprocessing")
+from utils.data_prep_helpers import (
     MinMaxScaleRange,
     clean_up_word,
     get_avg_vec,

@@ -8,11 +8,20 @@ from tomcat_speech.models.train_and_test_models import *
 from tomcat_speech.models.plot_training import *
 from tomcat_speech.models.multimodal_models import *
 
-from tomcat_speech.data_prep.data_prep_helpers import *
-from tomcat_speech.data_prep.data_prep_helpers import make_acoustic_dict
+sys.path.append("../multimodal_data_preprocessing")
+from utils.data_prep_helpers import (
+    MultitaskObject,
+    Glove,
+    make_glove_dict,
+    MultitaskTestObject,
+)
+from prep_data import make_acoustic_dict
+
+# from tomcat_speech.data_prep.data_prep_helpers import *
+# from tomcat_speech.data_prep.data_prep_helpers import make_acoustic_dict
 
 import tomcat_speech.data_prep.asist_data.sentiment_score_prep as score_prep
-import tomcat_speech.data_prep.asist_data.asist_prep as asist_prep
+import tomcat_speech.data_prep.asist_data.asist_dataset_creation as asist_prep
 
 # import parameters for model
 # comment or uncomment as needed
