@@ -34,6 +34,8 @@ else:
     num_embeddings = None
     pretrained_embeddings = None
 
+all_best_f1s = []
+
 # this assumes that the parameters included in the grid search are
 #   LR
 #   Dropout
@@ -73,8 +75,13 @@ for l_rate in params.lr:
                         print(this_model_params)
 
                         if not single_task:
-                            train_multitask(data, loss_fx, sampler, device, output_path, config, num_embeddings, pretrained_embeddings, extra_params=this_model_params)
+                            best_f1s = train_multitask(data, loss_fx, sampler, device, output_path, config, num_embeddings, pretrained_embeddings, extra_params=this_model_params)
                         else:
-                            train_single_task(data, loss_fx, sampler, device, output_path, config, num_embeddings, pretrained_embeddings, extra_params=this_model_params)
+                            best_f1s = train_single_task(data, loss_fx, sampler, device, output_path, config, num_embeddings, pretrained_embeddings, extra_params=this_model_params)
 
+                        all_best_f1s.append(best_f1s)
+
+with open(f"{output_path}/grid_search_results.csv", 'w') as wf:
+    for item in all_best_f1s:
+        wf.write(f'{",".join(item)}\n')
 

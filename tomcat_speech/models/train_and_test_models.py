@@ -173,6 +173,7 @@ def train_and_predict(
         train_state["tasks"].append(dset.task_num)
         train_state["train_avg_f1"][dset.task_num] = []
         train_state["val_avg_f1"][dset.task_num] = []
+        train_state["val_best_f1"].append(0)
 
     for epoch_index in range(num_epochs):
 
@@ -236,6 +237,8 @@ def train_and_predict(
             print(f"Val weighted f-score for task {task}: {task_avg_f1}")
             # add val f1 to train state
             train_state["val_avg_f1"][task].append(task_avg_f1[2])
+            if task_avg_f1[2] > train_state["val_best_f1"][task]:
+                train_state["val_best_f1"][task] = task_avg_f1[2]
 
         # every 5 epochs, print out a classification report on validation set
         if epoch_index % 5 == 0:
@@ -502,6 +505,7 @@ def make_train_state(learning_rate, model_save_file, early_stopping_criterion):
         "val_loss": [],
         "val_acc": [],
         "val_avg_f1": {},
+        "val_best_f1": [],
         "best_val_loss": [],
         "best_val_acc": [],
         "test_avg_f1": {},

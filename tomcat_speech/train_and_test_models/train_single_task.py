@@ -172,6 +172,8 @@ def train_single_task(all_data_list, loss_fx, sampler, device, output_path, conf
             save_name=f"{item_output_path}/avg-f1_task-{item}.png",
         )
 
+    return train_state["val_best_f1"]
+
 
 if __name__ == "__main__":
     # import parameters for model
