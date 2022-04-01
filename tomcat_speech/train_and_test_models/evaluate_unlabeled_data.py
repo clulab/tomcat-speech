@@ -7,6 +7,7 @@ import sys
 import os
 import time
 
+import pandas as pd
 import torch
 import numpy as np
 from datetime import date
@@ -156,13 +157,16 @@ if __name__ == "__main__":
                 config.model_params.early_stopping_criterion,
             )
 
+            # get order of predictions
+            ordered_ids = [item['audio_id'] for item in used_ds]
+
             # get predictions
             ordered_predictions, ordered_penult_lyrs = multitask_predict_without_gold_labels(
                 multitask_model,
                 used_ds,
                 config.model_params.batch_size,
                 device,
-                num_predictions=5,
+                num_predictions=2,
                 avgd_acoustic=avgd_acoustic_in_network,
                 use_speaker=config.model_params.use_speaker,
                 use_gender=config.model_params.use_gender,
@@ -170,9 +174,17 @@ if __name__ == "__main__":
                 return_penultimate_layer=True,
             )
 
+            all_preds = {}
             for pred_type in ordered_predictions.keys():
+                all_preds[pred_type] = []
                 print(pred_type)
                 print("--------------------")
                 for group_pred in ordered_predictions[pred_type]:
                     for preds in group_pred:
+                        all_preds[pred_type].append(preds.index(max(preds)))
                         print(preds.index(max(preds)))
+
+            data_to_save = pd.DataFrame(all_preds)
+            data_to_save.columns = ['emotion', 'trait']
+            data_to_save['audio_id'] = ordered_ids
+            data_to_save.to_csv(f"../../PROJECTS/ToMCAT/Evaluating_modelpredictions/data_from_speechAnalyzer/used_for_evaluating_model_results/all_preds_no_classweights.csv", index=False)
