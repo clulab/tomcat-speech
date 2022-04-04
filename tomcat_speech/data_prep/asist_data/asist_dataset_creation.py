@@ -8,8 +8,11 @@ import numpy as np
 import functools
 import operator
 import random
+import sys
 
-from tomcat_speech.data_prep.data_prep_helpers import (
+# import MultitaskObject and Glove from preprocessing code
+sys.path.append("../multimodal_data_preprocessing")
+from utils.data_prep_helpers import (
     MinMaxScaleRange,
     clean_up_word,
     get_avg_vec,
@@ -66,10 +69,7 @@ class AsistDataset(Dataset):
             self.get_min_max_scales()
 
         self.skipped_files = []
-        # Tests gender classifier:print('start')
 
-        # self.x_acoustic, self.x_glove, self.x_speaker, self.x_utt_lengths = self.combine_acoustic_and_glove()
-        # Tests gender classifierprint('end')
         if transcript_type.lower() == "zoom":
             (
                 self.x_acoustic,
@@ -171,7 +171,6 @@ class AsistDataset(Dataset):
         This makes each utterance its own data point; does NOT use conversational structure
         Doing this so that the data may be put into existing networks 8.27
         """
-        print("Data prep and normalization starting")
 
         # set holders for acoustic, words, and speakers
         acoustic_data = []
@@ -232,7 +231,6 @@ class AsistDataset(Dataset):
                             utt_wds[i] = self.glove.wd2idx["<UNK>"]
 
                     # save the acoustic information in remaining columns
-                    # todo: verify this works
                     row_vals = row.values[:-start_idx].tolist()
 
                     if self.sequence_prep == "truncate":
@@ -267,13 +265,6 @@ class AsistDataset(Dataset):
             acoustic_data = torch.tensor(acoustic_data)
             ordered_words = torch.tensor(ordered_words)
 
-        print("Acoustic data size is: " + str(acoustic_data.shape))
-        print("Ordered words is: " + str(ordered_words.shape))
-        print("Ordered speakers size is: " + str(len(ordered_speakers)))
-        print("Utterance lengths size is: " + str(len(utt_lengths)))
-
-        print("Data prep and normalization complete")
-
         # return acoustic info, words indices, speaker
         return acoustic_data, ordered_words, ordered_speakers, utt_lengths
 
@@ -281,7 +272,6 @@ class AsistDataset(Dataset):
         """
         Prepare the data when it is word-level aligned
         """
-        print("Data prep and normalization starting")
 
         # set holders for acoustic, words, and speakers
         acoustic_data = []
@@ -316,10 +306,8 @@ class AsistDataset(Dataset):
 
         all_speakers = sorted(list(set(speaker_list)))
 
-        print(self.valid_files)
         # iterate through items in the acoustic dict
         for key, item in self.acoustic_dict.items():
-            print(f"key is: {key}")
             # if the item has gold data
             if key in self.valid_files:
                 # set holders
@@ -405,13 +393,6 @@ class AsistDataset(Dataset):
             acoustic_data = torch.tensor(acoustic_data)
             ordered_words = torch.tensor(ordered_words)
 
-        print("Acoustic data size is: " + str(acoustic_data.shape))
-        print("Ordered words is: " + str(ordered_words.shape))
-        print("Ordered speakers size is: " + str(len(ordered_speakers)))
-        print("Utterance lengths size is: " + str(len(utt_lengths)))
-
-        print("Data prep and normalization complete")
-
         # return acoustic info, words indices, speaker
         return acoustic_data, ordered_words, ordered_speakers, utt_lengths
 
@@ -420,10 +401,6 @@ class AsistDataset(Dataset):
         Combine acoustic feats + glove indices (speaker info, too)
         :return: list of double of ([acoustic], [glove_index], [speaker])
         """
-        print("Data prep and normalization starting")
-        # print(self.acoustic_dict.keys())
-        # print(self.valid_files)
-        # sys.exit()
 
         # set holders for acoustic, words, and speakers
         acoustic_data = []
@@ -456,8 +433,6 @@ class AsistDataset(Dataset):
             if key in self.valid_files:
                 speaker_set = set(item["speaker"])
                 all_speakers = sorted([str(item) for item in speaker_set])
-                # print(all_speakers)
-                # sys.exit()
 
                 # prepare intermediate holders
                 intermediate_wds = []
@@ -470,15 +445,10 @@ class AsistDataset(Dataset):
                 for idx, row in item.iterrows():
                     # get the speaker
                     spkr = str(row["speaker"])
-                    # print(row)
-                    # sys.exit()
 
                     # todo: this also includes all researchers
                     #   should we remove them later?
                     intermediate_speakers.append(all_speakers.index(spkr))
-                    # print(spkr)
-                    # print(all_speakers.index(spkr))
-                    # sys.exit()
 
                     # get the word
                     utt = clean_up_word(row["utt"]).lower()
@@ -504,8 +474,6 @@ class AsistDataset(Dataset):
                         self.minmax_scale(row_vals, lower=0, upper=1)
                     # add acoustic information to intermediate holder
                     intermediate_acoustic.append(row_vals)
-                    # print(row_vals)
-                    # sys.exit()
 
                 # add information from intermediate holder to lists of all data
                 if self.sequence_prep == "truncate":
@@ -548,13 +516,6 @@ class AsistDataset(Dataset):
             ordered_speakers = torch.tensor(ordered_speakers)
             utt_lengths = torch.tensor(utt_lengths)
 
-        print("Acoustic data size is: " + str(acoustic_data.shape))
-        print("Ordered words is: " + str(ordered_words.shape))
-        print("Ordered speakers size is: " + str(ordered_speakers.shape))
-        print("Utterance lengths size is: " + str(utt_lengths.shape))
-
-        print("Data prep and normalization complete")
-
         # return acoustic info, words indices, speaker
         return acoustic_data, ordered_words, ordered_speakers, utt_lengths
 
@@ -572,7 +533,6 @@ class AsistDataset(Dataset):
         for key in self.acoustic_dict.keys():
             # if the sid has gold data, add it
             if key in self.valid_files:
-                print(key)
                 if key not in self.skipped_files:
                     y = ys[ys.index == key].overall.item()
                     ordered_ys.append(y)
@@ -596,31 +556,16 @@ class AsistDataset(Dataset):
 
         if self.ys_df:
             for i, item in enumerate(self.x_acoustic):
-                # todo: this should be fixed earlier in code
-                acoustic_length = len(item)
                 all_data.append(
-                    (
-                        item,
-                        self.x_glove[i],
-                        self.x_speaker[i],
-                        self.speaker_gender_data,
-                        self.y_data[i],
-                        self.x_utt_lengths[i],
-                        acoustic_length,
-                    )
-                )
-        else:
-            for i, item in enumerate(self.x_acoustic):
-                acoustic_length = len(item)
-                all_data.append(
-                    (
-                        item,
-                        self.x_glove[i],
-                        self.x_speaker[i],
-                        self.speaker_gender_data,
-                        self.x_utt_lengths[i],
-                        acoustic_length,
-                    )
+                    {
+                        "x_acoustic": item.clone().detach(),
+                        "x_utt": self.x_glove[i].clone().detach(),
+                        "x_speaker": self.x_speaker[i],
+                        "x_gender": self.speaker_gender_data,
+                        "ys": self.y_data[i],
+                        "utt_length": self.x_utt_lengths[i],
+                        "acoustic_length": len(item),
+                    }
                 )
 
         return all_data

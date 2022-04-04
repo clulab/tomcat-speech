@@ -25,7 +25,7 @@ def evaluate(
     avgd_acoustic=True,
     use_speaker=True,
     use_gender=False,
-    save_encoded_data=False
+    save_encoded_data=False,
 ):
     """
     Train_ds_list and val_ds_list are lists of MultTaskObject objects!
@@ -64,10 +64,18 @@ def evaluate(
         # get the task for this batch
         batch_task = tasks[batch_index]
 
-        batch_ids = batch['audio_id']
+        batch_ids = batch["audio_id"]
         ids_holder[batch_task].extend(batch_ids)
 
-        batch_acoustic, batch_text, batch_speakers, batch_genders, y_gold, batch_lengths, batch_acoustic_lengths = separate_data(batch, device)
+        (
+            batch_acoustic,
+            batch_text,
+            batch_speakers,
+            batch_genders,
+            y_gold,
+            batch_lengths,
+            batch_acoustic_lengths,
+        ) = separate_data(batch, device)
 
         if not use_speaker:
             batch_speakers = None
@@ -83,7 +91,7 @@ def evaluate(
                 length_input=batch_lengths,
                 gender_input=batch_genders,
                 task_num=tasks[batch_index],
-                save_encoded_data=save_encoded_data
+                save_encoded_data=save_encoded_data,
             )
         else:
             y_pred = classifier(
@@ -94,7 +102,7 @@ def evaluate(
                 acoustic_len_input=batch_acoustic_lengths,
                 gender_input=batch_genders,
                 task_num=tasks[batch_index],
-                save_encoded_data=save_encoded_data
+                save_encoded_data=save_encoded_data,
             )
 
         if save_encoded_data:
@@ -141,7 +149,7 @@ def evaluate(
         pickle.dump(gold_preds_ids, pfile)
 
     if save_encoded_data:
-        with open("output/encoded_output.pickle", 'wb') as pf:
+        with open("output/encoded_output.pickle", "wb") as pf:
             pickle.dump(preds_to_viz, pf)
 
 
@@ -159,7 +167,7 @@ def train_and_predict(
     use_speaker=True,
     use_gender=False,
     save_encoded_data=False,
-    loss_fx=None
+    loss_fx=None,
 ):
     """
     Train_ds_list and val_ds_list are lists of MultTaskObject objects!
@@ -195,7 +203,7 @@ def train_and_predict(
             train_state,
             mode="training",
             save_encoded_data=save_encoded_data,
-            loss_fx=loss_fx
+            loss_fx=loss_fx,
         )
 
         # add loss and accuracy to train state
@@ -224,7 +232,7 @@ def train_and_predict(
             train_state,
             mode="eval",
             save_encoded_data=save_encoded_data,
-            loss_fx=loss_fx
+            loss_fx=loss_fx,
         )
 
         # get precision, recall, f1 info
@@ -280,7 +288,7 @@ def run_model(
     train_state,
     mode="training",
     save_encoded_data=False,
-    loss_fx=None
+    loss_fx=None,
 ):
     """
     Run the model in either training or testing within a single epoch
@@ -335,12 +343,14 @@ def run_model(
             avgd_acoustic,
             tasks,
             datasets_list,
-            #save_encoded_data=save_encoded_data #todo: add me
+            # save_encoded_data=save_encoded_data #todo: add me
         )
 
         # calculate loss
         if loss_fx:
-            loss = loss_fx(batch_pred, y_gold) * datasets_list[batch_task].loss_multiplier
+            loss = (
+                loss_fx(batch_pred, y_gold) * datasets_list[batch_task].loss_multiplier
+            )
         else:
             loss = (
                 datasets_list[batch_task].loss_fx(batch_pred, y_gold)
@@ -382,7 +392,7 @@ def get_predictions(
     avgd_acoustic,
     tasks,
     datasets_list,
-    save_encoded_data=False
+    save_encoded_data=False,
 ):
     """
     Get predictions from data
@@ -418,7 +428,7 @@ def get_predictions(
             length_input=batch_lengths,
             gender_input=batch_genders,
             task_num=tasks[batch_index],
-            save_encoded_data=save_encoded_data
+            save_encoded_data=save_encoded_data,
         )
     else:
         y_pred = classifier(
@@ -429,7 +439,7 @@ def get_predictions(
             acoustic_len_input=batch_acoustic_lengths,
             gender_input=batch_genders,
             task_num=tasks[batch_index],
-            save_encoded_data=save_encoded_data
+            save_encoded_data=save_encoded_data,
         )
 
     batch_pred = y_pred[batch_task]
@@ -557,7 +567,8 @@ def update_train_state(model, train_state):
 
         # Stop early ?
         train_state["stop_early"] = (
-            train_state["early_stopping_step"] >= train_state["early_stopping_criterion"]
+            train_state["early_stopping_step"]
+            >= train_state["early_stopping_criterion"]
         )
 
     return train_state
@@ -1436,19 +1447,21 @@ def multitask_predict_without_gold_labels(
 
     # for each batch in the dataloader
     for batch_index, batch in enumerate(test_batches):
-        # compute the output
-        batch_acoustic = batch[0].to(device)
-        batch_text = batch[1].to(device)
-        batch_lengths = batch[-2].to(device)
-        batch_acoustic_lengths = batch[-1].to(device)
-        if use_speaker:
-            batch_speakers = batch[2].to(device)
-        else:
+
+        (
+            batch_acoustic,
+            batch_text,
+            batch_speakers,
+            batch_genders,
+            _,
+            batch_lengths,
+            batch_acoustic_lengths,
+        ) = separate_data(batch, device)
+
+        if not use_speaker:
             batch_speakers = None
 
-        if use_gender:
-            batch_genders = batch[3].to(device)
-        else:
+        if not use_gender:
             batch_genders = None
 
         if avgd_acoustic:
