@@ -17,6 +17,8 @@ from utils.data_prep_helpers import (
     clean_up_word,
     get_avg_vec,
     scale_feature,
+    get_acoustic_means,
+    transform_acoustic_item
 )
 
 
@@ -85,6 +87,9 @@ class AsistDataset(Dataset):
                 self.x_utt_lengths,
                 # self.x_speaker_gender, #sa
             ) = self.combine_acoustic_and_glove_wd_level()
+
+        # get acoustic means, stdev
+        self.x_acoustic_means, self.x_acoustic_stdev = get_acoustic_means(self.x_acoustic)
 
         # todo: we should get gender info on participants OR predict it
         # add call to wrapper function that calls the gender classifier
@@ -555,9 +560,12 @@ class AsistDataset(Dataset):
 
         if self.ys_df:
             for i, item in enumerate(self.x_acoustic):
+                acoustic_data = transform_acoustic_item(
+                    item, self.x_acoustic_means, self.x_acoustic_stdev
+                )
                 all_data.append(
                     {
-                        "x_acoustic": item.clone().detach(),
+                        "x_acoustic": acoustic_data.clone().detach(),
                         "x_utt": self.x_glove[i].clone().detach(),
                         "x_speaker": self.x_speaker[i],
                         "x_gender": self.speaker_gender_data,

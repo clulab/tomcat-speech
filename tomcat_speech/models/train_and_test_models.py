@@ -478,6 +478,10 @@ def separate_data(batch_of_data, device):
         except KeyError:
             y_gold = []
     else:
+        # get mean
+        
+        # get st dev
+
         batch_acoustic = batch_of_data["x_acoustic"].detach().to(device)
         batch_text = batch_of_data["x_utt"].detach().to(device)
         batch_speakers = batch_of_data["x_speaker"].to(device)
