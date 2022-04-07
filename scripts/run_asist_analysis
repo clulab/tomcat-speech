@@ -13,13 +13,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--glove_file",
         help="Path to Glove file",
-        default="data/glove.short.300d.punct.txt",
+        default="../../datasets/glove/glove.short.300d.punct.txt",
         nargs="?",
     )
     parser.add_argument(
         "--emotion_model",
         help="Path to saved model you would like to use in testing",
-        default="data/EMOTION_MODEL_FOR_ASIST_batch100_100hidden_2lyrs_lr0.01.pth",
+        default="output/data_testing/EmoPers_trained_model.pt",
         nargs="?",
     )
     parser.add_argument(

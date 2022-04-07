@@ -1,8 +1,11 @@
 import random
 import json
 import re
+import warnings
+
 import numpy as np
 import torch
+import sys
 
 from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDataset
 from tomcat_speech.models.train_and_test_models import (
@@ -38,9 +41,6 @@ def read_in_aligned_json(input_aligned_json):
     return list_of_json
 
 
-# make new version with Glove Obj
-
-
 def predict_with_model(list_of_json_objs, trained_model, glove, device, params):
 
     # set random seed
@@ -51,13 +51,12 @@ def predict_with_model(list_of_json_objs, trained_model, glove, device, params):
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
-
     # decide if you want to use avgd feats
     avgd_acoustic = params.model_params.avgd_acoustic or params.model_params.add_avging
 
     # get acoustic dict and utts dict
     acoustic_dict = get_data_from_json(list_of_json_objs, avgd_acoustic)
-    print("Acoustic dict created")
+
     # MAKE DATASET
     data = AsistDataset(
         acoustic_dict,
@@ -115,7 +114,6 @@ def get_json_output_of_speech_analysis(
     # get set of pretrained embeddings and their shape
     pretrained_embeddings = glove.data
     num_embeddings = pretrained_embeddings.size()[0]
-    print(f"shape of pretrained embeddings is: {data.glove.data.size()}")
 
     # create test model
     classifier = MultitaskModel(
@@ -130,7 +128,6 @@ def get_json_output_of_speech_analysis(
 
     prediction_json = predict_with_model(list_of_json_objs, classifier, glove, device, params)
     return prediction_json
-
 
 
 def save_json_predictions(prediction_json_list, savepath):
