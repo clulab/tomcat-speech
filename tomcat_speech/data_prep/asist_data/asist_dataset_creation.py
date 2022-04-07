@@ -108,8 +108,7 @@ class AsistDataset(Dataset):
 
     def get_min_max_scales(self):
         for df in self.acoustic_dict.values():
-
-            for row in df_subset.itertuples():
+            for row in df.itertuples():
                 for i, wd in enumerate(row):
                     if i >= self.cols_to_skip + 1:
                         self.min_max_scaler.update((i - (self.cols_to_skip + 1)), wd)
@@ -563,6 +562,18 @@ class AsistDataset(Dataset):
                         "x_speaker": self.x_speaker[i],
                         "x_gender": self.speaker_gender_data,
                         "ys": self.y_data[i],
+                        "utt_length": self.x_utt_lengths[i],
+                        "acoustic_length": len(item),
+                    }
+                )
+        else:
+            for i, item in enumerate(self.x_acoustic):
+                all_data.append(
+                    {
+                        "x_acoustic": item.clone().detach(),
+                        "x_utt": self.x_glove[i].clone().detach(),
+                        "x_speaker": self.x_speaker[i],
+                        "x_gender": self.speaker_gender_data,
                         "utt_length": self.x_utt_lengths[i],
                         "acoustic_length": len(item),
                     }

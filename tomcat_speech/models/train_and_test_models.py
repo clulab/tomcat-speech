@@ -2,6 +2,7 @@
 import pickle
 import sys
 import random
+import warnings
 from datetime import datetime
 
 import torch
@@ -470,18 +471,24 @@ def separate_data(batch_of_data, device):
         batch_text = batch_of_data[1].detach().to(device)
         batch_speakers = batch_of_data[2].to(device)
         batch_genders = batch_of_data[3].to(device)
-        y_gold = batch_of_data[4].detach().to(device)
         batch_lengths = batch_of_data[-2].to(device)
         batch_acoustic_lengths = batch_of_data[-1].to(device)
+        try:
+            y_gold = batch_of_data[4].detach().to(device)
+        except KeyError:
+            y_gold = []
     else:
         batch_acoustic = batch_of_data["x_acoustic"].detach().to(device)
         batch_text = batch_of_data["x_utt"].detach().to(device)
         batch_speakers = batch_of_data["x_speaker"].to(device)
         batch_genders = batch_of_data["x_gender"].to(device)
-        # todo add flexibilty for other tasks in same dataset
-        y_gold = batch_of_data["ys"][0].detach().to(device)
         batch_lengths = batch_of_data["utt_length"].to(device)
         batch_acoustic_lengths = batch_of_data["acoustic_length"].to(device)
+        try:
+            # todo add flexibilty for other tasks in same dataset
+            y_gold = batch_of_data["ys"][0].detach().to(device)
+        except KeyError:
+            y_gold = []
 
     return (
         batch_acoustic,
