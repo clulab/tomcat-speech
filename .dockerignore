@@ -9,6 +9,8 @@
 !/mmc_server.py
 !/tomcat_speech
 !/scripts/**
+!/data
+!/multimodal_data_preprocessing
 
 # Ignore unnecessary files inside allowed directories
 # This should go after the allowed directories
