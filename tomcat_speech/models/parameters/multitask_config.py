@@ -34,7 +34,8 @@ if USE_SERVER:
     load_path = "/data/nlp/corpora/MM/pickled_data/distilbert_custom_feats"
 else:
     # path from which to load pickled data files
-    load_path = "../../datasets/pickled_data/IS13_glove_GOLD"
+    # load_path = "../../datasets/pickled_data/IS13_glove_GOLD"
+    load_path = "../../datasets/pickled_data"
     # load_path = "../../datasets/pickled_data/distilbert_custom_feats"
 
 # set dir to save full experiments
@@ -48,6 +49,9 @@ chalearn_predtype = "max_class"
 # feature_set = "combined_features_distilbert_dict"
 feature_set = "IS13_glove_dict"
 
+# give a list of the datasets to be used
+datasets = ["cdc", "firstimpr", "meld", "mosi", "ravdess"]
+
 num_feats = 130
 if feature_set.lower() == "is13":
     num_feats = 130
@@ -59,6 +63,8 @@ model_params = Namespace(
     use_gradnorm=False,
     # whether to use data sampler
     use_sampler=False,
+    # whether to use class weights
+    use_clsswts=False,
     # decide whether to use early, intermediate, or late fusion
     fusion_type="int",  # int, late, early
     # consistency parameters
@@ -76,6 +82,8 @@ model_params = Namespace(
     use_distilbert=False,
     # set whether to have a single loss function
     single_loss=False,
+    # whether to use loss multiplier by dataset size
+    loss_multiplier=False,
     # input dimension parameters
     text_dim=300,  # text vector length # 768 for bert/distilbert, 300 for glove
     short_emb_dim=30,  # length of trainable embeddings vec

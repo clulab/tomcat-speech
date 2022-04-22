@@ -22,11 +22,88 @@ from utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict
 from tomcat_speech.data_prep.ingest_data import *
 
 
-def load_modality_data(device, config):
+def load_modality_data(device, config, use_text=True, use_acoustic=True, use_spectrograms=False):
     """
     Load the modality-separated data
     """
-    pass
+    load_path = config.load_path
+    feature_set = config.feature_set
+    feature_type, embedding_type = feature_set.split("_")[:2]
+
+    all_datasets = {}
+
+    # iterate through datasets listed in config file
+    for dataset in config.datasets:
+        dataset = dataset.lower()
+        train_modalities = []
+        dev_modalities = []
+        test_modalities = []
+        if use_text:
+            text_base = f"{load_path}/field_separated_data/text_data/{embedding_type}/{dataset}_{embedding_type}"
+            train_text = pickle.load(open(f"{text_base}_train.pickle", "rb"))
+            train_modalities.append(train_text)
+            dev_text = pickle.load(open(f"{text_base}_dev.pickle", "rb"))
+            dev_modalities.append(dev_text)
+            test_text = pickle.load(open(f"{text_base}_test.pickle", "rb"))
+            test_modalities.append(test_text)
+        if use_acoustic:
+            audio_base = f"{load_path}/field_separated_data/acoustic_data/{feature_type}/{dataset}_{feature_type}"
+            train_audio = pickle.load(open(f"{audio_base}_train.pickle", "rb"))
+            train_modalities.append(train_audio)
+            dev_audio = pickle.load(open(f"{audio_base}_dev.pickle", "rb"))
+            dev_modalities.append(dev_audio)
+            test_audio = pickle.load(open(f"{audio_base}_dev.pickle", "rb"))
+            test_modalities.append(test_audio)
+        if use_spectrograms:
+            spec_base = f"{load_path}/field_separated_data/spectrogram_data/{dataset}_spec"
+            train_spec = pickle.load(open(f"{spec_base}_train.pickle", "rb"))
+            train_modalities.append(train_spec)
+            dev_spec = pickle.load(open(f"{spec_base}_dev.pickle", "rb"))
+            dev_modalities.append(dev_spec)
+            test_spec = pickle.load(open(f"{spec_base}_test.pickle", "rb"))
+            test_modalities.append(test_spec)
+
+        # add ys data and classweights to this
+        ys_base = f"{load_path}/field_separated_data/ys_data/{dataset}_ys"
+        ys_train = pickle.load(open(f"{ys_base}_train.pickle", "rb"))
+        train_modalities.append(ys_train)
+        ys_dev = pickle.load(open(f"{ys_base}_dev.pickle", "rb"))
+        dev_modalities.append(ys_dev)
+        ys_test = pickle.load(open(f"{ys_base}_test.pickle", "rb"))
+        test_modalities.append(ys_test)
+
+        # combine modalities
+        if len(train_modalities) < 2:
+            exit("No modalities data has been loaded; please select at least one modality to load")
+
+        train_data = combine_modality_data(train_modalities)
+        print(train_data[0])
+        exit()
+        dev_data = combine_modality_data(dev_modalities)
+        test_data = combine_modality_data(test_modalities)
+
+        clsswts_base = f"{load_path}/field_separated_data/class_weights/{dataset}_clsswts.pickle"
+        clsswts = pickle.load(open(clsswts_base, "rb"))
+
+
+def combine_modality_data(list_of_modality_data):
+    """
+    Use a list of lists of dicts (each of which contains info on a modality)
+    to get a single list of dicts for the dataset
+    return this single list of dicts
+    """
+    all_data = {}
+
+    # get all utterance IDs
+    for item in list_of_modality_data[0]:
+        all_data[item['audio_id']] = item
+
+    for dataset in list_of_modality_data[1:]:
+        for item in dataset:
+            all_data[item['audio_id']].update(item)
+
+    # return a list of this
+    return list(all_data.values())
 
 
 def load_data(device, config):
@@ -34,42 +111,75 @@ def load_data(device, config):
     load_path = config.load_path
     feature_set = config.feature_set
 
+    task_num = 0
+
+    total_data_size = 0
+
+    # get a dict to hold all datasets
+    all_datasets = {}
+
+    # iterate through datasets listed in config file
+    for dataset in config.datasets:
+        dataset = dataset.lower()
+        train_ds = pickle.load(open(f"{load_path}/{dataset}_{feature_set}_train.pickle", "rb"))
+        dev_ds = pickle.load(open(f"{load_path}/{dataset}_{feature_set}_dev.pickle", "rb"))
+        test_ds = pickle.load(open(f"{load_path}/{dataset}_{feature_set}_test.pickle", "rb"))
+        clsswts = pickle.load(open(f"{load_path}/{dataset}_{feature_set}_clsswts.pickle", "rb"))
+
+        dset_loss_func = torch.nn.CrossEntropyLoss(
+            weight=clsswts.to(device) if config.model_params.use_clsswts else None,
+            reduction="mean"
+        )
+
+        dset_obj = MultitaskObject(
+            train_ds,
+            dev_ds,
+            test_ds,
+            dset_loss_func,
+            task_num = task_num
+        )
+
+        # add this to dict of datasets
+        all_datasets[task_num] = dset_obj
+
+        # increment task number
+        task_num += 1
+
+        # add to total data size
+        total_data_size += len(cdc_train_ds)
+
+
+
     # import cdc data
-    # cdc_train_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_train.pickle", "rb"))
-    # cdc_dev_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_dev.pickle", "rb"))
-    # cdc_test_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_test.pickle", "rb"))
-    # cdc_weights = pickle.load(open(f"{load_path}/cdc_{feature_set}_clsswts.pickle", "rb"))
-    # print("CDC data loaded")
-    #
-    # # import cmu mosi data
-    # mosi_train_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_train.pickle", "rb"))
-    # mosi_dev_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_dev.pickle", "rb"))
-    # mosi_test_ds = pickle.load(open(f"{load_path}/mosi_{feature_set}_test.pickle", "rb"))
-    # mosi_weights = pickle.load(open(f"{load_path}/mosi_{feature_set}_clsswts.pickle", "rb"))
-    # print("CMU MOSI data loaded")
+    if 'cdc' in config.datasets.lower():
+        cdc_train_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_train.pickle", "rb"))
+        cdc_dev_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_dev.pickle", "rb"))
+        cdc_test_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_test.pickle", "rb"))
+        cdc_weights = pickle.load(open(f"{load_path}/cdc_{feature_set}_clsswts.pickle", "rb"))
+        print("CDC data loaded")
 
-    # import firstimpr data
-    firstimpr_train_ds = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_train.pickle", "rb"))
-    firstimpr_dev_ds = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_dev.pickle", "rb"))
-    firstimpr_test_ds = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_test.pickle", "rb"))
-    # firstimpr_weights = pickle.load(open(f"{load_path}/firstimpr_{feature_set}_clsswts.pickle", "rb"))
-    print("FirstImpr data loaded")
+        # # add loss function for cdc
+        cdc_loss_func = torch.nn.CrossEntropyLoss(
+            weight=cdc_weights.to(device) if config.model_params.use_clsswts else None,
+            reduction="mean"
+        )
 
-    # import meld data
-    meld_train_ds = pickle.load(open(f"{load_path}/meld_{feature_set}_train.pickle", "rb"))
-    meld_dev_ds = pickle.load(open(f"{load_path}/meld_{feature_set}_dev.pickle", "rb"))
-    meld_test_ds = pickle.load(open(f"{load_path}/meld_{feature_set}_test.pickle", "rb"))
-    # meld_weights = pickle.load(open(f"{load_path}/meld_{feature_set}_clsswts.pickle", "rb"))
-    print("MELD data loaded")
+        cdc_obj = MultitaskObject(
+            cdc_train_ds,
+            cdc_dev_ds,
+            cdc_test_ds,
+            cdc_loss_func,
+            task_num=task_num
+        )
 
-    # # import ravdess data
-    # ravdess_train_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_train.pickle", "rb"))
-    # ravdess_dev_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_dev.pickle", "rb"))
-    # ravdess_test_ds = pickle.load(open(f"{load_path}/ravdess_{feature_set}_test.pickle", "rb"))
-    # ravdess_weights = pickle.load(open(f"{load_path}/ravdess_{feature_set}_clsswts.pickle", "rb"))
-    # print("RAVDESS data loaded")
+    all_data_list = [all_datasets[item] for item in sorted(all_datasets.keys())]
 
-    # if not using distilbert embeddings
+    # optionally change loss multiplier
+    if config.model_params.loss_multiplier:
+        for obj in all_data_list:
+            obj.change_loss_multiplier(len(obj.train_ds)/float(total_data_size))
+
+   # if not using distilbert embeddings
     if not config.model_params.use_distilbert:
         # make glove
         glove_dict = make_glove_dict(config.glove_path)
@@ -79,105 +189,6 @@ def load_data(device, config):
         pretrained_embeddings = glove.data
         num_embeddings = pretrained_embeddings.size()[0]
         print(f"shape of pretrained embeddings is: {glove.data.size()}")
-
-    # get number of items in all datasets
-    # total_data_size = len(cdc_train_ds) + len(mosi_train_ds) + len(firstimpr_train_ds) + \
-    #                   len(meld_train_ds) + len(ravdess_train_ds)
-
-    # # add loss function for cdc
-    # cdc_loss_func = torch.nn.CrossEntropyLoss(
-    #     weight=cdc_weights.to(device),
-    #     reduction="mean"
-    # )
-    #
-    # cdc_obj = MultitaskObject(
-    #     cdc_train_ds,
-    #     cdc_dev_ds,
-    #     cdc_test_ds,
-    #     cdc_loss_func,
-    #     task_num=0
-    # )
-
-    # cdc_obj.change_loss_multiplier(2)
-    # cdc_obj.change_loss_multiplier(len(cdc_train_ds) / float(total_data_size))
-
-    # # add loss func, multitask obj for cmu mosi
-    # mosi_loss_func = torch.nn.CrossEntropyLoss(
-    #     weight=mosi_weights.to(device),
-    #     reduction="mean"
-    # )
-    #
-    # mosi_obj = MultitaskObject(
-    #     mosi_train_ds,
-    #     mosi_dev_ds,
-    #     mosi_test_ds,
-    #     mosi_loss_func,
-    #     task_num=1
-    # )
-
-    # mosi_obj.change_loss_multiplier(7)
-    # mosi_obj.change_loss_multiplier(len(mosi_train_ds) / float(total_data_size))
-
-    # add loss function for firstimpr
-    firstimpr_loss_func = torch.nn.CrossEntropyLoss(
-        # weight=firstimpr_weights.to(device),
-        reduction="mean"
-    )
-    # create multitask object
-    firstimpr_obj = MultitaskObject(
-        firstimpr_train_ds,
-        firstimpr_dev_ds,
-        firstimpr_test_ds,
-        firstimpr_loss_func,
-        task_num=1,
-    )
-
-    # firstimpr_obj.change_loss_multiplier(5)
-    # firstimpr_obj.change_loss_multiplier(len(firstimpr_train_ds) / float(total_data_size))
-
-    # # add loss function for meld
-    meld_loss_func = torch.nn.CrossEntropyLoss(
-        # weight=meld_weights.to(device),
-        reduction="mean"
-    )
-    # create multitask object
-    meld_obj = MultitaskObject(
-        meld_train_ds,
-        meld_dev_ds,
-        meld_test_ds,
-        meld_loss_func,
-        task_num=0,
-    )
-
-    # meld_obj.change_loss_multiplier(7)
-    # meld_obj.change_loss_multiplier(len(meld_train_ds) / float(total_data_size))
-
-    # # add loss function, multitask obj for ravdess
-    # ravdess_loss_func = torch.nn.CrossEntropyLoss(
-    #     weight=ravdess_weights.to(device),
-    #     reduction="mean"
-    # )
-    #
-    # ravdess_obj = MultitaskObject(
-    #     ravdess_train_ds,
-    #     ravdess_dev_ds,
-    #     ravdess_test_ds,
-    #     ravdess_loss_func,
-    #     task_num=4
-    # )
-
-    # ravdess_obj.change_loss_multiplier(2)
-    # ravdess_obj.change_loss_multiplier(len(ravdess_train_ds) / float(total_data_size))
-
-    # set all data list
-    all_data_list = [
-        # cdc_obj,
-        # mosi_obj,
-        meld_obj,
-        firstimpr_obj,
-        # meld_obj,
-        # ravdess_obj
-    ]
 
     # create a single loss function
     if config.model_params.single_loss:
@@ -306,6 +317,8 @@ if __name__ == "__main__":
     import tomcat_speech.models.parameters.multitask_config as config
 
     device = set_cuda_and_seeds(config)
+
+    data = load_modality_data(device, config, use_text=True, use_acoustic=True, use_spectrograms=False)
 
     if not config.model_params.use_distilbert:
         data, loss_fx, sampler, num_embeddings, pretrained_embeddings = load_data(device, config)
