@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tomcat_speech.models.audio_model_bases import SpecCNNBase
+
 
 class EarlyFusionMultimodalModel(nn.Module):
     """
@@ -144,6 +146,9 @@ class IntermediateFusionMultimodalModel(nn.Module):
         # get number of output dims
         self.out_dims = params.output_dim
 
+        # whether spectrograms are included 
+        self.spec = params.use_spec
+
         # if we feed text through additional layer(s)
         if not use_distilbert:
             self.text_input_size = params.text_dim + params.short_emb_dim
@@ -166,6 +171,10 @@ class IntermediateFusionMultimodalModel(nn.Module):
             batch_first=True,
             bidirectional=True,
         )
+
+        # whether to use a cnn over spectrogram features
+        if params.use_spec: 
+            self.spec_cnn = SpecCNNBase(params)
 
         # set the size of the input into the fc layers
         if params.avgd_acoustic or params.add_avging:
@@ -219,6 +228,9 @@ class IntermediateFusionMultimodalModel(nn.Module):
             )
             self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
 
+        if params.use_spec:
+            self.fc_input_dim = self.fc_input_dim + self.spec_out_dim
+
         # initialize fully connected layers
         self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
         # self.fc_batch_norm = nn.BatchNorm1d(params.fc_hidden_dim)
@@ -233,6 +245,7 @@ class IntermediateFusionMultimodalModel(nn.Module):
         length_input=None,
         acoustic_len_input=None,
         gender_input=None,
+        spec_input=None,
         get_prob_dist=False,
         save_encoded_data=False
     ):
@@ -298,6 +311,11 @@ class IntermediateFusionMultimodalModel(nn.Module):
             inputs = torch.cat((encoded_acoustic, encoded_text, gender_embs), 1)
         else:
             inputs = torch.cat((encoded_acoustic, encoded_text), 1)
+        
+        # use spectrograms if needed 
+        if spec_input is not None:
+            spec_out = self.spec_cnn(spec_input)
+            inputs = torch.cat((inputs, spec_out), 1)
 
         # use pooled, squeezed feats as input into fc layers
         output = torch.tanh(F.dropout(self.fc1(inputs), 0.5))

@@ -121,3 +121,80 @@ class AcousticOnlyModel(nn.Module):
 
         # return the output
         return output
+
+class SpecCNNBase(nn.Module):
+    """
+    A CNN base to use with spectrogram data; DOES NOT contain any linear layers 
+    """
+    def __init__(self, params):
+        super(SpecCNNBase, self).__init__()
+
+        self.spec_dim = 512  # todo: check this number 
+
+        self.output_dim = params.spec_out_dim 
+
+        # kernels for each layer
+        self.k1_size = params.kernel_1_size
+        self.k2_size = params.kernel_2_size
+        self.k3_size = params.kernel_3_size
+
+        # number of output channels from conv layers
+        self.out_channels = params.out_channels
+
+        # word embeddings
+        self.conv1 = nn.Conv1d(self.spec_dim, self.out_channels, self.k1_size)
+        self.maxconv1 = nn.MaxPool1d(kernel_size=self.k1_size)
+        self.conv2 = nn.Conv1d(self.spec_dim, self.out_channels, self.k2_size)
+        self.maxconv2 = nn.MaxPool1d(kernel_size=self.k2_size)
+        self.conv3 = nn.Conv1d(self.spec_dim, self.out_channels, self.k3_size)
+        self.maxconv3 = nn.MaxPool1d(kernel_size=self.k3_size)
+    
+    def forward(self, spec_input):
+        inputs = spec_input.permute(0, 2, 1)
+
+        # feed data into convolutional layers
+        conv1_out = F.leaky_relu(self.conv1(inputs))
+        feats1 = F.max_pool1d(conv1_out, 5, stride=1)
+
+        conv2_out = F.leaky_relu(self.conv2(inputs))
+        feats2 = F.max_pool1d(conv2_out, 4, stride=1)
+
+        conv3_out = F.leaky_relu(self.conv3(inputs))
+        feats3 = F.max_pool1d(conv3_out, 3, stride=1)
+
+        # combine output of convolutional layers
+        intermediate = torch.cat((feats1, feats2, feats3), 1)
+
+        # feats6
+        all_feats = F.max_pool1d(intermediate, intermediate.size(dim=2)).squeeze(dim=2)
+
+        return all_feats
+
+
+class SpecOnlyCNN(nn.Module):
+    """
+    A CNN with multiple input channels with different kernel size operating over input
+    Used with only spectrogram modality.
+    """
+    def __init__(self, params):
+        super(SpecOnlyCNN, self).__init__()
+
+        # get base cnn 
+        self.cnn = SpecCNNBase(params)
+
+        # fully connected layers
+        self.fc1 = nn.Linear(self.out_channels * 3, params.text_cnn_hidden_dim)
+        self.fc2 = nn.Linear(params.text_cnn_hidden_dim, self.output_dim)
+
+    def forward(
+        self,
+        spec_input
+    ):
+        all_feats = self.cnn(spec_input)
+
+        # feed this through fully connected layer
+        fc1_out = torch.tanh(self.fc1((F.dropout(all_feats, self.dropout))))
+
+        output = self.fc2(fc1_out)
+
+        return output.squeeze(dim=1)

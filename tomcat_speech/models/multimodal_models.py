@@ -3,7 +3,7 @@ import sys
 
 import torch.nn as nn
 
-from tomcat_speech.models.audio_model_bases import AcousticOnlyModel
+from tomcat_speech.models.audio_model_bases import AcousticOnlyModel, SpecCNNBase, SpecOnlyCNN
 from tomcat_speech.models.model_prediction_layers import PredictionLayer, TextPlusPredictionLayer, AcousticPlusPredictionLayer
 from tomcat_speech.models.multimodal_model_bases import IntermediateFusionMultimodalModel, EarlyFusionMultimodalModel, LateFusionMultimodalModel, MultimodalBaseDuplicateInput
 from tomcat_speech.models.text_model_bases import TextOnlyModel
@@ -39,6 +39,8 @@ class MultitaskModel(nn.Module):
             self.base = TextOnlyModel(
                 params, num_embeddings, pretrained_embeddings, use_distilbert
             )
+        elif params.spec_only is True:
+            self.base = SpecOnlyCNN(params)
         else:
             if params.fusion_type.lower() == "early":
                 self.base = EarlyFusionMultimodalModel(
