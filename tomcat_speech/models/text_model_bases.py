@@ -229,6 +229,69 @@ class TextOnlyRNN(nn.Module):
         # return the output
         return output
 
+class TextRNNBase(nn.Module):
+    """
+    The text-rnn base for intermediate fusion+ models
+    """
+    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None, use_distilbert=False):
+        super(TextRNNBase, self).__init__()
+
+        self.text_dim = params.text_dim
+        self.num_embeddings = num_embeddings
+        self.text_gru_hidden_dim = params.text_gru_hidden_dim
+
+        # if we feed text through additional layer(s)
+        if not use_distilbert:
+            self.text_input_size = params.text_dim + params.short_emb_dim
+        else:
+            self.text_input_size = params.text_dim
+
+        self.text_rnn = nn.LSTM(
+            input_size=self.text_input_size,
+            hidden_size=params.text_gru_hidden_dim,
+            num_layers=params.num_gru_layers,
+            batch_first=True,
+            bidirectional=True,
+        )
+        # self.text_batch_norm = nn.BatchNorm1d(num_features=params.text_gru_hidden_dim)
+
+        # distilbert vs glove initialization
+        self.use_distilbert = use_distilbert
+
+        if not use_distilbert:
+            # initialize word embeddings
+            self.embedding = nn.Embedding(
+                num_embeddings, self.text_dim, _weight=pretrained_embeddings
+            )
+            self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
+
+    def forward(self, 
+        text_input,
+        length_input=None,
+    ):
+        # using pretrained embeddings, so detach to not update weights
+        # embs: (batch_size, seq_len, emb_dim)
+        if not self.use_distilbert:
+            embs = F.dropout(self.embedding(text_input), 0.1).detach()
+
+            short_embs = F.dropout(self.short_embedding(text_input), 0.1)
+
+            all_embs = torch.cat((embs, short_embs), dim=2)
+        else:
+            all_embs = text_input
+
+        # flatten_parameters() decreases memory usage
+        self.text_rnn.flatten_parameters()
+
+        packed = nn.utils.rnn.pack_padded_sequence(
+            all_embs, length_input, batch_first=True, enforce_sorted=False
+        )
+
+        # feed embeddings through GRU
+        packed_output, (hidden, cell) = self.text_rnn(packed)
+
+        return hidden[-1]
+
 
 class TextOnlyModel(nn.Module):
     """
