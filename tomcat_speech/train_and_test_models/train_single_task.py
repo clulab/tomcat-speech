@@ -77,7 +77,8 @@ def load_data(device, config):
 
 
 def train_single_task(all_data_list, loss_fx, sampler, device, output_path, config,
-                    num_embeddings=None, pretrained_embeddings=None, extra_params=None):
+                    num_embeddings=None, pretrained_embeddings=None, extra_params=None,
+                    pretrained_model=None):
     if extra_params:
         model_params = extra_params
     else:
@@ -117,6 +118,11 @@ def train_single_task(all_data_list, loss_fx, sampler, device, output_path, conf
         params=task_model.parameters(),
         weight_decay=model_params.weight_decay,
     )
+
+    # if we are loading pretrained files for fine-tuning, add these here
+    if pretrained_model is not None:
+        task_model.load_state_dict(pretrained_model['model_state_dict'])
+        optimizer.load_state_dict(pretrained_model['optimizer_state_dict'])
 
     # set the classifier(s) to the right device
     multitask_model = task_model.to(device)
@@ -206,9 +212,16 @@ if __name__ == "__main__":
     # copy the config file into the experiment directory
     shutil.copyfile(config.CONFIG_FILE, os.path.join(output_path, "config.py"))
 
+    # get pretrained model if fine-tuning
+    if config.pretrained_model is not None:
+        pretrained = torch.load(config.pretrained_model, map_location=device)
+    else:
+        pretrained = None
+
     # add stdout to a log file
     with open(os.path.join(output_path, "log"), "a") as f:
         if not config.DEBUG:
             sys.stdout = f
 
-            train_single_task(data, loss_fx, sampler, device, output_path, config, num_embeddings, pretrained_embeddings)
+            train_single_task(data, loss_fx, sampler, device, output_path, config, num_embeddings,
+                              pretrained_embeddings, pretrained_model=pretrained)

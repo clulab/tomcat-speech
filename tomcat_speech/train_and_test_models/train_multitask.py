@@ -4,41 +4,49 @@ import pickle
 import shutil
 import sys
 import os
+
+#sys.path.append("/home/u18/jmculnan/github/tomcat-speech")
 import torch
 import numpy as np
+import torch.nn as nn
 from datetime import date
 import random
 
-from tomcat_speech.data_prep.samplers import RandomOversampler
+# from tomcat_speech.data_prep.samplers import RandomOversampler
 from tomcat_speech.models.train_and_test_models import train_and_predict, make_train_state
 from tomcat_speech.models.multimodal_models import MultitaskModel
 from tomcat_speech.models.plot_training import *
 from tomcat_speech.train_and_test_models.train_and_test_utils import set_cuda_and_seeds, select_model
 
 # import MultitaskObject and Glove from preprocessing code
-sys.path.append("../multimodal_data_preprocessing")
-from utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict
+sys.path.append("/home/jculnan/github/multimodal_data_preprocessing")
+from utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict #, convert_to_ternary
 
 from tomcat_speech.data_prep.ingest_data import *
 
 
-def load_modality_data(device, config, use_text=True, use_acoustic=True, use_spectrograms=False):
+def load_modality_data(device, config, use_text=True, use_acoustic=True):
     """
     Load the modality-separated data
     """
+    use_spectrograms = config.model_params.use_spec
     load_path = config.load_path
     feature_set = config.feature_set
     feature_type, embedding_type = feature_set.split("_")[:2]
 
     all_datasets = {}
+    task_num = 0
+    total_data_size = 0
 
     # iterate through datasets listed in config file
     for dataset in config.datasets:
         dataset = dataset.lower()
+        print(f"Now loading dataset {dataset}")
         train_modalities = []
         dev_modalities = []
         test_modalities = []
         if use_text:
+            print(f"Loading Text Features for embedding type {embedding_type}")
             text_base = f"{load_path}/field_separated_data/text_data/{embedding_type}/{dataset}_{embedding_type}"
             train_text = pickle.load(open(f"{text_base}_train.pickle", "rb"))
             train_modalities.append(train_text)
@@ -46,44 +54,133 @@ def load_modality_data(device, config, use_text=True, use_acoustic=True, use_spe
             dev_modalities.append(dev_text)
             test_text = pickle.load(open(f"{text_base}_test.pickle", "rb"))
             test_modalities.append(test_text)
+            del train_text, dev_text, test_text
         if use_acoustic:
+            print(f"Loading Acoustic Features for acoustic set {feature_type}")
             audio_base = f"{load_path}/field_separated_data/acoustic_data/{feature_type}/{dataset}_{feature_type}"
             train_audio = pickle.load(open(f"{audio_base}_train.pickle", "rb"))
             train_modalities.append(train_audio)
             dev_audio = pickle.load(open(f"{audio_base}_dev.pickle", "rb"))
             dev_modalities.append(dev_audio)
-            test_audio = pickle.load(open(f"{audio_base}_dev.pickle", "rb"))
+            test_audio = pickle.load(open(f"{audio_base}_test.pickle", "rb"))
             test_modalities.append(test_audio)
+            del train_audio, dev_audio, test_audio
         if use_spectrograms:
+            print("Loading Spectrogram Features")
             spec_base = f"{load_path}/field_separated_data/spectrogram_data/{dataset}_spec"
+            print("Loading spec features for train set")
             train_spec = pickle.load(open(f"{spec_base}_train.pickle", "rb"))
+            print("Spec features loaded for train set")
+
+            longest = 300
+            x_replacer = torch.zeros(longest, 513)
+            for item in train_spec:
+                x = x_replacer.detach().clone()
+                x[:min(len(item['x_spec']), longest), :513] = item['x_spec'][:min(len(item['x_spec']), longest)]
+                item['x_spec'] = x
             train_modalities.append(train_spec)
+            del train_spec
+
+            print("Loading spec features for dev set")
             dev_spec = pickle.load(open(f"{spec_base}_dev.pickle", "rb"))
+            for item in dev_spec:
+                x = x_replacer.detach().clone()
+                x[:min(len(item['x_spec']), longest), :513] = item['x_spec'][:min(len(item['x_spec']), longest)]
+                item['x_spec'] = x
             dev_modalities.append(dev_spec)
+            del dev_spec
+
+            print("loading spec features for test set")
             test_spec = pickle.load(open(f"{spec_base}_test.pickle", "rb"))
+            for item in test_spec:
+                x = x_replacer.detach().clone()
+                x[:min(len(item['x_spec']), longest), :513] = item['x_spec'][:min(len(item['x_spec']), longest)]
+                item['x_spec'] = x
             test_modalities.append(test_spec)
+            del test_spec
 
         # add ys data and classweights to this
+        print(f"Loading gold labels for dataset {dataset}")
         ys_base = f"{load_path}/field_separated_data/ys_data/{dataset}_ys"
         ys_train = pickle.load(open(f"{ys_base}_train.pickle", "rb"))
-        train_modalities.append(ys_train)
         ys_dev = pickle.load(open(f"{ys_base}_dev.pickle", "rb"))
-        dev_modalities.append(ys_dev)
         ys_test = pickle.load(open(f"{ys_base}_test.pickle", "rb"))
+
+        #if dataset == "mosi":
+        #    ys_train = convert_to_ternary(ys_train)
+        #    ys_dev = convert_to_ternary(ys_dev)
+        #    ys_test = convert_to_ternary(ys_test)
+
+        train_modalities.append(ys_train)
+        dev_modalities.append(ys_dev)
         test_modalities.append(ys_test)
+
+        del ys_train, ys_dev, ys_test
 
         # combine modalities
         if len(train_modalities) < 2:
             exit("No modalities data has been loaded; please select at least one modality to load")
 
         train_data = combine_modality_data(train_modalities)
-        print(train_data[0])
-        exit()
         dev_data = combine_modality_data(dev_modalities)
         test_data = combine_modality_data(test_modalities)
 
+        del train_modalities, dev_modalities, test_modalities
+
         clsswts_base = f"{load_path}/field_separated_data/class_weights/{dataset}_clsswts.pickle"
         clsswts = pickle.load(open(clsswts_base, "rb"))
+
+        dset_loss_func = torch.nn.CrossEntropyLoss(
+            weight=clsswts.to(device) if config.model_params.use_clsswts else None,
+            reduction="mean"
+        )
+
+        all_datasets[task_num] = MultitaskObject(train_data,
+                                                 dev_data,
+                                                 test_data,
+                                                 dset_loss_func,
+                                                 task_num=task_num)
+        # increment task number
+        task_num += 1
+
+        # add to the total data size
+        total_data_size += len(train_data)
+
+    all_data_list = [all_datasets[item] for item in sorted(all_datasets.keys())]
+
+    del all_datasets
+
+    # optionally change loss multiplier
+    if config.model_params.loss_multiplier:
+        for obj in all_data_list:
+            obj.change_loss_multiplier(len(obj.train_ds) / float(total_data_size))
+
+    # if not using distilbert embeddings
+    if not config.model_params.use_distilbert:
+        # make glove
+        glove_dict = make_glove_dict(config.glove_path)
+        glove = Glove(glove_dict)
+
+        # get set of pretrained embeddings and their shape
+        pretrained_embeddings = glove.data
+        num_embeddings = pretrained_embeddings.size()[0]
+
+    # create a single loss function
+    if config.model_params.single_loss:
+        loss_fx = torch.nn.CrossEntropyLoss(reduction="mean")
+    else:
+        loss_fx = None
+
+    print(
+        "Model, loss function, and optimization created"
+    )
+
+    # set sampler
+    sampler = None
+    if not config.model_params.use_distilbert:
+        return all_data_list, loss_fx, sampler, num_embeddings, pretrained_embeddings
+    else:
+        return all_data_list, loss_fx, sampler
 
 
 def combine_modality_data(list_of_modality_data):
@@ -136,7 +233,7 @@ def load_data(device, config):
             dev_ds,
             test_ds,
             dset_loss_func,
-            task_num = task_num
+            task_num=task_num
         )
 
         # add this to dict of datasets
@@ -146,40 +243,16 @@ def load_data(device, config):
         task_num += 1
 
         # add to total data size
-        total_data_size += len(cdc_train_ds)
-
-
-
-    # import cdc data
-    if 'cdc' in config.datasets.lower():
-        cdc_train_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_train.pickle", "rb"))
-        cdc_dev_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_dev.pickle", "rb"))
-        cdc_test_ds = pickle.load(open(f"{load_path}/cdc_{feature_set}_test.pickle", "rb"))
-        cdc_weights = pickle.load(open(f"{load_path}/cdc_{feature_set}_clsswts.pickle", "rb"))
-        print("CDC data loaded")
-
-        # # add loss function for cdc
-        cdc_loss_func = torch.nn.CrossEntropyLoss(
-            weight=cdc_weights.to(device) if config.model_params.use_clsswts else None,
-            reduction="mean"
-        )
-
-        cdc_obj = MultitaskObject(
-            cdc_train_ds,
-            cdc_dev_ds,
-            cdc_test_ds,
-            cdc_loss_func,
-            task_num=task_num
-        )
+        total_data_size += len(train_ds)
 
     all_data_list = [all_datasets[item] for item in sorted(all_datasets.keys())]
 
     # optionally change loss multiplier
     if config.model_params.loss_multiplier:
         for obj in all_data_list:
-            obj.change_loss_multiplier(len(obj.train_ds)/float(total_data_size))
+            obj.change_loss_multiplier(len(obj.train_ds) / float(total_data_size))
 
-   # if not using distilbert embeddings
+    # if not using distilbert embeddings
     if not config.model_params.use_distilbert:
         # make glove
         glove_dict = make_glove_dict(config.glove_path)
@@ -201,10 +274,10 @@ def load_data(device, config):
     )
 
     # sampler = None
-    if config.model_params.use_sampler:
-        sampler = RandomOversampler(config.model_params.seed)
-    else:
-        sampler = None
+    # iif config.model_params.use_sampler:
+    #    sampler = RandomOversampler(config.model_params.seed)
+    # else:
+    sampler = None
     # sampler = BatchSchedulerSampler()
 
     if not config.model_params.use_distilbert:
@@ -222,7 +295,7 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
 
     # decide if you want to use avgd feats
     avgd_acoustic_in_network = (
-        model_params.avgd_acoustic or model_params.add_avging
+            model_params.avgd_acoustic or model_params.add_avging
     )
 
     # 3. CREATE NN
@@ -245,10 +318,13 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
         )
     )
 
-
     # this uses train-dev-test folds
     # create instance of model
     multitask_model = select_model(model_params, num_embeddings, pretrained_embeddings)
+    # allow to load a pretrained model for further fine-tuning
+    if config.saved_model is not None:
+        multitask_model.load_state_dict(torch.load(config.saved_model, map_location=device))
+        multitask_model.to(device)
 
     optimizer = torch.optim.Adam(
         lr=model_params.lr,
@@ -281,7 +357,8 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
         avgd_acoustic=avgd_acoustic_in_network,
         use_speaker=model_params.use_speaker,
         use_gender=model_params.use_gender,
-        loss_fx=loss_fx
+        loss_fx=loss_fx,
+        use_spec=model_params.use_spec
     )
 
     # plot the loss and accuracy curves
@@ -290,8 +367,8 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
     loss_save = f"{item_output_path}/loss.png"
     # plot the loss from model
     plot_train_dev_curve(
-        train_state["train_loss"],
-        train_state["val_loss"],
+        train_vals=train_state["train_loss"],
+        dev_vals=train_state["val_loss"],
         x_label="Epoch",
         y_label="Loss",
         title=loss_title,
@@ -301,9 +378,8 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
     # plot the avg f1 curves for each dataset
     for item in train_state["tasks"]:
         plot_train_dev_curve(
-            train_state["train_avg_f1"][item],
-            train_state["val_avg_f1"][item],
-            x_label="Epoch",
+            train_vals=train_state["train_avg_f1"][item],
+            dev_vals=train_state["val_avg_f1"][item],
             y_label="Weighted AVG F1",
             title=f"Average f-scores for task {item} for model {model_params.model} with lr {model_params.lr}",
             save_name=f"{item_output_path}/avg-f1_task-{item}.png",
@@ -318,12 +394,12 @@ if __name__ == "__main__":
 
     device = set_cuda_and_seeds(config)
 
-    data = load_modality_data(device, config, use_text=True, use_acoustic=True, use_spectrograms=False)
-
     if not config.model_params.use_distilbert:
-        data, loss_fx, sampler, num_embeddings, pretrained_embeddings = load_data(device, config)
+        data, loss_fx, sampler, num_embeddings, pretrained_embeddings = load_modality_data(device, config,
+                                                                                           use_text=True,
+                                                                                           use_acoustic=True)
     else:
-        data, loss_fx, sampler = load_data(device, config)
+        data, loss_fx, sampler = load_modality_data(device, config, use_text=True, use_acoustic=True)
         num_embeddings = None
         pretrained_embeddings = None
 
