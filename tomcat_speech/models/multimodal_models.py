@@ -69,6 +69,7 @@ class MultitaskModel(nn.Module):
         self,
         acoustic_input,
         text_input,
+        spec_input=None,
         speaker_input=None,
         length_input=None,
         acoustic_len_input=None,
@@ -99,6 +100,7 @@ class MultitaskModel(nn.Module):
             final_base_layer = self.base(
                 acoustic_input,
                 text_input,
+                spec_input=spec_input,
                 speaker_input=speaker_input,
                 length_input=length_input,
                 acoustic_len_input=acoustic_len_input,
