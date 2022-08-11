@@ -22,6 +22,9 @@ EXPERIMENT_DESCRIPTION = "MC_Testing_gridsearch_code_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 
+# whether you are starting with a pretrained model that you update during training
+trained_model = None # or path to model file
+
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
 
@@ -46,6 +49,8 @@ chalearn_predtype = "max_class"
 # set the acoustic feature set
 feature_set = "IS13_glove_dict"
 
+saved_model = None
+
 num_feats = 130
 if feature_set.lower() == "is13":
     num_feats = 130
@@ -64,6 +69,8 @@ model_params = Namespace(
     # trying text only model or not
     text_only=False,
     audio_only=False,
+    use_spec=False,
+    spec_only=False,
     # overall model parameters
     model="Multitask",
     num_epochs=200,

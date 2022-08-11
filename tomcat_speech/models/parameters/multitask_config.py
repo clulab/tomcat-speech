@@ -18,9 +18,12 @@ EXPERIMENT_ID = 1
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
 # EXPERIMENT_DESCRIPTION = "IntermediateFusion_test_paramsfromMMML_ClassWts_"
-EXPERIMENT_DESCRIPTION = "MC_GOLD_noClssWts_nogender_25to75perc_avg_IS13"
+EXPERIMENT_DESCRIPTION = "Test_for_example_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
+
+# whether you are starting with a pretrained model that you update during training
+trained_model = None # or path to model file
 
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
@@ -28,14 +31,14 @@ CONFIG_FILE = os.path.abspath(__file__)
 num_tasks = 5
 
 # set parameters for data prep
-glove_path = "../../datasets/glove/glove.subset.300d.txt"
+glove_path = "/media/jculnan/backup/jculnan/datasets/glove/glove.subset.300d.txt"
 
 if USE_SERVER:
     load_path = "/data/nlp/corpora/MM/pickled_data/distilbert_custom_feats"
 else:
     # path from which to load pickled data files
     # load_path = "../../datasets/pickled_data/IS13_glove_GOLD"
-    load_path = "../../datasets/pickled_data"
+    load_path = "/media/jculnan/backup/jculnan/datasets/pickled_data"
     # load_path = "../../datasets/pickled_data/distilbert_custom_feats"
 
 # set dir to save full experiments
@@ -50,7 +53,11 @@ chalearn_predtype = "max_class"
 feature_set = "IS13_glove_dict"
 
 # give a list of the datasets to be used
-datasets = ["cdc", "firstimpr", "meld", "mosi", "ravdess"]
+# todo: link datasets to output classes
+# datasets = ["mosi", "ravdess"]
+datasets = ["asist"]
+
+saved_model = "output/multitask/1_MMC_gridsearch_nospec_glove_2022-07-13/LR0.0001_BATCH64_NUMLYR2_SHORTEMB30_INT-OUTPUT100_DROPOUT0.2_FC-FINALDIM50/MMC_gridsearch_spec_glove.pt"
 
 num_feats = 130
 if feature_set.lower() == "is13":
@@ -74,12 +81,14 @@ model_params = Namespace(
     audio_only=False,
     # overall model parameters
     model="Multitask", # todo: what are the options for this? multitask_text_shared,
-    num_epochs=200,
-    batch_size=100,  # 128,  # 32
-    early_stopping_criterion=20,
+    num_epochs=1,
+    batch_size=64,  # 128,  # 32
+    early_stopping_criterion=1,
     num_gru_layers=2,  # 1,  # 3,  # 1,  # 4, 2,
     bidirectional=True,
     use_distilbert=False,
+    use_spec=False,
+    spec_only=False,
     # set whether to have a single loss function
     single_loss=False,
     # whether to use loss multiplier by dataset size
@@ -109,9 +118,9 @@ model_params = Namespace(
     gender_emb_dim=4,
     # outputs
     output_dim=100,  # output dimensions from last layer of base model
-    output_0_dim=7,  # output vec for first task 2 7 5 7 2
-    output_1_dim=5,  # output vec for second task
-    output_2_dim=0,  # output vec for third task
+    output_0_dim=5,  # output vec for first task 2 7 5 7 2
+    output_1_dim=7,  # output vec for second task
+    output_2_dim=3,  # output vec for third task
     output_3_dim=0,
     output_4_dim=0,
     # FC layer parameters
