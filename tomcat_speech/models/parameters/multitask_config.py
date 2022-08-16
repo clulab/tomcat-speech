@@ -57,7 +57,7 @@ feature_set = "IS13_glove_dict"
 # datasets = ["mosi", "ravdess"]
 datasets = ["asist"]
 
-saved_model = "output/multitask/1_MMC_gridsearch_nospec_glove_2022-07-13/LR0.0001_BATCH64_NUMLYR2_SHORTEMB30_INT-OUTPUT100_DROPOUT0.2_FC-FINALDIM50/MMC_gridsearch_spec_glove.pt"
+saved_model = "output/multitask/1_MMC_gridsearch_nospec_glove_2022-07-13/LR0.0001_BATCH64_NUMLYR2_SHORTEMB30_INT-OUTPUT100_DROPOUT0.2_FC-FINALDIM50/MMC_gridsearch_spec_glove_.pt"
 
 num_feats = 130
 if feature_set.lower() == "is13":

@@ -62,7 +62,7 @@ def finetune_multitask(all_data_list, loss_fx, sampler, device, output_path, con
     multitask_model = select_model(model_params, num_embeddings, pretrained_embeddings)
 
     # load saved model
-    saved = torch.load(config.saved_model)
+    saved = torch.load(config.saved_model, map_location=device)
     multitask_model.load_state_dict(saved.model_state_dict)
 
     optimizer = torch.optim.Adam(

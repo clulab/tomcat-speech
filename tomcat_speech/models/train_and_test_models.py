@@ -144,6 +144,7 @@ def evaluate(
         with open("output/encoded_output.pickle", 'wb') as pf:
             pickle.dump(preds_to_viz, pf)
 
+
 def train_and_predict_multitask_singledataset(
     classifier,
     train_state,
