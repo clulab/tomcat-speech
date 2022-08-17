@@ -18,17 +18,14 @@ EXPERIMENT_ID = 1
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
 # EXPERIMENT_DESCRIPTION = "IntermediateFusion_test_paramsfromMMML_ClassWts_"
-EXPERIMENT_DESCRIPTION = "Test_for_example_"
+EXPERIMENT_DESCRIPTION = "Test_finetuning_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
-
-# whether you are starting with a pretrained model that you update during training
-trained_model = None # or path to model file
 
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
 
-num_tasks = 5
+num_tasks = 3
 
 # set parameters for data prep
 glove_path = "/media/jculnan/backup/jculnan/datasets/glove/glove.subset.300d.txt"
@@ -57,7 +54,7 @@ feature_set = "IS13_glove_dict"
 # datasets = ["mosi", "ravdess"]
 datasets = ["asist"]
 
-saved_model = "output/multitask/1_MMC_gridsearch_nospec_glove_2022-07-13/LR0.0001_BATCH64_NUMLYR2_SHORTEMB30_INT-OUTPUT100_DROPOUT0.2_FC-FINALDIM50/MMC_gridsearch_spec_glove_.pt"
+saved_model = "output/multitask/1_Testing_gridsearch_2022-08-16/LR0.001_BATCH100_NUMLYR2_SHORTEMB30_INT-OUTPUT100_DROPOUT0.2_FC-FINALDIM20/Testing_gridsearch_code_.pt"
 
 num_feats = 130
 if feature_set.lower() == "is13":
@@ -81,9 +78,9 @@ model_params = Namespace(
     audio_only=False,
     # overall model parameters
     model="Multitask", # todo: what are the options for this? multitask_text_shared,
-    num_epochs=1,
-    batch_size=64,  # 128,  # 32
-    early_stopping_criterion=1,
+    num_epochs=100,
+    batch_size=100,  # 128,  # 32
+    early_stopping_criterion=20,
     num_gru_layers=2,  # 1,  # 3,  # 1,  # 4, 2,
     bidirectional=True,
     use_distilbert=False,
@@ -126,7 +123,7 @@ model_params = Namespace(
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,
     fc_hidden_dim=100,  # 20,  must match output_dim if final fc layer removed from base model
-    final_hidden_dim=50,  # the out size of dset-specific fc1 and input of fc2
+    final_hidden_dim=20,  # the out size of dset-specific fc1 and input of fc2
     dropout=0.2,  # 0.2, 0.3
     # optimizer parameters
     lr=1e-4,

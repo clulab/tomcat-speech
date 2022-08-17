@@ -59,18 +59,18 @@ def finetune_multitask(all_data_list, loss_fx, sampler, device, output_path, con
     )
 
     # this uses train-dev-test folds
-    multitask_model = select_model(model_params, num_embeddings, pretrained_embeddings)
+    multitask_model = select_model(model_params, num_embeddings, pretrained_embeddings, multidataset=False)
 
     # load saved model
     saved = torch.load(config.saved_model, map_location=device)
-    multitask_model.load_state_dict(saved.model_state_dict)
+    multitask_model.load_state_dict(saved["model_state_dict"])
 
     optimizer = torch.optim.Adam(
         lr=model_params.lr,
         params=multitask_model.parameters(),
         weight_decay=model_params.weight_decay,
     )
-    optimizer.load_state_dict(saved.optimizer_state_dict)
+    optimizer.load_state_dict(saved["optimizer_state_dict"])
 
     # set the classifier(s) to the right device
     multitask_model = multitask_model.to(device)

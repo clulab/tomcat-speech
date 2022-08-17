@@ -11,30 +11,29 @@ save_dataset = False
 # do you want to load pre-saved dataset files?
 load_dataset = True
 
-
 EXPERIMENT_ID = 1
 # during training: enter a brief description that will make the experiment easy to identify
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
 # EXPERIMENT_DESCRIPTION = "IntermediateFusion_test_paramsfromMMML_ClassWts_"
-EXPERIMENT_DESCRIPTION = "TEST_MC_Testing_gridsearch_code_"
+EXPERIMENT_DESCRIPTION = "Asist_spec_distilbert_hierCNN_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
 
-num_tasks = 5
+num_tasks = 3
 
 # set parameters for data prep
-glove_path = "../../datasets/glove/glove.subset.300d.txt"
+glove_path = "/media/jculnan/backup/jculnan/datasets/glove/glove.subset.300d.txt"
 
 if USE_SERVER:
-    load_path = "/data/nlp/corpora/MM/pickled_data/distilbert_custom_feats"
+    load_path = "/xdisk/bethard/culnan"
 else:
     # path from which to load pickled data files
-    load_path = "../../dataset/pickled_data/asist_IS13_glove_dict_test.pickle"
+    load_path = "/media/jculnan/backup/jculnan/datasets/pickled_data"
 
 # set dir to save full experiments
 exp_save_path = "output/multitask"
@@ -46,6 +45,9 @@ chalearn_predtype = "max_class"
 # set the acoustic feature set
 feature_set = "IS13_glove_dict"
 
+# set the datasets
+datasets = ["asist"]
+
 num_feats = 130
 if feature_set.lower() == "is13":
     num_feats = 130
@@ -53,10 +55,14 @@ elif "combined_features" in feature_set.lower() or "custom" in feature_set.lower
     num_feats = 10
 
 model_params = Namespace(
+    # loss multiplier
+    loss_multiplier=False,
     # use gradnorm for loss normalization
     use_gradnorm=False,
     # whether to use data sampler
     use_sampler=False,
+    # whether to use class weights
+    use_clsswts=False,
     # decide whether to use early, intermediate, or late fusion
     fusion_type="int",  # int, late, early
     # consistency parameters
@@ -64,13 +70,15 @@ model_params = Namespace(
     # trying text only model or not
     text_only=False,
     audio_only=False,
+    spec_only=False,
+    use_spec=True,
     # overall model parameters
     model="Multitask",
-    num_epochs=200,
-    batch_size=100,  # 128,  # 32
-    early_stopping_criterion=5,
+    num_epochs=100,
+    batch_size=4,  # 128,  # 32
+    early_stopping_criterion=10,
     num_gru_layers=2,  # 1,  # 3,  # 1,  # 4, 2,
-    bidirectional=False,
+    bidirectional=True,
     use_distilbert=False,
     # set whether to have a single loss function
     single_loss=False,
@@ -83,6 +91,7 @@ model_params = Namespace(
     kernel_2_size=4,
     kernel_3_size=5,
     out_channels=20,
+    spec_out_dim=20,  # 20
     text_cnn_hidden_dim=100,
     # text_output_dim=30,   # 100,   # 50, 300,
     text_gru_hidden_dim=100,  # 30,  # 50,  # 20
@@ -99,9 +108,9 @@ model_params = Namespace(
     gender_emb_dim=4,
     # outputs
     output_dim=100,  # output dimensions from last layer of base model
-    output_0_dim=7,  # output vec for first task 2 7 5 7 2
-    output_1_dim=5,  # output vec for second task
-    output_2_dim=0,  # output vec for third task
+    output_0_dim=5,  # output vec for first task 2 7 5 7 2
+    output_1_dim=7,  # output vec for second task
+    output_2_dim=3,  # output vec for third task
     output_3_dim=0,
     output_4_dim=0,
     # FC layer parameters

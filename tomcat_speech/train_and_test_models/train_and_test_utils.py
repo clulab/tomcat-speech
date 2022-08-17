@@ -36,7 +36,7 @@ def set_cuda_and_seeds(config):
     return device
 
 
-def select_model(model_params, num_embeddings, pretrained_embeddings):
+def select_model(model_params, num_embeddings, pretrained_embeddings, multidataset=True):
     """
     Use model parameters to select the appropriate model
     Return this model for training
@@ -66,6 +66,7 @@ def select_model(model_params, num_embeddings, pretrained_embeddings):
         model = MultitaskModel(params=model_params,
                                use_distilbert=model_params.use_distilbert,
                                num_embeddings=num_embeddings,
-                               pretrained_embeddings=pretrained_embeddings)
+                               pretrained_embeddings=pretrained_embeddings,
+                               multi_dataset=multidataset)
 
     return model
