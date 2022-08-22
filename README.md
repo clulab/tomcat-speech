@@ -15,6 +15,8 @@ models.
   ```
 * GloVE: https://nlp.stanford.edu/projects/glove/
 
+This will be updated to include BERT.
+
 You will also need `ffmpeg` to use some of the modules. You can install it with
 your OS package manager (e.g. MacPorts/Homebrew/apt-get/yum)
 
