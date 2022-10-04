@@ -40,6 +40,9 @@ else:
     # path from which to load pickled data files
     load_path = "../../datasets/pickled_data/distilbert_custom_feats"
 
+# if you are loading a pretrained model, put the path to it here
+pretrained_model = None
+
 # set dir to save full experiments
 exp_save_path = f"output/single_task/{task}"
 
