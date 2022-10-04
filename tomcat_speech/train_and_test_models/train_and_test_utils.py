@@ -6,6 +6,7 @@ import random
 from tomcat_speech.models.multimodal_models import MultitaskModel, MultitaskAcousticShared, \
     MultitaskDuplicateInputModel, MultitaskTextShared
 from tomcat_speech.models.text_model_bases import TextOnlyModel
+# ckj:  check whether other models need to be incorporated
 
 def set_cuda_and_seeds(config):
     # set cuda
