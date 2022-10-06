@@ -5,7 +5,7 @@ import random
 
 from tomcat_speech.models.multimodal_models import MultitaskModel, MultitaskAcousticShared, \
     MultitaskDuplicateInputModel, MultitaskTextShared
-
+from tomcat_speech.models.text_model_bases import TextOnlyModel
 
 def set_cuda_and_seeds(config):
     # set cuda
@@ -57,6 +57,11 @@ def select_model(model_params, num_embeddings, pretrained_embeddings, multidatas
                                     use_distilbert=model_params.use_distilbert,
                                     num_embeddings=num_embeddings,
                                     pretrained_embeddings=pretrained_embeddings)
+    elif "text_only" in model_params.model.lower():
+        model = TextOnlyModel(params=model_params,
+                use_distilbert=model_params.use_distilbert,
+                num_embeddings=num_embeddings,
+                pretrained_embeddings=pretrained_embeddings)
     elif "duplicate_input" in model_params.model.lower():
         model = MultitaskDuplicateInputModel(params=model_params,
                                              use_distilbert=model_params.use_distilbert,
