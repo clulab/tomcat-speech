@@ -580,13 +580,15 @@ def run_model_multitask_singledataset(
 
         # calculate loss
         for task, preds in enumerate(batch_pred):
+            batch_losses = []
             if loss_fx:
-                loss = loss_fx(preds, y_gold[task]) * datasets_list[0].loss_multiplier
+                loss = loss_fx[task](preds, y_gold[task]) * datasets_list[0].loss_multiplier
             else:
                 loss = (
-                    datasets_list[0].loss_fx(preds, y_gold[task])
+                    datasets_list[0].loss_fx[task](preds, y_gold[task])
                     * datasets_list[0].loss_multiplier
                 )
+                batch_losses.append(loss)
 
             loss_t = loss.item()
 
