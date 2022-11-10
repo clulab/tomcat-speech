@@ -4,6 +4,7 @@ import datetime
 import pickle
 import shutil
 import sys
+sys.path.append("/home/jculnan/github/tomcat-speech")
 import os
 import time
 
@@ -105,8 +106,7 @@ if __name__ == "__main__":
             # if data is field-separated
             used_ds = load_modality_data(device, config,
                                          use_text=True,
-                                         use_acoustic=True,
-                                         use_spectrograms=config.model_params.use_spec)
+                                         use_acoustic=True)
             #used_ds = used_ds[0][0].train
             all_ds = []
             all_ds.extend(used_ds[0][0].train)
@@ -114,11 +114,6 @@ if __name__ == "__main__":
             all_ds.extend(used_ds[0][0].test)
             used_ds = all_ds
             print("Data loaded")
-
-            # todo: once you incorporate spectrograms
-            #   remove this
-            #for item in used_ds:
-            #    del item['x_spec']
 
             # if not using distilbert embeddings
             if not config.model_params.use_distilbert:
@@ -203,4 +198,4 @@ if __name__ == "__main__":
             data_to_save.columns = ['trait', 'emotion', 'sentiment']
             data_to_save['audio_id'] = ordered_ids
             #data_to_save.to_csv(f"../../PROJECTS/ToMCAT/Evaluating_modelpredictions/data_from_speechAnalyzer/used_for_evaluating_model_results/all_preds_no_classweights.csv", index=False)
-            data_to_save.to_csv(f"/media/jculnan/backup/jculnan/datasets/asist_data/mmc_hiercnn_spec_glove_preds.csv", index=False)
+            data_to_save.to_csv(f"{config.exp_save_path}/predictions.csv", index=False)
