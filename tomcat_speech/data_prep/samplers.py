@@ -71,7 +71,7 @@ class RandomOversampler():
     Use a random oversampler to oversample minority classes
     """
     def __init__(self, seed):
-        self.sampler = imblearn.over_sampling.RandomOverSampler(random_state=seed)
+        self.sampler = imblearn.over_sampling.RandomOverSampler(random_state=seed, shrinkage=2.5)
 
     def _oversample(self, utt_ids, y_values):
         # use the random oversampler
@@ -104,7 +104,8 @@ class RandomOversampler():
         all_ids = [[item['audio_id']] for item in dataset]
         # todo: expand to allow flexibility of which task to select
         #   when there are multiple
-        all_ys = [item['ys'][0] for item in dataset]
+        # TODO: update with info from hpc
+        all_ys = [item['ys'][1] for item in dataset]  # going with emotion items
 
         # do oversampling
         sampled_ids = self._oversample(all_ids, all_ys)
