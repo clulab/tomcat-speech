@@ -10,10 +10,13 @@ import numpy as np
 from datetime import date
 import random
 
-from tomcat_speech.models.train_and_test_models import train_and_predict, make_train_state
+from tomcat_speech.models.train_and_test_models import train_and_predict
 from tomcat_speech.models.multimodal_models import MultitaskModel
 from tomcat_speech.models.plot_training import *
-from tomcat_speech.train_and_test_models.train_and_test_utils import set_cuda_and_seeds, select_model
+from tomcat_speech.train_and_test_models.train_and_test_utils import (
+    set_cuda_and_seeds,
+    select_model,
+    make_train_state)
 from tomcat_speech.train_and_test_models.train_multitask import load_modality_data
 
 # import MultitaskObject and Glove from preprocessing code

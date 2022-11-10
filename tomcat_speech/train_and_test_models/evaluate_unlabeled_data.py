@@ -14,10 +14,8 @@ import numpy as np
 from datetime import date
 import random
 
-from tomcat_speech.models.train_and_test_models import (
-    make_train_state,
-    multitask_predict_without_gold_labels,
-)
+from tomcat_speech.train_and_test_models.train_and_test_utils import make_train_state
+from tomcat_speech.models.train_and_test_without_gold_labels import multitask_predict_without_gold_labels
 from tomcat_speech.models.multimodal_models import MultitaskModel
 
 # import MultitaskObject and Glove from preprocessing code

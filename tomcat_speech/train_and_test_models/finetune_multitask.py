@@ -14,11 +14,14 @@ import random
 
 from tomcat_speech.data_prep.samplers import RandomOversampler
 # from tomcat_speech.data_prep.samplers import RandomOversampler
-from tomcat_speech.models.train_and_test_models import make_train_state, \
-    train_and_predict_multitask_singledataset
+from tomcat_speech.models.train_and_test_multitask_singledataset import train_and_predict_multitask_singledataset
 from tomcat_speech.models.multimodal_models import MultitaskModel
 from tomcat_speech.models.plot_training import *
-from tomcat_speech.train_and_test_models.train_and_test_utils import set_cuda_and_seeds, select_model
+from tomcat_speech.train_and_test_models.train_and_test_utils import (
+    set_cuda_and_seeds,
+    select_model,
+    make_train_state
+)
 from tomcat_speech.train_and_test_models.train_multitask import combine_modality_data
 # import MultitaskObject and Glove from preprocessing code
 sys.path.append("/home/jculnan/github/multimodal_data_preprocessing")

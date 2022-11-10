@@ -17,7 +17,7 @@ EXPERIMENT_ID = 1
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
 # EXPERIMENT_DESCRIPTION = "IntermediateFusion_test_paramsfromMMML_ClassWts_"
-EXPERIMENT_DESCRIPTION = "Asist_spec_distilbert_hierCNN_"
+EXPERIMENT_DESCRIPTION = "MMC_gridsearch_spec_glove_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 
@@ -33,10 +33,10 @@ if USE_SERVER:
     load_path = "/xdisk/bethard/culnan"
 else:
     # path from which to load pickled data files
-    load_path = "/media/jculnan/backup/jculnan/datasets/pickled_data"
+    load_path = "data"
 
 # set dir to save full experiments
-exp_save_path = "output/multitask"
+exp_save_path = "output/ToMCAT_resultstest/results"
 
 # todo: reincorporate this implementation?
 # set type of predictions to make for chalearn
@@ -46,7 +46,7 @@ chalearn_predtype = "max_class"
 feature_set = "IS13_glove_dict"
 
 # set the datasets
-datasets = ["asist"]
+datasets = ["asist1"]
 
 num_feats = 130
 if feature_set.lower() == "is13":
@@ -71,11 +71,11 @@ model_params = Namespace(
     text_only=False,
     audio_only=False,
     spec_only=False,
-    use_spec=True,
+    use_spec=False,
     # overall model parameters
     model="Multitask",
     num_epochs=100,
-    batch_size=4,  # 128,  # 32
+    batch_size=64,  # 128,  # 32
     early_stopping_criterion=10,
     num_gru_layers=2,  # 1,  # 3,  # 1,  # 4, 2,
     bidirectional=True,
@@ -91,7 +91,7 @@ model_params = Namespace(
     kernel_2_size=4,
     kernel_3_size=5,
     out_channels=20,
-    spec_out_dim=20,  # 20
+    spec_out_dim=20,
     text_cnn_hidden_dim=100,
     # text_output_dim=30,   # 100,   # 50, 300,
     text_gru_hidden_dim=100,  # 30,  # 50,  # 20
@@ -117,7 +117,7 @@ model_params = Namespace(
     num_fc_layers=1,  # 1,  # 2,
     fc_hidden_dim=100,  # 20,  must match output_dim if final fc layer removed from base model
     final_hidden_dim=20,  # the out size of dset-specific fc1 and input of fc2
-    dropout=0.2,  # 0.2, 0.3
+    dropout=0.3,  # 0.2, 0.3
     # optimizer parameters
     lr=1e-4,
     beta_1=0.9,
