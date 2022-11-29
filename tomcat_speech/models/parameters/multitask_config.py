@@ -44,7 +44,13 @@ exp_save_path = "output/multitask"
 # todo: reincorporate this implementation?
 chalearn_predtype = "max_class"
 
-# provide the name of the acoustic feature set
+# set the acoustic and text feature sets
+# the first item should be the acoustic feature set
+# the second item should be the text embedding type (distilbert, bert, glove)
+# the third item is whether to use data in list or dict form
+# currently, list form is being phased out, so use dict
+# if these items are not set correctly,
+# the data may not be loaded properly
 feature_set = "IS13_glove_dict"
 
 # give a list of the datasets to be used

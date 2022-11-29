@@ -46,8 +46,14 @@ pretrained_model = None
 # set dir to save full experiments
 exp_save_path = f"output/single_task/{task}"
 
-# set the acoustic feature set
-feature_set = "combined_features_distilbert_dict"
+# set the acoustic and text feature sets
+# the first item should be the acoustic feature set
+# the second item should be the text embedding type (distilbert, bert, glove)
+# the third item is whether to use data in list or dict form
+# currently, list form is being phased out, so use dict
+# if these items are not set correctly,
+# the data may not be loaded properly
+feature_set = "IS13_distilbert_dict"
 
 num_feats = 130
 if feature_set.lower() == "is13":
