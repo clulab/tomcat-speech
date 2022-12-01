@@ -10,7 +10,7 @@ from tomcat_speech.data_prep.data_prep_helpers import (
     make_glove_dict,
     Glove,
 )
-from tomcat_speech.train_and_test_models.asist_analysis_functions import predict_with_model
+from tomcat_speech.training_and_evaluation_functions.asist_analysis_functions import predict_with_model
 
 # the current parameters file is saved as testing_parameters/config.py
 import tomcat_speech.parameters.testing_parameters.config as params
@@ -40,12 +40,6 @@ PREDICTOR = MultitaskModel(
 # get saved parameters
 PREDICTOR.load_state_dict(torch.load(MODEL_PATH))
 PREDICTOR.to(device)
-
-# class Emotions(BaseModel):
-
-
-# todo: email Adarsh about not using this, just using raw json with
-# get_json_output_of_speech_analysis
 
 class DialogAgentMessage(BaseModel):
     """Data model for incoming message from UAZ Dialog Agent"""

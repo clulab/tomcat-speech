@@ -10,8 +10,8 @@ import torch
 import numpy as np
 import random
 
-from tomcat_speech.train_and_test_models.train_and_test_utils import make_train_state
-from tomcat_speech.train_and_test_models.train_and_test_without_gold_labels import multitask_predict_without_gold_labels
+from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import make_train_state
+from tomcat_speech.training_and_evaluation_functions.train_and_test_without_gold_labels import multitask_predict_without_gold_labels
 from tomcat_speech.models.multimodal_models import MultitaskModel
 
 # import MultitaskObject and Glove from preprocessing code
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     output_path = os.path.dirname(config_path)
 
     shutil.copyfile(
-        config_path, "tomcat_speech/train_and_test_models/testing_parameters/config.py"
+        config_path, "tomcat_speech/training_and_evaluation_functions/testing_parameters/config.py"
     )
 
     # import parameters for model

@@ -236,7 +236,7 @@ model_params = Namespace(
     # whether to use gradnorm for loss normalization
     # this has been removed from the code, so don't worry about this flag
     # if you want to reimplement this, use the function:
-    #   multitask_train_and_predict_with_gradnorm from train_and_test_models.py
+    #   multitask_train_and_predict_with_gradnorm from training_and_evaluation_functions.py
     use_gradnorm=False,
     # whether the input features are already averaged when loaded
     # if true, the features read in are already averaged (vector per input item)

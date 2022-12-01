@@ -1,17 +1,150 @@
-
+# implement training and testing for models
+import pickle
+import sys
 from datetime import datetime
 
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
 
-from tomcat_speech.train_and_test_models.train_and_test_utils import (
+from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
     get_all_batches,
-    update_train_state
+    update_train_state,
+    separate_data
 )
 
 
-def train_and_predict_multitask_singledataset(
+def evaluate(
+    classifier,
+    train_state,
+    datasets_list,
+    batch_size,
+    pickle_save_name,
+    device="cpu",
+    avgd_acoustic=True,
+    use_speaker=True,
+    use_gender=False,
+    save_encoded_data=False
+):
+    """
+    Train_ds_list and val_ds_list are lists of MultTaskObject objects!
+    Length of the list is the number of datasets used
+    """
+    num_tasks = len(datasets_list)
+    # get a list of the tasks by number
+    for dset in datasets_list:
+        train_state["tasks"].append(dset.task_num)
+        train_state["test_avg_f1"][dset.task_num] = []
+
+    # Iterate over validation set--put it in a dataloader
+    batches, tasks = get_all_batches(
+        datasets_list, batch_size=batch_size, shuffle=True, partition="test"
+    )
+
+    # set classifier to evaluation mode
+    classifier.eval()
+
+    # set holders to use for error analysis
+    ys_holder = {}
+    for i in range(num_tasks):
+        ys_holder[i] = []
+    preds_holder = {}
+    for i in range(num_tasks):
+        preds_holder[i] = []
+    ids_holder = {}
+    for i in range(num_tasks):
+        ids_holder[i] = []
+    preds_to_viz = {}
+    for i in range(num_tasks):
+        preds_to_viz[i] = []
+
+    # for each batch in the list of batches created by the dataloader
+    for batch_index, batch in enumerate(batches):
+        # get the task for this batch
+        batch_task = tasks[batch_index]
+
+        batch_ids = batch['audio_id']
+        ids_holder[batch_task].extend(batch_ids)
+
+        batch_acoustic, batch_text, batch_speakers, batch_genders, y_gold, batch_lengths, batch_acoustic_lengths = separate_data(batch, device)
+
+        if not use_speaker:
+            batch_speakers = None
+        if not use_gender:
+            batch_genders = None
+
+        # compute the output
+        if avgd_acoustic:
+            y_pred = classifier(
+                acoustic_input=batch_acoustic,
+                text_input=batch_text,
+                speaker_input=batch_speakers,
+                length_input=batch_lengths,
+                gender_input=batch_genders,
+                task_num=tasks[batch_index],
+                save_encoded_data=save_encoded_data
+            )
+        else:
+            y_pred = classifier(
+                acoustic_input=batch_acoustic,
+                text_input=batch_text,
+                speaker_input=batch_speakers,
+                length_input=batch_lengths,
+                acoustic_len_input=batch_acoustic_lengths,
+                gender_input=batch_genders,
+                task_num=tasks[batch_index],
+                save_encoded_data=save_encoded_data
+            )
+
+        if save_encoded_data:
+            encoded_data = y_pred[-1]
+
+        batch_pred = y_pred[batch_task]
+
+        if datasets_list[batch_task].binary:
+            batch_pred = batch_pred.float()
+            y_gold = y_gold.float()
+
+        # add preds vector to holder for pca visualization
+        if save_encoded_data:
+            preds_to_viz[batch_task].extend(encoded_data.tolist())
+
+        # add ys to holder for error analysis
+        preds_holder[batch_task].extend(
+            [item.index(max(item)) for item in batch_pred.tolist()]
+        )
+        ys_holder[batch_task].extend(y_gold.tolist())
+
+    for task in preds_holder.keys():
+        task_avg_f1 = precision_recall_fscore_support(
+            ys_holder[task], preds_holder[task], average="weighted"
+        )
+        print(f"Test weighted f-score for task {task}: {task_avg_f1}")
+        train_state["test_avg_f1"][task].append(task_avg_f1[2])
+
+    for task in preds_holder.keys():
+        print(f"Classification report and confusion matrix for task {task}:")
+        print(confusion_matrix(ys_holder[task], preds_holder[task]))
+        print("======================================================")
+        print(classification_report(ys_holder[task], preds_holder[task], digits=4))
+
+    # combine
+    gold_preds_ids = {}
+    for task in preds_holder.keys():
+        gold_preds_ids[task] = list(
+            zip(ys_holder[task], preds_holder[task], ids_holder[task])
+        )
+
+    # save to pickle
+    with open(pickle_save_name, "wb") as pfile:
+        pickle.dump(gold_preds_ids, pfile)
+
+    if save_encoded_data:
+        with open("output/encoded_output.pickle", 'wb') as pf:
+            pickle.dump(preds_to_viz, pf)
+
+
+def train_and_predict(
     classifier,
     train_state,
     datasets_list,
@@ -29,17 +162,17 @@ def train_and_predict_multitask_singledataset(
     use_spec=False
 ):
     """
-        Train_ds_list and val_ds_list are lists of MultTaskObject objects!
-        Length of the list is the number of datasets used
-        """
-    num_tasks = 3
+    Train_ds_list and val_ds_list are lists of MultTaskObject objects!
+    Length of the list is the number of datasets used
+    """
+    num_tasks = len(datasets_list)
 
     print(f"Number of tasks: {num_tasks}")
     # get a list of the tasks by number
-    for task in range(num_tasks):
-        train_state["tasks"].append(task)
-        train_state["train_avg_f1"][task] = []
-        train_state["val_avg_f1"][task] = []
+    for dset in datasets_list:
+        train_state["tasks"].append(dset.task_num)
+        train_state["train_avg_f1"][dset.task_num] = []
+        train_state["val_avg_f1"][dset.task_num] = []
         train_state["val_best_f1"].append(0)
 
     for epoch_index in range(num_epochs):
@@ -50,7 +183,7 @@ def train_and_predict_multitask_singledataset(
         train_state["epoch_index"] = epoch_index
 
         # get running loss, holders of ys and predictions on training partition
-        running_loss, ys_holder, preds_holder = run_model_multitask_singledataset(
+        running_loss, ys_holder, preds_holder = run_model(
             datasets_list,
             classifier,
             batch_size,
@@ -80,7 +213,7 @@ def train_and_predict_multitask_singledataset(
             train_state["train_avg_f1"][task].append(task_avg_f1[2])
 
         # get running loss, holders of ys and predictions on dev partition
-        running_loss, ys_holder, preds_holder = run_model_multitask_singledataset(
+        running_loss, ys_holder, preds_holder = run_model(
             datasets_list,
             classifier,
             batch_size,
@@ -138,7 +271,7 @@ def train_and_predict_multitask_singledataset(
         sys.stdout.flush()
 
 
-def run_model_multitask_singledataset(
+def run_model(
     datasets_list,
     classifier,
     batch_size,
@@ -158,8 +291,6 @@ def run_model_multitask_singledataset(
     Run the model in either training or testing within a single epoch
     Returns running_loss, gold labels, and predictions
     """
-    batch_task = None
-
     first = datetime.now()
 
     # Iterate over training dataset
@@ -190,13 +321,15 @@ def run_model_multitask_singledataset(
 
     # for each batch in the list of batches created by the dataloader
     for batch_index, batch in enumerate(batches):
+        # find the task for this batch
+        batch_task = tasks[batch_index]
 
         # zero gradients
         if mode.lower() == "training" or mode.lower() == "train":
             optimizer.zero_grad()
 
         # get ys and predictions for the batch
-        y_gold, batch_pred = get_asist_predictions(
+        y_gold, batch_pred = get_predictions(
             batch,
             batch_index,
             batch_task,
@@ -212,31 +345,27 @@ def run_model_multitask_singledataset(
         )
 
         # calculate loss
-        for task, preds in enumerate(batch_pred):
-            batch_losses = []
-            if loss_fx:
-                loss = loss_fx[task](preds, y_gold[task]) * datasets_list[0].loss_multiplier
-            else:
-                loss = (
-                    datasets_list[0].loss_fx[task](preds, y_gold[task])
-                    * datasets_list[0].loss_multiplier
-                )
-                batch_losses.append(loss)
-
-            loss_t = loss.item()
-
-            # calculate running loss
-            running_loss += (loss_t - running_loss) / (batch_index + 1)
-
-            # use loss to produce gradients
-            if mode.lower() == "training" or mode.lower() == "train":
-                loss.backward(retain_graph=True)
-
-            # add ys to holder for error analysis
-            preds_holder[task].extend(
-                [item.index(max(item)) for item in preds.detach().tolist()]
+        if loss_fx:
+            loss = loss_fx(batch_pred, y_gold) * datasets_list[batch_task].loss_multiplier
+        else:
+            loss = (
+                datasets_list[batch_task].loss_fx(batch_pred, y_gold)
+                * datasets_list[batch_task].loss_multiplier
             )
-            ys_holder[task].extend(y_gold[task].detach().tolist())
+        loss_t = loss.item()
+
+        # calculate running loss
+        running_loss += (loss_t - running_loss) / (batch_index + 1)
+
+        # use loss to produce gradients
+        if mode.lower() == "training" or mode.lower() == "train":
+            loss.backward()
+
+        # add ys to holder for error analysis
+        preds_holder[batch_task].extend(
+            [item.index(max(item)) for item in batch_pred.detach().tolist()]
+        )
+        ys_holder[batch_task].extend(y_gold.detach().tolist())
 
         # increment optimizer
         if mode.lower() == "training" or mode.lower() == "train":
@@ -248,7 +377,7 @@ def run_model_multitask_singledataset(
     return running_loss, ys_holder, preds_holder
 
 
-def get_asist_predictions(
+def get_predictions(
     batch,
     batch_index,
     batch_task,
@@ -263,15 +392,17 @@ def get_asist_predictions(
     save_encoded_data=False
 ):
     """
-    Get predictions from asist data ON THREE TASKS
+    Get predictions from data
     This should abstract train and dev into a single function
-    Used with multitask networks
+    Used with multitask and prototypical networks so far
     """
     # get parts of batches
     # get data
-    for item in batch["ys"]:
-        item = item.detach().to(device)
-    y_gold = batch["ys"]
+    # todo add flexibilty for other tasks in same dataset
+    if batch_task is not None:
+        y_gold = batch["ys"][0].detach().to(device)
+    else:
+        y_gold = batch["ys"].detach().to(device)
 
     batch_acoustic = batch["x_acoustic"].detach().to(device)
     batch_text = batch["x_utt"].detach().to(device)
@@ -284,8 +415,8 @@ def get_asist_predictions(
         batch_genders = batch["x_gender"].to(device)
     else:
         batch_genders = None
-    batch_lengths = batch["utt_length"] # .to(device)
-    batch_acoustic_lengths = batch["acoustic_length"] # .to(device)
+    batch_lengths = batch["utt_length"]
+    batch_acoustic_lengths = batch["acoustic_length"]
     if use_spec:
         batch_spec = batch["x_spec"].to(device)
     else:
@@ -317,6 +448,13 @@ def get_asist_predictions(
             save_encoded_data=save_encoded_data
         )
 
-    batch_pred = y_pred[:3]
+    if batch_task is not None:
+        batch_pred = y_pred[batch_task]
+
+        if datasets_list[batch_task].binary:
+            batch_pred = batch_pred.float()
+            y_gold = y_gold.float()
+    else:
+        batch_pred = y_pred
 
     return y_gold, batch_pred
