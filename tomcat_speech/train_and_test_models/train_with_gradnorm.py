@@ -1,4 +1,11 @@
 
+import torch
+import torch.nn as nn
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import classification_report
+from sklearn.metrics import precision_recall_fscore_support
+
+from tomcat_speech.train_and_test_models.train_and_test_utils import update_train_state, get_all_batches, get_all_batches_oversampling
 
 def multitask_train_and_predict_with_gradnorm(
     classifier,

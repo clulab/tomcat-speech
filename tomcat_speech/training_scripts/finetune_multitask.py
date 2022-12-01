@@ -1,28 +1,23 @@
 # train the models created in models directory with MUStARD data
 # currently the main entry point into the system
-import pickle
 import shutil
 import sys
 import os
 
 #sys.path.append("/home/u18/jmculnan/github/tomcat-speech")
 import torch
-import numpy as np
-import torch.nn as nn
 from datetime import date
-import random
 
 from tomcat_speech.data_prep.samplers import RandomOversampler
 # from tomcat_speech.data_prep.samplers import RandomOversampler
-from tomcat_speech.models.train_and_test_multitask_singledataset import train_and_predict_multitask_singledataset
-from tomcat_speech.models.multimodal_models import MultitaskModel
+from tomcat_speech.train_and_test_models.train_and_test_multitask_singledataset import train_and_predict_multitask_singledataset
 from tomcat_speech.models.plot_training import *
 from tomcat_speech.train_and_test_models.train_and_test_utils import (
     set_cuda_and_seeds,
     select_model,
     make_train_state
 )
-from tomcat_speech.train_and_test_models.train_multitask import combine_modality_data
+from tomcat_speech.training_scripts.train_multitask import combine_modality_data
 # import MultitaskObject and Glove from preprocessing code
 sys.path.append("/home/jculnan/github/multimodal_data_preprocessing")
 from utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict #, convert_to_ternary
@@ -291,7 +286,7 @@ def finetune_multitask(all_data_list, loss_fx, sampler, device, output_path, con
 
 if __name__ == "__main__":
     # import parameters for model
-    import tomcat_speech.models.parameters.multitask_config as config
+    import tomcat_speech.parameters.multitask_config as config
 
     device = set_cuda_and_seeds(config)
 

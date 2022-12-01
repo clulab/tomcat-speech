@@ -1,27 +1,22 @@
 # train a single-task model for any of the five tasks
 # combining the training of the separate train_task models into one
 
-import pickle
 import shutil
 import sys
 import os
 import torch
-import numpy as np
 from datetime import date
-import random
 
-from tomcat_speech.models.train_and_test_models import train_and_predict
-from tomcat_speech.models.multimodal_models import MultitaskModel
+from tomcat_speech.train_and_test_models.train_and_test_models import train_and_predict
 from tomcat_speech.models.plot_training import *
 from tomcat_speech.train_and_test_models.train_and_test_utils import (
     set_cuda_and_seeds,
     select_model,
     make_train_state)
-from tomcat_speech.train_and_test_models.train_multitask import load_modality_data
+from tomcat_speech.training_scripts.train_multitask import load_modality_data
 
 # import MultitaskObject and Glove from preprocessing code
 sys.path.append("../multimodal_data_preprocessing")
-from utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict
 
 
 # todo: Cheonkam, if load_modality_data works as called
@@ -189,7 +184,7 @@ def train_single_task(all_data_list, loss_fx, sampler, device, output_path, conf
 
 if __name__ == "__main__":
     # import parameters for model
-    import tomcat_speech.models.parameters.singletask_config as config
+    import tomcat_speech.parameters.singletask_config as config
 
     # set cuda and random seeds
     device = set_cuda_and_seeds(config)

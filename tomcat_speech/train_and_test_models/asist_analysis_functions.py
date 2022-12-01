@@ -3,16 +3,17 @@ import json
 import re
 import numpy as np
 import torch
+import sys
 
 from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDataset
-from tomcat_speech.models.train_and_test_without_gold_labels import (
+from tomcat_speech.train_and_test_models.train_and_test_without_gold_labels import (
     multitask_predict_without_gold_labels
 )
 from tomcat_speech.models.multimodal_models import MultitaskModel
 
 # import MultitaskObject and Glove from preprocessing code
 sys.path.append("../multimodal_data_preprocessing")
-from utils.data_prep_helpers import Glove, make_glove_dict, DatumListDataset
+from utils.data_prep_helpers import DatumListDataset
 
 import pandas as pd
 

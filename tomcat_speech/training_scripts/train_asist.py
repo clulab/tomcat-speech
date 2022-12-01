@@ -4,17 +4,15 @@
 #       if your acoustic features have not been extracted from audio
 
 from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDataset
-from tomcat_speech.models.train_and_test_models import *
+from tomcat_speech.train_and_test_models.train_and_test_models import *
 from tomcat_speech.models.plot_training import *
 from tomcat_speech.models.multimodal_models import *
 from tomcat_speech.train_and_test_models.train_and_test_utils import make_train_state
 
 sys.path.append("../multimodal_data_preprocessing")
 from utils.data_prep_helpers import (
-    MultitaskObject,
     Glove,
     make_glove_dict,
-    MultitaskTestObject,
 )
 from prep_data import make_acoustic_dict
 
@@ -27,7 +25,6 @@ import tomcat_speech.data_prep.asist_data.asist_dataset_creation as asist_prep
 
 # import parameters for model
 # comment or uncomment as needed
-from tomcat_speech.models.parameters.multitask_config import *
 
 # from tomcat_speech.models.parameters.multitask_params import params
 # from tomcat_speech.models.parameters.lr_baseline_1_params import params

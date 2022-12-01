@@ -7,18 +7,18 @@ import sys
 single_task = False
 if len(sys.argv) > 1:
     if sys.argv[1].lower() == "singletask" or sys.argv[1].lower() == "single task" or sys.argv[1].lower() == "single":
-        from tomcat_speech.train_and_test_models.train_single_task import *
-        import tomcat_speech.models.parameters.singletask_gridsearch_config as config
+        from tomcat_speech.training_scripts.train_single_task import *
+        import tomcat_speech.parameters.singletask_gridsearch_config as config
         print("Using single task grid search")
         single_task = True
     else:
-        from tomcat_speech.train_and_test_models.train_multitask import *
-        import tomcat_speech.models.parameters.multitask_gridsearch_config as config
+        from tomcat_speech.training_scripts.train_multitask import *
+        import tomcat_speech.parameters.multitask_gridsearch_config as config
         print("sys.argv[1] is not SINGLE; using multitask grid search")
 else:
     # default to multitask
-    from tomcat_speech.train_and_test_models.train_multitask import *
-    import tomcat_speech.models.parameters.multitask_gridsearch_config as config
+    from tomcat_speech.training_scripts.train_multitask import *
+    import tomcat_speech.parameters.multitask_gridsearch_config as config
     print("No config type specified; defaulting to multitask grid search")
 
 # get the params

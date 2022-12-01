@@ -1,29 +1,23 @@
 # train the models created in models directory with MUStARD data
 # currently the main entry point into the system
-import datetime
 import pickle
 import shutil
 import sys
 import os
-import time
 
 import torch
 import numpy as np
-from datetime import date
 import random
 
-from tomcat_speech.models.train_and_test_models import (
-    evaluate,
-    train_and_predict
+from tomcat_speech.train_and_test_models.train_and_test_models import (
+    evaluate
 )
 from tomcat_speech.train_and_test_models.train_and_test_utils import make_train_state
 from tomcat_speech.models.multimodal_models import MultitaskModel
-from tomcat_speech.models.plot_training import *
 
 # import MultitaskObject and Glove from preprocessing code
 sys.path.append("../multimodal_data_preprocessing")
 from utils.data_prep_helpers import (
-    MultitaskObject,
     Glove,
     make_glove_dict,
     MultitaskTestObject,
@@ -57,7 +51,7 @@ if __name__ == "__main__":
     )
 
     # import parameters for model
-    from tomcat_speech.train_and_test_models.testing_parameters import config
+    from tomcat_speech.parameters.testing_parameters import config
 
     # set random seed
     torch.manual_seed(config.model_params.seed)
@@ -75,7 +69,7 @@ if __name__ == "__main__":
 
     # decide if you want to use avgd feats
     avgd_acoustic_in_network = (
-        config.model_params.avgd_acoustic or config.model_params.add_avging
+            config.model_params.avgd_acoustic or config.model_params.add_avging
     )
 
     # set location for pickled data (saving or loading)
