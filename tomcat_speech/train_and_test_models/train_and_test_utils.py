@@ -17,7 +17,8 @@ def set_cuda_and_seeds(config):
 
     # # Check CUDA
     if torch.cuda.is_available():
-        torch.cuda.set_device(2)
+        torch.cuda.set_device(0)
+        #torch.cuda.set_device(2)
 
     # set random seed
     torch.manual_seed(config.model_params.seed)

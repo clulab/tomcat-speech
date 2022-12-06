@@ -19,7 +19,7 @@ from tomcat_speech.models.plot_training import *
 from tomcat_speech.train_and_test_models.train_and_test_utils import set_cuda_and_seeds, select_model
 
 # import MultitaskObject and Glove from preprocessing code
-sys.path.append("/home/jculnan/github/multimodal_data_preprocessing")
+sys.path.append("/home/cheonkamjeong/multimodal_data_preprocessing")
 from utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict #, convert_to_ternary
 
 from tomcat_speech.data_prep.ingest_data import *
