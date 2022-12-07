@@ -32,10 +32,10 @@ CONFIG_FILE = os.path.abspath(__file__)
 num_tasks = 5
 
 # set parameters for data prep
-glotve_path = "/home/tomcat/multimodatl_data/glove.subset.300d.txt"
+glove_path = "/home/tomcat/multimodal_data/glove.subset.300d.txt"
 #glove_path = "../../datasets/glove/glove.subset.300d.txt"
-datasets = ["meld"]
-datasets_num = {"meld":7, "firstimpr":5, "ravdess":2, "mosi":7, "cdc":2} 
+datasets = ["toymeld"]
+datasets_num = {"meld":7, "firstimpr":5, "ravdess":2, "mosi":7, "cdc":2, "toymeld": 7}
 
 if USE_SERVER:
     load_path = "/home/tomcat/multimodal_data"
