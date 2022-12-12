@@ -15,6 +15,8 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
 
+from tomcat_speech.models.train_and_test_models import update_train_state
+
 def get_all_batches(dataset_list, batch_size, shuffle, partition="train", sampler=None):
     """
     Create all batches and put them together as a single dataset
