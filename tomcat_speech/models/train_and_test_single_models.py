@@ -267,10 +267,10 @@ def run_model(
             # save_encoded_data=save_encoded_data #todo: add me
         )
 
-        print("batch_task is:", batch_task) #added 12/06/22
-        print("batch_pred is:", batch_pred) #added 12/06/22
-        print("y_gold is:", y_gold) #added 12/06/22
-        print(batch_pred.size()) #added 12/06/22
+        # print("batch_task is:", batch_task) #added 12/06/22
+        # print("batch_pred is:", batch_pred) #added 12/06/22
+        # print("y_gold is:", y_gold) #added 12/06/22
+        # print(batch_pred.size()) #added 12/06/22
         
         # calculate loss
         if loss_fx:
@@ -335,7 +335,7 @@ def get_predictions(
     batch_text = batch["x_utt"].detach().to(device)
     #print(batch_text) # added 11/29/22
     #print(type(batch_text)) # added 11/29/22
-    print(batch_text.size()) # added 11/29/22
+    # print(batch_text.size()) # added 11/29/22
     if use_speaker:
         batch_speakers = batch["x_speaker"].to(device)
     else:
