@@ -333,7 +333,7 @@ def get_predictions(
     batch_text = batch["x_utt"].detach().to(device)
     #print(batch_text) # added 11/29/22
     #print(type(batch_text)) # added 11/29/22
-    #print(batch_text.size()) # added 11/29/22
+    print(batch_text.size()) # added 11/29/22
     if use_speaker:
         batch_speakers = batch["x_speaker"].to(device)
     else:
@@ -371,6 +371,11 @@ def get_predictions(
         )
 
     batch_pred = y_pred[batch_task]
+    print("y predictions are:")
+    print(y_pred)
+    print(batch_task)
+    print("Now printing batch predictions from line 375 of train_and_test_single_models.py")
+    print(batch_pred)
 
     if datasets_list[batch_task].binary:
         batch_pred = batch_pred.float()
