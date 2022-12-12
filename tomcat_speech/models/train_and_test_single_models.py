@@ -370,12 +370,12 @@ def get_predictions(
             save_encoded_data=save_encoded_data,
         )
 
-    batch_pred = y_pred[batch_task]
-    print("y predictions are:")
-    print(y_pred)
-    print(batch_task)
-    print("Now printing batch predictions from line 375 of train_and_test_single_models.py")
-    print(batch_pred)
+    batch_pred = y_pred
+    # print("y predictions are:")
+    # print(y_pred)
+    # print(batch_task)
+    # print("Now printing batch predictions from line 375 of train_and_test_single_models.py")
+    # print(batch_pred)
 
     if datasets_list[batch_task].binary:
         batch_pred = batch_pred.float()

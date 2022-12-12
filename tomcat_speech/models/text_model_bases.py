@@ -379,7 +379,6 @@ class TextOnlyModel(nn.Module):
         save_encoded_data=False,
         spec_input = None #added 10/24/22
     ):
-        print(f"text input received by model is of size: {text_input.size()}")
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
         if not self.use_distilbert:
@@ -405,14 +404,9 @@ class TextOnlyModel(nn.Module):
             all_embs, length_input, batch_first=True, enforce_sorted=False
         )
 
-        # added 11/29/22 to check the size
-        print(packed.data.size())
-
         # feed embeddings through GRU
         packed_output, (hidden, cell) = self.text_rnn(packed)
         encoded_text = F.dropout(hidden[-1], 0.3)
-
-        print(f"size of encoded text at line 412 of model: {encoded_text.size()}")
 
         # combine modalities as required by architecture
         if speaker_input is not None:
@@ -422,12 +416,9 @@ class TextOnlyModel(nn.Module):
         else:
             inputs = encoded_text
 
-        print(f"inputs at line 421 of model: {inputs.size()}")
         # use pooled, squeezed feats as input into fc layers
         output = torch.tanh(F.dropout(self.fc1(inputs), 0.5))
-        print(f"output size at line 423 of model: {output.size()}")
         output = self.fc2(output) # 12/06/22
-        print(f"output size at line 425 of model: {output.size()}")
 
         if self.out_dims == 1: 
             output = torch.sigmoid(output)
@@ -435,8 +426,5 @@ class TextOnlyModel(nn.Module):
             prob = nn.Softmax(dim=1)
             output = prob(output)
 
-        print("Printing output of model forward pass")
-        print(output)
-        print(output.size())
         # return the output
         return output
