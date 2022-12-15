@@ -34,7 +34,7 @@ num_tasks = 5
 # set parameters for data prep
 glove_path = "/home/tomcat/multimodal_data/glove.subset.300d.txt"
 #glove_path = "../../datasets/glove/glove.subset.300d.txt"
-datasets = ["toymeld"]
+datasets = ["meld"] #"toymeld"
 datasets_num = {"meld":7, "firstimpr":5, "ravdess":2, "mosi":7, "cdc":2, "toymeld": 7}
 
 if USE_SERVER:
@@ -74,10 +74,10 @@ model_params = Namespace(
         # overall model parameters
         #model=f"Single_task_{task}", # - => _ 10/24/22
         model=f"text_only", #added 10/24/22
-        num_epochs=200,
+        num_epochs=1, #revised from 200 to 1 for testing 12/15/22
         batch_size=100,  # 128,  # 32
         early_stopping_criterion=50,
-        num_gru_layers=2,  # 1,  # 3,  # 1,  # 4, 2,
+        num_gru_layers=1,  # 1,  # 3,  # 1,  # 4, 2, #2=>1 for testing 12/15/22
         bidirectional=False,
         use_distilbert=True,
         # input dimension parameters
@@ -91,7 +91,7 @@ model_params = Namespace(
         out_channels=20,
         text_cnn_hidden_dim=100,
         # text_output_dim=30,   # 100,   # 50, 300,
-        text_gru_hidden_dim=300,  # 30,  # 50,  # 20
+        text_gru_hidden_dim=20,  # 30,  # 50,  # 20 #300=>20 for testing 12/15/22
         # acoustic NN
         avgd_acoustic=False,  # set true to use avgd acoustic feat vectors without RNN
         add_avging=True,  # set to true if you want to avg acoustic feature vecs upon input
@@ -112,7 +112,7 @@ model_params = Namespace(
         single_loss = False,
         # whether to use loss multiplier by dataset size
         loss_multiplier = False, # output
-        output_dim=100,  # output dimensions from last layer of base model
+        output_dim=10,  # output dimensions from last layer of base model #100=>10 for testing 12/15/22
         output_0_dim=datasets_num[datasets[0]], # set to 7 because ['meld'] has 7 classes
         #print(output_0_dim), # added 12/05/22
         #output_0_dim=5,  # output vec for first task
@@ -122,8 +122,8 @@ model_params = Namespace(
         output_4_dim=0,
         # FC layer parameters
         num_fc_layers=1,  # 1,  # 2,
-        fc_hidden_dim=100,  # 20,  must match output_dim if final fc layer removed from base model
-        final_hidden_dim=200,  # the out size of dset-specific fc1 and input of fc2
+        fc_hidden_dim=10,  # 20,  must match output_dim if final fc layer removed from base model #100=>10 for testing 12/15/22
+        final_hidden_dim=20,  # the out size of dset-specific fc1 and input of fc2 #200=>20 for testing 12/15/22
         dropout=0.4,  # 0.2, 0.3
         # optimizer parameters
         lr=1e-6,

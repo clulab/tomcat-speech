@@ -21,14 +21,13 @@ def get_all_batches(dataset_list, batch_size, shuffle, partition="train", sample
     """
     Create all batches and put them together as a single dataset
     """
+    print("Time is now:", datetime.now()) #12/15/22 added
     # set holder for batches
     all_batches = []
     all_loss_funcs = []
 
     # get number of tasks
     num_tasks = len(dataset_list)
-
-    # batch the data for each task
 
     # batch the data for each task
     for i in range(num_tasks):
@@ -39,6 +38,7 @@ def get_all_batches(dataset_list, batch_size, shuffle, partition="train", sample
             data = DataLoader(
                 dataset_list[i].train, batch_size=batch_size, shuffle=shuffle
             )
+            print(f"Time when DataLoader called for task {i} is now:" ,datetime.now()) #12/15/22 added
         elif partition == "dev" or partition == "val":
             data = DataLoader(
                 dataset_list[i].dev, batch_size=batch_size, shuffle=shuffle
@@ -53,6 +53,7 @@ def get_all_batches(dataset_list, batch_size, shuffle, partition="train", sample
         # put batches together
         all_batches.append(data)
         all_loss_funcs.append(loss_func)
+        print("Time when data and loss_func added to holders is now:", datetime.now()) #12/15/22 added
 
     randomized_batches = []
     randomized_tasks = []
@@ -64,10 +65,13 @@ def get_all_batches(dataset_list, batch_size, shuffle, partition="train", sample
             randomized_batches.append(batch)
             randomized_tasks.append(task_num)
         task_num += 1
+    print("Time when all batches prepared for randomization is now:", datetime.now()) #12/15/22 added
 
     zipped = list(zip(randomized_batches, randomized_tasks))
     random.shuffle(zipped)
+    print("Time when batches randomized is now:", datetime.now()) #12/15/22 added
     randomized_batches, randomized_tasks = list(zip(*zipped))
+    print("Time when randomized batches converted to list now:", datetime.now()) #12/15/22 added
 
     return randomized_batches, randomized_tasks
 
