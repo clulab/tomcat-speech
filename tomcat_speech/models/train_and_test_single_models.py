@@ -5,9 +5,6 @@ import random
 import warnings
 from datetime import datetime
 
-import torch
-import torch.nn as nn
-
 # import parameters for model
 from torch.utils.data import DataLoader, RandomSampler
 
@@ -17,18 +14,14 @@ from sklearn.metrics import precision_recall_fscore_support
 
 from tomcat_speech.models.train_and_test_models import update_train_state
 
-def get_all_batches(dataset_list, batch_size, shuffle, partition="train", sampler=None):
-    """
-    Create all batches and put them together as a single dataset
-    """
+
+def get_data_from_loader(dataset_list, batch_size, shuffle, partition="train", sampler=None):
     # set holder for batches
     all_batches = []
     all_loss_funcs = []
 
     # get number of tasks
     num_tasks = len(dataset_list)
-
-    # batch the data for each task
 
     # batch the data for each task
     for i in range(num_tasks):
@@ -54,6 +47,14 @@ def get_all_batches(dataset_list, batch_size, shuffle, partition="train", sample
         all_batches.append(data)
         all_loss_funcs.append(loss_func)
 
+    return all_batches, all_loss_funcs
+
+
+def randomize_batches(all_batches):
+    """
+    Randomize the order in which minibatches are seen
+    Done to get different batches of same task separated for multitasking
+    """
     randomized_batches = []
     randomized_tasks = []
 
@@ -70,6 +71,7 @@ def get_all_batches(dataset_list, batch_size, shuffle, partition="train", sample
     randomized_batches, randomized_tasks = list(zip(*zipped))
 
     return randomized_batches, randomized_tasks
+
 
 def train_and_predict(
     classifier,
@@ -107,9 +109,14 @@ def train_and_predict(
 
         train_state["epoch_index"] = epoch_index
 
+        # load data here -- only once (but Data should be shuffled each time)
+        train_data = get_data_from_loader(datasets_list, batch_size, shuffle=True,
+                                          partition='train', sampler=sampler)
+
         # get running loss, holders of ys and predictions on training partition
         running_loss, ys_holder, preds_holder = run_model(
-            datasets_list,
+            datasets_list,  # todo: refactor to remove me
+            train_data,
             classifier,
             batch_size,
             num_tasks,
@@ -136,9 +143,14 @@ def train_and_predict(
             # add training f1 to train state
             train_state["train_avg_f1"][task].append(task_avg_f1[2])
 
+        # load data here -- only once (but Data should be shuffled each time)
+        dev_data = get_data_from_loader(datasets_list, batch_size, shuffle=True,
+                                          partition='dev', sampler=sampler)
+
         # get running loss, holders of ys and predictions on dev partition
         running_loss, ys_holder, preds_holder = run_model(
             datasets_list,
+            dev_data,
             classifier,
             batch_size,
             num_tasks,
@@ -198,6 +210,7 @@ def train_and_predict(
 
 def run_model(
     datasets_list,
+    partition_data,
     classifier,
     batch_size,
     num_tasks,
@@ -220,17 +233,8 @@ def run_model(
     # Iterate over training dataset
     running_loss = 0.0
 
-    # set classifier(s) to appropriate mode
-    if mode.lower() == "training" or mode.lower() == "train":
-        classifier.train()
-        batches, tasks = get_all_batches(
-                datasets_list, batch_size=batch_size, shuffle=True
-        )
-    else:
-        classifier.eval()
-        batches, tasks = get_all_batches(
-            datasets_list, batch_size=batch_size, shuffle=True, partition="dev"
-        )
+    # get batches and tasks
+    batches, tasks = randomize_batches(partition_data)
 
     next_time = datetime.now()
     print(f"Batches organized at {next_time - first}")
@@ -262,8 +266,6 @@ def run_model(
             use_speaker,
             use_gender,
             avgd_acoustic,
-            tasks,
-            datasets_list,
             # save_encoded_data=save_encoded_data #todo: add me
         )
 
@@ -317,8 +319,6 @@ def get_predictions(
     use_speaker,
     use_gender,
     avgd_acoustic,
-    tasks,
-    datasets_list,
     save_encoded_data=False,
 ):
     """
@@ -331,7 +331,6 @@ def get_predictions(
     # todo add flexibilty for other tasks in same dataset
     y_gold = batch["ys"][0].detach().to(device)
 
-    batch_acoustic = batch["x_acoustic"].detach().to(device)
     batch_text = batch["x_utt"].detach().to(device)
     #print(batch_text) # added 11/29/22
     #print(type(batch_text)) # added 11/29/22
@@ -345,14 +344,12 @@ def get_predictions(
         batch_genders = batch["x_gender"].to(device)
     else:
         batch_genders = None
-    batch_lengths = batch["utt_length"] #.to(device)
-    batch_acoustic_lengths = batch["acoustic_length"] #.to(device)
+    batch_lengths = batch["utt_length"]
 
     # feed these parts into classifier
     # compute the output
     if avgd_acoustic:
         y_pred = classifier(
-            #acoustic_input=batch_acoustic,
             text_input=batch_text,
             speaker_input=batch_speakers,
             length_input=batch_lengths,
@@ -362,11 +359,9 @@ def get_predictions(
         )
     else:
         y_pred = classifier(
-            #acoustic_input=batch_acoustic,
             text_input=batch_text,
             speaker_input=batch_speakers,
             length_input=batch_lengths,
-            acoustic_len_input=batch_acoustic_lengths,
             gender_input=batch_genders,
             #task_num=tasks[batch_index],
             save_encoded_data=save_encoded_data,
@@ -379,9 +374,10 @@ def get_predictions(
     # print("Now printing batch predictions from line 375 of train_and_test_single_models.py")
     # print(batch_pred)
 
-    if datasets_list[batch_task].binary:
-        batch_pred = batch_pred.float()
-        y_gold = y_gold.float()
+    # todo: make sure we can remove this
+    # if datasets_list[batch_task].binary:
+    #     batch_pred = batch_pred.float()
+    #     y_gold = y_gold.float()
 
     return y_gold, batch_pred
 
