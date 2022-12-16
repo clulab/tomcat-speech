@@ -105,16 +105,20 @@ def train_and_predict(
         train_state["train_avg_f1"][dset.task_num] = []
         train_state["val_avg_f1"][dset.task_num] = []
 
+    # load data here -- only once (but Data should be shuffled each time)
+    train_data, _ = get_data_from_loader(datasets_list, batch_size, shuffle=True,
+                                         partition='train', sampler=sampler)
+
+    # load data here -- only once (but Data should be shuffled each time)
+    dev_data, _ = get_data_from_loader(datasets_list, batch_size, shuffle=True,
+                                       partition='dev', sampler=sampler)
+
     for epoch_index in range(num_epochs):
 
         first = datetime.now()
         print(f"Starting epoch {epoch_index} at {first}")
 
         train_state["epoch_index"] = epoch_index
-
-        # load data here -- only once (but Data should be shuffled each time)
-        train_data, _ = get_data_from_loader(datasets_list, batch_size, shuffle=True,
-                                          partition='train', sampler=sampler)
 
         # get running loss, holders of ys and predictions on training partition
         running_loss, ys_holder, preds_holder = run_model(
@@ -145,10 +149,6 @@ def train_and_predict(
             print(f"Training weighted f-score for task {task}: {task_avg_f1}")
             # add training f1 to train state
             train_state["train_avg_f1"][task].append(task_avg_f1[2])
-
-        # load data here -- only once (but Data should be shuffled each time)
-        dev_data, _ = get_data_from_loader(datasets_list, batch_size, shuffle=True,
-                                          partition='dev', sampler=sampler)
 
         # get running loss, holders of ys and predictions on dev partition
         running_loss, ys_holder, preds_holder = run_model(
