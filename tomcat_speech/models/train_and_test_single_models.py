@@ -113,7 +113,7 @@ def train_and_predict(
         train_state["epoch_index"] = epoch_index
 
         # load data here -- only once (but Data should be shuffled each time)
-        train_data = get_data_from_loader(datasets_list, batch_size, shuffle=True,
+        train_data, _ = get_data_from_loader(datasets_list, batch_size, shuffle=True,
                                           partition='train', sampler=sampler)
 
         # get running loss, holders of ys and predictions on training partition
@@ -147,7 +147,7 @@ def train_and_predict(
             train_state["train_avg_f1"][task].append(task_avg_f1[2])
 
         # load data here -- only once (but Data should be shuffled each time)
-        dev_data = get_data_from_loader(datasets_list, batch_size, shuffle=True,
+        dev_data, _ = get_data_from_loader(datasets_list, batch_size, shuffle=True,
                                           partition='dev', sampler=sampler)
 
         # get running loss, holders of ys and predictions on dev partition
