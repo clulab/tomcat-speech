@@ -201,6 +201,10 @@ if __name__ == "__main__":
         data, loss_fx, sampler = load_modality_data(device, config)
         num_embeddings = None
         pretrained_embeddings = None
+    
+    print(type(data[0].train)) #12/15/22
+    print(len(data[0].train)) #12/15/22
+    exit() #12/15/22
 
     # create save location
     output_path = os.path.join(

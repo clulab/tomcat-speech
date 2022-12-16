@@ -65,10 +65,13 @@ def randomize_batches(all_batches):
             randomized_batches.append(batch)
             randomized_tasks.append(task_num)
         task_num += 1
+    print("Time when all batches prepared for randomization is now:", datetime.now()) #12/15/22 added
 
     zipped = list(zip(randomized_batches, randomized_tasks))
     random.shuffle(zipped)
+    print("Time when batches randomized is now:", datetime.now()) #12/15/22 added
     randomized_batches, randomized_tasks = list(zip(*zipped))
+    print("Time when randomized batches converted to list now:", datetime.now()) #12/15/22 added
 
     return randomized_batches, randomized_tasks
 
