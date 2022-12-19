@@ -15,7 +15,7 @@ from sklearn.metrics import precision_recall_fscore_support
 from tomcat_speech.models.train_and_test_models import update_train_state
 
 
-def get_data_from_loader(dataset_list, batch_size, shuffle, partition="train", sampler=None):
+def get_data_from_loader(dataset_list, batch_size, shuffle, device, partition="train", sampler=None):
     # set holder for batches
     all_batches = []
     all_loss_funcs = []
@@ -30,15 +30,18 @@ def get_data_from_loader(dataset_list, batch_size, shuffle, partition="train", s
             if sampler is not None:
                 dataset_list[i].train = sampler.prep_data_through_oversampling(dataset_list[i].train)
             data = DataLoader(
-                dataset_list[i].train, batch_size=batch_size, shuffle=shuffle
+                dataset_list[i].train, batch_size=batch_size, shuffle=shuffle,
+                pin_memory=True, pin_memory_device=device
             )
         elif partition == "dev" or partition == "val":
             data = DataLoader(
-                dataset_list[i].dev, batch_size=batch_size, shuffle=shuffle
+                dataset_list[i].dev, batch_size=batch_size, shuffle=shuffle,
+                pin_memory=True, pin_memory_device=device
             )
         elif partition == "test":
             data = DataLoader(
-                dataset_list[i].test, batch_size=batch_size, shuffle=shuffle
+                dataset_list[i].test, batch_size=batch_size, shuffle=shuffle,
+                pin_memory=True, pin_memory_device=device
             )
         else:
             sys.exit(f"Error: data partition {partition} not found")
@@ -106,11 +109,11 @@ def train_and_predict(
         train_state["val_avg_f1"][dset.task_num] = []
 
     # load data here -- only once (but Data should be shuffled each time)
-    train_data, _ = get_data_from_loader(datasets_list, batch_size, shuffle=True,
+    train_data, _ = get_data_from_loader(datasets_list, batch_size, shuffle=True, device=device,
                                          partition='train', sampler=sampler)
 
     # load data here -- only once (but Data should be shuffled each time)
-    dev_data, _ = get_data_from_loader(datasets_list, batch_size, shuffle=True,
+    dev_data, _ = get_data_from_loader(datasets_list, batch_size, shuffle=True, device=device,
                                        partition='dev', sampler=sampler)
 
     for epoch_index in range(num_epochs):
