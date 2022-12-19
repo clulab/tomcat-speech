@@ -31,17 +31,17 @@ def get_data_from_loader(dataset_list, batch_size, shuffle, device, partition="t
                 dataset_list[i].train = sampler.prep_data_through_oversampling(dataset_list[i].train)
             data = DataLoader(
                 dataset_list[i].train, batch_size=batch_size, shuffle=shuffle,
-                pin_memory=True, pin_memory_device=device
+                pin_memory=True
             )
         elif partition == "dev" or partition == "val":
             data = DataLoader(
                 dataset_list[i].dev, batch_size=batch_size, shuffle=shuffle,
-                pin_memory=True, pin_memory_device=device
+                pin_memory=True
             )
         elif partition == "test":
             data = DataLoader(
                 dataset_list[i].test, batch_size=batch_size, shuffle=shuffle,
-                pin_memory=True, pin_memory_device=device
+                pin_memory=True
             )
         else:
             sys.exit(f"Error: data partition {partition} not found")
