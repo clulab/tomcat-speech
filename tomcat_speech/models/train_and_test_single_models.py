@@ -30,18 +30,20 @@ def get_data_from_loader(dataset_list, batch_size, shuffle, device, partition="t
             if sampler is not None:
                 dataset_list[i].train = sampler.prep_data_through_oversampling(dataset_list[i].train)
             data = DataLoader(
-                dataset_list[i].train, batch_size=batch_size, shuffle=shuffle,
-                pin_memory=True
+                dataset_list[i].train, batch_size=batch_size, shuffle=shuffle, num_workers=4, 
+                # pin_memory=True with GPU, not CPU
+                #added 12/19/22 for testing parallel processing
             )
         elif partition == "dev" or partition == "val":
             data = DataLoader(
                 dataset_list[i].dev, batch_size=batch_size, shuffle=shuffle,
-                pin_memory=True
+                num_workers=4, 
+                # added 12/19/22
             )
         elif partition == "test":
             data = DataLoader(
-                dataset_list[i].test, batch_size=batch_size, shuffle=shuffle,
-                pin_memory=True
+                dataset_list[i].test, batch_size=batch_size, shuffle=shuffle, num_workers=4, 
+                # added 12/19/22
             )
         else:
             sys.exit(f"Error: data partition {partition} not found")

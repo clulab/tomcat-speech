@@ -74,7 +74,7 @@ model_params = Namespace(
         # overall model parameters
         #model=f"Single_task_{task}", # - => _ 10/24/22
         model=f"text_only", #added 10/24/22
-        num_epochs=1, #revised from 200 to 1 for testing 12/15/22
+        num_epochs=2, #revised from 200 to 1 for testing 12/15/22
         batch_size=100,  # 128,  # 32
         early_stopping_criterion=50,
         num_gru_layers=1,  # 1,  # 3,  # 1,  # 4, 2, #2=>1 for testing 12/15/22

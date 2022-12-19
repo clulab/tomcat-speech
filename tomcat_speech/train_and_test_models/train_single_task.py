@@ -204,7 +204,7 @@ if __name__ == "__main__":
     
     print(type(data[0].train)) #12/15/22
     print(len(data[0].train)) #12/15/22
-    exit() #12/15/22
+    #exit() #12/15/22
 
     # create save location
     output_path = os.path.join(
