@@ -20,7 +20,7 @@ EXPERIMENT_ID = 1
 # EXPERIMENT_DESCRIPTION = "IntermediateFusion_test_paramsfromMMML_ClassWts_"
 EXPERIMENT_DESCRIPTION = "MC_Testing_gridsearch_code_"
 # indicate whether this code is being run locally or on the server
-USE_SERVER = False
+USE_SERVER = True #01/10/23
 
 # whether you are starting with a pretrained model that you update during training
 trained_model = None # or path to model file
@@ -31,13 +31,14 @@ CONFIG_FILE = os.path.abspath(__file__)
 num_tasks = 5
 
 # set parameters for data prep
-glove_path = "../../datasets/glove/glove.subset.300d.txt"
+glove_path = "/home/tomcat/multimodal_data/glove.subset.300d.txt" #01/10/23
 
 if USE_SERVER:
-    load_path = "/data/nlp/corpora/MM/pickled_data/distilbert_custom_feats"
+    load_path = "/home/tomcat/multimodal_data" #01/10/23
 else:
     # path from which to load pickled data files
-    load_path = "../../datasets/pickled_data/IS13_glove_GOLD"
+    #load_path = "../../datasets/pickled_data/IS13_glove_GOLD"
+    None
 
 # set dir to save full experiments
 exp_save_path = "output/multitask"
@@ -47,7 +48,9 @@ exp_save_path = "output/multitask"
 chalearn_predtype = "max_class"
 
 # set the acoustic feature set
-feature_set = "IS13_glove_dict"
+feature_set = "IS13_distilbert_dict" #01/10/23
+
+datasets = ["meld"] #added 01/10/23
 
 saved_model = None
 
@@ -62,6 +65,8 @@ model_params = Namespace(
     use_gradnorm=False,
     # whether to use data sampler
     use_sampler=False,
+    # whether to use class weights 01/10/23
+    use_clsswts=False,
     # decide whether to use early, intermediate, or late fusion
     fusion_type="int",  # int, late, early
     # consistency parameters
@@ -77,10 +82,12 @@ model_params = Namespace(
     batch_size=[100],  # 128,  # 32
     early_stopping_criterion=5,
     num_gru_layers=2,  # 1,  # 3,  # 1,  # 4, 2,
-    bidirectional=False,
+    bidirectional=True, #01/10/23
     use_distilbert=False,
     # set whether to have a single loss function
     single_loss=False,
+    # whether to use loss multiplier by dataset size 01/10/23
+    loss_multiplier=False,
     # input dimension parameters
     text_dim=300,  # text vector length # 768 for bert/distilbert, 300 for glove
     short_emb_dim=30,  # length of trainable embeddings vec
@@ -105,9 +112,9 @@ model_params = Namespace(
     use_gender=False,
     gender_emb_dim=4,
     # outputs
-    output_dim=100,  # output dimensions from last layer of base model
+    output_dim=[100],  # output dimensions from last layer of base model
     output_0_dim=7,  # output vec for first task 2 7 5 7 2
-    output_1_dim=5,  # output vec for second task
+    output_1_dim=0,  # output vec for second task, 01/10/23
     output_2_dim=0,  # output vec for third task
     output_3_dim=0,
     output_4_dim=0,
