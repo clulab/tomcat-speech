@@ -12,68 +12,13 @@ import sys
 sys.path.append("/home/cheonkamjeong/multimodal_data_preprocessing")
 from tomcat_speech.models.train_and_test_models import train_and_predict, make_train_state
 from tomcat_speech.models.multimodal_models import MultitaskModel
+from tomcat_speech.train_and_test_models.train_multitask import load_modality_data
 from tomcat_speech.models.plot_training import *
 from tomcat_speech.train_and_test_models.train_and_test_utils import set_cuda_and_seeds, select_model
 
 # import MultitaskObject and Glove from preprocessing code
 sys.path.append("../multimodal_data_preprocessing")
-#from utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict
-import utils
-
-def load_data(device, config):
-    # 1. Load datasets + glove object
-    load_path = config.load_path
-    feature_set = config.feature_set
-
-    # import data
-    train_ds = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_train.pickle", "rb"))
-    dev_ds = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_dev.pickle", "rb"))
-    test_ds = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_test.pickle", "rb"))
-    class_weights = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_clsswts.pickle", "rb"))
-
-    # if not using distilbert embeddings
-    if not config.model_params.use_distilbert:
-        # make glove
-        glove_dict = make_glove_dict(config.glove_path)
-        glove = Glove(glove_dict)
-
-        # get set of pretrained embeddings and their shape
-        pretrained_embeddings = glove.data
-        num_embeddings = pretrained_embeddings.size()[0]
-        print(f"shape of pretrained embeddings is: {glove.data.size()}")
-
-    # add loss function for cdc
-    loss_func = torch.nn.CrossEntropyLoss(
-        weight=class_weights.to(device),
-        reduction="mean"
-    )
-
-    # create multitask object
-    task_obj = MultitaskObject(
-        train_ds,
-        dev_ds,
-        test_ds,
-        loss_func,
-        task_num=0,
-    )
-
-    # set all data list
-    all_data_list = [
-        task_obj
-    ]
-
-    print(
-        "Model, loss function, and optimization created"
-    )
-
-    # todo: set data sampler?
-    sampler = None
-    # sampler = BatchSchedulerSampler()
-
-    if not config.model_params.use_distilbert:
-        return all_data_list, loss_func, sampler, num_embeddings, pretrained_embeddings
-    else:
-        return all_data_list, loss_func, sampler
+from utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict
 
 
 def train_single_task(all_data_list, loss_fx, sampler, device, output_path, config,
@@ -122,7 +67,7 @@ def train_single_task(all_data_list, loss_fx, sampler, device, output_path, conf
     multitask_model = task_model.to(device)
     print(multitask_model)
 
-    # create a a save path and file for the model
+    # create a save path and file for the model
     model_save_file = f"{item_output_path}/{config.EXPERIMENT_DESCRIPTION}.pt"
 
     # make the train state to keep track of model training/development
@@ -182,9 +127,9 @@ if __name__ == "__main__":
 
     # get data
     if not config.model_params.use_distilbert:
-        data, loss_fx, sampler, num_embeddings, pretrained_embeddings = load_data(device, config)
+        data, loss_fx, sampler, num_embeddings, pretrained_embeddings = load_modality_data(device, config, use_acoustic=False)
     else:
-        data, loss_fx, sampler = load_data(device, config)
+        data, loss_fx, sampler = load_modality_data(device, config, use_acoustic=False)
         num_embeddings = None
         pretrained_embeddings = None
 
