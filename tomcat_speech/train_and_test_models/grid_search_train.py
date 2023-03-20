@@ -2,6 +2,10 @@
 
 from copy import deepcopy
 import sys
+
+from ray import tune
+from ray.tune import CLIReporter
+from ray.tune.schedulers import ASHAScheduler
 #sys.path.append("/home/u18/jmculnan/github/tomcat-speech")
 
 single_task = False
@@ -52,7 +56,6 @@ for l_rate in params.lr:
             for b_size in params.batch_size:
                 #for spec_out in params.spec_out_dim:
                  for outd in params.output_dim:
-
                     # create save location
                     output_path = os.path.join(
                         config.exp_save_path,

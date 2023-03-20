@@ -6,6 +6,7 @@ import shutil
 import sys
 sys.path.append("/home/cheonkamjeong/multimodal_data_preprocessing")
 import os
+
 import torch
 import numpy as np
 from datetime import date
@@ -94,7 +95,7 @@ def train_single_task(all_data_list, loss_fx, sampler, device, output_path, conf
         model_params.avgd_acoustic or model_params.add_avging
     )
 
-    # 3. CREATE NN
+    # CREATE NN
     print(model_params)
 
     item_output_path = os.path.join(

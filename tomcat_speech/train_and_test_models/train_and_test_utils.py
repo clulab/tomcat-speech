@@ -10,14 +10,14 @@ from tomcat_speech.models.text_model_bases import TextOnlyModel
 def set_cuda_and_seeds(config):
     # set cuda
     cuda = False
-    if torch.cuda.is_available():
-        cuda = True
+    #if torch.cuda.is_available():
+    #    cuda = True
 
     device = torch.device("cuda" if cuda else "cpu")
 
     # # Check CUDA
-    if torch.cuda.is_available():
-        torch.cuda.set_device(0)
+    #if torch.cuda.is_available():
+    #    torch.cuda.set_device(0)
         #torch.cuda.set_device(2)
 
     # set random seed
