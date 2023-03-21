@@ -5,7 +5,7 @@
 
 from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDataset
 from tomcat_speech.training_and_evaluation_functions.train_and_test_models import *
-from tomcat_speech.models.plot_training import *
+from tomcat_speech.training_and_evaluation_functions.plot_training import *
 from tomcat_speech.models.multimodal_models import *
 from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import make_train_state
 

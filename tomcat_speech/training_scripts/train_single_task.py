@@ -8,7 +8,7 @@ import torch
 from datetime import date
 
 from tomcat_speech.training_and_evaluation_functions.train_and_test_models import train_and_predict
-from tomcat_speech.models.plot_training import *
+from tomcat_speech.training_and_evaluation_functions.plot_training import *
 from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
     set_cuda_and_seeds,
     select_model,
@@ -129,7 +129,7 @@ def train_single_task(all_data_list, loss_fx, sampler, device, output_path, conf
     multitask_model = task_model.to(device)
     print(multitask_model)
 
-    # create a a save path and file for the model
+    # create a save path and file for the model
     model_save_file = f"{item_output_path}/{config.EXPERIMENT_DESCRIPTION}.pt"
 
     # make the train state to keep track of model training/development

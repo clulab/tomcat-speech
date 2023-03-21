@@ -11,7 +11,7 @@ from datetime import date
 from tomcat_speech.data_prep.samplers import RandomOversampler
 # from tomcat_speech.data_prep.samplers import RandomOversampler
 from tomcat_speech.training_and_evaluation_functions.train_and_test_multitask_singledataset import train_and_predict_multitask_singledataset
-from tomcat_speech.models.plot_training import *
+from tomcat_speech.training_and_evaluation_functions.plot_training import *
 from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
     set_cuda_and_seeds,
     select_model,
