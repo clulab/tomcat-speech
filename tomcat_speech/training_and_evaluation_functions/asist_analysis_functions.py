@@ -133,7 +133,6 @@ def get_json_output_of_speech_analysis(
     return prediction_json
 
 
-
 def save_json_predictions(prediction_json_list, savepath):
     # save the prediction json objects to a single file
     with open(savepath, 'w') as sfile:
