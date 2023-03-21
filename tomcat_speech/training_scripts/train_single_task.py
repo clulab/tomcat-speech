@@ -15,67 +15,6 @@ from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import
     make_train_state)
 from tomcat_speech.training_scripts.train_multitask import load_modality_data
 
-# import MultitaskObject and Glove from preprocessing code
-sys.path.append("../multimodal_data_preprocessing")
-
-
-# todo: Cheonkam, if load_modality_data works as called
-#   then this can be deleted
-# def load_data(device, config):
-#     # 1. Load datasets + glove object
-#     load_path = config.load_path
-#     feature_set = config.feature_set
-#
-#     # import data
-#     train_ds = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_train.pickle", "rb"))
-#     dev_ds = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_dev.pickle", "rb"))
-#     test_ds = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_test.pickle", "rb"))
-#     class_weights = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_clsswts.pickle", "rb"))
-#
-#     # if not using distilbert embeddings
-#     if not config.model_params.use_distilbert:
-#         # make glove
-#         glove_dict = make_glove_dict(config.glove_path)
-#         glove = Glove(glove_dict)
-#
-#         # get set of pretrained embeddings and their shape
-#         pretrained_embeddings = glove.data
-#         num_embeddings = pretrained_embeddings.size()[0]
-#         print(f"shape of pretrained embeddings is: {glove.data.size()}")
-#
-#     # add loss function for cdc
-#     loss_func = torch.nn.CrossEntropyLoss(
-#         weight=class_weights.to(device),
-#         reduction="mean"
-#     )
-#
-#     # create multitask object
-#     task_obj = MultitaskObject(
-#         train_ds,
-#         dev_ds,
-#         test_ds,
-#         loss_func,
-#         task_num=0,
-#     )
-#
-#     # set all data list
-#     all_data_list = [
-#         task_obj
-#     ]
-#
-#     print(
-#         "Model, loss function, and optimization created"
-#     )
-#
-#     # todo: set data sampler?
-#     sampler = None
-#     # sampler = BatchSchedulerSampler()
-#
-#     if not config.model_params.use_distilbert:
-#         return all_data_list, loss_func, sampler, num_embeddings, pretrained_embeddings
-#     else:
-#         return all_data_list, loss_func, sampler
-
 
 def train_single_task(all_data_list, loss_fx, sampler, device, output_path, config,
                     num_embeddings=None, pretrained_embeddings=None, extra_params=None,
