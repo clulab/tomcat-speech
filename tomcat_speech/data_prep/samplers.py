@@ -54,13 +54,6 @@ class BatchSchedulerSampler(torch.utils.data.sampler.Sampler):
                     except StopIteration:
                         # stop trying to add samples and continue on in the next dataset
                         break
-                        # got to the end of iterator - restart the iterator and continue to get samples
-                        # until reaching "epoch_samples"
-                        # sampler_iterators[i] = samplers_list[i].__iter__()
-                        # cur_batch_sampler = sampler_iterators[i]
-                        # cur_sample_org = cur_batch_sampler.__next__()
-                        # cur_sample = cur_sample_org + push_index_val[i]
-                        # cur_samples.append(cur_sample)
                 final_samples_list.extend(cur_samples)
 
         return iter(final_samples_list)
