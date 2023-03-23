@@ -3,7 +3,9 @@ import torch
 from torch.utils.data import DataLoader
 import numpy as np
 import random
+import sys
 
+from tomcat_speech.data_prep.samplers import RandomSampler
 from tomcat_speech.models.multimodal_models import MultitaskModel, MultitaskAcousticShared, \
     MultitaskDuplicateInputModel, MultitaskTextShared
 

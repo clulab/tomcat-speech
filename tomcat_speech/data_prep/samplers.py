@@ -97,7 +97,6 @@ class RandomOversampler():
         all_ids = [[item['audio_id']] for item in dataset]
         # todo: expand to allow flexibility of which task to select
         #   when there are multiple
-        # TODO: update with info from hpc
         all_ys = [item['ys'][1] for item in dataset]  # going with emotion items
 
         # do oversampling

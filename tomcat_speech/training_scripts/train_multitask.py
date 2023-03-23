@@ -19,8 +19,8 @@ from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import
 )
 
 # import MultitaskObject and Glove from preprocessing code
-sys.path.append("/home/jculnan/github/multimodal_data_preprocessing")
-from utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict #, convert_to_ternary
+sys.path.append("/home/cheonkamjeong/multimodal_data_preprocessing")
+from preprocessing_utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict #, convert_to_ternary
 
 from tomcat_speech.data_prep.ingest_data import *
 
