@@ -1,11 +1,10 @@
-from asist.prep_asist import prep_asist_data
-from cdc.prep_cdc import *
-from cmu_mosi.prep_mosi import *
-from firstimpr.prep_firstimpr import *
-from lives_health.prep_lives import prep_lives_data
-from meld.prep_meld import *
-from mustard.prep_mustard import *
-from ravdess.prep_ravdess import *
+from tomcat_speech.data_prep.asist.prep_asist import prep_asist_data
+from tomcat_speech.data_prep.cdc.prep_cdc import *
+from tomcat_speech.data_prep.cmu_mosi.prep_mosi import *
+from tomcat_speech.data_prep.firstimpr.prep_firstimpr import *
+from tomcat_speech.data_prep.meld.prep_meld import *
+from tomcat_speech.data_prep.mustard.prep_mustard import *
+from tomcat_speech.data_prep.ravdess.prep_ravdess import *
 
 from torch.utils.data import Dataset
 
@@ -119,20 +118,6 @@ def prep_data(
             avg_acoustic_data=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
             selected_ids=selected_ids,
-            num_train_ex=num_train_ex,
-            include_spectrograms=include_spectrograms
-        )
-    elif dataset == "lives":
-        train, dev, test, weights = prep_lives_data(
-            data_path,
-            feature_set,
-            transcription_type,
-            emb_type,
-            glove_path,
-            feats_to_use,
-            as_dict=data_as_dict,
-            avg_acoustic_data=avg_acoustic_data,
-            custom_feats_file=custom_feats_file,
             num_train_ex=num_train_ex,
             include_spectrograms=include_spectrograms
         )

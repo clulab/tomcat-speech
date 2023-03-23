@@ -1,8 +1,7 @@
-from prep_data import *
-from utils.data_prep_helpers import (
+from tomcat_speech.data_prep.prep_data import SelfSplitPrep, get_updated_class_weights
+from tomcat_speech.data_prep.utils.data_prep_helpers import (
     Glove,
     make_glove_dict,
-    get_speaker_to_index_dict,
     get_data_samples,
 )
 

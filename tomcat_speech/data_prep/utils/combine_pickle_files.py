@@ -4,13 +4,8 @@ from pathlib import Path
 import re
 import pickle
 import torch
-import sys
-sys.path.append("/home/jculnan/github/multimodal_data_preprocessing")
 from sklearn.utils import compute_class_weight
 import numpy as np
-
-
-#from prep_data import get_updated_class_weights
 
 
 def get_class_weights_for_multiple_tasks(train_ys):

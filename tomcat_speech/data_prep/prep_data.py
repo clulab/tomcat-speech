@@ -6,7 +6,7 @@ import datetime
 from sklearn.utils import compute_class_weight
 from torchtext.data import get_tokenizer
 
-from combine_xs_and_ys_by_dataset import (
+from tomcat_speech.data_prep.combine_xs_and_ys_by_dataset import (
     combine_xs_and_ys_firstimpr,
     combine_xs_and_ys_meld,
     combine_xs_and_ys_mustard,
@@ -15,7 +15,7 @@ from combine_xs_and_ys_by_dataset import (
     combine_xs_and_ys_asist
 )
 
-from make_data_tensors_by_dataset import *
+from tomcat_speech.data_prep.make_data_tensors_by_dataset import *
 
 import pandas as pd
 

@@ -4,9 +4,10 @@
 import librosa
 import soundfile as sf
 import torch
-from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor, Wav2Vec2Tokenizer  # , Wav2Vec2FeatureExtractor
+from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 import nltk
 import os
+
 
 def load_model():
     tokenizer = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
@@ -38,6 +39,7 @@ def asr_transcript(input_file):
     transcription = tokenizer.decode(predicted_ids[0])
 
     return correct_sentence(transcription.lower())
+
 
 def transcribe_audio_dir(input_dir):
     tokenizer, model = load_model()

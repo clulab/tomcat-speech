@@ -1,5 +1,5 @@
 from sklearn.metrics import cohen_kappa_score
-import pandas as pd
+
 
 def get_kappas(df1, df2):
     """
@@ -24,11 +24,3 @@ def get_kappas(df1, df2):
     print(df1['emotion'].value_counts())
     print("Emotion counts for df2:")
     print(df2['emotion'].value_counts())
-
-
-if __name__ == "__main__":
-    sh_df = pd.read_csv('SH_HSRData_TrialMessages_Trial-T000607_Team-TM000204_Member-na_CondBtwn-none_CondWin-na_Vers-3_correctedTranscripts.csv')
-    ck_df = pd.read_csv('CKJ_HSRData_TrialMessages_Trial-T000607_Team-TM000204_Member-na_CondBtwn-none_CondWin-na_Vers-3_correctedTranscripts.csv')
-
-
-    get_kappas(sh_df, ck_df)

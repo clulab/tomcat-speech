@@ -6,7 +6,7 @@ import pickle
 
 import pandas as pd
 import numpy as np
-from utils.data_prep_helpers import clean_up_word, make_glove_dict, Glove
+from tomcat_speech.data_prep.utils.data_prep_helpers import clean_up_word
 
 from torchtext.data import get_tokenizer
 
@@ -45,11 +45,11 @@ def get_all_vocab_from_transcribed_df(dataframe):
         try:
             utt = clean_up_word(utt)
             wds = tokenizer(utt)
+            for wd in wds:
+                all_vocab.add(wd)
+                all_wds.append(wd)
         except AttributeError:
             print(utt)
-        for wd in wds:
-            all_vocab.add(wd)
-            all_wds.append(wd)
 
     return all_vocab
 

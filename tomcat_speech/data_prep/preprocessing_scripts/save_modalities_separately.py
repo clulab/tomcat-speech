@@ -1,5 +1,5 @@
 
-from utils.data_saving_and_loading_helpers import *
+from tomcat_speech.data_prep.utils.data_saving_and_loading_helpers import prep_data
 
 import pickle
 import bz2
@@ -61,11 +61,6 @@ def save_data_components(
         pickle.dump(clss_weights, bz2.BZ2File(f"{save_path}/{dataset}_clsswts.bz2", "wb"))
     else:
         pickle.dump(clss_weights, open(f"{save_path}/{dataset}_clsswts.pickle", "wb"))
-
-
-    # todo: implement if we need custom fields per dataset
-    # # get all parts of data to save
-    # all_fields = dev_ds[0].keys()
 
     all_data = [('train', train_ds),
                 ('dev', dev_ds),
@@ -150,7 +145,6 @@ if __name__ == "__main__":
     #mustard_path = f"{base_path}/MUStARD"
     #ravdess_path = f"{base_path}/RAVDESS_Speech"
     asist_path = f"{base_path}"
-    #lives_path = "../../lives_test/done"
 
     #save_path = "../../datasets/pickled_data/field_separated_data"
     save_path = "/media/jculnan/One Touch/jculnan/datasets/MultiCAT"
@@ -189,7 +183,6 @@ if __name__ == "__main__":
     datasets = ["asist"]
     # datasets = ["firstimpr", "meld", "ravdess"]
     # datasets = ["ravdess"]
-    # datasets = ["lives"]
 
     # custom_feats_file = "combined_features_small.txt"
     custom_feats_file = None
@@ -276,16 +269,3 @@ if __name__ == "__main__":
                 emb_type=emb_type,
                 custom_feats_file=custom_feats_file,
             )
-        # todo: lives requires custom fields
-        # elif dataset == "lives":
-        #     save_data_components(
-        #         dataset,
-        #         save_path,
-        #         lives_path,
-        #         feature_set,
-        #         transcription_type,
-        #         glove_path,
-        #         emb_type=emb_type,
-        #         custom_feats_file=custom_feats_file,
-        #         selected_ids=selected_ids,
-        #     )

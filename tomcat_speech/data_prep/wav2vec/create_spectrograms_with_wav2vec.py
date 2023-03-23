@@ -3,7 +3,6 @@
 import os
 import torch
 import torchaudio
-import torchaudio.functional as F
 import torchaudio.transforms as T
 
 import pandas as pd
@@ -39,8 +38,6 @@ def get_and_save_spectrogram(path_to_dir, audiofile, save_dir, resample=None):
         n_fft=1024,
         win_length=None,
         hop_length=512,
-        #center=True,
-        #pad_mode="reflect",
         power=2.0,
     )
 
@@ -55,7 +52,6 @@ def get_and_save_spectrogram(path_to_dir, audiofile, save_dir, resample=None):
     spec.to_csv(f"{save_dir}/{audioname}.csv", index=False)
 
 
-
 def plot_spectrogram(spec, title=None, ylabel='freq_bin', aspect='auto', xmax=None, save_name=None):
     fig, axs = plt.subplots(1, 1)
     # added
@@ -68,9 +64,6 @@ def plot_spectrogram(spec, title=None, ylabel='freq_bin', aspect='auto', xmax=No
     if xmax:
         axs.set_xlim((0, xmax))
     fig.colorbar(im, ax=axs)
-    # # add losses/epoch for train and dev set to plot
-    # ax.plot(epoch, train_vals, label="train")
-    # ax.plot(epoch, dev_vals, label="dev")
     # save the file
     if save_name is not None:
         plt.savefig(fname=save_name)
@@ -81,7 +74,6 @@ def plot_spectrogram(spec, title=None, ylabel='freq_bin', aspect='auto', xmax=No
 
 if __name__ == "__main__":
     the_files = "../../asist_data/sent-emo/for_PI_meeting_07.22/split"
-    #the_files = "../../datasets/multimodal_datasets/MELD_formatted/train/train_audio_mono"
     output = "../../asist_data/sent-emo/for_PI_meeting_07.22/spectrograms"
 
     max_size = None

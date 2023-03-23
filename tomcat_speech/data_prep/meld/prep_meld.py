@@ -1,7 +1,7 @@
 from sklearn.model_selection import train_test_split
 
-from prep_data import *
-from utils.data_prep_helpers import Glove, make_glove_dict, get_data_samples
+from tomcat_speech.data_prep.prep_data import StandardPrep
+from tomcat_speech.data_prep.utils.data_prep_helpers import Glove, make_glove_dict, get_data_samples
 
 
 def prep_meld_data(
@@ -56,7 +56,6 @@ def prep_meld_data(
     train_and_dev = train_data + dev_data
     train_data, dev_data = train_test_split(train_and_dev, test_size=0.2, random_state=88)
 
-    # todo: fix weights so they are only coming from repartitioned train
     class_weights = meld_prep.train_prep.class_weights
 
     if num_train_ex:

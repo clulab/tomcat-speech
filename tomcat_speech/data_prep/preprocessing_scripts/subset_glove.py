@@ -1,13 +1,13 @@
 # use this to create a subset of glove for the relevant data
 # to save time during dataset creation, model training and testing
 
-import glove.glove_subsetting as glove
+import tomcat_speech.data_prep.glove.glove_subsetting as glove
 import pandas as pd
 import numpy as np
 import argparse
 from torchtext.data import get_tokenizer
 
-from utils.data_prep_helpers import clean_up_word
+from tomcat_speech.data_prep.utils.data_prep_helpers import clean_up_word
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

@@ -1,17 +1,13 @@
 # extract information from audio
-# this information is modified from the code in:
-# https://github.com/jmculnan/audio_feature_extraction (private repo)
 
 # required packages
 import os, sys
-import json, re
+import re
 from pprint import pprint
 import subprocess as sp
 from tqdm import tqdm
 
 import pandas as pd
-
-# from wav2vec.create_spectrograms_with_wav2vec import get_and_save_spectrogram
 
 
 class TRSToCSV:

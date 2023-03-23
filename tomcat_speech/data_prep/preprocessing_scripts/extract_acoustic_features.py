@@ -2,9 +2,7 @@
 # this script assumes that all of the datasets you will use
 #   exist in the same base directory
 
-import sys
-sys.path.append("/home/jculnan/github/multimodal_data_preprocessing")
-from utils.audio_extraction import run_feature_extraction
+from tomcat_speech.data_prep.utils.audio_extraction import run_feature_extraction
 
 
 def extract_acoustic_features(datasets_list, base_path, feature_set):
