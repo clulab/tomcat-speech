@@ -1,33 +1,27 @@
+# test a single-task model for any of the five tasks
+# combining the testing of the separate train_task models into one
+
 # train the models created in models directory with MUStARD data
 # currently the main entry point into the system
-import datetime
 import pickle
 import shutil
 import sys
 import os
-import time
-
-import pandas as pd
 import torch
 import numpy as np
-from datetime import date
 import random
 
-from tomcat_speech.models.train_and_test_models import (
-    make_train_state,
-    multitask_predict_without_gold_labels,
-)
+from tomcat_speech.training_and_evaluation_functions.train_and_test_models import evaluate
+from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import make_train_state
 from tomcat_speech.models.multimodal_models import MultitaskModel
 
 # import MultitaskObject and Glove from preprocessing code
-sys.path.append("/home/jculnan/github/multimodal_data_preprocessing")
+sys.path.append("../multimodal_data_preprocessing")
 from utils.data_prep_helpers import (
-    MultitaskObject,
     Glove,
     make_glove_dict,
     MultitaskTestObject,
 )
-from tomcat_speech.train_and_test_models.train_multitask import load_modality_data
 
 # set device
 cuda = False
@@ -39,7 +33,6 @@ device = torch.device("cuda" if cuda else "cpu")
 # # Check CUDA
 if torch.cuda.is_available():
     torch.cuda.set_device(2)
-
 
 if __name__ == "__main__":
     # set saved model
@@ -53,12 +46,10 @@ if __name__ == "__main__":
     config_path = os.path.abspath(config_path)
     output_path = os.path.dirname(config_path)
 
-    shutil.copyfile(
-        config_path, "tomcat_speech/train_and_test_models/testing_parameters/config.py"
-    )
+    shutil.copyfile(config_path, "mmml/config_files/test_config.py")
 
     # import parameters for model
-    from tomcat_speech.train_and_test_models.testing_parameters import config
+    import mmml.config_files.test_config as config
 
     # set random seed
     torch.manual_seed(config.model_params.seed)
@@ -88,37 +79,19 @@ if __name__ == "__main__":
     # add stdout to a log file
     with open(os.path.join(output_path, "log"), "a") as f:
         if not config.DEBUG:
-            # sys.stdout = f
-
-            # separate from training/dev code
-            print("\n")
-            print("BEGINNING EVALUATION OF TRAINED MODEL")
+            sys.stdout = f
 
             # 1. Load datasets + glove object
             load_path = config.load_path
             feature_set = config.feature_set
 
-            # import data
-            #used_ds = pickle.load(open(f"{load_path}", "rb"))
-            #print("Data loaded")
-
-            # if data is field-separated
-            used_ds = load_modality_data(device, config,
-                                         use_text=True,
-                                         use_acoustic=True,
-                                         use_spectrograms=config.model_params.use_spec)
-            #used_ds = used_ds[0][0].train
-            all_ds = []
-            all_ds.extend(used_ds[0][0].train)
-            all_ds.extend(used_ds[0][0].dev)
-            all_ds.extend(used_ds[0][0].test)
-            used_ds = all_ds
-            print("Data loaded")
-
-            # todo: once you incorporate spectrograms
-            #   remove this
-            #for item in used_ds:
-            #    del item['x_spec']
+            # get
+            test_ds = pickle.load(
+                open(f"{load_path}/{config.task}_{feature_set}_test.pickle", "rb")
+            )
+            class_weights = pickle.load(
+                open(f"{load_path}/{config.task}_{feature_set}_clsswts.pickle", "rb")
+            )
 
             # if not using distilbert embeddings
             if not config.model_params.use_distilbert:
@@ -131,33 +104,42 @@ if __name__ == "__main__":
                 num_embeddings = pretrained_embeddings.size()[0]
                 print(f"shape of pretrained embeddings is: {glove.data.size()}")
 
+            # 3. CREATE NN
             # this uses train-dev-test folds
             # create instance of model
             if config.model_params.use_distilbert:
-                multitask_model = MultitaskModel(
+                task_model = MultitaskModel(
                     params=config.model_params,
                     use_distilbert=config.model_params.use_distilbert,
-                    multi_dataset=False
                 )
             else:
-                multitask_model = MultitaskModel(
+                task_model = MultitaskModel(
                     params=config.model_params,
                     use_distilbert=config.model_params.use_distilbert,
                     num_embeddings=num_embeddings,
                     pretrained_embeddings=pretrained_embeddings,
-                    multi_dataset=False
                 )
 
             optimizer = torch.optim.Adam(
                 lr=config.model_params.lr,
-                params=multitask_model.parameters(),
+                params=task_model.parameters(),
                 weight_decay=config.model_params.weight_decay,
             )
 
             # set the classifier(s) to the right device
             # get saved parameters
-            multitask_model.load_state_dict(torch.load(saved_model, map_location=device))
-            multitask_model.to(device)
+            task_model.load_state_dict(torch.load(saved_model, map_location=device))
+            task_model.to(device)
+
+            # add loss function for cdc
+            loss_func = torch.nn.CrossEntropyLoss(
+                weight=class_weights.to(device), reduction="mean"
+            )
+
+            task_obj = MultitaskTestObject(test_ds, loss_func, task_num=0)
+
+            # set all data list
+            all_data_list = [task_obj]
 
             print("Trained model loaded, loss function, and optimization prepared")
 
@@ -171,36 +153,15 @@ if __name__ == "__main__":
                 config.model_params.early_stopping_criterion,
             )
 
-            # get order of predictions
-            #ordered_ids = [item['audio_id'] for item in used_ds[0]]
-
-            # get predictions
-            ordered_predictions, ordered_penult_lyrs, ordered_ids = multitask_predict_without_gold_labels(
-                multitask_model,
-                used_ds,
+            # train the model and evaluate on development set
+            evaluate(
+                task_model,
+                train_state,
+                all_data_list,
                 config.model_params.batch_size,
-                device,
-                num_predictions=3,
+                pickle_save_name=f"{item_output_path}/test_results.pickle",
+                device=device,
                 avgd_acoustic=avgd_acoustic_in_network,
                 use_speaker=config.model_params.use_speaker,
                 use_gender=config.model_params.use_gender,
-                get_prob_dist=True,
-                return_penultimate_layer=True,
-                use_spec=config.model_params.use_spec,
             )
-
-            all_preds = {}
-            for pred_type in ordered_predictions.keys():
-                all_preds[pred_type] = []
-                #print(pred_type)
-                #print("--------------------")
-                for group_pred in ordered_predictions[pred_type]:
-                    for preds in group_pred:
-                        all_preds[pred_type].append(preds.index(max(preds)))
-                        print(preds.index(max(preds)))
-
-            data_to_save = pd.DataFrame(all_preds)
-            data_to_save.columns = ['trait', 'emotion', 'sentiment']
-            data_to_save['audio_id'] = ordered_ids
-            #data_to_save.to_csv(f"../../PROJECTS/ToMCAT/Evaluating_modelpredictions/data_from_speechAnalyzer/used_for_evaluating_model_results/all_preds_no_classweights.csv", index=False)
-            data_to_save.to_csv(f"/media/jculnan/backup/jculnan/datasets/asist_data/mmc_hiercnn_spec_glove_preds.csv", index=False)

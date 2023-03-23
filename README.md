@@ -56,9 +56,9 @@ E.g.:
 
 ### Running models 
 
-Models are trained using the training scripts in the `tomcat_speech/train_and_test_models` subdirectory. 
+Models are trained using the training scripts in the `tomcat_speech/training_scripts` subdirectory. 
 
-The training scripts are associated with parameters files, which may be found in `tomcat_speech/models/parameters`. Alter the paths in the relevant parameters file as needed to run the training code of interest. 
+The training scripts are associated with parameters files, which may be found in `tomcat_speech/parameters`. Alter the paths in the relevant parameters file as needed to run the training code of interest. 
 
 You may either train a model with a single set of parameters (using `train_multitask.py` or `train_single_task.py`) or you may run a grid search by training on multiple parameter values using `grid_search_train.py`.
 

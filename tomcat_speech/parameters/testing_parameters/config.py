@@ -11,15 +11,19 @@ save_dataset = False
 # do you want to load pre-saved dataset files?
 load_dataset = True
 
+
 EXPERIMENT_ID = 1
 # during training: enter a brief description that will make the experiment easy to identify
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
 # EXPERIMENT_DESCRIPTION = "IntermediateFusion_test_paramsfromMMML_ClassWts_"
-EXPERIMENT_DESCRIPTION = "Asist_spec_distilbert_hierCNN_"
+EXPERIMENT_DESCRIPTION = "Gridsearch_distilbert_finetuning_pretrain-oversampled_finetune-clsswts_celoss_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
+
+# whether you are starting with a pretrained model that you update during training
+trained_model = None # or path to model file
 
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
@@ -27,13 +31,13 @@ CONFIG_FILE = os.path.abspath(__file__)
 num_tasks = 3
 
 # set parameters for data prep
-glove_path = "/media/jculnan/backup/jculnan/datasets/glove/glove.subset.300d.txt"
+glove_path = "/media/jculnan/backup/jculnan/glove/glove.subset.300d.txt"
 
 if USE_SERVER:
-    load_path = "/xdisk/bethard/culnan"
+    load_path = "/xdisk/bethard/jmculnan"
 else:
     # path from which to load pickled data files
-    load_path = "/media/jculnan/backup/jculnan/datasets/pickled_data"
+    load_path = "/media/jculnan/backup/jculnan/datasets/pickled_data/IS13_glove_GOLD"
 
 # set dir to save full experiments
 exp_save_path = "output/multitask"
@@ -43,10 +47,14 @@ exp_save_path = "output/multitask"
 chalearn_predtype = "max_class"
 
 # set the acoustic feature set
-feature_set = "IS13_glove_dict"
+feature_set = "IS13_distilbert_dict"
 
-# set the datasets
-datasets = ["asist"]
+saved_model = "/home/u18/jmculnan/github/tomcat-speech/output/multitask/1_Gridsearch_distilbert_training_textgruhid300_csloss_2022-11-12/LR0.001_BATCH64_NUMLYR2_SHORTEMB30_INT-OUTPUT100_DROPOUT0.2_FC-FINALDIM100/Gridsearch_distilbert_training_textgruhid300.pt"
+#saved_model = None
+
+# set the datasets 
+#datasets = ["firstimpr", "meld", "mosi"]
+datasets = ["asist1"]
 
 num_feats = 130
 if feature_set.lower() == "is13":
@@ -55,14 +63,13 @@ elif "combined_features" in feature_set.lower() or "custom" in feature_set.lower
     num_feats = 10
 
 model_params = Namespace(
-    # loss multiplier
     loss_multiplier=False,
     # use gradnorm for loss normalization
     use_gradnorm=False,
     # whether to use data sampler
     use_sampler=False,
-    # whether to use class weights
-    use_clsswts=False,
+    # use classweights 
+    use_clsswts=True,
     # decide whether to use early, intermediate, or late fusion
     fusion_type="int",  # int, late, early
     # consistency parameters
@@ -70,20 +77,20 @@ model_params = Namespace(
     # trying text only model or not
     text_only=False,
     audio_only=False,
+    use_spec=False,
     spec_only=False,
-    use_spec=True,
     # overall model parameters
     model="Multitask",
-    num_epochs=100,
-    batch_size=4,  # 128,  # 32
+    num_epochs=200,
+    batch_size=64,  # 128,  # 32
     early_stopping_criterion=10,
     num_gru_layers=2,  # 1,  # 3,  # 1,  # 4, 2,
-    bidirectional=True,
-    use_distilbert=False,
+    bidirectional=False,
+    use_distilbert=True,
     # set whether to have a single loss function
     single_loss=False,
     # input dimension parameters
-    text_dim=300,  # text vector length # 768 for bert/distilbert, 300 for glove
+    text_dim=768,  # text vector length # 768 for bert/distilbert, 300 for glove
     short_emb_dim=30,  # length of trainable embeddings vec
     audio_dim=num_feats,  # audio vector length
     # text NN
@@ -91,10 +98,10 @@ model_params = Namespace(
     kernel_2_size=4,
     kernel_3_size=5,
     out_channels=20,
-    spec_out_dim=20,  # 20
+    spec_out_dim=20,
     text_cnn_hidden_dim=100,
     # text_output_dim=30,   # 100,   # 50, 300,
-    text_gru_hidden_dim=100,  # 30,  # 50,  # 20
+    text_gru_hidden_dim=300,  # 30,  # 50,  # 20
     # acoustic NN
     avgd_acoustic=False,  # set true to use avgd acoustic feat vectors without RNN
     add_avging=True,  # set to true if you want to avg acoustic feature vecs upon input
@@ -116,7 +123,7 @@ model_params = Namespace(
     # FC layer parameters
     num_fc_layers=1,  # 1,  # 2,
     fc_hidden_dim=100,  # 20,  must match output_dim if final fc layer removed from base model
-    final_hidden_dim=20,  # the out size of dset-specific fc1 and input of fc2
+    final_hidden_dim=100,  # the out size of dset-specific fc1 and input of fc2
     dropout=0.2,  # 0.2, 0.3
     # optimizer parameters
     lr=1e-4,

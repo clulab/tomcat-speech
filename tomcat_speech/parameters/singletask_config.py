@@ -50,10 +50,14 @@ pretrained_model = None
 # set dir to save full experiments
 exp_save_path = f"output/single_task/{task}"
 
-# set the acoustic feature set
-#feature_set = "combined_features_distilbert_dict"
-#feature_set = "IS13_glove_dict"
-feature_set = "IS13_distilbert_dict" #revised on 11/30/22
+# set the acoustic and text feature sets
+# the first item should be the acoustic feature set
+# the second item should be the text embedding type (distilbert, bert, glove)
+# the third item is whether to use data in list or dict form
+# currently, list form is being phased out, so use dict
+# if these items are not set correctly,
+# the data may not be loaded properly
+feature_set = "IS13_distilbert_dict"
 
 num_feats = 130
 if feature_set.lower() == "is13":
@@ -72,7 +76,6 @@ model_params = Namespace(
         text_only=False,
         audio_only=False,
         # overall model parameters
-        #model=f"Single_task_{task}", # - => _ 10/24/22
         model=f"text_only", #added 10/24/22
         num_epochs=2, #revised from 200 to 1 for testing 12/15/22
         batch_size=100,  # 128,  # 32
@@ -114,7 +117,6 @@ model_params = Namespace(
         loss_multiplier = False, # output
         output_dim=10,  # output dimensions from last layer of base model #100=>10 for testing 12/15/22
         output_0_dim=datasets_num[datasets[0]], # set to 7 because ['meld'] has 7 classes
-        #print(output_0_dim), # added 12/05/22
         #output_0_dim=5,  # output vec for first task
         output_1_dim=0,  # output vec for second task
         output_2_dim=0,  # output vec for third task

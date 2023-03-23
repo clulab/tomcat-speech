@@ -1,4 +1,4 @@
-from tomcat_speech.train_and_test_models.asist_analysis_functions import *
+from tomcat_speech.training_and_evaluation_functions.asist_analysis_functions import *
 
 if __name__ == "__main__":
     import argparse

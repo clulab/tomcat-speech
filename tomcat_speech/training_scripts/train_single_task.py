@@ -1,85 +1,22 @@
 # train a single-task model for any of the five tasks
 # combining the training of the separate train_task models into one
 
-import pickle
 import shutil
 import sys
 sys.path.append("/home/cheonkamjeong/multimodal_data_preprocessing")
 import os
 
 import torch
-import numpy as np
 from datetime import date
-import random
 
-from tomcat_speech.models.train_and_test_single_models import train_and_predict, make_train_state
-from tomcat_speech.models.multimodal_models import MultitaskModel
-from tomcat_speech.models.plot_training import *
-from tomcat_speech.train_and_test_models.train_and_test_utils import set_cuda_and_seeds, select_model
-from tomcat_speech.train_and_test_models.train_multitask import load_modality_data
-
-# import MultitaskObject and Glove from preprocessing code
-#sys.path.append("/home/cheonkamjeong/multimodal_data_preprocessing")
-#print(sys.path)
-from utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict
-
-
-# todo: Cheonkam, if load_modality_data works as called
-#   then this can be deleted
-# def load_data(device, config):
-#     # 1. Load datasets + glove object
-#     load_path = config.load_path
-#     feature_set = config.feature_set
-#
-#     # import data
-#     train_ds = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_train.pickle", "rb"))
-#     dev_ds = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_dev.pickle", "rb"))
-#     test_ds = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_test.pickle", "rb"))
-#     class_weights = pickle.load(open(f"{load_path}/{config.task}_{feature_set}_clsswts.pickle", "rb"))
-#
-#     # if not using distilbert embeddings
-#     if not config.model_params.use_distilbert:
-#         # make glove
-#         glove_dict = make_glove_dict(config.glove_path)
-#         glove = Glove(glove_dict)
-#
-#         # get set of pretrained embeddings and their shape
-#         pretrained_embeddings = glove.data
-#         num_embeddings = pretrained_embeddings.size()[0]
-#         print(f"shape of pretrained embeddings is: {glove.data.size()}")
-#
-#     # add loss function for cdc
-#     loss_func = torch.nn.CrossEntropyLoss(
-#         weight=class_weights.to(device),
-#         reduction="mean"
-#     )
-#
-#     # create multitask object
-#     task_obj = MultitaskObject(
-#         train_ds,
-#         dev_ds,
-#         test_ds,
-#         loss_func,
-#         task_num=0,
-#     )
-#
-#     # set all data list
-#     all_data_list = [
-#         task_obj
-#     ]
-#
-#     print(
-#         "Model, loss function, and optimization created"
-#     )
-#
-#     # todo: set data sampler?
-#     sampler = None
-#     # sampler = BatchSchedulerSampler()
-#
-#     if not config.model_params.use_distilbert:
-#         return all_data_list, loss_func, sampler, num_embeddings, pretrained_embeddings
-#     else:
-#         return all_data_list, loss_func, sampler
+from tomcat_speech.training_and_evaluation_functions.train_and_test_single_models import (
+    train_and_predict,
+    make_train_state)
+from tomcat_speech.training_and_evaluation_functions.plot_training import *
+from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
+    set_cuda_and_seeds,
+    select_model)
+from tomcat_speech.training_scripts.train_multitask import load_modality_data
 
 
 def train_single_task(all_data_list, loss_fx, sampler, device, output_path, config,
@@ -134,7 +71,7 @@ def train_single_task(all_data_list, loss_fx, sampler, device, output_path, conf
     multitask_model = task_model.to(device)
     print(multitask_model)
 
-    # create a a save path and file for the model
+    # create a save path and file for the model
     model_save_file = f"{item_output_path}/{config.EXPERIMENT_DESCRIPTION}.pt"
 
     # make the train state to keep track of model training/development
@@ -190,7 +127,7 @@ def train_single_task(all_data_list, loss_fx, sampler, device, output_path, conf
 
 if __name__ == "__main__":
     # import parameters for model
-    import tomcat_speech.models.parameters.singletask_config as config
+    import tomcat_speech.parameters.singletask_config as config
 
     # set cuda and random seeds
     device = set_cuda_and_seeds(config)
@@ -205,7 +142,6 @@ if __name__ == "__main__":
     
     print(type(data[0].train)) #12/15/22
     print(len(data[0].train)) #12/15/22
-    #exit() #12/15/22
 
     # create save location
     output_path = os.path.join(

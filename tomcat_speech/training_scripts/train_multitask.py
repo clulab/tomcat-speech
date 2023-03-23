@@ -1,22 +1,22 @@
 # train the models created in models directory with MUStARD data
 # currently the main entry point into the system
-import pickle
 import shutil
 import sys
 import os
 
 #sys.path.append("/home/u18/jmculnan/github/tomcat-speech")
 import torch
-import numpy as np
-import torch.nn as nn
 from datetime import date
-import random
 
+from tomcat_speech.data_prep.samplers import RandomOversampler
 # from tomcat_speech.data_prep.samplers import RandomOversampler
-from tomcat_speech.models.train_and_test_models import train_and_predict, make_train_state
-from tomcat_speech.models.multimodal_models import MultitaskModel
-from tomcat_speech.models.plot_training import *
-from tomcat_speech.train_and_test_models.train_and_test_utils import set_cuda_and_seeds, select_model
+from tomcat_speech.training_and_evaluation_functions.train_and_test_models import train_and_predict
+from tomcat_speech.training_and_evaluation_functions.plot_training import *
+from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
+    set_cuda_and_seeds,
+    select_model,
+    make_train_state
+)
 
 # import MultitaskObject and Glove from preprocessing code
 sys.path.append("/home/cheonkamjeong/multimodal_data_preprocessing")
@@ -153,7 +153,7 @@ def load_modality_data(device, config, use_text=True, use_acoustic=True):
     # optionally change loss multiplier
     if config.model_params.loss_multiplier:
         for obj in all_data_list:
-            obj.change_loss_multiplier(len(obj.train_ds) / float(total_data_size))
+            obj.change_loss_multiplier(len(obj.train) / float(total_data_size))
 
     # if not using distilbert embeddings
     if not config.model_params.use_distilbert:
@@ -176,7 +176,11 @@ def load_modality_data(device, config, use_text=True, use_acoustic=True):
     )
 
     # set sampler
-    sampler = None
+    if config.model_params.use_sampler:
+        sampler = RandomOversampler(config.model_params.seed)
+    else:
+        sampler = None
+
     if not config.model_params.use_distilbert:
         return all_data_list, loss_fx, sampler, num_embeddings, pretrained_embeddings
     else:
@@ -274,10 +278,10 @@ def load_data(device, config):
     )
 
     # sampler = None
-    # iif config.model_params.use_sampler:
-    #    sampler = RandomOversampler(config.model_params.seed)
-    # else:
-    sampler = None
+    if config.model_params.use_sampler:
+       sampler = RandomOversampler(config.model_params.seed)
+    else:
+        sampler = None
     # sampler = BatchSchedulerSampler()
 
     if not config.model_params.use_distilbert:
@@ -390,7 +394,7 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
 
 if __name__ == "__main__":
     # import parameters for model
-    import tomcat_speech.models.parameters.multitask_config as config
+    import tomcat_speech.parameters.multitask_config as config
 
     device = set_cuda_and_seeds(config)
 
