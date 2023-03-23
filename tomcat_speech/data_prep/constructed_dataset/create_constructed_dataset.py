@@ -42,10 +42,6 @@ class ConstructedDataset:
             # else use place in overall list
             self.ys_idx = new_num
 
-    def add_class_nums(self, numslist):
-        for num in numslist:
-            self.class_nums.append(num)
-
     def create_constructed_data(self, class_nums):
         """
         Select a portion of a dataset consisting of a specific class number
@@ -164,7 +160,6 @@ def make_single_constructed_set_from_multiple_datasets(
     :param save_name: names to save dataset as
         if None, name is taken from the dataset names + task + class nums
     :return:
-    TODO: currently only accepts input paths and not unpickled datasets
     """
     # holder for all data
     all_data = []
@@ -177,8 +172,6 @@ def make_single_constructed_set_from_multiple_datasets(
 
     for i, dataset in enumerate(list_of_datasets):
         # get save name information
-        # todo: this will result in long names
-        #   condense eventually
         if save_name is None:
             the_name = dataset.split("/")[-1].split(".pickle")[0]
             the_task = f"{str(list_of_task_nums[i])}"
@@ -218,19 +211,3 @@ def make_single_constructed_set_from_multiple_datasets(
 
     # save the data points for this task to pickle
     pickle.dump(all_data, open(f"{save_path}/{save_name}.pickle", "wb"))
-
-
-if __name__ == "__main__":
-    base_path = "../../datasets/pickled_data"
-
-    train = f"{base_path}/mustard_IS13_distilbert_dict_train.pickle"
-    dev = f"{base_path}/mustard_IS13_distilbert_dict_dev.pickle"
-    test = f"{base_path}/mustard_IS13_distilbert_dict_test.pickle"
-
-    all = [train, dev, test]
-
-    tasks = [0, 0, 0]
-    classes = [[1], [1], [1]]
-
-    make_multiple_constructed_datasets(all, tasks, classes, base_path)
-    make_single_constructed_set_from_multiple_datasets(all, tasks, classes, base_path)

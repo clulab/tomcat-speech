@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import sys
 
-from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDataset
+from tomcat_speech.data_prep.asist.asist_dataset_creation import AsistDataset
 from tomcat_speech.training_and_evaluation_functions.train_and_test_without_gold_labels import (
     multitask_predict_without_gold_labels
 )

@@ -12,8 +12,6 @@ def convert_metadata(metadata_file_path, save_path, n_speakers=1):
             jline = json.loads(line)
             all_lines.append(jline)
 
-            # print(jline['data'].keys())
-            # exit()
     idx2emo = {0:'anger', 1:'disgust', 2: 'fear', 3: 'joy', 4: 'neutral',
                5: 'sadness', 6: 'surprise'}
     idx2trait = {0:'agreeableness', 1: 'conscientiousness', 2:'extroversion',
@@ -129,8 +127,3 @@ if __name__ == "__main__":
     metadata_path = f"{base_path}/study-3_2022_HSRData_TrialMessages_Trial-T000608_Team-TM000204_Member-na_CondBtwn-none_CondWin-na_Vers-1.metadata"
     save_path = f"{base_path}/T000608_gold.tsv"
     convert_metadata_orig(metadata_path, save_path)
-
-    # base_path = "data_from_speechAnalyzer/used_for_evaluating_model_results/423_vid7.5boost"
-    # metadata_path = f"{base_path}/T000452.metadata_replay"
-    # save_path = f"{base_path}/organized_data_gold.tsv"
-    # convert_metadata(metadata_path, save_path, n_speakers=1)

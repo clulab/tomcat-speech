@@ -1,5 +1,5 @@
-from prep_data import *
-from utils.data_prep_helpers import Glove, make_glove_dict, get_data_samples
+from tomcat_speech.data_prep.prep_data import *
+from tomcat_speech.data_prep.utils.data_prep_helpers import Glove, make_glove_dict, get_data_samples
 
 
 def prep_firstimpr_data(
@@ -70,7 +70,6 @@ def prep_firstimpr_data(
     return train_data, dev_data, test_data, class_weights
 
 
-# todo: add back in to firstimpr ys
 def convert_ys(ys, conversion="high-low", mean_y=None, one_third=None, two_thirds=None):
     """
     Convert a set of ys into binary high-low labels

@@ -2,8 +2,6 @@
 import os
 import glob
 import re
-import pandas as pd
-from sklearn.model_selection import train_test_split
 
 from prep_data import SelfSplitPrep, get_updated_class_weights
 from utils.data_prep_helpers import (
@@ -288,23 +286,3 @@ def extract_audio_for_cdc(gold_label_df, base_path):
         extract_portions_of_mp4_or_wav(
             wav_path, wav_name, time_start, time_end, save_path, short_name
         )
-
-
-# if __name__ == "__main__":
-#     pass
-
-# corpus_path = "../../datasets/multimodal_datasets/Columbia_deception_corpus"
-# save_filename = "cdc_gold.tsv"
-# #
-# preprocess_cdc(corpus_path, save_filename, delete_existing_data_file=True)
-# gold_data_df = pd.read_csv(f"{corpus_path}/{save_filename}", sep="\t")
-# extract_audio_for_cdc(gold_data_df, corpus_path)
-#
-# # run feature extraction
-# run_feature_extraction(f"{corpus_path}/wav", "IS13", f"{corpus_path}/IS13")
-#
-# train, dev, test, weights = prep_cdc_data()
-#
-# print(train[0])
-# print(len(train))
-# print(weights)

@@ -3,7 +3,7 @@
 # add "prep_data" as an argument when running this from command line
 #       if your acoustic features have not been extracted from audio
 
-from tomcat_speech.data_prep.asist_data.asist_dataset_creation import AsistDataset
+from tomcat_speech.data_prep.asist.asist_dataset_creation import AsistDataset
 from tomcat_speech.training_and_evaluation_functions.train_and_test_models import *
 from tomcat_speech.training_and_evaluation_functions.plot_training import *
 from tomcat_speech.models.multimodal_models import *
@@ -20,8 +20,8 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 from sklearn.metrics import precision_recall_fscore_support
 
-import tomcat_speech.data_prep.asist_data.sentiment_score_prep as score_prep
-import tomcat_speech.data_prep.asist_data.asist_dataset_creation as asist_prep
+import tomcat_speech.data_prep.asist.sentiment_score_prep as score_prep
+import tomcat_speech.data_prep.asist.asist_dataset_creation as asist_prep
 
 # import parameters for model
 # comment or uncomment as needed

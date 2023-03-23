@@ -5,8 +5,6 @@ import torch
 from torch import nn
 from transformers import BertTokenizer, BertModel, DistilBertModel, DistilBertTokenizer, RobertaTokenizer, RobertaModel
 
-# Load pre-trained model tokenizer (vocabulary)
-
 
 class DistilBertEmb:
     def __init__(self):
@@ -54,28 +52,6 @@ class DistilBertEmb:
         # from all 12 layers.
         with torch.no_grad():
             outputs = self.model(utt_tensor, id_tensor)
-
-            # for BERT (but NOT distilbert):
-            # with `output_hidden_states = True`, the third item will be the
-            # hidden states from all layers. See the documentation for more details:
-            # https://huggingface.co/transformers/model_doc/bert.html#bertmodel
-            # hidden_state = outputs[2]
-            # Concatenate the tensors for all layers. We use `stack` here to
-            # create a new dimension in the tensor.
-            # token_embeddings = torch.stack(hidden_state, dim=0)
-            # Remove dimension 1, the "batches".
-            # token_embeddings = torch.squeeze(token_embeddings, dim=1)
-            # Swap dimensions 0 and 1.
-            # token_embeddings = token_embeddings.permute(1, 0, 2)
-            # # get word embeddings
-            # for emb_layer_mat in token_embeddings:
-            #     # todo: try out different versions of this for performance
-            #     # select penultimate hidden layer as embedding
-            #     token_emb = emb_layer_mat[-2]
-            #
-            #     # add this embedding to word counts and add to idx2emb
-            #     # todo asap: just add embeddings directly to data and pickle all together
-            #     embeddings.append(token_emb)
 
             # output 0 is the output of the final layer of distilbert
             #   which seems to be what we want here. For bert, start with outputs[2]
@@ -159,7 +135,6 @@ class BertEmb:
         with torch.no_grad():
             outputs = self.model(utt_tensor, id_tensor)
 
-            # for BERT (but NOT distilbert):
             # with `output_hidden_states = True`, the third item will be the
             # hidden states from all layers. See the documentation for more details:
             # https://huggingface.co/transformers/model_doc/bert.html#bertmodel
@@ -173,12 +148,9 @@ class BertEmb:
             token_embeddings = token_embeddings.permute(1, 0, 2)
             # # get word embeddings
             for emb_layer_mat in token_embeddings:
-                #     # todo: try out different versions of this for performance
-                #     # select penultimate hidden layer as embedding
+                # select penultimate hidden layer as embedding
                 token_emb = emb_layer_mat[-2]
-                #
-                #     # add this embedding to word counts and add to idx2emb
-                #     # todo asap: just add embeddings directly to data and pickle all together
+                # add this embedding to word counts and add to idx2emb
                 embeddings.append(token_emb)
 
         embeddings = torch.stack(embeddings)
@@ -256,12 +228,9 @@ class RobertaEmebeddings:
             token_embeddings = token_embeddings.permute(1, 0, 2)
             # # get word embeddings
             for emb_layer_mat in token_embeddings:
-                #     # todo: try out different versions of this for performance
-                #     # select penultimate hidden layer as embedding
+                # select penultimate hidden layer as embedding
                 token_emb = emb_layer_mat[-2]
-                #
-                #     # add this embedding to word counts and add to idx2emb
-                #     # todo asap: just add embeddings directly to data and pickle all together
+                # add this embedding to word counts and add to idx2emb
                 embeddings.append(token_emb)
 
         embeddings = torch.stack(embeddings)

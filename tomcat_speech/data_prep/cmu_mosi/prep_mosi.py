@@ -4,8 +4,6 @@ import re
 from prep_data import SelfSplitPrep, get_updated_class_weights
 from utils.data_prep_helpers import make_glove_dict, Glove, get_data_samples
 
-from utils.audio_extraction import run_feature_extraction
-
 
 def prep_mosi_data(
     data_path="../../datasets/multimodal_datasets/CMU_MOSI",
@@ -130,19 +128,3 @@ def read_segmented_transcript(path_to_transcript):
             segment_dict[(name, num)] = line
 
     return segment_dict
-
-
-if __name__ == "__main__":
-    # audio_path = "../../datasets/multimodal_datasets/CMU_MOSI"
-    # audio_extension = "Audio/WAV_16000/segmented"
-    #
-    # run_feature_extraction(f"{audio_path}/{audio_extension}", "IS13", f"{audio_path}/IS13")
-
-    # base_path = "../../datasets/multimodal_datasets/CMU_MOSI"
-    # convert_gold_labels_to_tsv(base_path)
-
-    train, dev, test, weights = prep_mosi_data()
-    #
-    # print(train[0])
-    # print(len(train))
-    # print(weights)
