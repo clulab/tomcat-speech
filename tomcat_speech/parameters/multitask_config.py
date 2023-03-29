@@ -3,7 +3,9 @@
 from argparse import Namespace
 import os
 
-DEBUG = False # no saving of files; output in the terminal; first random seed from the list
+DEBUG = (
+    False  # no saving of files; output in the terminal; first random seed from the list
+)
 
 # what number experiment is this?
 # can leave it at 1 or increment if you have multiple
@@ -83,10 +85,8 @@ model_params = Namespace(
     #   the latter may either be reincorporated into the network(s)
     #   in the future or may be removed from this Namespace
     # --------------------------------------------------
-
     # set the random seed; this seed is used by torch and random functions
     seed=88,  # 1007
-
     # overall model selection
     # --------------------------------------------------
     # 'model' is used to select an overall model during model selection
@@ -94,7 +94,6 @@ model_params = Namespace(
     # options: acoustic_shared, text_shared, duplicate_input, text_only, multitask
     # other options may be added in the future for more model types
     model="Multitask",
-
     # data preparation parameters
     # --------------------------------------------------
     # whether we are using bert-based dense embeddings
@@ -106,7 +105,6 @@ model_params = Namespace(
     # when set to true, we use an instance of class oversampler
     # from tomcatspeech.data_prep.samplers
     use_sampler=False,
-
     # loss function parameters
     # --------------------------------------------------
     # whether to use class weights
@@ -125,7 +123,6 @@ model_params = Namespace(
     #   the number of data points per task
     # this is completed when loading the data in the train/finetune scripts
     loss_multiplier=False,
-
     # optimizer parameters
     # --------------------------------------------------
     # learning rate
@@ -136,7 +133,6 @@ model_params = Namespace(
     beta_1=0.9,
     beta_2=0.999,
     weight_decay=0.0001,
-
     # parameters for model base selection
     # --------------------------------------------------
     # decide whether to use early, intermediate, or late fusion
@@ -163,7 +159,6 @@ model_params = Namespace(
     # if false, the acoustic features are not averaged and an audio LSTM is used
     # this defaults to true, as it's much faster but performance is comparable
     add_avging=True,  # set to true if you want to avg acoustic feature vecs upon input
-
     # parameters for model training
     # --------------------------------------------------
     # the maximum number of epochs that a model can run
@@ -172,7 +167,6 @@ model_params = Namespace(
     batch_size=100,  # 128,  # 32
     # how many epochs the model will run after updating
     early_stopping_criterion=20,
-
     # parameters for model architecture
     # --------------------------------------------------
     # number of classes for each of the tasks of interest
@@ -183,26 +177,21 @@ model_params = Namespace(
     output_2_dim=3,  # number of classes in the third task
     output_3_dim=0,  # number of classes in the fourth task
     output_4_dim=0,  # number of classes in the fifth task
-
     # number of layers in the recurrent portion of our model
     # this has actually changed from gru to lstm
     num_gru_layers=2,  # 1,  # 3,  # 1,  # 4, 2,
     # whether the recurrent portion of the model is bidirectional
     bidirectional=True,
-
     # input dimension parameters
     text_dim=300,  # text vector length # 768 for bert/distilbert, 300 for glove
     short_emb_dim=30,  # length of trainable embeddings vec
     # how long is each audio input -- set by the number of acoustic features above
     audio_dim=num_feats,  # audio vector length
-
     # hyperparameter for text LSTM
     # the size of the hidden dimension between LSTM layers
     text_gru_hidden_dim=100,  # 30,  # 50,  # 20
-
     # output dimensions for model
     output_dim=100,  # output dimensions from last layer of base model
-
     # number of fully connected layers after concatenation of modalities
     # this number must either be 1 or 2
     num_fc_layers=1,  # 1,  # 2,
@@ -214,7 +203,6 @@ model_params = Namespace(
     # it may be beneficial to add multiple dropout parameters here
     # so that each may be tuned
     dropout=0.2,  # 0.2, 0.3
-
     # parameters that are only used with specific architecture
     # --------------------------------------------------
     # hyperparameters for a text CNN
@@ -229,8 +217,6 @@ model_params = Namespace(
     # if add_avging is true, this number isn't used,
     #   so it's usually unused
     acoustic_gru_hidden_dim=100,
-
-
     # currently unused parameters
     # --------------------------------------------------
     # whether to use gradnorm for loss normalization
@@ -242,7 +228,6 @@ model_params = Namespace(
     # if true, the features read in are already averaged (vector per input item)
     # if false, the features read in are not averaged (tensor per input item)
     avgd_acoustic=False,  # set true to use avgd acoustic feat vectors without RNN
-
     # speaker embeddings
     # if use_speaker is true, speaker-specific embeddings are used
     # if use_speaker is false, no speaker-specific embeddings are used

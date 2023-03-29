@@ -15,7 +15,9 @@ from sklearn.metrics import precision_recall_fscore_support
 from tomcat_speech.models.train_and_test_models import update_train_state
 
 
-def get_data_from_loader(dataset_list, batch_size, shuffle, device, partition="train", sampler=None):
+def get_data_from_loader(
+    dataset_list, batch_size, shuffle, device, partition="train", sampler=None
+):
     # set holder for batches
     all_batches = []
     all_loss_funcs = []
@@ -28,21 +30,31 @@ def get_data_from_loader(dataset_list, batch_size, shuffle, device, partition="t
         if partition == "train":
             # (over)sample training data if needed
             if sampler is not None:
-                dataset_list[i].train = sampler.prep_data_through_oversampling(dataset_list[i].train)
+                dataset_list[i].train = sampler.prep_data_through_oversampling(
+                    dataset_list[i].train
+                )
             data = DataLoader(
-                dataset_list[i].train, batch_size=batch_size, shuffle=shuffle, num_workers=4, 
+                dataset_list[i].train,
+                batch_size=batch_size,
+                shuffle=shuffle,
+                num_workers=4,
                 # pin_memory=True with GPU, not CPU
-                #added 12/19/22 for testing parallel processing
+                # added 12/19/22 for testing parallel processing
             )
         elif partition == "dev" or partition == "val":
             data = DataLoader(
-                dataset_list[i].dev, batch_size=batch_size, shuffle=shuffle,
-                num_workers=4, 
+                dataset_list[i].dev,
+                batch_size=batch_size,
+                shuffle=shuffle,
+                num_workers=4,
                 # added 12/19/22
             )
         elif partition == "test":
             data = DataLoader(
-                dataset_list[i].test, batch_size=batch_size, shuffle=shuffle, num_workers=4, 
+                dataset_list[i].test,
+                batch_size=batch_size,
+                shuffle=shuffle,
+                num_workers=4,
                 # added 12/19/22
             )
         else:
@@ -70,13 +82,17 @@ def randomize_batches(all_batches):
             randomized_batches.append(batch)
             randomized_tasks.append(task_num)
         task_num += 1
-    print("Time when all batches prepared for randomization is now:", datetime.now()) #12/15/22 added
+    print(
+        "Time when all batches prepared for randomization is now:", datetime.now()
+    )  # 12/15/22 added
 
     zipped = list(zip(randomized_batches, randomized_tasks))
     random.shuffle(zipped)
-    print("Time when batches randomized is now:", datetime.now()) #12/15/22 added
+    print("Time when batches randomized is now:", datetime.now())  # 12/15/22 added
     randomized_batches, randomized_tasks = list(zip(*zipped))
-    print("Time when randomized batches converted to list now:", datetime.now()) #12/15/22 added
+    print(
+        "Time when randomized batches converted to list now:", datetime.now()
+    )  # 12/15/22 added
 
     return randomized_batches, randomized_tasks
 
@@ -111,15 +127,26 @@ def train_and_predict(
         train_state["val_avg_f1"][dset.task_num] = []
 
     # load data here -- only once (but Data should be shuffled each time)
-    train_data, _ = get_data_from_loader(datasets_list, batch_size, shuffle=True, device=device,
-                                         partition='train', sampler=sampler)
+    train_data, _ = get_data_from_loader(
+        datasets_list,
+        batch_size,
+        shuffle=True,
+        device=device,
+        partition="train",
+        sampler=sampler,
+    )
 
     # load data here -- only once (but Data should be shuffled each time)
-    dev_data, _ = get_data_from_loader(datasets_list, batch_size, shuffle=True, device=device,
-                                       partition='dev', sampler=sampler)
+    dev_data, _ = get_data_from_loader(
+        datasets_list,
+        batch_size,
+        shuffle=True,
+        device=device,
+        partition="dev",
+        sampler=sampler,
+    )
 
     for epoch_index in range(num_epochs):
-
         first = datetime.now()
         print(f"Starting epoch {epoch_index} at {first}")
 
@@ -185,21 +212,18 @@ def train_and_predict(
         # every 5 epochs, print out a classification report on validation set
         if epoch_index % 5 == 0:
             for task in preds_holder.keys():
-                print(
-                    f"Classification report and confusion matrix for task {task}:")
+                print(f"Classification report and confusion matrix for task {task}:")
                 print(confusion_matrix(ys_holder[task], preds_holder[task]))
                 print("======================================================")
                 print(
-                    classification_report(
-                        ys_holder[task], preds_holder[task], digits=4)
+                    classification_report(ys_holder[task], preds_holder[task], digits=4)
                 )
 
         # add loss and accuracy to train state
         train_state["val_loss"].append(running_loss)
 
         # update the train state now that our epoch is complete
-        train_state = update_train_state(
-            model=classifier, train_state=train_state)
+        train_state = update_train_state(model=classifier, train_state=train_state)
 
         # update scheduler if there is one
         if scheduler is not None:
@@ -281,12 +305,11 @@ def run_model(
         # print("batch_pred is:", batch_pred) #added 12/06/22
         # print("y_gold is:", y_gold) #added 12/06/22
         # print(batch_pred.size()) #added 12/06/22
-        
+
         # calculate loss
         if loss_fx:
             loss = (
-                loss_fx(batch_pred, y_gold) *
-                datasets_list[batch_task].loss_multiplier
+                loss_fx(batch_pred, y_gold) * datasets_list[batch_task].loss_multiplier
             )
         else:
             loss = (
@@ -340,8 +363,8 @@ def get_predictions(
     y_gold = batch["ys"][0].detach().to(device)
 
     batch_text = batch["x_utt"].detach().to(device)
-    #print(batch_text) # added 11/29/22
-    #print(type(batch_text)) # added 11/29/22
+    # print(batch_text) # added 11/29/22
+    # print(type(batch_text)) # added 11/29/22
     # print(batch_text.size()) # added 11/29/22
     if use_speaker:
         batch_speakers = batch["x_speaker"].to(device)
@@ -362,7 +385,7 @@ def get_predictions(
             speaker_input=batch_speakers,
             length_input=batch_lengths,
             gender_input=batch_genders,
-            #task_num=tasks[batch_index],
+            # task_num=tasks[batch_index],
             save_encoded_data=save_encoded_data,
         )
     else:
@@ -371,7 +394,7 @@ def get_predictions(
             speaker_input=batch_speakers,
             length_input=batch_lengths,
             gender_input=batch_genders,
-            #task_num=tasks[batch_index],
+            # task_num=tasks[batch_index],
             save_encoded_data=save_encoded_data,
         )
 
@@ -388,6 +411,7 @@ def get_predictions(
     #     y_gold = y_gold.float()
 
     return y_gold, batch_pred
+
 
 def make_train_state(learning_rate, model_save_file, early_stopping_criterion):
     # makes a train state to save information on model during training/testing
@@ -414,4 +438,3 @@ def make_train_state(learning_rate, model_save_file, early_stopping_criterion):
         "model_filename": model_save_file,
         "early_stopping_criterion": early_stopping_criterion,
     }
-    

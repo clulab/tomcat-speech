@@ -6,18 +6,33 @@ import os
 import torch
 from datetime import date
 
-from tomcat_speech.training_and_evaluation_functions.train_and_test_models import train_and_predict
-from tomcat_speech.training_and_evaluation_functions.plot_training import plot_train_dev_curve
+from tomcat_speech.training_and_evaluation_functions.train_and_test_models import (
+    train_and_predict,
+)
+from tomcat_speech.training_and_evaluation_functions.plot_training import (
+    plot_train_dev_curve,
+)
 from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
     set_cuda_and_seeds,
     select_model,
-    make_train_state
+    make_train_state,
 )
-from tomcat_speech.training_and_evaluation_functions.loading_data import load_modality_data
+from tomcat_speech.training_and_evaluation_functions.loading_data import (
+    load_modality_data,
+)
 
 
-def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config,
-                    num_embeddings=None, pretrained_embeddings=None, extra_params=None):
+def train_multitask(
+    all_data_list,
+    loss_fx,
+    sampler,
+    device,
+    output_path,
+    config,
+    num_embeddings=None,
+    pretrained_embeddings=None,
+    extra_params=None,
+):
     """
     Train a multitask model
     :param all_data_list: a list of MultitaskObjects, containing the datasets
@@ -38,9 +53,7 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
         model_params = config.model_params
 
     # decide if you want to use avgd feats
-    avgd_acoustic_in_network = (
-            model_params.avgd_acoustic or model_params.add_avging
-    )
+    avgd_acoustic_in_network = model_params.avgd_acoustic or model_params.add_avging
 
     # 3. CREATE NN
     print(model_params)
@@ -56,18 +69,16 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
     )
 
     # make sure the full save path exists; if not, create it
-    os.system(
-        'if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(
-            item_output_path
-        )
-    )
+    os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(item_output_path))
 
     # this uses train-dev-test folds
     # create instance of model
     multitask_model = select_model(model_params, num_embeddings, pretrained_embeddings)
     # allow to load a pretrained model for further fine-tuning
     if config.saved_model is not None:
-        multitask_model.load_state_dict(torch.load(config.saved_model, map_location=device))
+        multitask_model.load_state_dict(
+            torch.load(config.saved_model, map_location=device)
+        )
         multitask_model.to(device)
 
     optimizer = torch.optim.Adam(
@@ -84,8 +95,9 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
     model_save_file = f"{item_output_path}/{config.EXPERIMENT_DESCRIPTION}.pt"
 
     # make the train state to keep track of model training/development
-    train_state = make_train_state(model_params.lr, model_save_file,
-                                   model_params.early_stopping_criterion)
+    train_state = make_train_state(
+        model_params.lr, model_save_file, model_params.early_stopping_criterion
+    )
 
     # train the model and evaluate on development set
     train_and_predict(
@@ -102,7 +114,7 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
         use_speaker=model_params.use_speaker,
         use_gender=model_params.use_gender,
         loss_fx=loss_fx,
-        use_spec=model_params.use_spec
+        use_spec=model_params.use_spec,
     )
 
     # plot the loss and accuracy curves
@@ -116,7 +128,7 @@ def train_multitask(all_data_list, loss_fx, sampler, device, output_path, config
         x_label="Epoch",
         y_label="Loss",
         title=loss_title,
-        save_name=loss_save
+        save_name=loss_save,
     )
 
     # plot the avg f1 curves for each dataset
@@ -139,11 +151,17 @@ if __name__ == "__main__":
     device = set_cuda_and_seeds(config)
 
     if not config.model_params.use_distilbert:
-        data, loss_fx, sampler, num_embeddings, pretrained_embeddings = load_modality_data(device, config,
-                                                                                           use_text=True,
-                                                                                           use_acoustic=True)
+        (
+            data,
+            loss_fx,
+            sampler,
+            num_embeddings,
+            pretrained_embeddings,
+        ) = load_modality_data(device, config, use_text=True, use_acoustic=True)
     else:
-        data, loss_fx, sampler = load_modality_data(device, config, use_text=True, use_acoustic=True)
+        data, loss_fx, sampler = load_modality_data(
+            device, config, use_text=True, use_acoustic=True
+        )
         num_embeddings = None
         pretrained_embeddings = None
 
@@ -169,4 +187,13 @@ if __name__ == "__main__":
         if not config.DEBUG:
             sys.stdout = f
 
-            train_multitask(data, loss_fx, sampler, device, output_path, config, num_embeddings, pretrained_embeddings)
+            train_multitask(
+                data,
+                loss_fx,
+                sampler,
+                device,
+                output_path,
+                config,
+                num_embeddings,
+                pretrained_embeddings,
+            )

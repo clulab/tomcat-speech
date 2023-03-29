@@ -11,8 +11,9 @@ from tomcat_speech.data_prep.combine_xs_and_ys_by_dataset import (
     combine_xs_and_ys_meld,
     combine_xs_and_ys_mustard,
     combine_xs_and_ys_cdc,
-    combine_xs_and_ys_mosi, combine_xs_and_ys_lives,
-    combine_xs_and_ys_asist
+    combine_xs_and_ys_mosi,
+    combine_xs_and_ys_lives,
+    combine_xs_and_ys_asist,
 )
 
 from tomcat_speech.data_prep.make_data_tensors_by_dataset import *
@@ -90,8 +91,9 @@ class StandardPrep:
             self.use_bert = False
 
         # get longest utt
-        self.longest_utt = get_longest_utt(all_data, self.tokenizer, self.use_bert,
-                                           bert_type.lower() == "text")
+        self.longest_utt = get_longest_utt(
+            all_data, self.tokenizer, self.use_bert, bert_type.lower() == "text"
+        )
 
         # set longest accepted acoustic file
         self.longest_acoustic = 1500
@@ -111,7 +113,7 @@ class StandardPrep:
             add_avging=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
             bert_type=bert_type,
-            include_spectrograms=include_spectrograms
+            include_spectrograms=include_spectrograms,
         )
 
         print("deleting train data")
@@ -131,7 +133,7 @@ class StandardPrep:
             add_avging=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
             bert_type=bert_type,
-            include_spectrograms=include_spectrograms
+            include_spectrograms=include_spectrograms,
         )
         self.dev_prep.update_acoustic_means(
             self.train_prep.acoustic_means, self.train_prep.acoustic_stdev
@@ -154,7 +156,7 @@ class StandardPrep:
             add_avging=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
             bert_type=bert_type,
-            include_spectrograms=include_spectrograms
+            include_spectrograms=include_spectrograms,
         )
         self.test_prep.update_acoustic_means(
             self.train_prep.acoustic_means, self.train_prep.acoustic_stdev
@@ -184,7 +186,7 @@ class SelfSplitPrep:
         avg_acoustic_data=False,
         custom_feats_file=None,
         bert_type="distilbert",
-        include_spectrograms=False
+        include_spectrograms=False,
     ):
         # set path to data files
         self.d_type = data_type.lower()
@@ -224,11 +226,11 @@ class SelfSplitPrep:
             all_speakers = get_lives_speakers(self.all_data)
             speaker2idx = get_speaker_to_index_dict(all_speakers)
         elif data_type == "asist":
-            all_speakers = set(self.all_data['participant']) # participant
+            all_speakers = set(self.all_data["participant"])  # participant
             speaker2idx = get_speaker_to_index_dict(all_speakers)
             # drop na's for sent-emo labels
             # otherwise, more acoustic files will be read in than text items
-            self.all_data = self.all_data.dropna(subset=['sentiment', 'emotion'])
+            self.all_data = self.all_data.dropna(subset=["sentiment", "emotion"])
         else:
             speaker2idx = None
 
@@ -248,8 +250,9 @@ class SelfSplitPrep:
             self.use_bert = False
 
         # get longest utt
-        self.longest_utt = get_longest_utt(self.all_data, self.tokenizer, self.use_bert,
-                                           bert_type.lower() == "text")
+        self.longest_utt = get_longest_utt(
+            self.all_data, self.tokenizer, self.use_bert, bert_type.lower() == "text"
+        )
 
         # set longest accepted acoustic file
         self.longest_acoustic = 1000
@@ -269,7 +272,7 @@ class SelfSplitPrep:
             add_avging=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
             bert_type=bert_type,
-            include_spectrograms=include_spectrograms
+            include_spectrograms=include_spectrograms,
         )
 
         del self.all_data
@@ -283,7 +286,7 @@ class SelfSplitPrep:
     def get_data_folds(self):
         # get the list of all conversations
         if self.d_type == "lives":
-            all_convos = list(set([item['recording_id'] for item in self.data]))
+            all_convos = list(set([item["recording_id"] for item in self.data]))
             train_convos, dev_convos, test_convos = create_data_folds_list(
                 all_convos, self.train_prop, self.test_prop
             )
@@ -295,6 +298,7 @@ class SelfSplitPrep:
                 self.data, self.train_prop, self.test_prop
             )
         return train_data, dev_data, test_data
+
 
 def get_updated_class_weights(train_ys):
     """
@@ -329,7 +333,7 @@ class DataPrep:
         add_avging=False,
         custom_feats_file=None,
         bert_type="distilbert",
-        include_spectrograms=False
+        include_spectrograms=False,
     ):
         # set data type
         self.d_type = data_type
@@ -363,8 +367,12 @@ class DataPrep:
         del self.acoustic_dict, self.acoustic_lengths_dict
 
         if include_spectrograms:
-            self.spec_dict, self.spec_lengths_dict = make_spectrograms_dict(data_path, data_type)
-            self.spec_set, self.spec_lengths_list = self.make_spectrogram_set(self.spec_dict, self.spec_lengths_dict)
+            self.spec_dict, self.spec_lengths_dict = make_spectrograms_dict(
+                data_path, data_type
+            )
+            self.spec_set, self.spec_lengths_list = self.make_spectrogram_set(
+                self.spec_dict, self.spec_lengths_dict
+            )
             del self.spec_dict, self.spec_lengths_dict
         else:
             self.spec_set = None
@@ -420,7 +428,7 @@ class DataPrep:
                 self.acoustic_stdev,
                 as_dict=as_dict,
                 spec_data=self.spec_set,
-                spec_lengths=self.spec_lengths_list
+                spec_lengths=self.spec_lengths_list,
             )
         elif self.d_type == "mustard":
             combined = combine_xs_and_ys_mustard(
@@ -432,7 +440,7 @@ class DataPrep:
                 speaker2idx,
                 as_dict=as_dict,
                 spec_data=self.spec_set,
-                spec_lengths=self.spec_lengths_list
+                spec_lengths=self.spec_lengths_list,
             )
         elif self.d_type == "chalearn" or self.d_type == "firstimpr":
             combined = combine_xs_and_ys_firstimpr(
@@ -444,7 +452,7 @@ class DataPrep:
                 pred_type=self.pred_type,
                 as_dict=as_dict,
                 spec_data=self.spec_set,
-                spec_lengths=self.spec_lengths_list
+                spec_lengths=self.spec_lengths_list,
             )
         elif self.d_type == "cdc":
             combined = combine_xs_and_ys_cdc(
@@ -456,7 +464,7 @@ class DataPrep:
                 speaker2idx,
                 as_dict=as_dict,
                 spec_data=self.spec_set,
-                spec_lengths=self.spec_lengths_list
+                spec_lengths=self.spec_lengths_list,
             )
         elif (
             self.d_type == "mosi"
@@ -473,7 +481,7 @@ class DataPrep:
                 pred_type=self.pred_type,
                 as_dict=as_dict,
                 spec_data=self.spec_set,
-                spec_lengths=self.spec_lengths_list
+                spec_lengths=self.spec_lengths_list,
             )
         elif self.d_type == "lives":
             combined = combine_xs_and_ys_lives(
@@ -485,7 +493,7 @@ class DataPrep:
                 speaker2idx,
                 as_dict=as_dict,
                 spec_data=self.spec_set,
-                spec_lengths=self.spec_lengths_list
+                spec_lengths=self.spec_lengths_list,
             )
         elif self.d_type == "asist":
             combined = combine_xs_and_ys_asist(
@@ -525,11 +533,14 @@ class DataPrep:
         ):
             valid_ids = text_data["id"].tolist()
         elif self.d_type == "lives":
-            text_data['utt_num'] = text_data['utt_num'].astype(str)
-            valid_ids = text_data.agg(lambda x: f"{x['recording_id']}_utt{x['utt_num']}_speaker{x['speaker']}", axis=1)
+            text_data["utt_num"] = text_data["utt_num"].astype(str)
+            valid_ids = text_data.agg(
+                lambda x: f"{x['recording_id']}_utt{x['utt_num']}_speaker{x['speaker']}",
+                axis=1,
+            )
             # valid_ids = text_data[['recording_id', 'utt_num']].agg("_".join, axis=1)
         elif self.d_type == "asist":
-            valid_ids = text_data["message_id"].tolist() # audio_id
+            valid_ids = text_data["message_id"].tolist()  # audio_id
 
         # get intersection of valid ids and ids present in acoustic data
         all_used_ids = set(valid_ids).intersection(set(acoustic_dict.keys()))
@@ -557,8 +568,9 @@ class DataPrep:
         ordered_acoustic_lengths = []
 
         # for all items with audio + gold label
-        for item in tqdm(self.used_ids, desc=f"Preparing acoustic set for {self.d_type}"):
-
+        for item in tqdm(
+            self.used_ids, desc=f"Preparing acoustic set for {self.d_type}"
+        ):
             # pull out the acoustic feats df
             acoustic_data = acoustic_dict[item]
             ordered_acoustic_lengths.append(acoustic_lengths_dict[item])
@@ -595,12 +607,7 @@ class DataPrep:
 
         return all_acoustic, ordered_acoustic_lengths
 
-    def make_spectrogram_set(
-        self,
-        spec_dict,
-        spec_lengths_dict,
-        longest_spec=1500
-    ):
+    def make_spectrogram_set(self, spec_dict, spec_lengths_dict, longest_spec=1500):
         """
         Prepare the spectrogram data
         :param spec_dict: a dict of acoustic feat dfs
@@ -615,7 +622,6 @@ class DataPrep:
 
         # for all items with audio + gold label
         for item in tqdm(self.used_ids, desc=f"Preparing spec set for {self.d_type}"):
-
             # pull out the spec feats df
             spec_data = spec_dict[item]
             ordered_spec_lengths.append(spec_lengths_dict[item])
@@ -692,9 +698,7 @@ def get_longest_utt(data, tokenizer, use_bert=False, return_text=False):
     if return_text:
         # todo: is this even needed?
         #   changed to 1 bc seems irrelevant
-        item_lens = [
-            1 for utt in all_utts
-        ]
+        item_lens = [1 for utt in all_utts]
     elif use_bert:
         # tokenize and count all items in dataset
         item_lens = [
@@ -728,8 +732,8 @@ def get_paths(data_type, data_path):
 
 def get_lives_speakers(df):
     # get lives speakers by combining the 'speaker' category with the 'sid' category
-    df['speaker'] = df['speaker'].astype(str)
-    all_speakers = df[['speaker', 'sid']].agg('-'.join, axis=1)
+    df["speaker"] = df["speaker"].astype(str)
+    all_speakers = df[["speaker", "sid"]].agg("-".join, axis=1)
 
     return set(all_speakers.unique())
 
@@ -750,7 +754,10 @@ def make_acoustic_dict(file_path, dataset, feature_set, use_cols=None):
     acoustic_lengths = {}
 
     # get the acoustic features files
-    for feats_file in tqdm(glob.glob(f"{file_path}/{feature_set}/*_{feature_set}.csv"), desc=f"Loading acoustic feature files for {dataset}"):
+    for feats_file in tqdm(
+        glob.glob(f"{file_path}/{feature_set}/*_{feature_set}.csv"),
+        desc=f"Loading acoustic feature files for {dataset}",
+    ):
         # read each file as a pandas df
         if use_cols is None or (
             len(use_cols) == 1
@@ -859,7 +866,10 @@ def make_spectrograms_dict(file_path, dataset):
     spec_lengths = {}
 
     # get the acoustic features files
-    for spec_file in tqdm(glob.glob(f"{file_path}/spec/*.csv"), desc=f"Loading spectrogram files for {dataset}"):
+    for spec_file in tqdm(
+        glob.glob(f"{file_path}/spec/*.csv"),
+        desc=f"Loading spectrogram files for {dataset}",
+    ):
         # read each file as a pandas df
         spec = pd.read_csv(spec_file)
 

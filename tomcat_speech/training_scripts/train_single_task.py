@@ -11,26 +11,37 @@ from datetime import date
 
 from tomcat_speech.training_and_evaluation_functions.train_and_test_single_models import (
     train_and_predict,
-    make_train_state)
+    make_train_state,
+)
 from tomcat_speech.training_and_evaluation_functions.plot_training import *
 from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
     set_cuda_and_seeds,
-    select_model)
-from tomcat_speech.training_and_evaluation_functions.loading_data import load_modality_data
+    select_model,
+)
+from tomcat_speech.training_and_evaluation_functions.loading_data import (
+    load_modality_data,
+)
 
 
-def train_single_task(all_data_list, loss_fx, sampler, device, output_path, config,
-                    num_embeddings=None, pretrained_embeddings=None, extra_params=None,
-                    pretrained_model=None):
+def train_single_task(
+    all_data_list,
+    loss_fx,
+    sampler,
+    device,
+    output_path,
+    config,
+    num_embeddings=None,
+    pretrained_embeddings=None,
+    extra_params=None,
+    pretrained_model=None,
+):
     if extra_params:
         model_params = extra_params
     else:
         model_params = config.model_params
 
     # decide if you want to use avgd feats
-    avgd_acoustic_in_network = (
-        model_params.avgd_acoustic or model_params.add_avging
-    )
+    avgd_acoustic_in_network = model_params.avgd_acoustic or model_params.add_avging
 
     # CREATE NN
     print(model_params)
@@ -46,11 +57,7 @@ def train_single_task(all_data_list, loss_fx, sampler, device, output_path, conf
     )
 
     # make sure the full save path exists; if not, create it
-    os.system(
-        'if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(
-            item_output_path
-        )
-    )
+    os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(item_output_path))
 
     # this uses train-dev-test folds
     # create instance of model
@@ -64,8 +71,8 @@ def train_single_task(all_data_list, loss_fx, sampler, device, output_path, conf
 
     # if we are loading pretrained files for fine-tuning, add these here
     if pretrained_model is not None:
-        task_model.load_state_dict(pretrained_model['model_state_dict'])
-        optimizer.load_state_dict(pretrained_model['optimizer_state_dict'])
+        task_model.load_state_dict(pretrained_model["model_state_dict"])
+        optimizer.load_state_dict(pretrained_model["optimizer_state_dict"])
 
     # set the classifier(s) to the right device
     multitask_model = task_model.to(device)
@@ -75,9 +82,10 @@ def train_single_task(all_data_list, loss_fx, sampler, device, output_path, conf
     model_save_file = f"{item_output_path}/{config.EXPERIMENT_DESCRIPTION}.pt"
 
     # make the train state to keep track of model training/development
-    train_state = make_train_state(model_params.lr, model_save_file,
-                                   model_params.early_stopping_criterion)
- 
+    train_state = make_train_state(
+        model_params.lr, model_save_file, model_params.early_stopping_criterion
+    )
+
     # train the model and evaluate on development set
     train_and_predict(
         multitask_model,
@@ -93,7 +101,7 @@ def train_single_task(all_data_list, loss_fx, sampler, device, output_path, conf
         use_speaker=model_params.use_speaker,
         use_gender=model_params.use_gender,
         loss_fx=loss_fx
-        #use_spec = False #added 10/24/22
+        # use_spec = False #added 10/24/22
     )
 
     # plot the loss and accuracy curves
@@ -108,7 +116,7 @@ def train_single_task(all_data_list, loss_fx, sampler, device, output_path, conf
         x_label="Epoch",
         y_label="Loss",
         title=loss_title,
-        save_name=loss_save
+        save_name=loss_save,
     )
 
     # plot the avg f1 curves for each dataset
@@ -134,14 +142,20 @@ if __name__ == "__main__":
 
     # get data
     if not config.model_params.use_distilbert:
-        data, loss_fx, sampler, num_embeddings, pretrained_embeddings = load_modality_data(device, config)
+        (
+            data,
+            loss_fx,
+            sampler,
+            num_embeddings,
+            pretrained_embeddings,
+        ) = load_modality_data(device, config)
     else:
         data, loss_fx, sampler = load_modality_data(device, config)
         num_embeddings = None
         pretrained_embeddings = None
-    
-    print(type(data[0].train)) #12/15/22
-    print(len(data[0].train)) #12/15/22
+
+    print(type(data[0].train))  # 12/15/22
+    print(len(data[0].train))  # 12/15/22
 
     # create save location
     output_path = os.path.join(
@@ -170,5 +184,14 @@ if __name__ == "__main__":
         if not config.DEBUG:
             sys.stdout = f
 
-            train_single_task(data, loss_fx, sampler, device, output_path, config, num_embeddings,
-                              pretrained_embeddings, pretrained_model=pretrained)
+            train_single_task(
+                data,
+                loss_fx,
+                sampler,
+                device,
+                output_path,
+                config,
+                num_embeddings,
+                pretrained_embeddings,
+                pretrained_model=pretrained,
+            )

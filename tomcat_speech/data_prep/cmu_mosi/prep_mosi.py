@@ -5,7 +5,7 @@ from tomcat_speech.data_prep.prep_data import SelfSplitPrep, get_updated_class_w
 from tomcat_speech.data_prep.utils.data_prep_helpers import (
     make_glove_dict,
     Glove,
-    get_data_samples
+    get_data_samples,
 )
 
 
@@ -61,7 +61,7 @@ def prep_mosi_data(
         avg_acoustic_data=avg_acoustic_data,
         custom_feats_file=custom_feats_file,
         bert_type=embedding_type,
-        include_spectrograms=include_spectrograms
+        include_spectrograms=include_spectrograms,
     )
 
     # get train, dev, test data

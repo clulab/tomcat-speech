@@ -85,7 +85,7 @@ def prep_data(
             as_dict=data_as_dict,
             avg_acoustic_data=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
-            include_spectrograms=include_spectrograms
+            include_spectrograms=include_spectrograms,
         )
     elif dataset == "firstimpr" or dataset == "chalearn":
         train, dev, test, weights = prep_firstimpr_data(
@@ -99,7 +99,7 @@ def prep_data(
             as_dict=data_as_dict,
             avg_acoustic_data=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
-            include_spectrograms=include_spectrograms
+            include_spectrograms=include_spectrograms,
         )
     elif dataset == "meld":
         train, dev, test, weights = prep_meld_data(
@@ -112,7 +112,7 @@ def prep_data(
             as_dict=data_as_dict,
             avg_acoustic_data=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
-            include_spectrograms=include_spectrograms
+            include_spectrograms=include_spectrograms,
         )
     elif dataset == "mustard":
         train, dev, test, weights = prep_mustard_data(
@@ -125,7 +125,7 @@ def prep_data(
             as_dict=data_as_dict,
             avg_acoustic_data=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
-            include_spectrograms=include_spectrograms
+            include_spectrograms=include_spectrograms,
         )
     elif dataset == "ravdess":
         train, dev, test, weights = prep_ravdess_data(
@@ -138,7 +138,7 @@ def prep_data(
             avg_acoustic_data=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
             selected_ids=selected_ids,
-            include_spectrograms=include_spectrograms
+            include_spectrograms=include_spectrograms,
         )
     elif dataset == "asist":
         train, dev, test, weights = prep_asist_data(
@@ -150,7 +150,7 @@ def prep_data(
             as_dict=data_as_dict,
             avg_acoustic_data=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
-            include_spectrograms=include_spectrograms
+            include_spectrograms=include_spectrograms,
         )
 
     return train, dev, test, weights

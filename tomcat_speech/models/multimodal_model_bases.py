@@ -14,8 +14,13 @@ class EarlyFusionMultimodalModel(nn.Module):
     Uses averaging of text tensors to do this
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None,
-                 use_distilbert=False):
+    def __init__(
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
+        use_distilbert=False,
+    ):
         super(EarlyFusionMultimodalModel, self).__init__()
         # input text + acoustic + speaker
         self.text_dim = params.text_dim
@@ -71,15 +76,15 @@ class EarlyFusionMultimodalModel(nn.Module):
         self.fc2 = nn.Linear(params.fc_hidden_dim, self.output_dim)
 
     def forward(
-            self,
-            acoustic_input,
-            text_input,
-            speaker_input=None,
-            length_input=None,
-            acoustic_len_input=None,
-            gender_input=None,
-            get_prob_dist=False,
-            save_encoded_data=False
+        self,
+        acoustic_input,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        acoustic_len_input=None,
+        gender_input=None,
+        get_prob_dist=False,
+        save_encoded_data=False,
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
@@ -134,8 +139,13 @@ class IntermediateFusionMultimodalModel(nn.Module):
     aligned at the word-level
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None,
-                 use_distilbert=False):
+    def __init__(
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
+        use_distilbert=False,
+    ):
         super(IntermediateFusionMultimodalModel, self).__init__()
         # input text + acoustic + speaker
         self.text_dim = params.text_dim
@@ -147,7 +157,7 @@ class IntermediateFusionMultimodalModel(nn.Module):
         # get number of output dims
         self.out_dims = params.output_dim
 
-        # whether spectrograms are included 
+        # whether spectrograms are included
         self.spec = params.use_spec
 
         # if we feed text through additional layer(s)
@@ -189,7 +199,7 @@ class IntermediateFusionMultimodalModel(nn.Module):
         else:
             # set size of input dim
             self.fc_input_dim = (
-                    params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
+                params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
             )
             # set size of hidden
             self.fc_hidden = 100
@@ -240,16 +250,16 @@ class IntermediateFusionMultimodalModel(nn.Module):
         self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
 
     def forward(
-            self,
-            acoustic_input,
-            text_input,
-            speaker_input=None,
-            length_input=None,
-            acoustic_len_input=None,
-            gender_input=None,
-            spec_input=None,
-            get_prob_dist=False,
-            save_encoded_data=False
+        self,
+        acoustic_input,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        acoustic_len_input=None,
+        gender_input=None,
+        spec_input=None,
+        get_prob_dist=False,
+        save_encoded_data=False,
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
@@ -342,7 +352,13 @@ class LateFusionMultimodalModel(nn.Module):
     A late fusion model that combines modalities only at decision time
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None, use_distilbert=False):
+    def __init__(
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
+        use_distilbert=False,
+    ):
         super(LateFusionMultimodalModel, self).__init__()
         self.text_dim = params.text_dim
         self.audio_dim = params.audio_dim
@@ -414,15 +430,15 @@ class LateFusionMultimodalModel(nn.Module):
         self.gender_embedding = nn.Embedding(3, params.gender_emb_dim)
 
     def forward(
-            self,
-            acoustic_input,
-            text_input,
-            speaker_input=None,
-            length_input=None,
-            acoustic_len_input=None,
-            gender_input=None,
-            get_prob_dist=False,
-            save_encoded_data=False
+        self,
+        acoustic_input,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        acoustic_len_input=None,
+        gender_input=None,
+        get_prob_dist=False,
+        save_encoded_data=False,
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
@@ -512,7 +528,12 @@ class MultimodalBaseDuplicateInput(nn.Module):
     """
 
     def __init__(
-            self, params, num_embeddings=None, pretrained_embeddings=None, num_tasks=2, use_distilbert=False
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
+        num_tasks=2,
+        use_distilbert=False,
     ):
         super(MultimodalBaseDuplicateInput, self).__init__()
         # get the number of duplicates
@@ -583,14 +604,14 @@ class MultimodalBaseDuplicateInput(nn.Module):
         self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
 
     def forward(
-            self,
-            acoustic_input,
-            text_input,
-            length_input=None,
-            gender_input=None,
-            task_num=0,
-            get_prob_dist=False,
-            save_encoded_data=False
+        self,
+        acoustic_input,
+        text_input,
+        length_input=None,
+        gender_input=None,
+        task_num=0,
+        get_prob_dist=False,
+        save_encoded_data=False,
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
@@ -713,8 +734,13 @@ class IntermediateFusionMultimodalModelWithSpectrogram(nn.Module):
     Feeds this through further neural layers
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None,
-                 use_distilbert=False):
+    def __init__(
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
+        use_distilbert=False,
+    ):
         super(IntermediateFusionMultimodalModelWithSpectrogram, self).__init__()
         # input text + acoustic + speaker
         self.text_dim = params.text_dim
@@ -761,7 +787,7 @@ class IntermediateFusionMultimodalModelWithSpectrogram(nn.Module):
         else:
             # set size of input dim
             self.fc_input_dim = (
-                    params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
+                params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
             )
             # set size of hidden
             self.fc_hidden = 100
@@ -808,15 +834,15 @@ class IntermediateFusionMultimodalModelWithSpectrogram(nn.Module):
         self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
 
     def forward(
-            self,
-            acoustic_input,
-            text_input,
-            speaker_input=None,
-            length_input=None,
-            acoustic_len_input=None,
-            gender_input=None,
-            get_prob_dist=False,
-            save_encoded_data=False
+        self,
+        acoustic_input,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        acoustic_len_input=None,
+        gender_input=None,
+        get_prob_dist=False,
+        save_encoded_data=False,
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)

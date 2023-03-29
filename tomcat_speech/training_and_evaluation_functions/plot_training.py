@@ -11,7 +11,7 @@ def plot_train_dev_curve(
     title="",
     save_name=None,
     show=False,
-    axis_boundaries=None
+    axis_boundaries=None,
 ):
     """
     plot the loss or accuracy/f1 curves over time for training and dev set
@@ -59,12 +59,7 @@ def plot_train_dev_curve(
 
 
 def plot_histograms_of_data_classes(
-        data_list,
-        x_label="",
-        y_label="",
-        title="",
-        save_name="",
-        show=False
+    data_list, x_label="", y_label="", title="", save_name="", show=False
 ):
     """
     Plot histograms for the number of items per class in the data

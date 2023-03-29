@@ -59,7 +59,7 @@ def prep_firstimpr_data(
         avg_acoustic_data=avg_acoustic_data,
         custom_feats_file=custom_feats_file,
         bert_type=embedding_type,
-        include_spectrograms=include_spectrograms
+        include_spectrograms=include_spectrograms,
     )
 
     # add the prediction type, since first impressions can have several

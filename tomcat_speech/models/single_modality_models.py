@@ -1,4 +1,3 @@
-
 import sys
 
 import torch
@@ -40,11 +39,12 @@ class MultitaskAcousticOnly(nn.Module):
         task_num=0,
         get_prob_dist=False,
         return_penultimate_layer=False,
-        save_encoded_data=False
+        save_encoded_data=False,
     ):
         # call forward on base model
         final_base_layer = self.acoustic_base(
-            acoustic_input, length_input=acoustic_len_input,
+            acoustic_input,
+            length_input=acoustic_len_input,
         )
 
         # set task-specific outputs
@@ -56,26 +56,53 @@ class MultitaskAcousticOnly(nn.Module):
 
         # get predictions for each task
         if not self.multi_dataset:
-            task_0_out = self.task_0_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
-            task_1_out = self.task_1_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
-            task_2_out = self.task_2_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
-            task_3_out = self.task_3_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
-            task_4_out = self.task_4_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+            task_0_out = self.task_0_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
+            task_1_out = self.task_1_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
+            task_2_out = self.task_2_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
+            task_3_out = self.task_3_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
+            task_4_out = self.task_4_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
         else:
             if task_num == 0:
-                task_0_out = self.task_0_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_0_out = self.task_0_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             elif task_num == 1:
-                task_1_out = self.task_1_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_1_out = self.task_1_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             elif task_num == 2:
-                task_2_out = self.task_2_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_2_out = self.task_2_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             elif task_num == 3:
-                task_3_out = self.task_3_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_3_out = self.task_3_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             elif task_num == 4:
-                task_4_out = self.task_4_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_4_out = self.task_4_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             else:
                 sys.exit(f"Task {task_num} not defined")
 
         if save_encoded_data:
-            return task_0_out, task_1_out, task_2_out, task_3_out, task_4_out, final_base_layer
+            return (
+                task_0_out,
+                task_1_out,
+                task_2_out,
+                task_3_out,
+                task_4_out,
+                final_base_layer,
+            )
         else:
             return task_0_out, task_1_out, task_2_out, task_3_out, task_4_out

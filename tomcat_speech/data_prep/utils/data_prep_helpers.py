@@ -198,7 +198,9 @@ class MinMaxScaleRange:
     use min-max scaling
     """
 
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         self.mins = {}
         self.maxes = {}
 
@@ -563,11 +565,9 @@ def transform_acoustic_item(item, acoustic_means, acoustic_stdev):
     return (item - acoustic_means) / acoustic_stdev
 
 
-def split_dataset_save_indices(data_path,
-                               perc_train,
-                               perc_test,
-                               pickle_savepath,
-                               speaker_in_one_partition=True):
+def split_dataset_save_indices(
+    data_path, perc_train, perc_test, pickle_savepath, speaker_in_one_partition=True
+):
     """
     Split a dataset into train, dev, test partitions
     Save the audio_ids of each partition to a pickle
@@ -586,8 +586,8 @@ def split_dataset_save_indices(data_path,
     idx2data = {}
 
     # get speakers and utt ids
-    speakers = data['speaker'].unique()
-    ids = data['id'].unique()
+    speakers = data["speaker"].unique()
+    ids = data["id"].unique()
 
     if speaker_in_one_partition:
         # get all speaker data
@@ -607,9 +607,12 @@ def split_dataset_save_indices(data_path,
     random.shuffle(idxs)
 
     # split
-    train = idxs[:round(max_num * perc_train)]
-    test = idxs[round(max_num * perc_train):round(max_num * perc_train) + round(max_num * perc_test)]
-    dev = idxs[round(max_num * perc_train) + round(max_num * perc_test):]
+    train = idxs[: round(max_num * perc_train)]
+    test = idxs[
+        round(max_num * perc_train) : round(max_num * perc_train)
+        + round(max_num * perc_test)
+    ]
+    dev = idxs[round(max_num * perc_train) + round(max_num * perc_test) :]
 
     # put all data together
     all_data = {"train": [], "dev": [], "test": []}
@@ -618,20 +621,20 @@ def split_dataset_save_indices(data_path,
     if speaker_in_one_partition:
         for item in train:
             name = idx2data[item]
-            all_data['train'].extend([utt_id for utt_id in ids if name in utt_id])
-            random.shuffle(all_data['train'])
+            all_data["train"].extend([utt_id for utt_id in ids if name in utt_id])
+            random.shuffle(all_data["train"])
         for item in dev:
             name = idx2data[item]
-            all_data['dev'].extend([utt_id for utt_id in ids if name in utt_id])
-            random.shuffle(all_data['dev'])
+            all_data["dev"].extend([utt_id for utt_id in ids if name in utt_id])
+            random.shuffle(all_data["dev"])
         for item in test:
             name = idx2data[item]
-            all_data['test'].extend([utt_id for utt_id in ids if name in utt_id])
-            random.shuffle(all_data['test'])
+            all_data["test"].extend([utt_id for utt_id in ids if name in utt_id])
+            random.shuffle(all_data["test"])
     else:
-        all_data['train'].extend([idx2data[item] for item in train])
-        all_data['dev'].extend([idx2data[item] for item in dev])
-        all_data['test'].extend([idx2data[item] for item in test])
+        all_data["train"].extend([idx2data[item] for item in train])
+        all_data["dev"].extend([idx2data[item] for item in dev])
+        all_data["test"].extend([idx2data[item] for item in test])
 
     # save item names
-    pickle.dump(all_data, open(pickle_savepath, 'wb'))
+    pickle.dump(all_data, open(pickle_savepath, "wb"))

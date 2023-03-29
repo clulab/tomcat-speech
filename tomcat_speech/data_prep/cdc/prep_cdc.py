@@ -26,25 +26,25 @@ def prep_cdc_data(
     as_dict=False,
     avg_acoustic_data=False,
     custom_feats_file=None,
-    include_spectrograms=False
+    include_spectrograms=False,
 ):
     """
-       Prepare pickle files for Columbia deception corpus data
-       :param data_path: the string path to directory containing the dataset
-       :param feature_set: the acoustic feature set to use (generally IS13)
-           could be IS09, IS10, IS11, IS12, IS13
-       :param transcription_type: string name of transcription type 'gold'
-       :param embedding_type: 'bert', 'roberta', 'distilbert', 'glove'
-       :param glove_filepath: the string path to a txt file containing GloVe
-       :param features_to_use: None or a list of specific acoustic features
-           if a list, these features are pulled from the opensmile output by name
-       :param as_dict: whether to save data as list of dicts (vs lists)
-           Our models expect dict data as of 2023.03.28
-       :param avg_acoustic_data: whether to average over acoustic features
-       :param custom_feats_file: None or the string name of a file containing
-           pre-generated custom acoustic features
-       :param include_spectrograms: whether to use spectrograms as part of the dataset
-       """
+    Prepare pickle files for Columbia deception corpus data
+    :param data_path: the string path to directory containing the dataset
+    :param feature_set: the acoustic feature set to use (generally IS13)
+        could be IS09, IS10, IS11, IS12, IS13
+    :param transcription_type: string name of transcription type 'gold'
+    :param embedding_type: 'bert', 'roberta', 'distilbert', 'glove'
+    :param glove_filepath: the string path to a txt file containing GloVe
+    :param features_to_use: None or a list of specific acoustic features
+        if a list, these features are pulled from the opensmile output by name
+    :param as_dict: whether to save data as list of dicts (vs lists)
+        Our models expect dict data as of 2023.03.28
+    :param avg_acoustic_data: whether to average over acoustic features
+    :param custom_feats_file: None or the string name of a file containing
+        pre-generated custom acoustic features
+    :param include_spectrograms: whether to use spectrograms as part of the dataset
+    """
     # load glove
     if embedding_type.lower() == "glove":
         glove_dict = make_glove_dict(glove_filepath)
@@ -67,7 +67,7 @@ def prep_cdc_data(
         avg_acoustic_data=avg_acoustic_data,
         custom_feats_file=custom_feats_file,
         bert_type=embedding_type,
-        include_spectrograms=include_spectrograms
+        include_spectrograms=include_spectrograms,
     )
 
     # get train, dev, test data

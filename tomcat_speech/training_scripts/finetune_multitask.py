@@ -9,18 +9,28 @@ import torch
 from datetime import date
 
 from tomcat_speech.data_prep.samplers import RandomOversampler
-from tomcat_speech.training_and_evaluation_functions.train_and_test_multitask_singledataset import train_and_predict_multitask_singledataset
+from tomcat_speech.training_and_evaluation_functions.train_and_test_multitask_singledataset import (
+    train_and_predict_multitask_singledataset,
+)
 from tomcat_speech.training_and_evaluation_functions.plot_training import *
 from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
     set_cuda_and_seeds,
     select_model,
-    make_train_state
+    make_train_state,
 )
-from tomcat_speech.training_and_evaluation_functions.loading_data import combine_modality_data
-from tomcat_speech.data_prep.utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict
+from tomcat_speech.training_and_evaluation_functions.loading_data import (
+    combine_modality_data,
+)
+from tomcat_speech.data_prep.utils.data_prep_helpers import (
+    MultitaskObject,
+    Glove,
+    make_glove_dict,
+)
 
 
-def load_modality_data_singledataset_multitask(device, config, use_text=True, use_acoustic=True):
+def load_modality_data_singledataset_multitask(
+    device, config, use_text=True, use_acoustic=True
+):
     """
     Load the modality-separated data for a single dataset
     that contains multiple tasks of interest
@@ -67,7 +77,9 @@ def load_modality_data_singledataset_multitask(device, config, use_text=True, us
             del train_audio, dev_audio, test_audio
         if use_spectrograms:
             print("Loading Spectrogram Features")
-            spec_base = f"{load_path}/field_separated_data/spectrogram_data/{dataset}_spec"
+            spec_base = (
+                f"{load_path}/field_separated_data/spectrogram_data/{dataset}_spec"
+            )
             print("Loading spec features for train set")
             train_spec = pickle.load(open(f"{spec_base}_train.pickle", "rb"))
             print("Spec features loaded for train set")
@@ -76,8 +88,10 @@ def load_modality_data_singledataset_multitask(device, config, use_text=True, us
             x_replacer = torch.zeros(longest, 513)
             for item in train_spec:
                 x = x_replacer.detach().clone()
-                x[:min(len(item['x_spec']), longest), :513] = item['x_spec'][:min(len(item['x_spec']), longest)]
-                item['x_spec'] = x
+                x[: min(len(item["x_spec"]), longest), :513] = item["x_spec"][
+                    : min(len(item["x_spec"]), longest)
+                ]
+                item["x_spec"] = x
             train_modalities.append(train_spec)
             del train_spec
 
@@ -85,8 +99,10 @@ def load_modality_data_singledataset_multitask(device, config, use_text=True, us
             dev_spec = pickle.load(open(f"{spec_base}_dev.pickle", "rb"))
             for item in dev_spec:
                 x = x_replacer.detach().clone()
-                x[:min(len(item['x_spec']), longest), :513] = item['x_spec'][:min(len(item['x_spec']), longest)]
-                item['x_spec'] = x
+                x[: min(len(item["x_spec"]), longest), :513] = item["x_spec"][
+                    : min(len(item["x_spec"]), longest)
+                ]
+                item["x_spec"] = x
             dev_modalities.append(dev_spec)
             del dev_spec
 
@@ -94,8 +110,10 @@ def load_modality_data_singledataset_multitask(device, config, use_text=True, us
             test_spec = pickle.load(open(f"{spec_base}_test.pickle", "rb"))
             for item in test_spec:
                 x = x_replacer.detach().clone()
-                x[:min(len(item['x_spec']), longest), :513] = item['x_spec'][:min(len(item['x_spec']), longest)]
-                item['x_spec'] = x
+                x[: min(len(item["x_spec"]), longest), :513] = item["x_spec"][
+                    : min(len(item["x_spec"]), longest)
+                ]
+                item["x_spec"] = x
             test_modalities.append(test_spec)
             del test_spec
 
@@ -114,7 +132,9 @@ def load_modality_data_singledataset_multitask(device, config, use_text=True, us
 
         # combine modalities
         if len(train_modalities) < 2:
-            exit("No modalities data has been loaded; please select at least one modality to load")
+            exit(
+                "No modalities data has been loaded; please select at least one modality to load"
+            )
 
         train_data = combine_modality_data(train_modalities)
         dev_data = combine_modality_data(dev_modalities)
@@ -122,19 +142,25 @@ def load_modality_data_singledataset_multitask(device, config, use_text=True, us
 
         del train_modalities, dev_modalities, test_modalities
 
-        clsswts_base = f"{load_path}/field_separated_data/class_weights/{dataset}_clsswts.pickle"
+        clsswts_base = (
+            f"{load_path}/field_separated_data/class_weights/{dataset}_clsswts.pickle"
+        )
         clsswts = pickle.load(open(clsswts_base, "rb"))
 
         dset_loss_func = []
         for classnum in train_data[0]["ys"]:
-            dset_loss_func.append(torch.nn.CrossEntropyLoss(weight=clsswts[classnum].to(device) if config.model_params.use_clsswts else None,
-                                                            reduction="mean"))
+            dset_loss_func.append(
+                torch.nn.CrossEntropyLoss(
+                    weight=clsswts[classnum].to(device)
+                    if config.model_params.use_clsswts
+                    else None,
+                    reduction="mean",
+                )
+            )
 
-        all_datasets[task_num] = MultitaskObject(train_data,
-                                                 dev_data,
-                                                 test_data,
-                                                 dset_loss_func,
-                                                 task_num=task_num)
+        all_datasets[task_num] = MultitaskObject(
+            train_data, dev_data, test_data, dset_loss_func, task_num=task_num
+        )
         # increment task number
         task_num += 1
 
@@ -166,9 +192,7 @@ def load_modality_data_singledataset_multitask(device, config, use_text=True, us
     else:
         loss_fx = None
 
-    print(
-        "Model, loss function, and optimization created"
-    )
+    print("Model, loss function, and optimization created")
 
     # set sampler
     if config.model_params.use_sampler:
@@ -182,8 +206,17 @@ def load_modality_data_singledataset_multitask(device, config, use_text=True, us
         return all_data_list, loss_fx, sampler
 
 
-def finetune_multitask(all_data_list, loss_fx, sampler, device, output_path, config,
-                    num_embeddings=None, pretrained_embeddings=None, extra_params=None):
+def finetune_multitask(
+    all_data_list,
+    loss_fx,
+    sampler,
+    device,
+    output_path,
+    config,
+    num_embeddings=None,
+    pretrained_embeddings=None,
+    extra_params=None,
+):
     """
     Use a pretrained model to fine-tune on a single dataset
     Here, we use a model pretrained on MELD and MOSI and
@@ -206,9 +239,7 @@ def finetune_multitask(all_data_list, loss_fx, sampler, device, output_path, con
         model_params = config.model_params
 
     # decide if you want to use avgd feats
-    avgd_acoustic_in_network = (
-            model_params.avgd_acoustic or model_params.add_avging
-    )
+    avgd_acoustic_in_network = model_params.avgd_acoustic or model_params.add_avging
 
     # 3. CREATE NN
     print(model_params)
@@ -224,14 +255,12 @@ def finetune_multitask(all_data_list, loss_fx, sampler, device, output_path, con
     )
 
     # make sure the full save path exists; if not, create it
-    os.system(
-        'if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(
-            item_output_path
-        )
-    )
+    os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(item_output_path))
 
     # this uses train-dev-test folds
-    multitask_model = select_model(model_params, num_embeddings, pretrained_embeddings, multidataset=False)
+    multitask_model = select_model(
+        model_params, num_embeddings, pretrained_embeddings, multidataset=False
+    )
 
     # load saved model
     saved = torch.load(config.saved_model, map_location=device)
@@ -252,8 +281,9 @@ def finetune_multitask(all_data_list, loss_fx, sampler, device, output_path, con
     model_save_file = f"{item_output_path}/{config.EXPERIMENT_DESCRIPTION}.pt"
 
     # make the train state to keep track of model training/development
-    train_state = make_train_state(model_params.lr, model_save_file,
-                                   model_params.early_stopping_criterion)
+    train_state = make_train_state(
+        model_params.lr, model_save_file, model_params.early_stopping_criterion
+    )
 
     # train the model and evaluate on development set
     train_and_predict_multitask_singledataset(
@@ -270,7 +300,7 @@ def finetune_multitask(all_data_list, loss_fx, sampler, device, output_path, con
         use_speaker=model_params.use_speaker,
         use_gender=model_params.use_gender,
         loss_fx=loss_fx,
-        use_spec=model_params.use_spec
+        use_spec=model_params.use_spec,
     )
 
     # plot the loss and accuracy curves
@@ -284,7 +314,7 @@ def finetune_multitask(all_data_list, loss_fx, sampler, device, output_path, con
         x_label="Epoch",
         y_label="Loss",
         title=loss_title,
-        save_name=loss_save
+        save_name=loss_save,
     )
 
     # plot the avg f1 curves for each dataset
@@ -307,11 +337,19 @@ if __name__ == "__main__":
     device = set_cuda_and_seeds(config)
 
     if not config.model_params.use_distilbert:
-        data, loss_fx, sampler, num_embeddings, pretrained_embeddings = load_modality_data_singledataset_multitask(device, config,
-                                                                                           use_text=True,
-                                                                                           use_acoustic=True)
+        (
+            data,
+            loss_fx,
+            sampler,
+            num_embeddings,
+            pretrained_embeddings,
+        ) = load_modality_data_singledataset_multitask(
+            device, config, use_text=True, use_acoustic=True
+        )
     else:
-        data, loss_fx, sampler = load_modality_data_singledataset_multitask(device, config, use_text=True, use_acoustic=True)
+        data, loss_fx, sampler = load_modality_data_singledataset_multitask(
+            device, config, use_text=True, use_acoustic=True
+        )
         num_embeddings = None
         pretrained_embeddings = None
 
@@ -337,4 +375,13 @@ if __name__ == "__main__":
         if not config.DEBUG:
             sys.stdout = f
 
-            finetune_multitask(data, loss_fx, sampler, device, output_path, config, num_embeddings, pretrained_embeddings)
+            finetune_multitask(
+                data,
+                loss_fx,
+                sampler,
+                device,
+                output_path,
+                config,
+                num_embeddings,
+                pretrained_embeddings,
+            )

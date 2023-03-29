@@ -9,8 +9,12 @@ import torch
 import numpy as np
 import random
 
-from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import make_train_state
-from tomcat_speech.training_and_evaluation_functions.train_and_test_without_gold_labels import multitask_predict_without_gold_labels
+from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
+    make_train_state,
+)
+from tomcat_speech.training_and_evaluation_functions.train_and_test_without_gold_labels import (
+    multitask_predict_without_gold_labels,
+)
 from tomcat_speech.models.multimodal_models import MultitaskModel
 
 # import MultitaskObject and Glove from preprocessing code
@@ -45,7 +49,8 @@ if __name__ == "__main__":
     output_path = os.path.dirname(config_path)
 
     shutil.copyfile(
-        config_path, "tomcat_speech/training_and_evaluation_functions/testing_parameters/config.py"
+        config_path,
+        "tomcat_speech/training_and_evaluation_functions/testing_parameters/config.py",
     )
 
     # import parameters for model
@@ -67,7 +72,7 @@ if __name__ == "__main__":
 
     # decide if you want to use avgd feats
     avgd_acoustic_in_network = (
-            config.model_params.avgd_acoustic or config.model_params.add_avging
+        config.model_params.avgd_acoustic or config.model_params.add_avging
     )
 
     # set location for pickled data (saving or loading)
@@ -90,9 +95,9 @@ if __name__ == "__main__":
             feature_set = config.feature_set
 
             # import data
-            used_ds = load_modality_data(device, config,
-                                         use_text=True,
-                                         use_acoustic=True)
+            used_ds = load_modality_data(
+                device, config, use_text=True, use_acoustic=True
+            )
 
             all_ds = []
             all_ds.extend(used_ds[0][0].train)
@@ -118,7 +123,7 @@ if __name__ == "__main__":
                 multitask_model = MultitaskModel(
                     params=config.model_params,
                     use_distilbert=config.model_params.use_distilbert,
-                    multi_dataset=False
+                    multi_dataset=False,
                 )
             else:
                 multitask_model = MultitaskModel(
@@ -126,7 +131,7 @@ if __name__ == "__main__":
                     use_distilbert=config.model_params.use_distilbert,
                     num_embeddings=num_embeddings,
                     pretrained_embeddings=pretrained_embeddings,
-                    multi_dataset=False
+                    multi_dataset=False,
                 )
 
             optimizer = torch.optim.Adam(
@@ -137,7 +142,9 @@ if __name__ == "__main__":
 
             # set the classifier(s) to the right device
             # get saved parameters
-            multitask_model.load_state_dict(torch.load(saved_model, map_location=device))
+            multitask_model.load_state_dict(
+                torch.load(saved_model, map_location=device)
+            )
             multitask_model.to(device)
 
             print("Trained model loaded, loss function, and optimization prepared")
@@ -153,10 +160,14 @@ if __name__ == "__main__":
             )
 
             # get order of predictions
-            #ordered_ids = [item['audio_id'] for item in used_ds[0]]
+            # ordered_ids = [item['audio_id'] for item in used_ds[0]]
 
             # get predictions
-            ordered_predictions, ordered_penult_lyrs, ordered_ids = multitask_predict_without_gold_labels(
+            (
+                ordered_predictions,
+                ordered_penult_lyrs,
+                ordered_ids,
+            ) = multitask_predict_without_gold_labels(
                 multitask_model,
                 used_ds,
                 config.model_params.batch_size,
@@ -173,15 +184,15 @@ if __name__ == "__main__":
             all_preds = {}
             for pred_type in ordered_predictions.keys():
                 all_preds[pred_type] = []
-                #print(pred_type)
-                #print("--------------------")
+                # print(pred_type)
+                # print("--------------------")
                 for group_pred in ordered_predictions[pred_type]:
                     for preds in group_pred:
                         all_preds[pred_type].append(preds.index(max(preds)))
                         print(preds.index(max(preds)))
 
             data_to_save = pd.DataFrame(all_preds)
-            data_to_save.columns = ['trait', 'emotion', 'sentiment']
-            data_to_save['audio_id'] = ordered_ids
-            #data_to_save.to_csv(f"../../PROJECTS/ToMCAT/Evaluating_modelpredictions/data_from_speechAnalyzer/used_for_evaluating_model_results/all_preds_no_classweights.csv", index=False)
+            data_to_save.columns = ["trait", "emotion", "sentiment"]
+            data_to_save["audio_id"] = ordered_ids
+            # data_to_save.to_csv(f"../../PROJECTS/ToMCAT/Evaluating_modelpredictions/data_from_speechAnalyzer/used_for_evaluating_model_results/all_preds_no_classweights.csv", index=False)
             data_to_save.to_csv(f"{config.exp_save_path}/_predictions.csv", index=False)

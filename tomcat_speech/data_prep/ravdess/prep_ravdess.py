@@ -15,14 +15,14 @@ from tomcat_speech.data_prep.prep_data import (
     make_spectrograms_dict,
     BertEmb,
     DistilBertEmb,
-    get_acoustic_means
+    get_acoustic_means,
 )
 from tomcat_speech.data_prep.utils.data_prep_helpers import (
     get_class_weights,
     create_data_folds_list,
     Glove,
     make_glove_dict,
-    transform_acoustic_item
+    transform_acoustic_item,
 )
 
 
@@ -55,8 +55,7 @@ def prep_ravdess_data(
     :param selected_ids: A list of lists, where each sublist contains
        the message ids for a single partition of the data
        these sublists are ordered [train, dev, test]
-    :param include_spectrograms: whether to use spectrograms as part of the dataset
-"""
+    :param include_spectrograms: whether to use spectrograms as part of the dataset"""
     # load glove
     if embedding_type.lower() == "glove":
         glove_dict = make_glove_dict(glove_filepath)
@@ -78,7 +77,7 @@ def prep_ravdess_data(
         custom_feats_file=custom_feats_file,
         selected_ids=selected_ids,
         embedding_type=embedding_type,
-        include_spectrograms=include_spectrograms
+        include_spectrograms=include_spectrograms,
     )
 
     train_data = ravdess_prep.train_data
@@ -166,17 +165,25 @@ class RavdessPrep:
         self.used_ids = self.get_all_used_ids(self.all_data)
 
         if include_spectrograms:
-            self.spec_dict, self.spec_lengths_dict = make_spectrograms_dict(self.path, "ravdess")
+            self.spec_dict, self.spec_lengths_dict = make_spectrograms_dict(
+                self.path, "ravdess"
+            )
             self.update_data_tensors()
 
         if custom_feats_file:
-            (self.train_data, self.dev_data, self.test_data,) = create_data_folds_list(
+            (
+                self.train_data,
+                self.dev_data,
+                self.test_data,
+            ) = create_data_folds_list(
                 self.all_data, train_prop, test_prop, shuffle=False
             )
         else:
-            (self.train_data, self.dev_data, self.test_data,) = create_data_folds_list(
-                self.all_data, train_prop, test_prop
-            )
+            (
+                self.train_data,
+                self.dev_data,
+                self.test_data,
+            ) = create_data_folds_list(self.all_data, train_prop, test_prop)
 
         # pull out ys from train to get class weights
         if as_dict:
@@ -203,16 +210,11 @@ class RavdessPrep:
         Get a list of all the ids that have both acoustic and text/gold info
         :return: array of all valid ids
         """
-        all_used_ids = [item['audio_id'] for item in all_data]
+        all_used_ids = [item["audio_id"] for item in all_data]
 
         return all_used_ids
 
-    def make_spectrogram_set(
-        self,
-        spec_dict,
-        spec_lengths_dict,
-        longest_spec=1500
-    ):
+    def make_spectrogram_set(self, spec_dict, spec_lengths_dict, longest_spec=1500):
         """
         Prepare the spectrogram data
         :param spec_dict: a dict of acoustic feat dfs
@@ -227,7 +229,6 @@ class RavdessPrep:
 
         # for all items with audio + gold label
         for item in tqdm(self.used_ids, desc=f"Preparing spec set for ravdess"):
-
             # pull out the spec feats df
             spec_data = spec_dict[item]
             ordered_spec_lengths.append(spec_lengths_dict[item])
@@ -250,10 +251,10 @@ class RavdessPrep:
         Add spectrogram info to data tensors if needed
         """
         for item in self.all_data:
-            audio_id = item['audio_id']
+            audio_id = item["audio_id"]
 
-            item['x_spec'] = self.spec_dict[audio_id]
-            item['spec_length'] = self.spec_lengths_dict[audio_id]
+            item["x_spec"] = self.spec_dict[audio_id]
+            item["spec_length"] = self.spec_lengths_dict[audio_id]
 
 
 def make_ravdess_data_tensors(
@@ -617,7 +618,6 @@ def preprocess_ravdess_data(
     for audio_dir in os.listdir(base_path):
         path_to_files = os.path.join(base_path, audio_dir)
         if os.path.isdir(path_to_files):
-
             # extract features using opensmile
             for audio_file in os.listdir(path_to_files):
                 audio_name = audio_file.split(".wav")[0]

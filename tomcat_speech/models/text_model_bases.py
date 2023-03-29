@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -188,7 +187,11 @@ class TextOnlyRNN(nn.Module):
         self.out_dims = params.final_hidden_dim
 
     def forward(
-        self, text_input, speaker_input=None, length_input=None, gender_input=None,
+        self,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        gender_input=None,
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
@@ -229,11 +232,19 @@ class TextOnlyRNN(nn.Module):
         # return the output
         return output
 
+
 class TextRNNBase(nn.Module):
     """
     The text-rnn base for intermediate fusion+ models
     """
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None, use_distilbert=False):
+
+    def __init__(
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
+        use_distilbert=False,
+    ):
         super(TextRNNBase, self).__init__()
 
         self.text_dim = params.text_dim
@@ -265,7 +276,8 @@ class TextRNNBase(nn.Module):
             )
             self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
 
-    def forward(self, 
+    def forward(
+        self,
         text_input,
         length_input=None,
     ):
@@ -300,7 +312,13 @@ class TextOnlyModel(nn.Module):
     aligned at the word-level
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None, use_distilbert=False):
+    def __init__(
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
+        use_distilbert=False,
+    ):
         super(TextOnlyModel, self).__init__()
         # input text + acoustic + speaker
         self.text_dim = params.text_dim
@@ -309,7 +327,7 @@ class TextOnlyModel(nn.Module):
         self.text_gru_hidden_dim = params.text_gru_hidden_dim
 
         # get number of output dims
-        self.out_dims = params.output_0_dim #12/06/22
+        self.out_dims = params.output_0_dim  # 12/06/22
 
         # if we feed text through additional layer(s)
         if not use_distilbert:
@@ -342,8 +360,9 @@ class TextOnlyModel(nn.Module):
             self.fc_input_dim = self.fc_input_dim + params.gender_emb_dim
 
         # set number of classes
-        self.output_dim = params.output_0_dim #revised output_dim => output_0_dim 12/06/22
-        
+        self.output_dim = (
+            params.output_0_dim
+        )  # revised output_dim => output_0_dim 12/06/22
 
         # set number of layers and dropout
         self.dropout = params.dropout
@@ -367,7 +386,9 @@ class TextOnlyModel(nn.Module):
 
         # initialize fully connected layers
         self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
-        self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_0_dim) #output_dim was from multithing - actually for 2 because we are using "text only" model as a separate model
+        self.fc2 = nn.Linear(
+            params.fc_hidden_dim, params.output_0_dim
+        )  # output_dim was from multithing - actually for 2 because we are using "text only" model as a separate model
 
     def forward(
         self,
@@ -377,7 +398,7 @@ class TextOnlyModel(nn.Module):
         gender_input=None,
         get_prob_dist=False,
         save_encoded_data=False,
-        spec_input = None #added 10/24/22
+        spec_input=None,  # added 10/24/22
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
@@ -388,7 +409,7 @@ class TextOnlyModel(nn.Module):
 
             all_embs = torch.cat((embs, short_embs), dim=2)
         else:
-            #print("We accessed the code correctly.") # added 11/29/22
+            # print("We accessed the code correctly.") # added 11/29/22
             all_embs = text_input
 
         # get speaker embeddings, if needed
@@ -398,7 +419,7 @@ class TextOnlyModel(nn.Module):
             gender_embs = self.gender_embedding(gender_input)
 
         # added 11/29/22 to check the size
-        #print(all_embs.size())
+        # print(all_embs.size())
 
         packed = nn.utils.rnn.pack_padded_sequence(
             all_embs, length_input, batch_first=True, enforce_sorted=False
@@ -418,9 +439,9 @@ class TextOnlyModel(nn.Module):
 
         # use pooled, squeezed feats as input into fc layers
         output = torch.tanh(F.dropout(self.fc1(inputs), 0.5))
-        output = self.fc2(output) # 12/06/22
+        output = self.fc2(output)  # 12/06/22
 
-        if self.out_dims == 1: 
+        if self.out_dims == 1:
             output = torch.sigmoid(output)
         elif get_prob_dist:
             prob = nn.Softmax(dim=1)

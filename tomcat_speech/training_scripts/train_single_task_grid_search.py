@@ -6,10 +6,20 @@ import torch
 from datetime import date
 
 import sys
-from tomcat_speech.training_and_evaluation_functions.train_and_test_single_models import train_and_predict, make_train_state
-from tomcat_speech.training_and_evaluation_functions.loading_data import load_modality_data
-from tomcat_speech.training_and_evaluation_functions.plot_training import plot_train_dev_curve
-from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import set_cuda_and_seeds, select_model
+from tomcat_speech.training_and_evaluation_functions.train_and_test_single_models import (
+    train_and_predict,
+    make_train_state,
+)
+from tomcat_speech.training_and_evaluation_functions.loading_data import (
+    load_modality_data,
+)
+from tomcat_speech.training_and_evaluation_functions.plot_training import (
+    plot_train_dev_curve,
+)
+from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
+    set_cuda_and_seeds,
+    select_model,
+)
 
 # hyperparameter tuning
 from ray import tune
@@ -17,9 +27,18 @@ from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 
 
-#03/20/23 config should be the first arg if with raytune
-def train_single_task(config, all_data_list, loss_fx, sampler, device, output_path,
-        num_embeddings=None, pretrained_embeddings=None, extra_params=None):
+# 03/20/23 config should be the first arg if with raytune
+def train_single_task(
+    config,
+    all_data_list,
+    loss_fx,
+    sampler,
+    device,
+    output_path,
+    num_embeddings=None,
+    pretrained_embeddings=None,
+    extra_params=None,
+):
     if extra_params:
         model_params = extra_params
     else:
@@ -27,14 +46,12 @@ def train_single_task(config, all_data_list, loss_fx, sampler, device, output_pa
 
     # decide if you want to use avgd feats
     # ToDo 03/20/23: we need to change this at some point
-    avgd_acoustic_in_network = (
-        model_params.avgd_acoustic or model_params.add_avging
-    )
+    avgd_acoustic_in_network = model_params.avgd_acoustic or model_params.add_avging
 
     # create  NN
     print(model_params)
 
-    '''
+    """
     item_output_path = os.path.join(
         output_path,
         f"LR{model_params.lr}_BATCH{model_params.batch_size}_"
@@ -51,17 +68,17 @@ def train_single_task(config, all_data_list, loss_fx, sampler, device, output_pa
             item_output_path
         )
     )
-    '''
+    """
 
     checkpoint_dir = output_path
 
     task_model = select_model(model_params, num_embeddings, pretrained_embeddings)
 
     optimizer = torch.optim.Adam(
-    lr=model_params.lr,
-    params=task_model.parameters(),
-    weight_decay=model_params.weight_decay,
-    )   
+        lr=model_params.lr,
+        params=task_model.parameters(),
+        weight_decay=model_params.weight_decay,
+    )
 
     # set the classifier(s) to the right device
     multitask_model = task_model.to(device)
@@ -75,14 +92,15 @@ def train_single_task(config, all_data_list, loss_fx, sampler, device, output_pa
         path = os.path.join(checkpoint_dir, "checkpoint")
         torch.save((net.state_dict(), optimizer.state_dict()), path)
 
-    tune.report(loss=(val_loss/val_steps), accuracy=correct/total)
+    tune.report(loss=(val_loss / val_steps), accuracy=correct / total)
 
     # create a save path and file for the model
-    #model_save_file = f"{item_output_path}/{config.EXPERIMENT_DESCRIPTION}.pt"
+    # model_save_file = f"{item_output_path}/{config.EXPERIMENT_DESCRIPTION}.pt"
 
     # make the train state to keep track of model training/development
-    train_state = make_train_state(model_params.lr, model_save_file,
-                                   model_params.early_stopping_criterion)
+    train_state = make_train_state(
+        model_params.lr, model_save_file, model_params.early_stopping_criterion
+    )
 
     # ToDo: raytune incorporation here?
     # train the model and evaluate on development set
@@ -99,7 +117,7 @@ def train_single_task(config, all_data_list, loss_fx, sampler, device, output_pa
         avgd_acoustic=avgd_acoustic_in_network,
         use_speaker=model_params.use_speaker,
         use_gender=model_params.use_gender,
-        loss_fx=loss_fx
+        loss_fx=loss_fx,
     )
 
     # plot the loss and accuracy curves
@@ -114,7 +132,7 @@ def train_single_task(config, all_data_list, loss_fx, sampler, device, output_pa
         x_label="Epoch",
         y_label="Loss",
         title=loss_title,
-        save_name=loss_save
+        save_name=loss_save,
     )
 
     # plot the avg f1 curves for each dataset
@@ -138,7 +156,13 @@ if __name__ == "__main__":
 
     # get data
     if not config.model_params.use_distilbert:
-        data, loss_fx, sampler, num_embeddings, pretrained_embeddings = load_modality_data(device, config, use_acoustic=False)
+        (
+            data,
+            loss_fx,
+            sampler,
+            num_embeddings,
+            pretrained_embeddings,
+        ) = load_modality_data(device, config, use_acoustic=False)
     else:
         data, loss_fx, sampler = load_modality_data(device, config, use_acoustic=False)
         num_embeddings = None
@@ -170,9 +194,15 @@ if __name__ == "__main__":
             config.batch_size = tune.grid_search([16, 32, 64, 128])
 
             result = tune.run(
-                    tune.with_parameters(data=data, loss_fx=loss_fx, sampler=sampler, device=device,\
-                            output_path=output_path, num_embeddings=num_embeddings,
-                            pretrained_embeddings=pretrained_embeddings),
-                    config=config
-                    )
-            #train_single_task(data, loss_fx, sampler, device, output_path, config, num_embeddings, pretrained_embeddings)
+                tune.with_parameters(
+                    data=data,
+                    loss_fx=loss_fx,
+                    sampler=sampler,
+                    device=device,
+                    output_path=output_path,
+                    num_embeddings=num_embeddings,
+                    pretrained_embeddings=pretrained_embeddings,
+                ),
+                config=config,
+            )
+            # train_single_task(data, loss_fx, sampler, device, output_path, config, num_embeddings, pretrained_embeddings)

@@ -1,4 +1,3 @@
-
 import torch
 
 from sklearn.utils import compute_class_weight
@@ -58,14 +57,14 @@ def prep_asist_data(
         avg_acoustic_data=avg_acoustic_data,
         custom_feats_file=custom_feats_file,
         bert_type=embedding_type,
-        include_spectrograms=include_spectrograms
+        include_spectrograms=include_spectrograms,
     )
 
     # get train, dev, test data
     train_data, dev_data, test_data = asist_prep.get_data_folds()
 
     # get train ys
-    train_ys = [item['ys'] for item in train_data]
+    train_ys = [item["ys"] for item in train_data]
 
     # get updated class weights using train ys
     class_weights = get_updated_class_weights_multicat(train_ys)

@@ -1,12 +1,15 @@
-
 import torch
 from torch.utils.data import DataLoader
 import numpy as np
 import random
 import sys
 
-from tomcat_speech.models.multimodal_models import MultitaskModel, MultitaskAcousticShared, \
-    MultitaskDuplicateInputModel, MultitaskTextShared
+from tomcat_speech.models.multimodal_models import (
+    MultitaskModel,
+    MultitaskAcousticShared,
+    MultitaskDuplicateInputModel,
+    MultitaskTextShared,
+)
 
 
 def set_cuda_and_seeds(config):
@@ -42,7 +45,9 @@ def set_cuda_and_seeds(config):
     return device
 
 
-def select_model(model_params, num_embeddings, pretrained_embeddings, multidataset=True):
+def select_model(
+    model_params, num_embeddings, pretrained_embeddings, multidataset=True
+):
     """
     Use model parameters to select the appropriate model
     Return this model for training
@@ -59,26 +64,34 @@ def select_model(model_params, num_embeddings, pretrained_embeddings, multidatas
         pretrained_embeddings = None
 
     if "acoustic_shared" in model_params.model.lower():
-        model = MultitaskAcousticShared(params=model_params,
-                                        use_distilbert=model_params.use_distilbert,
-                                        num_embeddings=num_embeddings,
-                                        pretrained_embeddings=pretrained_embeddings)
-    elif "text_shared" in  model_params.model.lower():
-        model = MultitaskTextShared(params=model_params,
-                                    use_distilbert=model_params.use_distilbert,
-                                    num_embeddings=num_embeddings,
-                                    pretrained_embeddings=pretrained_embeddings)
+        model = MultitaskAcousticShared(
+            params=model_params,
+            use_distilbert=model_params.use_distilbert,
+            num_embeddings=num_embeddings,
+            pretrained_embeddings=pretrained_embeddings,
+        )
+    elif "text_shared" in model_params.model.lower():
+        model = MultitaskTextShared(
+            params=model_params,
+            use_distilbert=model_params.use_distilbert,
+            num_embeddings=num_embeddings,
+            pretrained_embeddings=pretrained_embeddings,
+        )
     elif "duplicate_input" in model_params.model.lower():
-        model = MultitaskDuplicateInputModel(params=model_params,
-                                             use_distilbert=model_params.use_distilbert,
-                                             num_embeddings=num_embeddings,
-                                             pretrained_embeddings=pretrained_embeddings)
+        model = MultitaskDuplicateInputModel(
+            params=model_params,
+            use_distilbert=model_params.use_distilbert,
+            num_embeddings=num_embeddings,
+            pretrained_embeddings=pretrained_embeddings,
+        )
     else:
-        model = MultitaskModel(params=model_params,
-                               use_distilbert=model_params.use_distilbert,
-                               num_embeddings=num_embeddings,
-                               pretrained_embeddings=pretrained_embeddings,
-                               multi_dataset=multidataset)
+        model = MultitaskModel(
+            params=model_params,
+            use_distilbert=model_params.use_distilbert,
+            num_embeddings=num_embeddings,
+            pretrained_embeddings=pretrained_embeddings,
+            multi_dataset=multidataset,
+        )
 
     return model
 
@@ -103,7 +116,9 @@ def get_all_batches(dataset_list, batch_size, shuffle, partition="train", sample
         if partition == "train":
             # (over)sample training data if needed
             if sampler is not None:
-                dataset_list[i].train = sampler.prep_data_through_oversampling(dataset_list[i].train)
+                dataset_list[i].train = sampler.prep_data_through_oversampling(
+                    dataset_list[i].train
+                )
             data = DataLoader(
                 dataset_list[i].train, batch_size=batch_size, shuffle=shuffle
             )
@@ -190,9 +205,13 @@ def update_train_state(model, train_state, optimizer=None):
     # Save one model at least
     if train_state["epoch_index"] == 0:
         if optimizer is not None:
-            torch.save({'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
-                        train_state["model_filename"])
+            torch.save(
+                {
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                },
+                train_state["model_filename"],
+            )
         else:
             torch.save(model.state_dict(), train_state["model_filename"])
         train_state["stop_early"] = False
@@ -218,9 +237,13 @@ def update_train_state(model, train_state, optimizer=None):
         if avg_f1_t >= train_state["early_stopping_best_val"]:
             # save this as best model
             if optimizer is not None:
-                torch.save({'model_state_dict': model.state_dict(),
-                            'optimizer_state_dict': optimizer.state_dict()},
-                            train_state["model_filename"])
+                torch.save(
+                    {
+                        "model_state_dict": model.state_dict(),
+                        "optimizer_state_dict": optimizer.state_dict(),
+                    },
+                    train_state["model_filename"],
+                )
             else:
                 torch.save(model.state_dict(), train_state["model_filename"])
             print("updating model")
@@ -231,7 +254,8 @@ def update_train_state(model, train_state, optimizer=None):
 
         # Stop early ?
         train_state["stop_early"] = (
-            train_state["early_stopping_step"] >= train_state["early_stopping_criterion"]
+            train_state["early_stopping_step"]
+            >= train_state["early_stopping_criterion"]
         )
 
     return train_state

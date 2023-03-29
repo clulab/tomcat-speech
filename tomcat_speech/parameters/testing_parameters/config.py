@@ -3,7 +3,9 @@
 from argparse import Namespace
 import os
 
-DEBUG = False # no saving of files; output in the terminal; first random seed from the list
+DEBUG = (
+    False  # no saving of files; output in the terminal; first random seed from the list
+)
 
 # do you want to save dataset files?
 save_dataset = False
@@ -18,12 +20,14 @@ EXPERIMENT_ID = 1
 # EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
 # EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
 # EXPERIMENT_DESCRIPTION = "IntermediateFusion_test_paramsfromMMML_ClassWts_"
-EXPERIMENT_DESCRIPTION = "Gridsearch_distilbert_finetuning_pretrain-oversampled_finetune-clsswts_celoss_"
+EXPERIMENT_DESCRIPTION = (
+    "Gridsearch_distilbert_finetuning_pretrain-oversampled_finetune-clsswts_celoss_"
+)
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
 
 # whether you are starting with a pretrained model that you update during training
-trained_model = None # or path to model file
+trained_model = None  # or path to model file
 
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
@@ -50,10 +54,10 @@ chalearn_predtype = "max_class"
 feature_set = "IS13_distilbert_dict"
 
 saved_model = "/home/u18/jmculnan/github/tomcat-speech/output/multitask/1_Gridsearch_distilbert_training_textgruhid300_csloss_2022-11-12/LR0.001_BATCH64_NUMLYR2_SHORTEMB30_INT-OUTPUT100_DROPOUT0.2_FC-FINALDIM100/Gridsearch_distilbert_training_textgruhid300.pt"
-#saved_model = None
+# saved_model = None
 
-# set the datasets 
-#datasets = ["firstimpr", "meld", "mosi"]
+# set the datasets
+# datasets = ["firstimpr", "meld", "mosi"]
 datasets = ["asist1"]
 
 num_feats = 130
@@ -68,7 +72,7 @@ model_params = Namespace(
     use_gradnorm=False,
     # whether to use data sampler
     use_sampler=False,
-    # use classweights 
+    # use classweights
     use_clsswts=True,
     # decide whether to use early, intermediate, or late fusion
     fusion_type="int",  # int, late, early

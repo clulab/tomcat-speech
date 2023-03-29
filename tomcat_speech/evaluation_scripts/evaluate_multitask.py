@@ -9,9 +9,11 @@ import numpy as np
 import random
 
 from tomcat_speech.training_and_evaluation_functions.train_and_test_models import (
-    evaluate
+    evaluate,
 )
-from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import make_train_state
+from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
+    make_train_state,
+)
 from tomcat_speech.models.multimodal_models import MultitaskModel
 
 from tomcat_speech.data_prep.utils.data_prep_helpers import (
@@ -44,7 +46,8 @@ if __name__ == "__main__":
     output_path = os.path.dirname(config_path)
 
     shutil.copyfile(
-        config_path, "tomcat_speech/training_and_evaluation_functions/testing_parameters/config.py"
+        config_path,
+        "tomcat_speech/training_and_evaluation_functions/testing_parameters/config.py",
     )
 
     # import parameters for model
@@ -66,7 +69,7 @@ if __name__ == "__main__":
 
     # decide if you want to use avgd feats
     avgd_acoustic_in_network = (
-            config.model_params.avgd_acoustic or config.model_params.add_avging
+        config.model_params.avgd_acoustic or config.model_params.add_avging
     )
 
     # set location for pickled data (saving or loading)
@@ -167,7 +170,9 @@ if __name__ == "__main__":
 
             # set the classifier(s) to the right device
             # get saved parameters
-            multitask_model.load_state_dict(torch.load(saved_model, map_location=device))
+            multitask_model.load_state_dict(
+                torch.load(saved_model, map_location=device)
+            )
             multitask_model.to(device)
 
             # add loss function for cdc
@@ -190,7 +195,9 @@ if __name__ == "__main__":
             )
             # create multitask object
             firstimpr_obj = MultitaskTestObject(
-                firstimpr_test_ds, firstimpr_loss_func, task_num=2,
+                firstimpr_test_ds,
+                firstimpr_loss_func,
+                task_num=2,
             )
 
             # # add loss function for meld
@@ -198,7 +205,11 @@ if __name__ == "__main__":
                 weight=meld_weights.to(device), reduction="mean"
             )
             # create multitask object
-            meld_obj = MultitaskTestObject(meld_test_ds, meld_loss_func, task_num=3,)
+            meld_obj = MultitaskTestObject(
+                meld_test_ds,
+                meld_loss_func,
+                task_num=3,
+            )
 
             # add loss function, multitask obj for ravdess
             ravdess_loss_func = torch.nn.CrossEntropyLoss(

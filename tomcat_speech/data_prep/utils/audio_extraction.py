@@ -9,7 +9,10 @@ from tqdm import tqdm
 
 import pandas as pd
 
-from tomcat_speech.data_prep.wav2vec.create_spectrograms_with_wav2vec import get_and_save_spectrogram
+from tomcat_speech.data_prep.wav2vec.create_spectrograms_with_wav2vec import (
+    get_and_save_spectrogram,
+)
+
 
 class ExtractAudio:
     """
@@ -56,9 +59,10 @@ class ExtractAudio:
 
 
 class AudioSplit:
-    """ Takes audio, can split and join using ffmpeg"""
+    """Takes audio, can split and join using ffmpeg"""
+
     def __init__(self, base_path, audio_name, save_ext=None):
-        self.path = base_path,
+        self.path = (base_path,)
         self.fname = audio_name
         if not audio_name.endswith(".wav"):
             self.fpath = f"{base_path}/{audio_name}.wav"
@@ -187,6 +191,7 @@ class AudioSplit:
 #         print(f"Concatenation completed for {self.full_path}")
 #
 
+
 class GetFeatures:
     """
     Takes input files and gets acoustic features
@@ -269,9 +274,14 @@ def expand_words(trscsv, file_to_save):
     with open(trscsv, "r") as tcsv:
         tcsv.readline()
         for line in tcsv:
-            (speaker, timestart, timeend, word, utt_num, wd_num,) = line.strip().split(
-                "\t"
-            )
+            (
+                speaker,
+                timestart,
+                timeend,
+                word,
+                utt_num,
+                wd_num,
+            ) = line.strip().split("\t")
             saver.append([timestart, speaker, word, utt_num, wd_num])
             newtime = float(timestart) + 0.01
             while newtime < float(timeend):

@@ -1,6 +1,10 @@
 # contains functions to load preprocessed data
 from tomcat_speech.data_prep.samplers import RandomOversampler
-from tomcat_speech.data_prep.utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict
+from tomcat_speech.data_prep.utils.data_prep_helpers import (
+    MultitaskObject,
+    Glove,
+    make_glove_dict,
+)
 
 import pickle
 import torch
@@ -52,7 +56,9 @@ def load_modality_data(device, config, use_text=True, use_acoustic=True):
             del train_audio, dev_audio, test_audio
         if use_spectrograms:
             print("Loading Spectrogram Features")
-            spec_base = f"{load_path}/field_separated_data/spectrogram_data/{dataset}_spec"
+            spec_base = (
+                f"{load_path}/field_separated_data/spectrogram_data/{dataset}_spec"
+            )
             print("Loading spec features for train set")
             train_spec = pickle.load(open(f"{spec_base}_train.pickle", "rb"))
             print("Spec features loaded for train set")
@@ -61,8 +67,10 @@ def load_modality_data(device, config, use_text=True, use_acoustic=True):
             x_replacer = torch.zeros(longest, 513)
             for item in train_spec:
                 x = x_replacer.detach().clone()
-                x[:min(len(item['x_spec']), longest), :513] = item['x_spec'][:min(len(item['x_spec']), longest)]
-                item['x_spec'] = x
+                x[: min(len(item["x_spec"]), longest), :513] = item["x_spec"][
+                    : min(len(item["x_spec"]), longest)
+                ]
+                item["x_spec"] = x
             train_modalities.append(train_spec)
             del train_spec
 
@@ -70,8 +78,10 @@ def load_modality_data(device, config, use_text=True, use_acoustic=True):
             dev_spec = pickle.load(open(f"{spec_base}_dev.pickle", "rb"))
             for item in dev_spec:
                 x = x_replacer.detach().clone()
-                x[:min(len(item['x_spec']), longest), :513] = item['x_spec'][:min(len(item['x_spec']), longest)]
-                item['x_spec'] = x
+                x[: min(len(item["x_spec"]), longest), :513] = item["x_spec"][
+                    : min(len(item["x_spec"]), longest)
+                ]
+                item["x_spec"] = x
             dev_modalities.append(dev_spec)
             del dev_spec
 
@@ -79,8 +89,10 @@ def load_modality_data(device, config, use_text=True, use_acoustic=True):
             test_spec = pickle.load(open(f"{spec_base}_test.pickle", "rb"))
             for item in test_spec:
                 x = x_replacer.detach().clone()
-                x[:min(len(item['x_spec']), longest), :513] = item['x_spec'][:min(len(item['x_spec']), longest)]
-                item['x_spec'] = x
+                x[: min(len(item["x_spec"]), longest), :513] = item["x_spec"][
+                    : min(len(item["x_spec"]), longest)
+                ]
+                item["x_spec"] = x
             test_modalities.append(test_spec)
             del test_spec
 
@@ -99,7 +111,9 @@ def load_modality_data(device, config, use_text=True, use_acoustic=True):
 
         # combine modalities
         if len(train_modalities) < 2:
-            exit("No modalities data has been loaded; please select at least one modality to load")
+            exit(
+                "No modalities data has been loaded; please select at least one modality to load"
+            )
 
         train_data = combine_modality_data(train_modalities)
         dev_data = combine_modality_data(dev_modalities)
@@ -107,19 +121,19 @@ def load_modality_data(device, config, use_text=True, use_acoustic=True):
 
         del train_modalities, dev_modalities, test_modalities
 
-        clsswts_base = f"{load_path}/field_separated_data/class_weights/{dataset}_clsswts.pickle"
+        clsswts_base = (
+            f"{load_path}/field_separated_data/class_weights/{dataset}_clsswts.pickle"
+        )
         clsswts = pickle.load(open(clsswts_base, "rb"))
 
         dset_loss_func = torch.nn.CrossEntropyLoss(
             weight=clsswts.to(device) if config.model_params.use_clsswts else None,
-            reduction="mean"
+            reduction="mean",
         )
 
-        all_datasets[task_num] = MultitaskObject(train_data,
-                                                 dev_data,
-                                                 test_data,
-                                                 dset_loss_func,
-                                                 task_num=task_num)
+        all_datasets[task_num] = MultitaskObject(
+            train_data, dev_data, test_data, dset_loss_func, task_num=task_num
+        )
         # increment task number
         task_num += 1
 
@@ -151,9 +165,7 @@ def load_modality_data(device, config, use_text=True, use_acoustic=True):
     else:
         loss_fx = None
 
-    print(
-        "Model, loss function, and optimization created"
-    )
+    print("Model, loss function, and optimization created")
 
     # set sampler
     if config.model_params.use_sampler:
@@ -177,11 +189,11 @@ def combine_modality_data(list_of_modality_data):
 
     # get all utterance IDs
     for item in list_of_modality_data[0]:
-        all_data[item['audio_id']] = item
+        all_data[item["audio_id"]] = item
 
     for dataset in list_of_modality_data[1:]:
         for item in dataset:
-            all_data[item['audio_id']].update(item)
+            all_data[item["audio_id"]].update(item)
 
     # return a list of this
     return list(all_data.values())

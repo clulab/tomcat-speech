@@ -3,9 +3,22 @@ import sys
 
 import torch.nn as nn
 
-from tomcat_speech.models.audio_model_bases import AcousticOnlyModel, SpecCNNBase, SpecOnlyCNN
-from tomcat_speech.models.model_prediction_layers import PredictionLayer, TextPlusPredictionLayer, AcousticPlusPredictionLayer
-from tomcat_speech.models.multimodal_model_bases import IntermediateFusionMultimodalModel, EarlyFusionMultimodalModel, LateFusionMultimodalModel, MultimodalBaseDuplicateInput
+from tomcat_speech.models.audio_model_bases import (
+    AcousticOnlyModel,
+    SpecCNNBase,
+    SpecOnlyCNN,
+)
+from tomcat_speech.models.model_prediction_layers import (
+    PredictionLayer,
+    TextPlusPredictionLayer,
+    AcousticPlusPredictionLayer,
+)
+from tomcat_speech.models.multimodal_model_bases import (
+    IntermediateFusionMultimodalModel,
+    EarlyFusionMultimodalModel,
+    LateFusionMultimodalModel,
+    MultimodalBaseDuplicateInput,
+)
 from tomcat_speech.models.text_model_bases import TextOnlyModel
 
 
@@ -20,7 +33,7 @@ class MultitaskModel(nn.Module):
         num_embeddings=None,
         pretrained_embeddings=None,
         multi_dataset=True,
-        use_distilbert=False
+        use_distilbert=False,
     ):
         super(MultitaskModel, self).__init__()
         # save whether there are multiple datasets
@@ -77,7 +90,7 @@ class MultitaskModel(nn.Module):
         task_num=0,
         get_prob_dist=False,
         return_penultimate_layer=False,
-        save_encoded_data=False
+        save_encoded_data=False,
     ):
         # NOTE: if return_penultimate_layer, forward returns a (preds, penult) double
 
@@ -94,7 +107,7 @@ class MultitaskModel(nn.Module):
                 acoustic_input,
                 speaker_input=speaker_input,
                 acoustic_len_input=acoustic_len_input,
-                gender_input=gender_input
+                gender_input=gender_input,
             )
         else:
             final_base_layer = self.base(
@@ -114,27 +127,54 @@ class MultitaskModel(nn.Module):
         task_4_out = None
 
         if not self.multi_dataset:
-            task_0_out = self.task_0_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
-            task_1_out = self.task_1_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
-            task_2_out = self.task_2_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
-            task_3_out = self.task_3_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
-            task_4_out = self.task_3_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+            task_0_out = self.task_0_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
+            task_1_out = self.task_1_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
+            task_2_out = self.task_2_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
+            task_3_out = self.task_3_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
+            task_4_out = self.task_3_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
         else:
             if task_num == 0:
-                task_0_out = self.task_0_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_0_out = self.task_0_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             elif task_num == 1:
-                task_1_out = self.task_1_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_1_out = self.task_1_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             elif task_num == 2:
-                task_2_out = self.task_2_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_2_out = self.task_2_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             elif task_num == 3:
-                task_3_out = self.task_3_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_3_out = self.task_3_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             elif task_num == 4:
-                task_4_out = self.task_4_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_4_out = self.task_4_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             else:
                 sys.exit(f"Task {task_num} not defined")
 
         if save_encoded_data:
-            return task_0_out, task_1_out, task_2_out, task_3_out, task_4_out, final_base_layer
+            return (
+                task_0_out,
+                task_1_out,
+                task_2_out,
+                task_3_out,
+                task_4_out,
+                final_base_layer,
+            )
         else:
             return task_0_out, task_1_out, task_2_out, task_3_out, task_4_out
 
@@ -150,7 +190,7 @@ class MultitaskAcousticShared(nn.Module):
         num_embeddings=None,
         pretrained_embeddings=None,
         multi_dataset=True,
-        use_distilbert=False
+        use_distilbert=False,
     ):
         super(MultitaskAcousticShared, self).__init__()
         # save whether there are multiple datasets
@@ -167,35 +207,35 @@ class MultitaskAcousticShared(nn.Module):
             params.output_0_dim,
             num_embeddings=num_embeddings,
             pretrained_embeddings=pretrained_embeddings,
-            use_distilbert=use_distilbert
+            use_distilbert=use_distilbert,
         )
         self.task_1_predictor = TextPlusPredictionLayer(
             params,
             params.output_1_dim,
             num_embeddings=num_embeddings,
             pretrained_embeddings=pretrained_embeddings,
-            use_distilbert=use_distilbert
+            use_distilbert=use_distilbert,
         )
         self.task_2_predictor = TextPlusPredictionLayer(
             params,
             params.output_2_dim,
             num_embeddings=num_embeddings,
             pretrained_embeddings=pretrained_embeddings,
-            use_distilbert=use_distilbert
+            use_distilbert=use_distilbert,
         )
         self.task_3_predictor = TextPlusPredictionLayer(
             params,
             params.output_3_dim,
             num_embeddings=num_embeddings,
             pretrained_embeddings=pretrained_embeddings,
-            use_distilbert=use_distilbert
+            use_distilbert=use_distilbert,
         )
         self.task_4_predictor = TextPlusPredictionLayer(
             params,
             params.output_4_dim,
             num_embeddings=num_embeddings,
             pretrained_embeddings=pretrained_embeddings,
-            use_distilbert=use_distilbert
+            use_distilbert=use_distilbert,
         )
 
     def forward(
@@ -209,11 +249,12 @@ class MultitaskAcousticShared(nn.Module):
         task_num=0,
         get_prob_dist=False,
         return_penultimate_layer=False,
-        save_encoded_data=False
+        save_encoded_data=False,
     ):
         # call forward on base model
         final_base_layer = self.acoustic_base(
-            acoustic_input, acoustic_len_input=acoustic_len_input,
+            acoustic_input,
+            acoustic_len_input=acoustic_len_input,
         )
 
         task_0_out = None
@@ -224,19 +265,49 @@ class MultitaskAcousticShared(nn.Module):
 
         if not self.multi_dataset:
             task_0_out = self.task_0_predictor(
-                final_base_layer, text_input, speaker_input, length_input, gender_input, get_prob_dist, return_penultimate_layer
+                final_base_layer,
+                text_input,
+                speaker_input,
+                length_input,
+                gender_input,
+                get_prob_dist,
+                return_penultimate_layer,
             )
             task_1_out = self.task_1_predictor(
-                final_base_layer, text_input, speaker_input, length_input, gender_input, get_prob_dist, return_penultimate_layer
+                final_base_layer,
+                text_input,
+                speaker_input,
+                length_input,
+                gender_input,
+                get_prob_dist,
+                return_penultimate_layer,
             )
             task_2_out = self.task_2_predictor(
-                final_base_layer, text_input, speaker_input, length_input, gender_input, get_prob_dist, return_penultimate_layer
+                final_base_layer,
+                text_input,
+                speaker_input,
+                length_input,
+                gender_input,
+                get_prob_dist,
+                return_penultimate_layer,
             )
             task_3_out = self.task_3_predictor(
-                final_base_layer, text_input, speaker_input, length_input, gender_input, get_prob_dist, return_penultimate_layer
+                final_base_layer,
+                text_input,
+                speaker_input,
+                length_input,
+                gender_input,
+                get_prob_dist,
+                return_penultimate_layer,
             )
             task_4_out = self.task_4_predictor(
-                final_base_layer, text_input, speaker_input, length_input, gender_input, get_prob_dist, return_penultimate_layer
+                final_base_layer,
+                text_input,
+                speaker_input,
+                length_input,
+                gender_input,
+                get_prob_dist,
+                return_penultimate_layer,
             )
         else:
             if task_num == 0:
@@ -247,7 +318,7 @@ class MultitaskAcousticShared(nn.Module):
                     length_input,
                     gender_input,
                     get_prob_dist,
-                    return_penultimate_layer
+                    return_penultimate_layer,
                 )
             elif task_num == 1:
                 task_1_out = self.task_1_predictor(
@@ -257,7 +328,7 @@ class MultitaskAcousticShared(nn.Module):
                     length_input,
                     gender_input,
                     get_prob_dist,
-                    return_penultimate_layer
+                    return_penultimate_layer,
                 )
             elif task_num == 2:
                 task_2_out = self.task_2_predictor(
@@ -267,7 +338,7 @@ class MultitaskAcousticShared(nn.Module):
                     length_input,
                     gender_input,
                     get_prob_dist,
-                    return_penultimate_layer
+                    return_penultimate_layer,
                 )
             elif task_num == 3:
                 task_3_out = self.task_3_predictor(
@@ -277,7 +348,7 @@ class MultitaskAcousticShared(nn.Module):
                     length_input,
                     gender_input,
                     get_prob_dist,
-                    return_penultimate_layer
+                    return_penultimate_layer,
                 )
             elif task_num == 4:
                 task_4_out = self.task_4_predictor(
@@ -287,13 +358,20 @@ class MultitaskAcousticShared(nn.Module):
                     length_input,
                     gender_input,
                     get_prob_dist,
-                    return_penultimate_layer
+                    return_penultimate_layer,
                 )
             else:
                 sys.exit(f"Task {task_num} not defined")
 
         if save_encoded_data:
-            return task_0_out, task_1_out, task_2_out, task_3_out, task_4_out, final_base_layer
+            return (
+                task_0_out,
+                task_1_out,
+                task_2_out,
+                task_3_out,
+                task_4_out,
+                final_base_layer,
+            )
         else:
             return task_0_out, task_1_out, task_2_out, task_3_out, task_4_out
 
@@ -309,7 +387,7 @@ class MultitaskTextShared(nn.Module):
         num_embeddings=None,
         pretrained_embeddings=None,
         multi_dataset=True,
-        use_distilbert=False
+        use_distilbert=False,
     ):
         super(MultitaskTextShared, self).__init__()
         # save whether there are multiple datasets
@@ -318,32 +396,19 @@ class MultitaskTextShared(nn.Module):
 
         # # set base of model
         # comment this out and uncomment the below to try late fusion model
-        self.text_base = TextOnlyModel(params,
-                                           num_embeddings=num_embeddings,
-                                           pretrained_embeddings=pretrained_embeddings,
-                                           use_distilbert=use_distilbert)
+        self.text_base = TextOnlyModel(
+            params,
+            num_embeddings=num_embeddings,
+            pretrained_embeddings=pretrained_embeddings,
+            use_distilbert=use_distilbert,
+        )
 
         # set output layers
-        self.task_0_predictor = AcousticPlusPredictionLayer(
-            params,
-            params.output_0_dim
-        )
-        self.task_1_predictor = AcousticPlusPredictionLayer(
-            params,
-            params.output_1_dim
-        )
-        self.task_2_predictor = AcousticPlusPredictionLayer(
-            params,
-            params.output_2_dim
-        )
-        self.task_3_predictor = AcousticPlusPredictionLayer(
-            params,
-            params.output_3_dim
-        )
-        self.task_4_predictor = AcousticPlusPredictionLayer(
-            params,
-            params.output_4_dim
-        )
+        self.task_0_predictor = AcousticPlusPredictionLayer(params, params.output_0_dim)
+        self.task_1_predictor = AcousticPlusPredictionLayer(params, params.output_1_dim)
+        self.task_2_predictor = AcousticPlusPredictionLayer(params, params.output_2_dim)
+        self.task_3_predictor = AcousticPlusPredictionLayer(params, params.output_3_dim)
+        self.task_4_predictor = AcousticPlusPredictionLayer(params, params.output_4_dim)
 
     def forward(
         self,
@@ -356,11 +421,12 @@ class MultitaskTextShared(nn.Module):
         task_num=0,
         get_prob_dist=False,
         return_penultimate_layer=False,
-        save_encoded_data=False
+        save_encoded_data=False,
     ):
         # call forward on base model
         final_base_layer = self.text_base(
-            text_input, length_input=length_input,
+            text_input,
+            length_input=length_input,
         )
 
         task_0_out = None
@@ -371,19 +437,39 @@ class MultitaskTextShared(nn.Module):
 
         if not self.multi_dataset:
             task_0_out = self.task_0_predictor(
-                acoustic_input, final_base_layer, acoustic_len_input, get_prob_dist, return_penultimate_layer
+                acoustic_input,
+                final_base_layer,
+                acoustic_len_input,
+                get_prob_dist,
+                return_penultimate_layer,
             )
             task_1_out = self.task_1_predictor(
-                acoustic_input, final_base_layer, acoustic_len_input, get_prob_dist, return_penultimate_layer
+                acoustic_input,
+                final_base_layer,
+                acoustic_len_input,
+                get_prob_dist,
+                return_penultimate_layer,
             )
             task_2_out = self.task_2_predictor(
-                acoustic_input, final_base_layer, acoustic_len_input, get_prob_dist, return_penultimate_layer
+                acoustic_input,
+                final_base_layer,
+                acoustic_len_input,
+                get_prob_dist,
+                return_penultimate_layer,
             )
             task_3_out = self.task_3_predictor(
-                acoustic_input, final_base_layer, acoustic_len_input, get_prob_dist, return_penultimate_layer
+                acoustic_input,
+                final_base_layer,
+                acoustic_len_input,
+                get_prob_dist,
+                return_penultimate_layer,
             )
             task_4_out = self.task_4_predictor(
-                acoustic_input, final_base_layer, acoustic_len_input, get_prob_dist, return_penultimate_layer
+                acoustic_input,
+                final_base_layer,
+                acoustic_len_input,
+                get_prob_dist,
+                return_penultimate_layer,
             )
         else:
             if task_num == 0:
@@ -392,7 +478,7 @@ class MultitaskTextShared(nn.Module):
                     final_base_layer,
                     acoustic_len_input,
                     get_prob_dist,
-                    return_penultimate_layer
+                    return_penultimate_layer,
                 )
             elif task_num == 1:
                 task_1_out = self.task_1_predictor(
@@ -400,7 +486,7 @@ class MultitaskTextShared(nn.Module):
                     final_base_layer,
                     acoustic_len_input,
                     get_prob_dist,
-                    return_penultimate_layer
+                    return_penultimate_layer,
                 )
             elif task_num == 2:
                 task_2_out = self.task_2_predictor(
@@ -408,7 +494,7 @@ class MultitaskTextShared(nn.Module):
                     final_base_layer,
                     acoustic_len_input,
                     get_prob_dist,
-                    return_penultimate_layer
+                    return_penultimate_layer,
                 )
             elif task_num == 3:
                 task_3_out = self.task_3_predictor(
@@ -416,7 +502,7 @@ class MultitaskTextShared(nn.Module):
                     final_base_layer,
                     acoustic_len_input,
                     get_prob_dist,
-                    return_penultimate_layer
+                    return_penultimate_layer,
                 )
             elif task_num == 4:
                 task_4_out = self.task_4_predictor(
@@ -424,13 +510,20 @@ class MultitaskTextShared(nn.Module):
                     final_base_layer,
                     acoustic_len_input,
                     get_prob_dist,
-                    return_penultimate_layer
+                    return_penultimate_layer,
                 )
             else:
                 sys.exit(f"Task {task_num} not defined")
 
         if save_encoded_data:
-            return task_0_out, task_1_out, task_2_out, task_3_out, task_4_out, final_base_layer
+            return (
+                task_0_out,
+                task_1_out,
+                task_2_out,
+                task_3_out,
+                task_4_out,
+                final_base_layer,
+            )
         else:
             return task_0_out, task_1_out, task_2_out, task_3_out, task_4_out
 
@@ -449,7 +542,7 @@ class MultitaskDuplicateInputModel(nn.Module):
         pretrained_embeddings=None,
         multi_dataset=True,
         num_tasks=5,
-        use_distilbert=False
+        use_distilbert=False,
     ):
         super(MultitaskDuplicateInputModel, self).__init__()
         # save whether there are multiple datasets
@@ -480,7 +573,7 @@ class MultitaskDuplicateInputModel(nn.Module):
         task_num=0,
         get_prob_dist=False,
         return_penultimate_layer=False,
-        save_encoded_data=False
+        save_encoded_data=False,
     ):
         # call forward on base model
         final_base_layer = self.base(
@@ -498,26 +591,53 @@ class MultitaskDuplicateInputModel(nn.Module):
         task_4_out = None
 
         if not self.multi_dataset:
-            task_0_out = self.task_0_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
-            task_1_out = self.task_1_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
-            task_2_out = self.task_2_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
-            task_3_out = self.task_3_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
-            task_4_out = self.task_4_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+            task_0_out = self.task_0_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
+            task_1_out = self.task_1_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
+            task_2_out = self.task_2_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
+            task_3_out = self.task_3_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
+            task_4_out = self.task_4_predictor(
+                final_base_layer, get_prob_dist, return_penultimate_layer
+            )
         else:
             if task_num == 0:
-                task_0_out = self.task_0_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_0_out = self.task_0_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             elif task_num == 1:
-                task_1_out = self.task_1_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_1_out = self.task_1_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             elif task_num == 2:
-                task_2_out = self.task_2_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_2_out = self.task_2_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             elif task_num == 3:
-                task_3_out = self.task_3_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_3_out = self.task_3_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             elif task_num == 4:
-                task_4_out = self.task_4_predictor(final_base_layer, get_prob_dist, return_penultimate_layer)
+                task_4_out = self.task_4_predictor(
+                    final_base_layer, get_prob_dist, return_penultimate_layer
+                )
             else:
                 sys.exit(f"Task {task_num} not defined")
 
         if save_encoded_data:
-            return task_0_out, task_1_out, task_2_out, task_3_out, task_4_out, final_base_layer
+            return (
+                task_0_out,
+                task_1_out,
+                task_2_out,
+                task_3_out,
+                task_4_out,
+                final_base_layer,
+            )
         else:
             return task_0_out, task_1_out, task_2_out, task_3_out, task_4_out

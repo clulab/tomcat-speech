@@ -59,12 +59,15 @@ class BatchSchedulerSampler(torch.utils.data.sampler.Sampler):
         return iter(final_samples_list)
 
 
-class RandomOversampler():
+class RandomOversampler:
     """
     Use a random oversampler to oversample minority classes
     """
+
     def __init__(self, seed):
-        self.sampler = imblearn.over_sampling.RandomOverSampler(random_state=seed, shrinkage=2.5)
+        self.sampler = imblearn.over_sampling.RandomOverSampler(
+            random_state=seed, shrinkage=2.5
+        )
 
     def _oversample(self, utt_ids, y_values):
         # use the random oversampler
@@ -81,7 +84,7 @@ class RandomOversampler():
         # get dict of audio_id : data point idx
         audio_id2idx = {}
         for i, dpoint in enumerate(unsampled_data):
-            audio_id2idx[dpoint['audio_id']] = i
+            audio_id2idx[dpoint["audio_id"]] = i
 
         # add data point with each idx found
         for id in oversampled_ids:
@@ -94,10 +97,10 @@ class RandomOversampler():
         # oversample ids and then complete the oversampling of data points
         print("starting oversampling")
 
-        all_ids = [[item['audio_id']] for item in dataset]
+        all_ids = [[item["audio_id"]] for item in dataset]
         # todo: expand to allow flexibility of which task to select
         #   when there are multiple
-        all_ys = [item['ys'][1] for item in dataset]  # going with emotion items
+        all_ys = [item["ys"][1] for item in dataset]  # going with emotion items
 
         # do oversampling
         sampled_ids = self._oversample(all_ids, all_ys)
@@ -108,4 +111,3 @@ class RandomOversampler():
         print("oversampling complete")
 
         return sampled_dataset
-

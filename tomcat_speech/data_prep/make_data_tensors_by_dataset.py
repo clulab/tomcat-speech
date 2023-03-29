@@ -41,7 +41,9 @@ def make_data_tensors_meld(
     else:
         emb_maker = DistilBertEmb()
 
-    for idx, row in tqdm(text_data.iterrows(), total=len(text_data), desc="Organizing data for MELD"):
+    for idx, row in tqdm(
+        text_data.iterrows(), total=len(text_data), desc="Organizing data for MELD"
+    ):
         # check if this item has acoustic data
         dia_num, utt_num = row["diaid_uttid"].split("_")[:2]
         if (dia_num, utt_num) in used_utts_list:
@@ -134,10 +136,11 @@ def make_data_tensors_mustard(
     else:
         emb_maker = DistilBertEmb()
 
-    for idx, row in tqdm(text_data.iterrows(), total=len(text_data), desc="Organizing data for MUStARD"):
+    for idx, row in tqdm(
+        text_data.iterrows(), total=len(text_data), desc="Organizing data for MUStARD"
+    ):
         # check if this is in the list
         if row["clip_id"] in used_utts_list:
-
             # get audio id
             all_data["all_audio_ids"].append(row["clip_id"])
 
@@ -230,11 +233,12 @@ def make_data_tensors_chalearn(
     else:
         emb_maker = DistilBertEmb()
 
-    for idx, row in tqdm(text_data.iterrows(), total=len(text_data), desc="Organizing data for FirstImpr"):
+    for idx, row in tqdm(
+        text_data.iterrows(), total=len(text_data), desc="Organizing data for FirstImpr"
+    ):
         # check if this item has acoustic data
         audio_name = row["file"].split(".mp4")[0]
         if audio_name in used_utts_list:
-
             # get audio id
             all_data["all_audio_ids"].append(row["file"])
 
@@ -336,12 +340,13 @@ def make_data_tensors_cdc(
     else:
         emb_maker = DistilBertEmb()
 
-    for idx, row in tqdm(text_data.iterrows(), total=len(text_data), desc="Organizing data for CDC"):
+    for idx, row in tqdm(
+        text_data.iterrows(), total=len(text_data), desc="Organizing data for CDC"
+    ):
         # check if this item has acoustic data
         audio_name = str(row["utt_num"])
 
         if audio_name in used_utts_list:
-
             # get audio id
             all_data["all_audio_ids"].append(row["utt_num"])
 
@@ -423,9 +428,10 @@ def make_data_tensors_mosi(
     else:
         emb_maker = DistilBertEmb()
 
-    for idx, row in tqdm(text_data.iterrows(), total=len(text_data), desc="Organizing data for MOSI"):
+    for idx, row in tqdm(
+        text_data.iterrows(), total=len(text_data), desc="Organizing data for MOSI"
+    ):
         if row["id"] in used_utts_list:
-
             # get audio id
             all_data["all_audio_ids"].append(row["id"])
 
@@ -508,13 +514,20 @@ def make_data_tensors_lives(
     else:
         emb_maker = DistilBertEmb()
 
-    for idx, row in tqdm(text_data.iterrows(), total=len(text_data), desc="Organizing data for LIvES"):
+    for idx, row in tqdm(
+        text_data.iterrows(), total=len(text_data), desc="Organizing data for LIvES"
+    ):
         # if f"{row['recording_id']}_{row['utt_num']}" in used_utts_list:
-        if f"{row['recording_id']}_utt{row['utt_num']}_speaker{row['speaker']}" in used_utts_list:
-        # if row["id"] in used_utts_list:
+        if (
+            f"{row['recording_id']}_utt{row['utt_num']}_speaker{row['speaker']}"
+            in used_utts_list
+        ):
+            # if row["id"] in used_utts_list:
 
             # get audio id
-            all_data["all_audio_ids"].append(f"{row['recording_id']}_utt{row['utt_num']}_speaker{row['speaker']}")
+            all_data["all_audio_ids"].append(
+                f"{row['recording_id']}_utt{row['utt_num']}_speaker{row['speaker']}"
+            )
 
             if glove is not None:
                 # create utterance-level holders
@@ -547,8 +560,8 @@ def make_data_tensors_lives(
 
             spk_id = f"{row['speaker']}-{row['sid']}"
 
-            recording_id = row['recording_id']
-            utt_num = row['utt_num']
+            recording_id = row["recording_id"]
+            utt_num = row["utt_num"]
 
             all_data["all_speakers"].append(spk_id)
             all_data["all_recording_ids"].append(recording_id)
@@ -563,7 +576,13 @@ def make_data_tensors_lives(
 
 
 def make_data_tensors_asist(
-    text_data, used_utts_list, longest_utt, tokenizer, glove, bert_type="distilbert", use_text=True
+    text_data,
+    used_utts_list,
+    longest_utt,
+    tokenizer,
+    glove,
+    bert_type="distilbert",
+    use_text=True,
 ):
     """
     Make the data tensors for asist
@@ -589,11 +608,23 @@ def make_data_tensors_asist(
     }
 
     # set class numbers for sent, emo
-    sent2idx = {'positive': 2, 'neutral': 1, 'negative': 0}
-    emo2idx = {'anger': 0, 'disgust': 1, 'fear': 2, 'joy': 3, 'neutral': 4,
-               'sadness': 5, 'surprise': 6}
-    trait2idx = {'extroversion': 0, 'neuroticism': 1, 'agreeableness': 2,
-                 'openness': 3, 'conscientiousness': 4}
+    sent2idx = {"positive": 2, "neutral": 1, "negative": 0}
+    emo2idx = {
+        "anger": 0,
+        "disgust": 1,
+        "fear": 2,
+        "joy": 3,
+        "neutral": 4,
+        "sadness": 5,
+        "surprise": 6,
+    }
+    trait2idx = {
+        "extroversion": 0,
+        "neuroticism": 1,
+        "agreeableness": 2,
+        "openness": 3,
+        "conscientiousness": 4,
+    }
 
     if bert_type.lower() == "bert":
         emb_maker = BertEmb()
@@ -602,9 +633,10 @@ def make_data_tensors_asist(
     else:
         emb_maker = DistilBertEmb()
 
-    for idx, row in tqdm(text_data.iterrows(), total=len(text_data), desc="Organizing data for MultiCAT"):
+    for idx, row in tqdm(
+        text_data.iterrows(), total=len(text_data), desc="Organizing data for MultiCAT"
+    ):
         if row["message_id"] in used_utts_list:
-
             # get audio id
             all_data["all_audio_ids"].append(row["message_id"])
 
@@ -625,7 +657,7 @@ def make_data_tensors_asist(
             elif bert_type.lower() == "text":
                 # get values from row
                 # utt = tokenizer(clean_up_word(str(row['utt'])))
-                utt = str(row['utt'])
+                utt = str(row["utt"])
                 all_data["utt_lengths"].append(1)
                 all_data["all_utts"].append(utt)
             else:

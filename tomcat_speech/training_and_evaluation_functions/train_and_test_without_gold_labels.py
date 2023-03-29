@@ -1,9 +1,15 @@
 # perform multitask prediction on data that does not contain gold labels
 import pickle
 from torch.utils.data import DataLoader
-from sklearn.metrics import confusion_matrix, classification_report, precision_recall_fscore_support
+from sklearn.metrics import (
+    confusion_matrix,
+    classification_report,
+    precision_recall_fscore_support,
+)
 
-from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import get_all_batches
+from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
+    get_all_batches,
+)
 
 
 def multitask_predict_without_gold_labels(
@@ -17,7 +23,7 @@ def multitask_predict_without_gold_labels(
     use_gender=False,
     get_prob_dist=False,
     return_penultimate_layer=False,
-    use_spec=False
+    use_spec=False,
 ):
     """
     Test a pretrained model
@@ -62,26 +68,26 @@ def multitask_predict_without_gold_labels(
             else:
                 batch_genders = None
         else:
-            batch_acoustic = batch['x_acoustic'].to(device)
-            batch_text = batch['x_utt'].to(device)
-            batch_lengths = batch['utt_length'].to(device)
-            batch_acoustic_lengths = batch['acoustic_length'].to(device)
+            batch_acoustic = batch["x_acoustic"].to(device)
+            batch_text = batch["x_utt"].to(device)
+            batch_lengths = batch["utt_length"].to(device)
+            batch_acoustic_lengths = batch["acoustic_length"].to(device)
             if use_speaker:
-                batch_speakers = batch['x_speaker'].to(device)
+                batch_speakers = batch["x_speaker"].to(device)
             else:
                 batch_speakers = None
 
             if use_gender:
-                batch_genders = batch['x_gender'].to(device)
+                batch_genders = batch["x_gender"].to(device)
             else:
                 batch_genders = None
 
             if use_spec:
-                batch_spec = batch['x_spec'].to(device)
+                batch_spec = batch["x_spec"].to(device)
             else:
                 batch_spec = None
 
-            ordered_ids.extend(batch['audio_id'])
+            ordered_ids.extend(batch["audio_id"])
 
         if avgd_acoustic:
             y_pred = classifier(

@@ -8,7 +8,7 @@ import torch
 
 from tomcat_speech.data_prep.asist.asist_dataset_creation import AsistDataset
 from tomcat_speech.training_and_evaluation_functions.train_and_test_without_gold_labels import (
-    multitask_predict_without_gold_labels
+    multitask_predict_without_gold_labels,
 )
 from tomcat_speech.models.multimodal_models import MultitaskModel
 from tomcat_speech.data_prep.utils.data_prep_helpers import DatumListDataset
@@ -41,7 +41,6 @@ def read_in_aligned_json(input_aligned_json):
 
 
 def predict_with_model(list_of_json_objs, trained_model, glove, device, params):
-
     # set random seed
     seed = params.model_params.seed
     torch.manual_seed(seed)
@@ -126,13 +125,15 @@ def get_json_output_of_speech_analysis(
     classifier.load_state_dict(torch.load(trained_model_file))
     classifier.to(device)
 
-    prediction_json = predict_with_model(list_of_json_objs, classifier, glove, device, params)
+    prediction_json = predict_with_model(
+        list_of_json_objs, classifier, glove, device, params
+    )
     return prediction_json
 
 
 def save_json_predictions(prediction_json_list, savepath):
     # save the prediction json objects to a single file
-    with open(savepath, 'w') as sfile:
+    with open(savepath, "w") as sfile:
         for item in prediction_json_list:
             sfile.write(json.dumps(item) + "\n")
 
@@ -148,7 +149,6 @@ def get_data_from_json(list_of_json_objs, avgd_acoustic):
 
     # for file in files (in case more than one)
     for utt_json in list_of_json_objs:
-
         # get the text, speaker id, utt id, and start time
         utterance = utt_json["data"]["text"]
         speaker = utt_json["data"]["id"]
@@ -164,17 +164,11 @@ def get_data_from_json(list_of_json_objs, avgd_acoustic):
             #   add that possibility here
             try:
                 if utt_feats is None:
-                    utt_feats = pd.DataFrame.from_dict(
-                        eval(wd_message["features"])
-                    )
+                    utt_feats = pd.DataFrame.from_dict(eval(wd_message["features"]))
                 else:
                     # get the acoustic info
-                    item_feats = pd.DataFrame.from_dict(
-                        eval(wd_message["features"])
-                    )
-                    utt_feats = pd.concat(
-                        [utt_feats, item_feats], ignore_index=True
-                    )
+                    item_feats = pd.DataFrame.from_dict(eval(wd_message["features"]))
+                    utt_feats = pd.concat([utt_feats, item_feats], ignore_index=True)
             # sometimes the features data is null
             # in these cases, just skip this data
             except NameError:
@@ -190,7 +184,9 @@ def get_data_from_json(list_of_json_objs, avgd_acoustic):
         acoustic_dict[utt_id]["utt"] = utterance
         acoustic_dict[utt_id]["timestart"] = start_time
         # add metadata
-        acoustic_dict[utt_id] = add_metadata_to_df(acoustic_dict[utt_id], utt_json["msg"])
+        acoustic_dict[utt_id] = add_metadata_to_df(
+            acoustic_dict[utt_id], utt_json["msg"]
+        )
 
     return acoustic_dict
 
@@ -298,8 +294,18 @@ def printdict(nm, directory, predictions, penult_layers):
         y = directory[item]  # this is a pandas dataframe
 
         # keep relevant columns
-        sub = y[["speaker", "utt", "timestart", "version",
-                 "trial_id", "source", "sub_type", "timestamp"]].copy(deep=False)
+        sub = y[
+            [
+                "speaker",
+                "utt",
+                "timestart",
+                "version",
+                "trial_id",
+                "source",
+                "sub_type",
+                "timestamp",
+            ]
+        ].copy(deep=False)
         sub.insert(0, "filename", str(item))
         df1 = pd.concat([df1, sub])
 

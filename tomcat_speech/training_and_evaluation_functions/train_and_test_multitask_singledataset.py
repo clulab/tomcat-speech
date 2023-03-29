@@ -10,7 +10,7 @@ from sklearn.metrics import precision_recall_fscore_support
 
 from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
     get_all_batches,
-    update_train_state
+    update_train_state,
 )
 
 
@@ -29,7 +29,7 @@ def train_and_predict_multitask_singledataset(
     use_gender=False,
     save_encoded_data=False,
     loss_fx=None,
-    use_spec=False
+    use_spec=False,
 ):
     """
     Train and predict on a single dataset that uses multiple tasks
@@ -63,7 +63,6 @@ def train_and_predict_multitask_singledataset(
         train_state["val_best_f1"].append(0)
 
     for epoch_index in range(num_epochs):
-
         first = datetime.now()
         print(f"Starting epoch {epoch_index} at {first}")
 
@@ -111,7 +110,7 @@ def train_and_predict_multitask_singledataset(
             optimizer,
             mode="eval",
             loss_fx=loss_fx,
-            use_spec=use_spec
+            use_spec=use_spec,
         )
 
         # get precision, recall, f1 info
@@ -139,7 +138,9 @@ def train_and_predict_multitask_singledataset(
         train_state["val_loss"].append(running_loss)
 
         # update the train state now that our epoch is complete
-        train_state = update_train_state(model=classifier, train_state=train_state, optimizer=optimizer)
+        train_state = update_train_state(
+            model=classifier, train_state=train_state, optimizer=optimizer
+        )
 
         # update scheduler if there is one
         if scheduler is not None:
@@ -169,7 +170,7 @@ def run_model_multitask_singledataset(
     mode="training",
     loss_fx=None,
     sampler=None,
-    use_spec=False
+    use_spec=False,
 ):
     """
     Run the model in either training or testing within a single epoch
@@ -225,7 +226,6 @@ def run_model_multitask_singledataset(
 
     # for each batch in the list of batches created by the dataloader
     for batch_index, batch in enumerate(batches):
-
         # zero gradients
         if mode.lower() == "training" or mode.lower() == "train":
             optimizer.zero_grad()
@@ -246,7 +246,10 @@ def run_model_multitask_singledataset(
         for task, preds in enumerate(batch_pred):
             batch_losses = []
             if loss_fx:
-                loss = loss_fx[task](preds, y_gold[task]) * datasets_list[0].loss_multiplier
+                loss = (
+                    loss_fx[task](preds, y_gold[task])
+                    * datasets_list[0].loss_multiplier
+                )
             else:
                 loss = (
                     datasets_list[0].loss_fx[task](preds, y_gold[task])

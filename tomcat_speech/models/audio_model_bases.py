@@ -60,11 +60,11 @@ class AcousticOnlyModel(nn.Module):
         self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
 
     def forward(
-            self,
-            acoustic_input,
-            speaker_input=None,
-            acoustic_len_input=None,
-            gender_input=None,
+        self,
+        acoustic_input,
+        speaker_input=None,
+        acoustic_len_input=None,
+        gender_input=None,
     ):
         # get speaker embeddings, if needed
         if speaker_input is not None:
@@ -142,12 +142,12 @@ class SpecCNNBase(nn.Module):
         # number of output channels from conv layers
         self.out_channels = params.out_channels
 
-        #self.conv1 = nn.Conv1d(self.spec_dim, 256, self.k1_size)
-        #self.maxconv1 = nn.MaxPool1d(kernel_size=self.k1_size)
-        #self.conv2 = nn.Conv1d(256, self.out_channels * 3, self.k2_size)
-        #self.maxconv2 = nn.MaxPool1d(kernel_size=self.k2_size)
-        #self.conv3 = nn.Conv1d(self.out_channels * 3, self.out_channels, self.k3_size)
-        #self.maxconv3 = nn.MaxPool1d(kernel_size=self.k3_size)
+        # self.conv1 = nn.Conv1d(self.spec_dim, 256, self.k1_size)
+        # self.maxconv1 = nn.MaxPool1d(kernel_size=self.k1_size)
+        # self.conv2 = nn.Conv1d(256, self.out_channels * 3, self.k2_size)
+        # self.maxconv2 = nn.MaxPool1d(kernel_size=self.k2_size)
+        # self.conv3 = nn.Conv1d(self.out_channels * 3, self.out_channels, self.k3_size)
+        # self.maxconv3 = nn.MaxPool1d(kernel_size=self.k3_size)
 
         # this was taken from a CNN over features, but is now over a spectrogram
         # so we actually need a different shape for the input, i think
@@ -158,7 +158,9 @@ class SpecCNNBase(nn.Module):
         self.conv3 = nn.Conv2d(16, 32, self.k3_size)
         self.maxconv3 = nn.MaxPool2d(kernel_size=self.k3_size)
 
-        self.fc1 = nn.Linear(32 * 55 * 32, self.out_channels)  # 54 * 30 is resulting size of matrix after conv3
+        self.fc1 = nn.Linear(
+            32 * 55 * 32, self.out_channels
+        )  # 54 * 30 is resulting size of matrix after conv3
 
         def forward(self, spec_input):
             inputs = spec_input.permute(0, 2, 1)
@@ -224,10 +226,7 @@ class SpecOnlyCNN(nn.Module):
         self.fc1 = nn.Linear(self.out_channels * 3, params.text_cnn_hidden_dim)
         self.fc2 = nn.Linear(params.text_cnn_hidden_dim, self.output_dim)
 
-    def forward(
-            self,
-            spec_input
-    ):
+    def forward(self, spec_input):
         all_feats = self.cnn(spec_input)
 
         # feed this through fully connected layer

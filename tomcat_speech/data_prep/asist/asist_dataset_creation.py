@@ -44,12 +44,7 @@ class AsistDataset(Dataset):
         :param transcript_type: 'zoom'
         """
         self.cols_to_skip = 9 if transcript_type.lower() == "zoom" else 10
-        self.acoustic_dict = OrderedDict(
-            {
-                key: df
-                for key, df in acoustic_dict.items()
-            }
-        )
+        self.acoustic_dict = OrderedDict({key: df for key, df in acoustic_dict.items()})
         self.glove = glove
         if ys_path is not None:
             self.ys_df = pd.read_csv(ys_path)
@@ -207,7 +202,6 @@ class AsistDataset(Dataset):
         for key, item in self.acoustic_dict.items():
             # if the item has gold data
             if key in self.valid_files:
-
                 # for each row in that item's dataframe
                 for idx, row in item.iterrows():
                     # get the speaker

@@ -73,13 +73,15 @@ def extract_acoustic_features(datasets_list, base_path, feature_set):
             )
         elif dataset == "asist":
             asist_path = base_path
-            run_feature_extraction(f"{asist_path}/split",
-                                   feature_set,
-                                   f"{asist_path}/{feature_set}")
+            run_feature_extraction(
+                f"{asist_path}/split", feature_set, f"{asist_path}/{feature_set}"
+            )
 
 
 if __name__ == "__main__":
-    from tomcat_speech.data_prep.preprocessing_scripts.preprocessing_parameters import extract_acoustic_features_config as config
+    from tomcat_speech.data_prep.preprocessing_scripts.preprocessing_parameters import (
+        extract_acoustic_features_config as config,
+    )
 
     for feature in config.features_of_interest:
         extract_acoustic_features(config.datasets, config.path_to_datasets, feature)

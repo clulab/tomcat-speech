@@ -6,7 +6,9 @@ import os  # incorporates elements from https://github.com/marcovzla/discobert/b
 from argparse import Namespace
 import os
 
-DEBUG = False # no saving of files; output in the terminal; first random seed from the list
+DEBUG = (
+    False  # no saving of files; output in the terminal; first random seed from the list
+)
 
 # do you want to save dataset files?
 save_dataset = False

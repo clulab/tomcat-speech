@@ -1,4 +1,3 @@
-
 from tomcat_speech.data_prep.utils.data_saving_and_loading_helpers import prep_data
 
 import pickle
@@ -66,17 +65,17 @@ def save_data_components(
         False,  # acoustic data must not be averaged
         custom_feats_file,
         selected_ids=selected_ids,
-        include_spectrograms=False
+        include_spectrograms=False,
     )
     # save class weights
     if use_zip:
-        pickle.dump(clss_weights, bz2.BZ2File(f"{save_path}/{dataset}_clsswts.bz2", "wb"))
+        pickle.dump(
+            clss_weights, bz2.BZ2File(f"{save_path}/{dataset}_clsswts.bz2", "wb")
+        )
     else:
         pickle.dump(clss_weights, open(f"{save_path}/{dataset}_clsswts.pickle", "wb"))
 
-    all_data = [('train', train_ds),
-                ('dev', dev_ds),
-                ('test', test_ds)]
+    all_data = [("train", train_ds), ("dev", dev_ds), ("test", test_ds)]
 
     for partition_tuple in all_data:
         # get name of partition
@@ -109,7 +108,7 @@ def save_data_components(
             pickle.dump(utt_data, bz2.BZ2File(f"{utt_save_name}.bz2", "wb"))
             pickle.dump(ys_data, bz2.BZ2File(f"{ys_save_name}.bz2", "wb"))
         else:
-            pickle.dump(spec_data,open(f"{spec_save_name}.pickle", "wb"))
+            pickle.dump(spec_data, open(f"{spec_save_name}.pickle", "wb"))
             pickle.dump(acoustic_data, open(f"{acoustic_save_name}.pickle", "wb"))
             pickle.dump(utt_data, open(f"{utt_save_name}.pickle", "wb"))
             pickle.dump(ys_data, open(f"{ys_save_name}.pickle", "wb"))
@@ -127,7 +126,9 @@ def get_specific_fields(data, field_type, fields=None):
     sub_data = []
     if fields is not None:
         for item in data:
-            sub_data.append({key: value for key, value in item.items() if key in fields})
+            sub_data.append(
+                {key: value for key, value in item.items() if key in fields}
+            )
     else:
         if field_type.lower() == "spec":
             keys = ["x_spec", "spec_length", "audio_id"]
@@ -151,7 +152,9 @@ if __name__ == "__main__":
     # to change what datasets you preprocess and how you do it
     # make alterations to save_modalities_separately_config
     # and not this file
-    from tomcat_speech.data_prep.preprocessing_scripts.preprocessing_parameters import preprocess_datasets_config as config
+    from tomcat_speech.data_prep.preprocessing_scripts.preprocessing_parameters import (
+        preprocess_datasets_config as config,
+    )
 
     for dataset in config.datasets:
         if dataset == "mosi":
@@ -164,7 +167,9 @@ if __name__ == "__main__":
                 config.glove_path,
                 pred_type=config.mosi_pred_type,
                 emb_type=config.emb_type,
-                custom_feats_file=config.custom_feats_file["mosi"] if "mosi" in config.custom_feats_file.keys() else None,
+                custom_feats_file=config.custom_feats_file["mosi"]
+                if "mosi" in config.custom_feats_file.keys()
+                else None,
             )
         elif dataset == "firstimpr":
             save_data_components(
@@ -176,7 +181,9 @@ if __name__ == "__main__":
                 config.glove_path,
                 pred_type=config.firstimpr_pred_type,
                 emb_type=config.emb_type,
-                custom_feats_file=config.custom_feats_file["firstimpr"] if "firstimpr" in config.custom_feats_file.keys() else None,
+                custom_feats_file=config.custom_feats_file["firstimpr"]
+                if "firstimpr" in config.custom_feats_file.keys()
+                else None,
             )
         elif dataset == "cdc":
             save_data_components(
@@ -187,7 +194,9 @@ if __name__ == "__main__":
                 config.transcription_type,
                 config.glove_path,
                 emb_type=config.emb_type,
-                custom_feats_file=config.custom_feats_file["cdc"] if "cdc" in config.custom_feats_file.keys() else None,
+                custom_feats_file=config.custom_feats_file["cdc"]
+                if "cdc" in config.custom_feats_file.keys()
+                else None,
             )
         elif dataset == "meld":
             save_data_components(
@@ -198,7 +207,9 @@ if __name__ == "__main__":
                 config.transcription_type,
                 config.glove_path,
                 emb_type=config.emb_type,
-                custom_feats_file=config.custom_feats_file["meld"] if "meld" in config.custom_feats_file.keys() else None,
+                custom_feats_file=config.custom_feats_file["meld"]
+                if "meld" in config.custom_feats_file.keys()
+                else None,
             )
         elif dataset == "mustard":
             save_data_components(
@@ -209,7 +220,9 @@ if __name__ == "__main__":
                 config.transcription_type,
                 config.glove_path,
                 emb_type=config.emb_type,
-                custom_feats_file=config.custom_feats_file["mustard"] if "mustard" in config.custom_feats_file.keys() else None,
+                custom_feats_file=config.custom_feats_file["mustard"]
+                if "mustard" in config.custom_feats_file.keys()
+                else None,
             )
         elif dataset == "ravdess":
             save_data_components(
@@ -220,8 +233,12 @@ if __name__ == "__main__":
                 config.transcription_type,
                 config.glove_path,
                 emb_type=config.emb_type,
-                custom_feats_file=config.custom_feats_file["ravdess"] if "ravdess" in config.custom_feats_file.keys() else None,
-                selected_ids=config.selected_ids_paths["ravdess"] if "ravdess" in config.selected_ids_paths.keys() else None,
+                custom_feats_file=config.custom_feats_file["ravdess"]
+                if "ravdess" in config.custom_feats_file.keys()
+                else None,
+                selected_ids=config.selected_ids_paths["ravdess"]
+                if "ravdess" in config.selected_ids_paths.keys()
+                else None,
             )
         elif dataset == "asist":
             save_data_components(
@@ -232,5 +249,7 @@ if __name__ == "__main__":
                 config.transcription_type,
                 config.glove_path,
                 emb_type=config.emb_type,
-                custom_feats_file=config.custom_feats_file["asist"] if "asist" in config.custom_feats_file.keys() else None,
+                custom_feats_file=config.custom_feats_file["asist"]
+                if "asist" in config.custom_feats_file.keys()
+                else None,
             )

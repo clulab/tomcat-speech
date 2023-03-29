@@ -8,14 +8,14 @@ def get_dist_by_annotator(annotators_dict):
     """
     Get the distribution of data by annotator
     param annotators_dict : a dict of annotator: [filenames]
-    return: distribution of emotion and/or sentiment labels by annotator 
+    return: distribution of emotion and/or sentiment labels by annotator
     """
     for annr in annotators_dict.keys():
         files_list = annotators_dict[annr]
 
         # get dist
         sent, emos = get_dist(files_list)
-        
+
         # print out distribution
         print(f"{annr} sent distribution is:")
         print(sent.value_counts())
@@ -34,5 +34,5 @@ def get_dist(files_list):
             all_files = pd_df
         else:
             all_files = pd.concat([all_files, pd_df], axis=0)
-    
-    return all_files['sentiment'], all_files['emotion']
+
+    return all_files["sentiment"], all_files["emotion"]

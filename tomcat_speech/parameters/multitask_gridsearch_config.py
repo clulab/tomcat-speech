@@ -3,7 +3,9 @@
 from argparse import Namespace
 import os
 
-DEBUG = False # no saving of files; output in the terminal; first random seed from the list
+DEBUG = (
+    False  # no saving of files; output in the terminal; first random seed from the list
+)
 
 # do you want to save dataset files?
 save_dataset = False
@@ -20,10 +22,10 @@ EXPERIMENT_ID = 1
 # EXPERIMENT_DESCRIPTION = "IntermediateFusion_test_paramsfromMMML_ClassWts_"
 EXPERIMENT_DESCRIPTION = "MC_Testing_gridsearch_code_"
 # indicate whether this code is being run locally or on the server
-USE_SERVER = True #01/10/23
+USE_SERVER = True  # 01/10/23
 
 # whether you are starting with a pretrained model that you update during training
-trained_model = None # or path to model file
+trained_model = None  # or path to model file
 
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
@@ -31,13 +33,13 @@ CONFIG_FILE = os.path.abspath(__file__)
 num_tasks = 5
 
 # set parameters for data prep
-glove_path = "/home/tomcat/multimodal_data/glove.subset.300d.txt" #01/10/23
+glove_path = "/home/tomcat/multimodal_data/glove.subset.300d.txt"  # 01/10/23
 
 if USE_SERVER:
-    load_path = "/home/tomcat/multimodal_data" #01/10/23
+    load_path = "/home/tomcat/multimodal_data"  # 01/10/23
 else:
     # path from which to load pickled data files
-    #load_path = "../../datasets/pickled_data/IS13_glove_GOLD"
+    # load_path = "../../datasets/pickled_data/IS13_glove_GOLD"
     None
 
 # set dir to save full experiments
@@ -48,9 +50,9 @@ exp_save_path = "output/multitask"
 chalearn_predtype = "max_class"
 
 # set the acoustic feature set
-feature_set = "IS13_distilbert_dict" #01/10/23
+feature_set = "IS13_distilbert_dict"  # 01/10/23
 
-datasets = ["meld"] #added 01/10/23
+datasets = ["meld"]  # added 01/10/23
 
 saved_model = None
 
@@ -82,7 +84,7 @@ model_params = Namespace(
     batch_size=[100],  # 128,  # 32
     early_stopping_criterion=5,
     num_gru_layers=2,  # 1,  # 3,  # 1,  # 4, 2,
-    bidirectional=True, #01/10/23
+    bidirectional=True,  # 01/10/23
     use_distilbert=False,
     # set whether to have a single loss function
     single_loss=False,

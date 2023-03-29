@@ -14,11 +14,13 @@ class EEG_Model_Base(nn.Module):
         # can use generic LSTM to start with
         # should be bidirectional
         self.lstm = nn.LSTM(
-            input_size=self.num_channels * self.num_waves,  # todo: this might not be correct
+            input_size=self.num_channels
+            * self.num_waves,  # todo: this might not be correct
             hidden_size=params.eeg_lstm_hidden_dim,
             num_layers=params.num_eeg_lstm_layers,
             batch_first=True,
-            bidirectional=True)
+            bidirectional=True,
+        )
 
         # set acoustic fc layer 1
         self.fc_1 = nn.Linear(params.eeg_lstm_hidden_dim, params.eeg_fc_hidden_dim)
@@ -40,5 +42,3 @@ class EEG_Model_Base(nn.Module):
         out = F.dropout(self.fc2(encoded), 0.3)
 
         return out
-
-

@@ -42,7 +42,7 @@ transcription_type = "gold"
 # this may be 'bert', 'distilbert', 'roberta', 'glove', or 'text'
 # if 'text', the text data will NOT be converted to embeddings
 # and can be fed directly into a huggingface transformer model
-emb_type = "text" # include text, to be used with bert in the model itself
+emb_type = "text"  # include text, to be used with bert in the model itself
 
 # select which dataset(s) you want to preprocess
 # can be one or more of:
