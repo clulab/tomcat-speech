@@ -22,7 +22,6 @@ from tomcat_speech.data_prep.utils.data_prep_helpers import (
     create_data_folds_list,
     Glove,
     make_glove_dict,
-    get_data_samples,
     transform_acoustic_item
 )
 
@@ -37,9 +36,27 @@ def prep_ravdess_data(
     avg_acoustic_data=False,
     custom_feats_file=None,
     selected_ids=None,
-    num_train_ex=None,
     include_spectrograms=False,
 ):
+    """
+    Prepare pickle files for RAVDESS data
+    :param data_path: the string path to directory containing the dataset
+    :param feature_set: the acoustic feature set to use (generally IS13)
+       could be IS09, IS10, IS11, IS12, IS13
+    :param embedding_type: 'bert', 'roberta', 'distilbert', 'glove'
+    :param glove_filepath: the string path to a txt file containing GloVe
+    :param features_to_use: None or a list of specific acoustic features
+       if a list, these features are pulled from the opensmile output by name
+    :param as_dict: whether to save data as list of dicts (vs lists)
+       Our models expect dict data as of 2023.03.28
+    :param avg_acoustic_data: whether to average over acoustic features
+    :param custom_feats_file: None or the string name of a file containing
+       pre-generated custom acoustic features
+    :param selected_ids: A list of lists, where each sublist contains
+       the message ids for a single partition of the data
+       these sublists are ordered [train, dev, test]
+    :param include_spectrograms: whether to use spectrograms as part of the dataset
+"""
     # load glove
     if embedding_type.lower() == "glove":
         glove_dict = make_glove_dict(glove_filepath)
@@ -69,11 +86,7 @@ def prep_ravdess_data(
     test_data = ravdess_prep.test_data
 
     # get class weights
-    # todo: allow to get emotion or intensity or both
     class_weights = ravdess_prep.intensity_weights
-
-    if num_train_ex:
-        train_data = get_data_samples(train_data, num_train_ex)
 
     return train_data, dev_data, test_data, class_weights
 
@@ -90,15 +103,31 @@ class RavdessPrep:
         glove,
         train_prop=0.6,
         test_prop=0.2,
-        f_end="IS10.csv",
         use_cols=None,
         as_dict=False,
         avg_acoustic_data=False,
         custom_feats_file=None,
         selected_ids=None,
         embedding_type="distilbert",
-        include_spectrograms=False,  # todo: still need to add this
+        include_spectrograms=False,
     ):
+        """
+        :param ravdess_path: the string path to our ravdess dataset
+        :param feature_set: the string acoustic feature set to be used
+            'IS09', 'IS10', 'IS11', 'IS12', 'IS13'
+        :param glove: an instance of class Glove
+        :param train_prop: the proportion of data for training partition
+        :param test_prop: the proportion of data for the dev partition
+        :param use_cols: a list of specific acoustic feature columns to
+            extract from the openSMILE output or None for all features
+        :param avg_acoustic_data: whether to average the acoustic data
+        :param custom_feats_file: None or string path to a file containing
+            custom acoustic features
+        :param selected_ids: None or a nested list containing the ids for
+            data partitions [train, dev, test]
+        :param embedding_type: 'bert', 'distilbert', 'roberta', 'glove', 'text'
+        :param include_spectrograms: whether to use spectrogram data
+        """
         # path to dataset--all within acoustic files for ravdess
         self.path = ravdess_path
 
@@ -116,7 +145,7 @@ class RavdessPrep:
             self.all_data = make_ravdess_data_tensors(
                 self.feature_path,
                 glove,
-                f_end,
+                f"{feature_set}.csv",
                 use_cols,
                 add_avging=avg_acoustic_data,
                 as_dict=as_dict,
@@ -138,8 +167,6 @@ class RavdessPrep:
 
         if include_spectrograms:
             self.spec_dict, self.spec_lengths_dict = make_spectrograms_dict(self.path, "ravdess")
-            # self.spec_list, self.spec_lengths_list = self.make_spectrogram_set(self.spec_dict, self.spec_lengths_dict)
-
             self.update_data_tensors()
 
         if custom_feats_file:
@@ -227,7 +254,6 @@ class RavdessPrep:
 
             item['x_spec'] = self.spec_dict[audio_id]
             item['spec_length'] = self.spec_lengths_dict[audio_id]
-
 
 
 def make_ravdess_data_tensors(
@@ -450,10 +476,6 @@ def make_ravdess_data_tensors_with_custom_acoustic_features(
         utt_2, id_2 = emb_maker.tokenize("dogs are sitting by the door")
         utt_2 = emb_maker.get_embeddings(utt_2, torch.tensor(id_2).unsqueeze(0), 8)
         utt_length = max(len(utt_1), len(utt_2))
-
-    # will have to do two for loops
-    # one to get the longest acoustic df
-    # the other to organize data tensors
 
     # open acoustic features file
     path_to_acoustic_file = f"{acoustic_path}/{custom_feats_file}"

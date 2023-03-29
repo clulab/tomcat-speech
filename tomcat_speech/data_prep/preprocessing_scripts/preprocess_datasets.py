@@ -36,13 +36,14 @@ def save_data_components(
     :param feats_to_use: None or list of acoustic features to use from openSMILE extraction
         None uses the whole set of extracted acoustic features
     :param pred_type: type of predictions, for mosi and firstimpr
-        mosi:
-        firstimpr:
+        mosi: 'regression', 'classification' (7-class), 'ternary' (3-class classification)
+        firstimpr: 'max_class' (dominant trait), 'binary' (high-low per trait),
+        'ternary' (high-med-low per trait)
     :param use_zip: whether to save as a bz2 compressed file
     :param custom_feats_file: the string path to a file containing custom acoustic features
         usually NOT used unless you are testing out a new set of acoustic features
         which you have extracted on your own
-    :param selected_ids: None if generating data randomly or a list of 3 list
+    :param selected_ids: None if generating data randomly or a list of 3 lists
         One with message IDs for train partition, one for dev, one for test
         This is needed only for datasets that are not pre-partitioned if you
         wish to ensure that you have a specific split of the data
@@ -150,7 +151,7 @@ if __name__ == "__main__":
     # to change what datasets you preprocess and how you do it
     # make alterations to save_modalities_separately_config
     # and not this file
-    from tomcat_speech.data_prep.preprocessing_scripts.preprocessing_parameters import save_modalities_separately_config as config
+    from tomcat_speech.data_prep.preprocessing_scripts.preprocessing_parameters import preprocess_datasets_config as config
 
     for dataset in config.datasets:
         if dataset == "mosi":
@@ -164,7 +165,6 @@ if __name__ == "__main__":
                 pred_type=config.mosi_pred_type,
                 emb_type=config.emb_type,
                 custom_feats_file=config.custom_feats_file["mosi"] if "mosi" in config.custom_feats_file.keys() else None,
-                selected_ids=config.selected_ids_paths["mosi"] if "mosi" in config.selected_ids_paths.keys() else None,
             )
         elif dataset == "firstimpr":
             save_data_components(

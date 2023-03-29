@@ -10,67 +10,6 @@ from tqdm import tqdm
 import pandas as pd
 
 
-class TRSToCSV:
-    """
-    Takes a trs file and converts it to a csv
-    lines of csvfile are speaker,timestart,timeend, word, utt_num where:
-        speaker   = caller or patient
-        timestart = time of start of word
-        timeend   = time of end of word
-        word      = the word predicted
-        utt_num   = the utterance number within the conversation
-        word_num  = the word number (useful for averaging over words)
-    """
-
-    def __init__(self, path, trsfile):
-        self.path = path
-        self.tname = trsfile
-        self.tfile = f"{path}/{trsfile}.trs"
-
-    def convert_trs(self, savepath):
-        trs_arr = [["speaker", "timestart", "timeend", "word", "utt_num", "word_num"]]
-        with open(self.tfile, "r") as trs:
-            print(self.tfile)
-            # for line in trs:
-            # try:
-            utt = 0
-            spkr = 0
-            wd_num = 0
-            coach_participant = {}
-            for line in trs:
-                if "<Speaker id" in line:
-                    participant_num = re.search(r'"spkr(\d)', line).group(1)
-                    participant = re.search(r'name="(\S+)"', line).group(1)
-                    coach_participant[participant_num] = participant
-                if "<Turn " in line:
-                    # print(line)
-                    timestart = re.search(r'startTime="(\d+.\d+)"', line).group(1)
-                    timeend = re.search(r'endTime="(\d+.\d+)"', line).group(1)
-                    speaker = re.search(r'spkr(\d)">', line).group(1)
-                    word = re.search(r"/>(\S+)</Turn>", line).group(1)
-
-                    if coach_participant[speaker].lower() == "coach":
-                        # print("Coach found")
-                        real_speaker = 2
-                    elif coach_participant[speaker].lower() == "participant":
-                        # print("Participant found")
-                        real_speaker = 1
-                    else:
-                        exit("There was some problem here")
-
-                    wd_num += 1
-                    if spkr != real_speaker:
-                        spkr = real_speaker
-                        utt += 1
-
-                    trs_arr.append(
-                        [real_speaker, timestart, timeend, word, utt, wd_num]
-                    )
-        with open(f"{savepath}/{self.tname}.tsv", "w") as cfile:
-            for item in trs_arr:
-                cfile.write("\t".join([str(x) for x in item]) + "\n")
-
-
 class ExtractAudio:
     """
     Takes audio and extracts features from it using openSMILE
@@ -290,22 +229,6 @@ class GetFeatures:
         return feature_set
 
 
-# def run_feature_extraction(audio_path, feature_set, save_dir):
-#     """
-#     Run feature extraction from audio_extraction.py for a dataset
-#     """
-#     # make sure the full save path exists; if not, create it
-#     os.system(f'if [ ! -d "{save_dir}" ]; then mkdir -p {save_dir}; fi')
-#
-#     # save all files in the directory
-#     for wfile in os.listdir(audio_path):
-#         save_name = str(wfile.split(".wav")[0]) + f"_{feature_set}.csv"
-#         audio_extractor = ExtractAudio(
-#             audio_path, wfile, save_dir, "../../opensmile-3.0"
-#         )
-#         audio_extractor.save_acoustic_csv(feature_set, save_name)
-
-
 def run_feature_extraction(audio_path, feature_set, save_dir):
     """
     Run feature extraction from audio_extraction.py for a dataset
@@ -334,42 +257,6 @@ def run_feature_extraction(audio_path, feature_set, save_dir):
                 pass
 
 
-def transform_audio(txtfile):
-    """
-    Used for taking audio and transforming it in the way initially envisioned
-    for LIvES project.
-    txtfile = the path to a file containing rows of:
-        path : a path to the audio data
-        trsfile : the name of the transcription file (without .trs)
-        callwav : the name of wav file being transformed
-    todo: does this need to be changed to be relevant for this input?
-    """
-    with open(txtfile, "r") as tfile:
-        # print("textfile opened!")
-        for line in tfile:
-            # print("Line is: " + line)
-            path, trsfile, callwav = line.strip().split(",")
-
-            csvfile = f"{trsfile}.csv"
-            extension = callwav.split(".")[0]
-            speakers = ["1", "2"]
-
-            # diarized_input = DiarizedToCSV(path, jsonfile)
-            diarized_input = TRSToCSV(path, trsfile)
-            # print("diarized_input created")
-            diarized_input.convert_trs()
-            # print("conversion to json happened")
-
-            audio_input = AudioSplit(path, extension, callwav, csvfile)
-            audio_input.split_audio()
-
-            for speaker in speakers:
-                audio_input.make_textfile(f"{path}/{extension}/{speaker}", speaker)
-                audio_input.join_audio(f"{extension}-{speaker}.txt", speaker)
-
-            sp.run(["rm", "-r", f"{path}/{extension}"])
-
-
 def expand_words(trscsv, file_to_save):
     """
     Expands transcription file to include values at every 10ms
@@ -395,21 +282,6 @@ def expand_words(trscsv, file_to_save):
     with open(file_to_save, "w") as wfile:
         for item in saver:
             wfile.write("\t".join(item) + "\n")
-
-
-def avg_feats_across_words(feature_df):
-    """
-    Takes a pandas df of acoustic feats and collapses it into one
-    with feats avg'd across words
-    :param feature_df: pandas dataframe of features in 24msec intervals
-    :return: a new pandas df
-    """
-    # summarize + avg like dplyr in R
-    feature_df = feature_df.groupby(
-        ["word", "speaker", "utt_num", "word_num"], sort=False
-    ).mean()
-    feature_df = feature_df.reset_index()
-    return feature_df
 
 
 def convert_to_wav(nonwav_file):

@@ -30,7 +30,7 @@ feature_set = "IS13"
 # this is set to None if you do not have such a file
 # this is only needed when a dataset does not come prepartitioned
 # and you wish to have specific items in each partition
-# currently implemented for MOSI and RAVDESS
+# currently implemented for RAVDESS
 selected_ids_paths = None
 
 # set the transcription type

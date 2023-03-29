@@ -34,7 +34,7 @@ def prep_asist_data(
     :param avg_acoustic_data: whether to average over acoustic features
     :param custom_feats_file: None or the string name of a file containing
         pre-generated custom acoustic features
-    :param include_spectrograms: whether to generate spectrograms as part of the dataset
+    :param include_spectrograms: whether to use spectrograms as part of the dataset
     """
     # load glove
     if embedding_type.lower() == "glove":
