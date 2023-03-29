@@ -166,6 +166,7 @@ class StandardPrep:
 class SelfSplitPrep:
     """
     A class for when data must be manually partitioned
+    into train, dev, and test folds
     """
 
     def __init__(
@@ -665,10 +666,6 @@ class DataPrep:
             or self.d_type == "cmu-mosi"
         ):
             data_tensor_dict = make_data_tensors_mosi(
-                text_data, self.used_ids, longest_utt, self.tokenizer, glove, bert_type
-            )
-        elif self.d_type == "lives":
-            data_tensor_dict = make_data_tensors_lives(
                 text_data, self.used_ids, longest_utt, self.tokenizer, glove, bert_type
             )
         elif self.d_type == "asist":

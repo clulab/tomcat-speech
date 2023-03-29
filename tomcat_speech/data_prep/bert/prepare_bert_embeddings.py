@@ -3,7 +3,14 @@
 
 import torch
 from torch import nn
-from transformers import BertTokenizer, BertModel, DistilBertModel, DistilBertTokenizer, RobertaTokenizer, RobertaModel
+from transformers import (
+    BertTokenizer,
+    BertModel,
+    DistilBertModel,
+    DistilBertTokenizer,
+    RobertaTokenizer,
+    RobertaModel
+)
 
 
 class DistilBertEmb:

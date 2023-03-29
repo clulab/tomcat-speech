@@ -19,7 +19,7 @@ def make_data_tensors_meld(
     :param text_data: a pandas df containing text and gold
     :param used_utts_list: a list of all utterances with acoustic data
     :param longest_utt: length of longest utt
-    :param tokenizer: a tokenizer
+    :param tokenizer: a string for tokenizer type
     :param glove: an instance of class Glove
     :return: a dict containing tensors for utts, speakers, ys,
         and utterance lengths

@@ -2,7 +2,6 @@
 import pickle
 import sys
 import random
-import warnings
 from datetime import datetime
 
 # import parameters for model

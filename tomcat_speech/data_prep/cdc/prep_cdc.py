@@ -3,17 +3,16 @@ import os
 import glob
 import re
 
-from prep_data import SelfSplitPrep, get_updated_class_weights
-from utils.data_prep_helpers import (
+from tomcat_speech.data_prep.prep_data import SelfSplitPrep, get_updated_class_weights
+from tomcat_speech.data_prep.utils.data_prep_helpers import (
     split_string_time,
     make_glove_dict,
     Glove,
     get_data_samples,
 )
-from utils.audio_extraction import (
+from tomcat_speech.data_prep.utils.audio_extraction import (
     extract_portions_of_mp4_or_wav,
     convert_to_wav,
-    run_feature_extraction,
 )
 
 

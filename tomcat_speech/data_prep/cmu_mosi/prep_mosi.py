@@ -1,8 +1,12 @@
 import h5py
 import re
 
-from prep_data import SelfSplitPrep, get_updated_class_weights
-from utils.data_prep_helpers import make_glove_dict, Glove, get_data_samples
+from tomcat_speech.data_prep.prep_data import SelfSplitPrep, get_updated_class_weights
+from tomcat_speech.data_prep.utils.data_prep_helpers import (
+    make_glove_dict,
+    Glove,
+    get_data_samples
+)
 
 
 def prep_mosi_data(

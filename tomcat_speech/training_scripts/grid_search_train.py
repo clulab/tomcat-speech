@@ -6,7 +6,6 @@ import sys
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
-#sys.path.append("/home/u18/jmculnan/github/tomcat-speech")
 
 single_task = False
 if len(sys.argv) > 1:

@@ -8,9 +8,8 @@ import numpy as np
 import functools
 import operator
 import random
-import sys
 
-sys.path.append("../multimodal_data_preprocessing")
+# update this
 from utils.data_prep_helpers import (
     MinMaxScaleRange,
     clean_up_word,
@@ -35,7 +34,7 @@ class AsistDataset(Dataset):
         """
         :param acoustic_dict: dict of {utt_id : data}
         :param glove: an instance of class Glove
-        :param ys_path: path to dataframe of sid + ys
+        :param ys_path: path to dataframe of sid + ys (gold labels)
         :param splits: number of splits for CV
         :param norm: the type of data normalization
         :param sequence_prep: the way sequences are handled, options: truncate, pad, None

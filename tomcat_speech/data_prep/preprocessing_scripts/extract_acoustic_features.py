@@ -1,5 +1,5 @@
 # use this script to extract acoustic features from your datasets
-# this script assumes that all of the datasets you will use
+# this script assumes that all the datasets you will use
 #   exist in the same base directory
 
 from tomcat_speech.data_prep.utils.audio_extraction import run_feature_extraction
@@ -79,12 +79,6 @@ def extract_acoustic_features(datasets_list, base_path, feature_set):
 
 
 if __name__ == "__main__":
-
-    # datasets = ["mosi", "ravdess"]
-    # base_path = "../../datasets/multimodal_datasets"
-
-    #dataset = ["lives"]
-    #base_path = "../../lives_test/done"
 
     dataset = ["asist"]
     base_path = "/media/jculnan/backup/jculnan/datasets/asist_data2"

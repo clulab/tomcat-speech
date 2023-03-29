@@ -108,29 +108,3 @@ def convert_ys(ys, conversion="high-low", mean_y=None, one_third=None, two_third
                 else:
                     new_ys.append(0)
     return new_ys
-
-
-# example usage of above function for the sake of reimplementation
-# 1. get the locations you want
-# here we want 1/3 of the data and 2/3 of the data
-# q_measure = torch.tensor([0.33, 0.67])
-#
-# 2. get the 1/3 and 2/3 quantiles
-# consc_onethird, consc_twothird = torch.quantile(
-#     self.train_y_consc, q_measure
-# )
-#
-# 3. update y values
-# self.train_y_consc = convert_ys(
-#     self.train_y_consc,
-#     pred_type,
-#     one_third=consc_onethird,
-#     two_thirds=consc_twothird,
-# )
-
-# with binary classification
-# 1. find mean (or median)
-# consc_mean = torch.mean(self.train_y_consc)
-#
-# 2. update y values
-# self.train_y_consc = convert_ys(self.train_y_consc, pred_type, consc_mean)

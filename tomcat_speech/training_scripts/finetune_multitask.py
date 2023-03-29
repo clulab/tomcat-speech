@@ -3,13 +3,12 @@
 import shutil
 import sys
 import os
+import pickle
 
-#sys.path.append("/home/u18/jmculnan/github/tomcat-speech")
 import torch
 from datetime import date
 
 from tomcat_speech.data_prep.samplers import RandomOversampler
-# from tomcat_speech.data_prep.samplers import RandomOversampler
 from tomcat_speech.training_and_evaluation_functions.train_and_test_multitask_singledataset import train_and_predict_multitask_singledataset
 from tomcat_speech.training_and_evaluation_functions.plot_training import *
 from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
@@ -20,9 +19,7 @@ from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import
 from tomcat_speech.training_scripts.train_multitask import combine_modality_data
 # import MultitaskObject and Glove from preprocessing code
 sys.path.append("/home/jculnan/github/multimodal_data_preprocessing")
-from utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict #, convert_to_ternary
-
-from tomcat_speech.data_prep.ingest_data import *
+from tomcat_speech.data_prep.utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict
 
 
 def load_modality_data_singledataset_multitask(device, config, use_text=True, use_acoustic=True):
