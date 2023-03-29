@@ -32,6 +32,7 @@ def prep_cdc_data(
        Prepare pickle files for Columbia deception corpus data
        :param data_path: the string path to directory containing the dataset
        :param feature_set: the acoustic feature set to use (generally IS13)
+           could be IS09, IS10, IS11, IS12, IS13
        :param transcription_type: string name of transcription type 'gold'
        :param embedding_type: 'bert', 'roberta', 'distilbert', 'glove'
        :param glove_filepath: the string path to a txt file containing GloVe
@@ -123,7 +124,13 @@ def prep_cdc_trs_data(
 ):
     """
     Convert CDC trs files to organized tsv
-    :return: the new utterance number
+    :param trs_file_path: the string path to a .trs file
+    :param ltf_file_path: the string path to a .ltf file
+    :param save_filename_and_path: the string path to a file in which to save data
+    :param speaker: None or string name of speaker
+    :param utt_num: 0 if converting first trs file; int representing the starting point
+        if appending new data to an output file
+    :return: the new utterance number (to use if appending further data to this file)
     """
     # holder for utterance and gold data
     all_utts = []

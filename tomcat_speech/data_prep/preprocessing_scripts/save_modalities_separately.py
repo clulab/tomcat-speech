@@ -16,24 +16,36 @@ def save_data_components(
     emb_type,
     feats_to_use=None,
     pred_type=None,
-    zip=False,
+    use_zip=False,
     custom_feats_file=None,
     selected_ids=None,
 ):
     """
     Save partitioned data in pickled format
     :param dataset: the string name of dataset to use
-    :param save_path: path where you want to save pickled data
-    :param data_path: path to the data
-    :param feature_set: IS09-13
-    :param transcription_type: Gold, Google, Kaldi, Sphinx
-    :param glove_path: path to glove file
-    :param emb_type: whether to use glove or distilbert
-    :param feats_to_use: list of features, if needed
+        'asist', 'cdc', 'mosi', 'firstimpr', 'meld', 'mustard', 'ravdess'
+    :param save_path: string path where you want to save pickled data
+    :param data_path: string path to the data
+    :param feature_set: acoustic feature set to use; usually 'IS13'
+        'IS09', 'IS10', 'IS11', 'IS12', 'IS13'
+    :param transcription_type: Generally 'gold' unless testing new ASR data
+        'gold', 'google', 'kaldi', 'sphinx' for 2021 paper
+    :param glove_path: string path to glove file
+    :param emb_type: embedding type to use
+        'glove', 'distilbert', 'bert', 'roberta'
+    :param feats_to_use: None or list of acoustic features to use from openSMILE extraction
+        None uses the whole set of extracted acoustic features
     :param pred_type: type of predictions, for mosi and firstimpr
-    :param zip: whether to save as a bz2 compressed file
-    :param data_as_dict: whether each datapoint saves as a dict
-    :return:
+        mosi:
+        firstimpr:
+    :param use_zip: whether to save as a bz2 compressed file
+    :param custom_feats_file: the string path to a file containing custom acoustic features
+        usually NOT used unless you are testing out a new set of acoustic features
+        which you have extracted on your own
+    :param selected_ids: None if generating data randomly or a list of 3 list
+        One with message IDs for train partition, one for dev, one for test
+        This is needed only for datasets that are not pre-partitioned if you
+        wish to ensure that you have a specific split of the data
     """
     dataset = dataset.lower()
 
@@ -56,7 +68,7 @@ def save_data_components(
         include_spectrograms=False
     )
     # save class weights
-    if zip:
+    if use_zip:
         pickle.dump(clss_weights, bz2.BZ2File(f"{save_path}/{dataset}_clsswts.bz2", "wb"))
     else:
         pickle.dump(clss_weights, open(f"{save_path}/{dataset}_clsswts.pickle", "wb"))
@@ -90,7 +102,7 @@ def save_data_components(
         ys_save_name = f"{save_path}/{dataset}_ys_{partition_name}"
 
         # save
-        if zip:
+        if use_zip:
             pickle.dump(spec_data, bz2.BZ2File(f"{spec_save_name}.bz2", "wb"))
             pickle.dump(acoustic_data, bz2.BZ2File(f"{acoustic_save_name}.bz2", "wb"))
             pickle.dump(utt_data, bz2.BZ2File(f"{utt_save_name}.bz2", "wb"))
@@ -134,137 +146,91 @@ def get_specific_fields(data, field_type, fields=None):
 
 
 if __name__ == "__main__":
-    base_path = "/media/jculnan/One Touch/jculnan/datasets/MultiCAT"
-    #base_path = "/media/jculnan/backup/jculnan/datasets/multimodal_datasets"
-    #base_path = "../../datasets/multimodal_datasets"
-    #cdc_path = f"{base_path}/Columbia_deception_corpus"
-    #mosi_path = f"{base_path}/CMU_MOSI"
-    #firstimpr_path = f"{base_path}/FirstImpr"
-    #meld_path = f"{base_path}/MELD_formatted"
-    #mustard_path = f"{base_path}/MUStARD"
-    #ravdess_path = f"{base_path}/RAVDESS_Speech"
-    asist_path = f"{base_path}"
+    # read in the config file
+    # to change what datasets you preprocess and how you do it
+    # make alterations to save_modalities_separately_config
+    # and not this file
+    from tomcat_speech.data_prep.preprocessing_scripts.preprocessing_parameters import save_modalities_separately_config as config
 
-    #save_path = "../../datasets/pickled_data/field_separated_data"
-    save_path = "/media/jculnan/One Touch/jculnan/datasets/MultiCAT"
-
-    #glove_path = "../../datasets/glove/glove.subset.300d.txt"
-    glove_path = "/media/jculnan/One Touch/jculnan/datasets/glove/glove.subset.300d.txt"
-
-    feature_set = "IS13"
-
-    # get the ids from a pickle file containing ids in order
-    # rav_selected_ids_dict = pickle.load(
-    #     open("../../datasets/pickled_data/ravdess_ordered_ids.pickle", "rb")
-    # )
-    # rav_selected_ids = []
-    # rav_selected_ids.extend(rav_selected_ids_dict["train"])
-    # rav_selected_ids.extend(rav_selected_ids_dict["test"])
-    # rav_selected_ids.extend(rav_selected_ids_dict["dev"])
-
-    # get ids for mosi frmo pickle file containing ids in order
-    # mosi_selected_ids_dict = pickle.load(
-    #     open('../../datasets/pickled_data/mosi_ordered_ids.pickle', 'rb')
-    # )
-    # mosi_selected_ids = []
-    # mosi_selected_ids.extend(mosi_selected_ids_dict["train"])
-    # mosi_selected_ids.extend(mosi_selected_ids_dict["test"])
-    # mosi_selected_ids.extend(mosi_selected_ids_dict["dev"])
-
-    transcription_type = "gold"
-    #emb_type = "distilbert"
-    # emb_type = "distilbert"
-    emb_type = "text" # include text, to be used with bert in the model itself
-    # emb_type = "bert"
-
-    # datasets = ["cdc", "mosi", "firstimpr", "meld", "ravdess"]
-    #datasets = ["firstimpr", "meld"]
-    datasets = ["asist"]
-    # datasets = ["firstimpr", "meld", "ravdess"]
-    # datasets = ["ravdess"]
-
-    # custom_feats_file = "combined_features_small.txt"
-    custom_feats_file = None
-
-    for dataset in datasets:
+    for dataset in config.datasets:
         if dataset == "mosi":
             save_data_components(
                 dataset,
-                save_path,
-                mosi_path,
-                feature_set,
-                transcription_type,
-                glove_path,
-                pred_type="classification",
-                emb_type=emb_type,
-                custom_feats_file=custom_feats_file,
-                selected_ids=mosi_selected_ids,
+                config.save_path,
+                config.mosi_path,
+                config.feature_set,
+                config.transcription_type,
+                config.glove_path,
+                pred_type=config.mosi_pred_type,
+                emb_type=config.emb_type,
+                custom_feats_file=config.custom_feats_file["mosi"] if "mosi" in config.custom_feats_file.keys() else None,
+                selected_ids=config.selected_ids_paths["mosi"] if "mosi" in config.selected_ids_paths.keys() else None,
             )
         elif dataset == "firstimpr":
             save_data_components(
                 dataset,
-                save_path,
-                firstimpr_path,
-                feature_set,
-                transcription_type,
-                glove_path,
-                pred_type="max_class",
-                emb_type=emb_type,
-                custom_feats_file=custom_feats_file,
+                config.save_path,
+                config.firstimpr_path,
+                config.feature_set,
+                config.transcription_type,
+                config.glove_path,
+                pred_type=config.firstimpr_pred_type,
+                emb_type=config.emb_type,
+                custom_feats_file=config.custom_feats_file["firstimpr"] if "firstimpr" in config.custom_feats_file.keys() else None,
             )
         elif dataset == "cdc":
             save_data_components(
                 dataset,
-                save_path,
-                cdc_path,
-                feature_set,
-                transcription_type,
-                glove_path,
-                emb_type=emb_type,
-                custom_feats_file=custom_feats_file,
+                config.save_path,
+                config.cdc_path,
+                config.feature_set,
+                config.transcription_type,
+                config.glove_path,
+                emb_type=config.emb_type,
+                custom_feats_file=config.custom_feats_file["cdc"] if "cdc" in config.custom_feats_file.keys() else None,
             )
         elif dataset == "meld":
             save_data_components(
                 dataset,
-                save_path,
-                meld_path,
-                feature_set,
-                transcription_type,
-                glove_path,
-                emb_type=emb_type,
-                custom_feats_file=custom_feats_file,
+                config.save_path,
+                config.meld_path,
+                config.feature_set,
+                config.transcription_type,
+                config.glove_path,
+                emb_type=config.emb_type,
+                custom_feats_file=config.custom_feats_file["meld"] if "meld" in config.custom_feats_file.keys() else None,
             )
         elif dataset == "mustard":
             save_data_components(
                 dataset,
-                save_path,
-                mustard_path,
-                feature_set,
-                transcription_type,
-                glove_path,
-                emb_type=emb_type,
-                custom_feats_file=custom_feats_file,
+                config.save_path,
+                config.mustard_path,
+                config.feature_set,
+                config.transcription_type,
+                config.glove_path,
+                emb_type=config.emb_type,
+                custom_feats_file=config.custom_feats_file["mustard"] if "mustard" in config.custom_feats_file.keys() else None,
             )
         elif dataset == "ravdess":
             save_data_components(
                 dataset,
-                save_path,
-                ravdess_path,
-                feature_set,
-                transcription_type,
-                glove_path,
-                emb_type=emb_type,
-                custom_feats_file=custom_feats_file,
-                selected_ids=rav_selected_ids,
+                config.save_path,
+                config.ravdess_path,
+                config.feature_set,
+                config.transcription_type,
+                config.glove_path,
+                emb_type=config.emb_type,
+                custom_feats_file=config.custom_feats_file["ravdess"] if "ravdess" in config.custom_feats_file.keys() else None,
+                selected_ids=config.selected_ids_paths["ravdess"] if "ravdess" in config.selected_ids_paths.keys() else None,
             )
         elif dataset == "asist":
             save_data_components(
                 dataset,
-                save_path,
-                asist_path,
-                feature_set,
-                transcription_type,
-                glove_path,
-                emb_type=emb_type,
-                custom_feats_file=custom_feats_file,
+                config.save_path,
+                config.asist_path,
+                config.feature_set,
+                config.transcription_type,
+                config.glove_path,
+                emb_type=config.emb_type,
+                custom_feats_file=config.custom_feats_file["asist"] if "asist" in config.custom_feats_file.keys() else None,
             )

@@ -12,7 +12,6 @@ def extract_acoustic_features(datasets_list, base_path, feature_set):
     :param base_path: The string name of the path to the directory
         that contains all datasets
     :param feature_set: The set of features to extract
-    :return:
     """
     for dataset in datasets_list:
         dataset = dataset.lower()

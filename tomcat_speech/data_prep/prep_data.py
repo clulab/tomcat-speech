@@ -238,7 +238,6 @@ class SelfSplitPrep:
                 self.tokenizer = get_bert_tokenizer()
             elif bert_type.lower() == "roberta":
                 self.tokenizer = get_roberta_tokenizer()
-            # todo: clean this up
             elif bert_type.lower() == "text":
                 self.tokenizer = get_tokenizer("basic_english")
             else:
@@ -391,7 +390,7 @@ class DataPrep:
 
     def add_pred_type(self, ptype):
         """
-        Add a prediction type for chalearn
+        Add a prediction type for First Impressions
         Options: max_class, high-low/binary, high-med-low/ternary
         :param ptype: string name of prediction type
         :return:

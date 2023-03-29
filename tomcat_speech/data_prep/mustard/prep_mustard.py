@@ -2,7 +2,6 @@ from tomcat_speech.data_prep.prep_data import SelfSplitPrep, get_updated_class_w
 from tomcat_speech.data_prep.utils.data_prep_helpers import (
     Glove,
     make_glove_dict,
-    get_data_samples,
 )
 
 
@@ -16,9 +15,25 @@ def prep_mustard_data(
     as_dict=False,
     avg_acoustic_data=False,
     custom_feats_file=None,
-    num_train_ex=None,
     include_spectrograms=False,
 ):
+    """
+       Prepare pickle files for MELD data
+       :param data_path: the string path to directory containing the dataset
+       :param feature_set: the acoustic feature set to use (generally IS13)
+           could be IS09, IS10, IS11, IS12, IS13
+       :param transcription_type: string name of transcription type 'gold'
+       :param embedding_type: 'bert', 'roberta', 'distilbert', 'glove'
+       :param glove_filepath: the string path to a txt file containing GloVe
+       :param features_to_use: None or a list of specific acoustic features
+           if a list, these features are pulled from the opensmile output by name
+       :param as_dict: whether to save data as list of dicts (vs lists)
+           Our models expect dict data as of 2023.03.28
+       :param avg_acoustic_data: whether to average over acoustic features
+       :param custom_feats_file: None or the string name of a file containing
+           pre-generated custom acoustic features
+       :param include_spectrograms: whether to generate spectrograms as part of the dataset
+    """
     # load glove
     if embedding_type.lower() == "glove":
         glove_dict = make_glove_dict(glove_filepath)
@@ -58,8 +73,5 @@ def prep_mustard_data(
 
     # get updated class weights using train ys
     class_weights = get_updated_class_weights(train_ys)
-
-    if num_train_ex:
-        train_data = get_data_samples(train_data, num_train_ex)
 
     return train_data, dev_data, test_data, class_weights
