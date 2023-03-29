@@ -1,23 +1,12 @@
 import os
-<<<<<<< HEAD
 from typing import Dict, List
-=======
-import sys
-import warnings
-from typing import Optional, Dict, List
->>>>>>> master
 import torch
 
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from tomcat_speech.models.multimodal_models import MultitaskModel # fixme
-<<<<<<< HEAD
-from tomcat_speech.data_prep.data_prep_helpers import (
-=======
-sys.path.append("../multimodal_data_preprocessing")
-from utils.data_prep_helpers import (
->>>>>>> master
+from tomcat_speech.models.multimodal_models import MultitaskModel
+from tomcat_speech.data_prep.utils.data_prep_helpers import (
     make_glove_dict,
     Glove,
 )
@@ -52,12 +41,7 @@ PREDICTOR = MultitaskModel(
 PREDICTOR.load_state_dict(torch.load(MODEL_PATH))
 PREDICTOR.to(device)
 
-<<<<<<< HEAD
-=======
-# class Emotions(BaseModel):
 
-
->>>>>>> master
 class DialogAgentMessage(BaseModel):
     """Data model for incoming message from UAZ Dialog Agent"""
 
