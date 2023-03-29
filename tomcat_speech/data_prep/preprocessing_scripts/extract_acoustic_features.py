@@ -1,6 +1,12 @@
 # use this script to extract acoustic features from your datasets
+# acoustic features extracted are saved in new subdirectories
+# within the original dataset directories
+# these features are then read in when preprocessing the data
 # this script assumes that all the datasets you will use
 #   exist in the same base directory
+# to select which datasets to extract features for, and which
+# features to extract, alter extract_acoustic_features_config.py
+# you should not need to alter this file directly
 
 from tomcat_speech.data_prep.utils.audio_extraction import run_feature_extraction
 
@@ -65,11 +71,6 @@ def extract_acoustic_features(datasets_list, base_path, feature_set):
                 feature_set,
                 f"{ravdess_path}/{feature_set}",
             )
-        elif dataset == "lives":
-            lives_path = base_path
-            run_feature_extraction(f"{lives_path}/wav",
-                                   feature_set,
-                                   f"{lives_path}/{feature_set}")
         elif dataset == "asist":
             asist_path = base_path
             run_feature_extraction(f"{asist_path}/split",
@@ -78,9 +79,7 @@ def extract_acoustic_features(datasets_list, base_path, feature_set):
 
 
 if __name__ == "__main__":
+    from tomcat_speech.data_prep.preprocessing_scripts.preprocessing_parameters import extract_acoustic_features_config as config
 
-    dataset = ["asist"]
-    base_path = "/media/jculnan/backup/jculnan/datasets/asist_data2"
-
-    extract_acoustic_features(dataset, base_path, "IS13")
-    # extract_acoustic_features(dataset, base_path, "spec")
+    for feature in config.features_of_interest:
+        extract_acoustic_features(config.datasets, config.path_to_datasets, feature)

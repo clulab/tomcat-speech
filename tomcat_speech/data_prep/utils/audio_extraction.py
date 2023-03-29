@@ -9,6 +9,7 @@ from tqdm import tqdm
 
 import pandas as pd
 
+from tomcat_speech.data_prep.wav2vec.create_spectrograms_with_wav2vec import get_and_save_spectrogram
 
 class ExtractAudio:
     """
@@ -236,7 +237,6 @@ def run_feature_extraction(audio_path, feature_set, save_dir):
     :param feature_set: the feature set used;
         For openSMILE, the feature set is one of IS09-IS13
         For spectrograms, feature set is `spectrogram` or `spec`
-        For ASR-preprocessed feats, feature set is `asr` or `wav2vec`
     """
     # make sure the full save path exists; if not, create it
     os.system(f'if [ ! -d "{save_dir}" ]; then mkdir -p {save_dir}; fi')
@@ -245,16 +245,15 @@ def run_feature_extraction(audio_path, feature_set, save_dir):
     for wfile in tqdm(os.listdir(audio_path), desc=f"Processing files in {audio_path}"):
         if wfile.endswith(".wav"):
             save_name = str(wfile.split(".wav")[0]) + f"_{feature_set}.csv"
+            # extract acoustic features with openSMILE, if needed
             if feature_set.lower() in ["is09", "is10", "is11", "is12", "is13"]:
                 audio_extractor = ExtractAudio(
                     audio_path, wfile, save_dir, "../../opensmile-3.0"
                 )
                 audio_extractor.save_acoustic_csv(feature_set, save_name)
-            # todo: reimplement me
-            # elif feature_set.lower() in ["spectrogram", "spec"]:
-            #     get_and_save_spectrogram(audio_path, wfile, save_dir, resample=None)
-            elif feature_set.lower() in ["asr", "wav2vec"]:
-                pass
+            # get the spectrogram data, if needed
+            elif feature_set.lower() in ["spectrogram", "spec"]:
+                get_and_save_spectrogram(audio_path, wfile, save_dir, resample=None)
 
 
 def expand_words(trscsv, file_to_save):
