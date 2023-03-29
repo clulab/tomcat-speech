@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -188,7 +187,11 @@ class TextOnlyRNN(nn.Module):
         self.out_dims = params.final_hidden_dim
 
     def forward(
-        self, text_input, speaker_input=None, length_input=None, gender_input=None,
+        self,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        gender_input=None,
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
@@ -230,6 +233,78 @@ class TextOnlyRNN(nn.Module):
         return output
 
 
+class TextRNNBase(nn.Module):
+    """
+    The text-rnn base for intermediate fusion+ models
+    """
+
+    def __init__(
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
+        use_distilbert=False,
+    ):
+        super(TextRNNBase, self).__init__()
+
+        self.text_dim = params.text_dim
+        self.num_embeddings = num_embeddings
+        self.text_gru_hidden_dim = params.text_gru_hidden_dim
+
+        # if we feed text through additional layer(s)
+        if not use_distilbert:
+            self.text_input_size = params.text_dim + params.short_emb_dim
+        else:
+            self.text_input_size = params.text_dim
+
+        self.text_rnn = nn.LSTM(
+            input_size=self.text_input_size,
+            hidden_size=params.text_gru_hidden_dim,
+            num_layers=params.num_gru_layers,
+            batch_first=True,
+            bidirectional=True,
+        )
+        # self.text_batch_norm = nn.BatchNorm1d(num_features=params.text_gru_hidden_dim)
+
+        # distilbert vs glove initialization
+        self.use_distilbert = use_distilbert
+
+        if not use_distilbert:
+            # initialize word embeddings
+            self.embedding = nn.Embedding(
+                num_embeddings, self.text_dim, _weight=pretrained_embeddings
+            )
+            self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
+
+    def forward(
+        self,
+        text_input,
+        length_input=None,
+    ):
+        # using pretrained embeddings, so detach to not update weights
+        # embs: (batch_size, seq_len, emb_dim)
+        if not self.use_distilbert:
+            embs = F.dropout(self.embedding(text_input), 0.1).detach()
+
+            short_embs = F.dropout(self.short_embedding(text_input), 0.1)
+
+            all_embs = torch.cat((embs, short_embs), dim=2)
+        else:
+            all_embs = text_input
+
+        # flatten_parameters() decreases memory usage
+        self.text_rnn.flatten_parameters()
+
+        packed = nn.utils.rnn.pack_padded_sequence(
+            all_embs, length_input, batch_first=True, enforce_sorted=False
+        )
+
+        # feed embeddings through GRU
+        packed_output, (hidden, cell) = self.text_rnn(packed)
+
+        return hidden[-1]
+
+
 class TextOnlyModel(nn.Module):
     """
     An encoder to take a sequence of inputs and produce a sequence of intermediate representations
@@ -237,7 +312,13 @@ class TextOnlyModel(nn.Module):
     aligned at the word-level
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None, use_distilbert=False):
+    def __init__(
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
+        use_distilbert=False,
+    ):
         super(TextOnlyModel, self).__init__()
         # input text + acoustic + speaker
         self.text_dim = params.text_dim
@@ -246,7 +327,7 @@ class TextOnlyModel(nn.Module):
         self.text_gru_hidden_dim = params.text_gru_hidden_dim
 
         # get number of output dims
-        self.out_dims = params.output_dim
+        self.out_dims = params.output_0_dim  # 12/06/22
 
         # if we feed text through additional layer(s)
         if not use_distilbert:
@@ -279,7 +360,9 @@ class TextOnlyModel(nn.Module):
             self.fc_input_dim = self.fc_input_dim + params.gender_emb_dim
 
         # set number of classes
-        self.output_dim = params.output_dim
+        self.output_dim = (
+            params.output_0_dim
+        )  # revised output_dim => output_0_dim 12/06/22
 
         # set number of layers and dropout
         self.dropout = params.dropout
@@ -303,7 +386,9 @@ class TextOnlyModel(nn.Module):
 
         # initialize fully connected layers
         self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
-        self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
+        self.fc2 = nn.Linear(
+            params.fc_hidden_dim, params.output_0_dim
+        )  # output_dim was from multithing - actually for 2 because we are using "text only" model as a separate model
 
     def forward(
         self,
@@ -312,7 +397,8 @@ class TextOnlyModel(nn.Module):
         length_input=None,
         gender_input=None,
         get_prob_dist=False,
-        save_encoded_data=False
+        save_encoded_data=False,
+        spec_input=None,  # added 10/24/22
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
@@ -349,6 +435,7 @@ class TextOnlyModel(nn.Module):
 
         # use pooled, squeezed feats as input into fc layers
         output = torch.tanh(F.dropout(self.fc1(inputs), 0.5))
+        output = self.fc2(output)  # 12/06/22
 
         if self.out_dims == 1:
             output = torch.sigmoid(output)

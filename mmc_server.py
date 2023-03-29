@@ -1,22 +1,19 @@
 import os
-import sys
-import warnings
-from typing import Optional, Dict, List
+from typing import Dict, List
 import torch
 
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from tomcat_speech.models.multimodal_models import MultitaskModel # fixme
-sys.path.append("../multimodal_data_preprocessing")
-from utils.data_prep_helpers import (
+from tomcat_speech.models.multimodal_models import MultitaskModel
+from tomcat_speech.data_prep.utils.data_prep_helpers import (
     make_glove_dict,
     Glove,
 )
-from tomcat_speech.train_and_test_models.asist_analysis_functions import predict_with_model
+from tomcat_speech.training_and_evaluation_functions.asist_analysis_functions import predict_with_model
 
 # the current parameters file is saved as testing_parameters/config.py
-import tomcat_speech.train_and_test_models.testing_parameters.config as params
+import tomcat_speech.parameters.testing_parameters.config as params
 
 # Get model and glove paths
 MODEL_PATH = os.path.dirname(__file__) + "/data/EmoPers_trained_model.pt"
@@ -43,8 +40,6 @@ PREDICTOR = MultitaskModel(
 # get saved parameters
 PREDICTOR.load_state_dict(torch.load(MODEL_PATH))
 PREDICTOR.to(device)
-
-# class Emotions(BaseModel):
 
 
 class DialogAgentMessage(BaseModel):

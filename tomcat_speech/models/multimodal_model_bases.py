@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tomcat_speech.models.audio_model_bases import SpecCNNBase
+
 
 class EarlyFusionMultimodalModel(nn.Module):
     """
@@ -11,9 +13,13 @@ class EarlyFusionMultimodalModel(nn.Module):
     Fuses data prior to entry into the first neural layer;
     Uses averaging of text tensors to do this
     """
-
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None,
-                 use_distilbert=False):
+    def __init__(
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
+        use_distilbert=False,
+    ):
         super(EarlyFusionMultimodalModel, self).__init__()
         # input text + acoustic + speaker
         self.text_dim = params.text_dim
@@ -77,7 +83,7 @@ class EarlyFusionMultimodalModel(nn.Module):
         acoustic_len_input=None,
         gender_input=None,
         get_prob_dist=False,
-        save_encoded_data=False
+        save_encoded_data=False,
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
@@ -124,6 +130,7 @@ class EarlyFusionMultimodalModel(nn.Module):
         # return the output
         return output
 
+
 class IntermediateFusionMultimodalModel(nn.Module):
     """
     An encoder to take a sequence of inputs and produce a sequence of intermediate representations
@@ -131,8 +138,13 @@ class IntermediateFusionMultimodalModel(nn.Module):
     aligned at the word-level
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None,
-                 use_distilbert=False):
+    def __init__(
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
+        use_distilbert=False,
+    ):
         super(IntermediateFusionMultimodalModel, self).__init__()
         # input text + acoustic + speaker
         self.text_dim = params.text_dim
@@ -143,6 +155,9 @@ class IntermediateFusionMultimodalModel(nn.Module):
 
         # get number of output dims
         self.out_dims = params.output_dim
+
+        # whether spectrograms are included
+        self.spec = params.use_spec
 
         # if we feed text through additional layer(s)
         if not use_distilbert:
@@ -166,6 +181,10 @@ class IntermediateFusionMultimodalModel(nn.Module):
             batch_first=True,
             bidirectional=True,
         )
+
+        # whether to use a cnn over spectrogram features
+        if params.use_spec:
+            self.spec_cnn = SpecCNNBase(params)
 
         # set the size of the input into the fc layers
         if params.avgd_acoustic or params.add_avging:
@@ -219,7 +238,11 @@ class IntermediateFusionMultimodalModel(nn.Module):
             )
             self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
 
-        # initialize fully connected layers
+        if params.use_spec:
+            # self.fc_input_dim = self.fc_input_dim + (params.spec_out_dim * 3)
+            self.fc_input_dim = self.fc_input_dim + params.spec_out_dim
+
+            # initialize fully connected layers
         self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
         # self.fc_batch_norm = nn.BatchNorm1d(params.fc_hidden_dim)
 
@@ -233,8 +256,9 @@ class IntermediateFusionMultimodalModel(nn.Module):
         length_input=None,
         acoustic_len_input=None,
         gender_input=None,
+        spec_input=None,
         get_prob_dist=False,
-        save_encoded_data=False
+        save_encoded_data=False,
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
@@ -266,6 +290,7 @@ class IntermediateFusionMultimodalModel(nn.Module):
         # encoded_text = self.text_batch_norm(encoded_text)
 
         if acoustic_len_input is not None:
+            print("acoustic length input is used")
             packed_acoustic = nn.utils.rnn.pack_padded_sequence(
                 acoustic_input,
                 acoustic_len_input.clamp(max=1500),
@@ -280,7 +305,8 @@ class IntermediateFusionMultimodalModel(nn.Module):
 
         else:
             if len(acoustic_input.shape) > 2:
-                encoded_acoustic = acoustic_input.squeeze()
+                # get average of dim 1, as this is the un-averaged acoustic info
+                encoded_acoustic = torch.mean(acoustic_input, dim=1)
             else:
                 encoded_acoustic = acoustic_input
 
@@ -299,6 +325,11 @@ class IntermediateFusionMultimodalModel(nn.Module):
         else:
             inputs = torch.cat((encoded_acoustic, encoded_text), 1)
 
+        # use spectrograms if needed
+        if spec_input is not None:
+            spec_out = self.spec_cnn(spec_input)
+            inputs = torch.cat((inputs, spec_out), 1)
+
         # use pooled, squeezed feats as input into fc layers
         output = torch.tanh(F.dropout(self.fc1(inputs), 0.5))
 
@@ -314,12 +345,19 @@ class IntermediateFusionMultimodalModel(nn.Module):
         else:
             return output
 
+
 class LateFusionMultimodalModel(nn.Module):
     """
     A late fusion model that combines modalities only at decision time
     """
 
-    def __init__(self, params, num_embeddings=None, pretrained_embeddings=None, use_distilbert=False):
+    def __init__(
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
+        use_distilbert=False,
+    ):
         super(LateFusionMultimodalModel, self).__init__()
         self.text_dim = params.text_dim
         self.audio_dim = params.audio_dim
@@ -399,7 +437,7 @@ class LateFusionMultimodalModel(nn.Module):
         acoustic_len_input=None,
         gender_input=None,
         get_prob_dist=False,
-        save_encoded_data=False
+        save_encoded_data=False,
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
@@ -489,7 +527,12 @@ class MultimodalBaseDuplicateInput(nn.Module):
     """
 
     def __init__(
-        self, params, num_embeddings=None, pretrained_embeddings=None, num_tasks=2, use_distilbert=False
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
+        num_tasks=2,
+        use_distilbert=False,
     ):
         super(MultimodalBaseDuplicateInput, self).__init__()
         # get the number of duplicates
@@ -567,7 +610,7 @@ class MultimodalBaseDuplicateInput(nn.Module):
         gender_input=None,
         task_num=0,
         get_prob_dist=False,
-        save_encoded_data=False
+        save_encoded_data=False,
     ):
         # using pretrained embeddings, so detach to not update weights
         # embs: (batch_size, seq_len, emb_dim)
@@ -678,3 +721,202 @@ class MultimodalBaseDuplicateInput(nn.Module):
         else:
             return output
 
+
+class IntermediateFusionMultimodalModelWithSpectrogram(nn.Module):
+    """
+    A model that takes:
+        acoustic features
+        spectrogram of acoustic signal
+        text features
+    Feeds them through separate neural layers
+    Concatenates intermediate output
+    Feeds this through further neural layers
+    """
+
+    def __init__(
+        self,
+        params,
+        num_embeddings=None,
+        pretrained_embeddings=None,
+        use_distilbert=False,
+    ):
+        super(IntermediateFusionMultimodalModelWithSpectrogram, self).__init__()
+        # input text + acoustic + speaker
+        self.text_dim = params.text_dim
+        self.audio_dim = params.audio_dim
+        self.num_embeddings = num_embeddings
+        self.num_speakers = params.num_speakers
+        self.text_gru_hidden_dim = params.text_gru_hidden_dim
+
+        # get number of output dims
+        self.out_dims = params.output_dim
+
+        # if we feed text through additional layer(s)
+        if not use_distilbert:
+            self.text_input_size = params.text_dim + params.short_emb_dim
+        else:
+            self.text_input_size = params.text_dim
+
+        self.text_rnn = nn.LSTM(
+            input_size=self.text_input_size,
+            hidden_size=params.text_gru_hidden_dim,
+            num_layers=params.num_gru_layers,
+            batch_first=True,
+            bidirectional=True,
+        )
+        # self.text_batch_norm = nn.BatchNorm1d(num_features=params.text_gru_hidden_dim)
+
+        self.acoustic_rnn = nn.LSTM(
+            input_size=params.audio_dim,
+            hidden_size=params.acoustic_gru_hidden_dim,
+            num_layers=4,
+            batch_first=True,
+            bidirectional=True,
+        )
+
+        # set the size of the input into the fc layers
+        if params.avgd_acoustic or params.add_avging:
+            # set size of input dim
+            self.fc_input_dim = params.text_gru_hidden_dim + params.audio_dim
+            # set size of hidden
+            self.fc_hidden = 50
+            # set acoustic fc layer 1
+            self.acoustic_fc_1 = nn.Linear(params.audio_dim, self.fc_hidden)
+            # self.ac_fc_batch_norm = nn.BatchNorm1d(self.fc_hidden)
+        else:
+            # set size of input dim
+            self.fc_input_dim = (
+                params.text_gru_hidden_dim + params.acoustic_gru_hidden_dim
+            )
+            # set size of hidden
+            self.fc_hidden = 100
+            # set acoustic fc layer 1
+            self.acoustic_fc_1 = nn.Linear(params.fc_hidden_dim, self.fc_hidden)
+
+        # set acoustic fc layer 2
+        self.acoustic_fc_2 = nn.Linear(self.fc_hidden, params.audio_dim)
+
+        # initialize speaker, gender embeddings
+        self.speaker_embedding = None
+        self.gender_embedding = None
+
+        if params.use_speaker:
+            self.fc_input_dim = self.fc_input_dim + params.speaker_emb_dim
+            self.speaker_embedding = nn.Embedding(
+                params.num_speakers, params.speaker_emb_dim
+            )
+
+        elif params.use_gender:
+            self.fc_input_dim = self.fc_input_dim + params.gender_emb_dim
+            self.gender_embedding = nn.Embedding(3, params.gender_emb_dim)
+
+        # set number of classes
+        self.output_dim = params.output_dim
+
+        # set number of layers and dropout
+        self.dropout = params.dropout
+
+        # distilbert vs glove initialization
+        self.use_distilbert = use_distilbert
+
+        if not use_distilbert:
+            # initialize word embeddings
+            self.embedding = nn.Embedding(
+                num_embeddings, self.text_dim, _weight=pretrained_embeddings
+            )
+            self.short_embedding = nn.Embedding(num_embeddings, params.short_emb_dim)
+
+        # initialize fully connected layers
+        self.fc1 = nn.Linear(self.fc_input_dim, params.fc_hidden_dim)
+        # self.fc_batch_norm = nn.BatchNorm1d(params.fc_hidden_dim)
+
+        self.fc2 = nn.Linear(params.fc_hidden_dim, params.output_dim)
+
+    def forward(
+        self,
+        acoustic_input,
+        text_input,
+        speaker_input=None,
+        length_input=None,
+        acoustic_len_input=None,
+        gender_input=None,
+        get_prob_dist=False,
+        save_encoded_data=False,
+    ):
+        # using pretrained embeddings, so detach to not update weights
+        # embs: (batch_size, seq_len, emb_dim)
+        if not self.use_distilbert:
+            embs = F.dropout(self.embedding(text_input), 0.1).detach()
+
+            short_embs = F.dropout(self.short_embedding(text_input), 0.1)
+
+            all_embs = torch.cat((embs, short_embs), dim=2)
+        else:
+            all_embs = text_input
+
+        # get speaker embeddings, if needed
+        if speaker_input is not None:
+            speaker_embs = self.speaker_embedding(speaker_input).squeeze(dim=1)
+        if gender_input is not None:
+            gender_embs = self.gender_embedding(gender_input)
+
+        # flatten_parameters() decreases memory usage
+        self.text_rnn.flatten_parameters()
+
+        packed = nn.utils.rnn.pack_padded_sequence(
+            all_embs, length_input, batch_first=True, enforce_sorted=False
+        )
+
+        # feed embeddings through GRU
+        packed_output, (hidden, cell) = self.text_rnn(packed)
+        encoded_text = F.dropout(hidden[-1], 0.3)
+        # encoded_text = self.text_batch_norm(encoded_text)
+
+        if acoustic_len_input is not None:
+            packed_acoustic = nn.utils.rnn.pack_padded_sequence(
+                acoustic_input,
+                acoustic_len_input.clamp(max=1500),
+                batch_first=True,
+                enforce_sorted=False,
+            )
+            (
+                packed_acoustic_output,
+                (acoustic_hidden, acoustic_cell),
+            ) = self.acoustic_rnn(packed_acoustic)
+            encoded_acoustic = F.dropout(acoustic_hidden[-1], self.dropout)
+
+        else:
+            if len(acoustic_input.shape) > 2:
+                encoded_acoustic = acoustic_input.squeeze()
+            else:
+                encoded_acoustic = acoustic_input
+
+        encoded_acoustic = torch.tanh(
+            F.dropout(self.acoustic_fc_1(encoded_acoustic), self.dropout)
+        )
+        encoded_acoustic = torch.tanh(
+            F.dropout(self.acoustic_fc_2(encoded_acoustic), self.dropout)
+        )
+
+        # combine modalities as required by architecture
+        if speaker_input is not None:
+            inputs = torch.cat((encoded_acoustic, encoded_text, speaker_embs), 1)
+        elif gender_input is not None:
+            inputs = torch.cat((encoded_acoustic, encoded_text, gender_embs), 1)
+        else:
+            inputs = torch.cat((encoded_acoustic, encoded_text), 1)
+
+        # use pooled, squeezed feats as input into fc layers
+        output = torch.tanh(F.dropout(self.fc1(inputs), 0.5))
+
+        if self.out_dims == 1:
+            output = torch.sigmoid(output)
+        elif get_prob_dist:
+            prob = nn.Softmax(dim=1)
+            output = prob(output)
+
+        # return the output
+        if save_encoded_data:
+            return output, encoded_acoustic, encoded_text
+        else:
+            return output

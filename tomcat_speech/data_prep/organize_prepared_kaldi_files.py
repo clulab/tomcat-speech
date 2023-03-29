@@ -8,11 +8,7 @@ does not include headers
 
 import os
 import pandas as pd
-import warnings
 import sys
-
-# read in file
-# read in
 
 
 class OrganizeKaldiTranscriptions:
@@ -244,10 +240,6 @@ if __name__ == "__main__":
         transcribed_train = "meld_16000_train_transcription.txt"
         transcribed_dev = "meld_16000_dev_transcription.txt"
         transcribed_test = "meld_16000_test_transcription.txt"
-
-        # transcribed_train = "meld_train_sphinx_16000.txt"
-        # transcribed_dev = "meld_dev_sphinx_16000.txt"
-        # transcribed_test = "meld_test_sphinx_16000.txt"
 
         current_train_path = f"{meld_location}/train/train_sent_emo.csv"
         current_dev_path = f"{meld_location}/dev/dev_sent_emo.csv"

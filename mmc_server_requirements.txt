@@ -8,3 +8,7 @@ tqdm
 uvicorn
 fastapi
 transformers
+torchaudio
+nltk
+librosa
+h5py

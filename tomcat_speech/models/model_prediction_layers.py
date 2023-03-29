@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -22,7 +21,9 @@ class PredictionLayer(nn.Module):
         self.fc1 = nn.Linear(self.input_dim, self.inter_fc_prediction_dim)
         self.fc2 = nn.Linear(self.inter_fc_prediction_dim, self.output_dim)
 
-    def forward(self, combined_inputs, get_prob_dist=False, return_penultimate_layer=False):
+    def forward(
+        self, combined_inputs, get_prob_dist=False, return_penultimate_layer=False
+    ):
         out = torch.relu(F.dropout(self.fc1(combined_inputs), self.dropout))
         if return_penultimate_layer:
             penult = out
@@ -46,12 +47,7 @@ class AcousticPlusPredictionLayer(nn.Module):
     Contains text processing + a prediction layer
     Needs the output of an acoustic only layer
     """
-
-    def __init__(
-        self,
-        params,
-        out_dim
-    ):
+    def __init__(self, params, out_dim):
         super(AcousticPlusPredictionLayer, self).__init__()
 
         # specify out_dim explicity so we can do multiple tasks at once
@@ -85,7 +81,7 @@ class AcousticPlusPredictionLayer(nn.Module):
         text_input,
         acoustic_len_input=None,
         get_prob_dist=False,
-        return_penultimate_layer=False
+        return_penultimate_layer=False,
     ):
         # here, text_input is the output of the text-specific layers
 
@@ -148,7 +144,7 @@ class TextPlusPredictionLayer(nn.Module):
         out_dim,
         num_embeddings=None,
         pretrained_embeddings=None,
-        use_distilbert=False
+        use_distilbert=False,
     ):
         super(TextPlusPredictionLayer, self).__init__()
 
@@ -202,7 +198,7 @@ class TextPlusPredictionLayer(nn.Module):
         length_input=None,
         gender_input=None,
         get_prob_dist=False,
-        return_penultimate_layer=False
+        return_penultimate_layer=False,
     ):
         # here, acoustic_input is the output of the acoustic layers
 
