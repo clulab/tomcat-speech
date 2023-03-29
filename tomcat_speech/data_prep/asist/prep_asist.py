@@ -1,9 +1,7 @@
 
 import torch
-from sklearn.utils import compute_class_weight
 
-import pickle
-import os
+from sklearn.utils import compute_class_weight
 
 from tomcat_speech.data_prep.utils.data_prep_helpers import (
     make_glove_dict,
@@ -19,12 +17,31 @@ def prep_asist_data(
     embedding_type="distilbert",
     glove_filepath="../asist-speech/data/glove.short.300d.punct.txt",
     features_to_use=None,
-    as_dict=False,
+    as_dict=True,
     avg_acoustic_data=False,
     custom_feats_file=None,
     num_train_ex=None,
     include_spectrograms=False,
 ):
+    """
+    Prepare pickle files for ASIST data
+    :param data_path: the string path to file containing messages and gold labels
+    :param feature_set: the acoustic feature set to use (generally IS13)
+    :param transcription_type: 'gold'; kept only for consistency
+        with other 'prep_<dataset>_data' functions
+    :param embedding_type: 'bert', 'roberta', 'distilbert', 'glove'
+    :param glove_filepath: the string path to a txt file containing GloVe
+    :param features_to_use: None or a list of specific acoustic features
+        if a list, these features are pulled from the opensmile output by name
+    :param as_dict: whether to save data as list of dicts (vs lists)
+        Our models expect dict data as of 2023.03.28
+    :param avg_acoustic_data: whether to average over acoustic features
+    :param custom_feats_file: None or the string name of a file containing
+        pre-generated custom acoustic features
+    :param num_train_ex: the number of examples to keep in training partition
+        only kept for consistency with other 'prep_<dataset>_data' functions
+    :param include_spectrograms: whether to generate spectrograms as part of the dataset
+    """
     # load glove
     if embedding_type.lower() == "glove":
         glove_dict = make_glove_dict(glove_filepath)
@@ -78,103 +95,3 @@ def get_updated_class_weights_multicat(train_ys):
         all_task_weights.append(weights)
 
     return all_task_weights
-
-
-def save_asist_data(
-    dataset,
-    save_path,
-    data_path,
-    feature_set,
-    glove_path,
-    emb_type,
-    feats_to_use=None,
-    data_as_dict=False,
-    avg_acoustic_data=False,
-    custom_feats_file=None,
-    include_spectrograms=False,
-    num_partitions=1
-):
-    """
-    Save partitioned data in pickled format
-    :param dataset: the string name of dataset to use
-    :param save_path: path where you want to save pickled data
-    :param data_path: path to the data
-    :param feature_set: IS09-13
-    :param transcription_type: Gold, Google, Kaldi, Sphinx
-    :param glove_path: path to glove file
-    :param emb_type: whether to use glove or distilbert
-    :param feats_to_use: list of features, if needed
-    :param pred_type: type of predictions, for mosi and firstimpr
-    :param zip: whether to save as a bz2 compressed file
-    :param data_as_dict: whether each datapoint saves as a dict
-    :return:
-    """
-    dataset = dataset.lower()
-
-    # make sure the full save path exists; if not, create it
-    os.system(f'if [ ! -d "{save_path}" ]; then mkdir -p {save_path}; fi')
-
-    train_ds, dev_ds, test_ds, clss_weights = prep_asist_data(
-        data_path,
-        feature_set,
-        emb_type,
-        glove_path,
-        feats_to_use,
-        data_as_dict,
-        avg_acoustic_data,
-        custom_feats_file,
-        include_spectrograms
-    )
-
-    # use custom feats set instead of ISXX in save name
-    #   if custom feats are used
-    if custom_feats_file is not None:
-        feature_set = custom_feats_file.split(".")[0]
-
-    if data_as_dict:
-        dtype = "dict"
-    else:
-        dtype = "list"
-
-    if include_spectrograms:
-        train_save_name = f"{save_path}/{dataset}_{feature_set}_{emb_type}_{dtype}_spec_train"
-        dev_save_name = f"{save_path}/{dataset}_{feature_set}_{emb_type}_{dtype}_spec_dev"
-        test_save_name = f"{save_path}/{dataset}_{feature_set}_{emb_type}_{dtype}_spec_test"
-        wts_save_name = f"{save_path}/{dataset}_{feature_set}_{emb_type}_{dtype}_spec_clsswts"
-    else:
-        train_save_name = f"{save_path}/{dataset}_{feature_set}_{emb_type}_{dtype}_train"
-        dev_save_name = f"{save_path}/{dataset}_{feature_set}_{emb_type}_{dtype}_dev"
-        test_save_name = f"{save_path}/{dataset}_{feature_set}_{emb_type}_{dtype}_test"
-        wts_save_name = f"{save_path}/{dataset}_{feature_set}_{emb_type}_{dtype}_clsswts"
-
-    if num_partitions == 3:
-        pickle.dump(train_ds,open(f"{train_save_name}.pickle", "wb"))
-        pickle.dump(dev_ds, open(f"{dev_save_name}.pickle", "wb"))
-        pickle.dump(test_ds, open(f"{test_save_name}.pickle", "wb"))
-        pickle.dump(clss_weights, open(f"{wts_save_name}.pickle", "wb"))
-    elif num_partitions == 1:
-        data = train_ds + dev_ds + test_ds
-        pickle.dump(data, open(f"{test_save_name}.pickle", 'wb'))
-
-
-if __name__ == "__main__":
-    save_path = "../../dataset/pickled_data"
-    # data_path = "../../PROJECTS/ToMCAT/Evaluating_modelpredictions/data_from_speechAnalyzer/used_for_evaluating_model_results"
-    data_path = "../../study3_data_to_annotate"
-    emb_type = "glove"
-    glove_path = "../../datasets/glove/glove.subset.300d.txt"
-    dict_data = True
-    avg_feats = True
-    with_spec = False
-    partitions = 1
-
-    save_asist_data("asist",
-                    save_path=save_path,
-                    data_path=data_path,
-                    feature_set="IS13",
-                    glove_path=glove_path,
-                    emb_type=emb_type,
-                    data_as_dict=dict_data,
-                    avg_acoustic_data=avg_feats,
-                    include_spectrograms=with_spec,
-                    num_partitions=partitions)

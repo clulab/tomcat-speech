@@ -1,6 +1,5 @@
-# get bert embeddings
+# get bert, roberta, and distilbert embeddings
 # adapted from https://mccormickml.com/2019/05/14/BERT-word-embeddings-tutorial/#1-loading-pre-trained-bert
-
 import torch
 from torch import nn
 from transformers import (

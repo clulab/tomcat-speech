@@ -1,3 +1,5 @@
+# this file was used with study 3 online analysis
+# it is not needed for offline research or work with MultiCAT
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
@@ -9,8 +11,7 @@ import functools
 import operator
 import random
 
-# update this
-from utils.data_prep_helpers import (
+from tomcat_speech.data_prep.utils.data_prep_helpers import (
     MinMaxScaleRange,
     clean_up_word,
     get_avg_vec,
@@ -34,11 +35,13 @@ class AsistDataset(Dataset):
         """
         :param acoustic_dict: dict of {utt_id : data}
         :param glove: an instance of class Glove
-        :param ys_path: path to dataframe of sid + ys (gold labels)
-        :param splits: number of splits for CV
-        :param norm: the type of data normalization
-        :param sequence_prep: the way sequences are handled, options: truncate, pad, None
-        :param truncate_from: whether to truncate from start or end of file
+        :param ys_path: string path to dataframe of sid + ys (gold labels)
+        :param splits: int number of splits to create
+        :param norm: string type of data normalization; currently only minmax implemented
+        :param sequence_prep: the way sequences are handled, options: 'truncate', 'pad', None
+        :param truncate_from: whether to truncate from 'start' or 'end' of file
+        :param add_avging: whether to average over acoustic feature values
+        :param transcript_type: 'zoom'
         """
         self.cols_to_skip = 9 if transcript_type.lower() == "zoom" else 10
         self.acoustic_dict = OrderedDict(
@@ -83,9 +86,6 @@ class AsistDataset(Dataset):
                 self.x_utt_lengths,
             ) = self.combine_acoustic_and_glove_wd_level()
 
-        # todo: we should get gender info on participants OR predict it
-        # add call to wrapper function that calls the gender classifier
-        self.speaker_gender_data = 0
         if self.ys_df is not None:
             self.y_data = self.create_ordered_ys()
             self.y_data = self.create_ordered_ys_utt_level(
@@ -105,8 +105,7 @@ class AsistDataset(Dataset):
 
     def get_min_max_scales(self):
         for df in self.acoustic_dict.values():
-
-            for row in df_subset.itertuples():
+            for row in df.itertuples():
                 for i, wd in enumerate(row):
                     if i >= self.cols_to_skip + 1:
                         self.min_max_scaler.update((i - (self.cols_to_skip + 1)), wd)
@@ -229,7 +228,6 @@ class AsistDataset(Dataset):
                             utt_wds[i] = self.glove.wd2idx["<UNK>"]
 
                     # save the acoustic information in remaining columns
-                    # todo: verify this works
                     row_vals = row.values[:-start_idx].tolist()
 
                     if self.sequence_prep == "truncate":
@@ -287,7 +285,7 @@ class AsistDataset(Dataset):
 
         utt_lengths = []
 
-        # skip the the first cols_to_skip columns
+        # skip the first cols_to_skip columns
         start_idx = self.cols_to_skip
 
         # counter for smallest dataframe for truncation
@@ -418,10 +416,6 @@ class AsistDataset(Dataset):
         :return: list of double of ([acoustic], [glove_index], [speaker])
         """
         print("Data prep and normalization starting")
-        # print(self.acoustic_dict.keys())
-        # print(self.valid_files)
-        # sys.exit()
-
         # set holders for acoustic, words, and speakers
         acoustic_data = []
         ordered_words = []
@@ -453,29 +447,19 @@ class AsistDataset(Dataset):
             if key in self.valid_files:
                 speaker_set = set(item["speaker"])
                 all_speakers = sorted([str(item) for item in speaker_set])
-                # print(all_speakers)
-                # sys.exit()
 
                 # prepare intermediate holders
                 intermediate_wds = []
                 intermediate_speakers = []
                 intermediate_acoustic = []
-
                 intermediate_utt_lengths = []
 
                 # for each row in that item's dataframe
                 for idx, row in item.iterrows():
                     # get the speaker
                     spkr = str(row["speaker"])
-                    # print(row)
-                    # sys.exit()
-
-                    # todo: this also includes all researchers
-                    #   should we remove them later?
+                    # add this speaker's index to intermediate holder
                     intermediate_speakers.append(all_speakers.index(spkr))
-                    # print(spkr)
-                    # print(all_speakers.index(spkr))
-                    # sys.exit()
 
                     # get the word
                     utt = clean_up_word(row["utt"]).lower()
@@ -487,10 +471,8 @@ class AsistDataset(Dataset):
                         # save that word's index
                         if wd in self.glove.wd2idx.keys():
                             utt_wds[i] = self.glove.wd2idx[wd]
-                            # utt_wds.append(self.glove.wd2idx[wd])
                         else:
                             utt_wds[i] = self.glove.wd2idx["<UNK>"]
-                            # utt_wds.append(self.glove.wd2idx["<UNK>"])
 
                     intermediate_wds.append(utt_wds)
                     # save the acoustic information in remaining columns
@@ -501,8 +483,6 @@ class AsistDataset(Dataset):
                         self.minmax_scale(row_vals, lower=0, upper=1)
                     # add acoustic information to intermediate holder
                     intermediate_acoustic.append(row_vals)
-                    # print(row_vals)
-                    # sys.exit()
 
                 # add information from intermediate holder to lists of all data
                 if self.sequence_prep == "truncate":
@@ -549,7 +529,6 @@ class AsistDataset(Dataset):
         print("Ordered words is: " + str(ordered_words.shape))
         print("Ordered speakers size is: " + str(ordered_speakers.shape))
         print("Utterance lengths size is: " + str(utt_lengths.shape))
-
         print("Data prep and normalization complete")
 
         # return acoustic info, words indices, speaker
@@ -582,7 +561,6 @@ class AsistDataset(Dataset):
         create a list of all outcomes in the same order as the data
         """
         # create holder
-        # ordered_ys = random.sample(range(1), num_utts)
         ordered_ys = [random.randint(0, 1) for _ in range(num_utts)]
         return ordered_ys
 

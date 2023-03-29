@@ -36,14 +36,3 @@ def get_dist(files_list):
             all_files = pd.concat([all_files, pd_df], axis=0)
     
     return all_files['sentiment'], all_files['emotion']
-
-
-if __name__ == "__main__":
-
-    # import all of CKJ files 
-    files_list1 = ['CKJ_HSRData_TrialMessages_Trial-T000603_Team-TM000202_Member-na_CondBtwn-none_CondWin-na_Vers-3_correctedTranscripts.csv', 'CKJ_HSRData_TrialMessages_Trial-T000604_Team-TM000202_Member-na_CondBtwn-none_CondWin-na_Vers-3_correctedTranscripts.csv', 'CKJ_HSRData_TrialMessages_Trial-T000605_Team-TM000203_Member-na_CondBtwn-none_CondWin-na_Vers-3_correctedTranscripts.csv', 'CKJ_HSRData_TrialMessages_Trial-T000607_Team-TM000204_Member-na_CondBtwn-none_CondWin-na_Vers-3_correctedTranscripts.csv']
-
-    # import all of SH files
-    files_list2 = ['SH_HSRData_TrialMessages_Trial-T000603_Team-TM000202_Member-na_CondBtwn-none_CondWin-na_Vers-3_correctedTranscripts.csv', 'SH_HSRData_TrialMessages_Trial-T000604_Team-TM000202_Member-na_CondBtwn-none_CondWin-na_Vers-3_correctedTranscripts.csv', 'SH_HSRData_TrialMessages_Trial-T000605_Team-TM000203_Member-na_CondBtwn-none_CondWin-na_Vers-3_correctedTranscripts.csv', 'SH_HSRData_TrialMessages_Trial-T000607_Team-TM000204_Member-na_CondBtwn-none_CondWin-na_Vers-3_correctedTranscripts.csv']
-
-    annr_dict = {"CKJ": files_list1, "SH": files_list2}

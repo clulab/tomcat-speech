@@ -1,9 +1,17 @@
-# metadata_to_csv
+# this file was used with study 3 analysis
+# it is not needed for offline research or work with MultiCAT
 import json
 import re
 
 
 def convert_metadata(metadata_file_path, save_path, n_speakers=1):
+    """
+    extract messages and their gold labels from a .metadata file
+    saves this data as a tsv file
+    :param metadata_file_path: the string path to a .metadata file
+    :param save_path: the string path where processed data is saved
+    :param n_speakers: the total number of speakers in the mission
+    """
     all_lines = []
     with open(metadata_file_path, 'r') as the_file:
         for _ in range(n_speakers + 1):
@@ -27,11 +35,9 @@ def convert_metadata(metadata_file_path, save_path, n_speakers=1):
                 participant = line['data']['participant_id']
                 # get actual start time
                 start_time = line['data']['features']['word_messages'][0]['start_time']
-                # start_time = line['data']['start_timestamp']
                 try:
                     # get actual end time
                     end_time = line['data']['features']['word_messages'][-1]['end_time']
-                    # end_time = line['data']['end_timestamp']
                 except KeyError:
                     end_time = "None"
                 anger = float(line['data']['sentiment']['emotions']['anger'])
@@ -102,6 +108,11 @@ def save_data_to_file(json_data_lines, save_path, header, speaker_name):
 
 
 def convert_metadata_orig(metadata_file_path, save_path):
+    """
+    Alternative function for converting .metadata to .tsv
+    :param metadata_file_path: the string path to .metadata file
+    :param save_path: the string path to a tsv
+    """
     all_lines = []
 
     with open(metadata_file_path, 'r') as the_file:

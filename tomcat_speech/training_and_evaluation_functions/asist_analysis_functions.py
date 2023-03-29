@@ -1,3 +1,5 @@
+# this file was used with study 3 online analysis
+# it is not needed for offline research or work with MultiCAT
 import random
 import json
 import re
@@ -47,7 +49,6 @@ def predict_with_model(list_of_json_objs, trained_model, glove, device, params):
     random.seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
-
 
     # decide if you want to use avgd feats
     avgd_acoustic = params.model_params.avgd_acoustic or params.model_params.add_avging
