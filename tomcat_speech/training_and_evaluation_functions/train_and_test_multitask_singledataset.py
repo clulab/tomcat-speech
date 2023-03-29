@@ -1,5 +1,8 @@
-
+# this code is used for training when we have a single dataset
+# that is annotated for multiple tasks of interest
+# we use this code with this ASIST data in finetune_multitask.py
 from datetime import datetime
+import sys
 
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
@@ -29,9 +32,26 @@ def train_and_predict_multitask_singledataset(
     use_spec=False
 ):
     """
-        Train_ds_list and val_ds_list are lists of MultTaskObject objects!
-        Length of the list is the number of datasets used
-        """
+    Train and predict on a single dataset that uses multiple tasks
+    :param classifier: a pytorch model for classification
+    :param train_state: a train state made with function make_train_state
+    :param datasets_list: a list of MultitaskObjects containing our data
+    :param batch_size: the int size of minibatch
+    :param num_epochs: the max number of epochs for training
+    :param optimizer: an optimizer for training
+    :param device: 'cpu' or 'cuda'
+    :param scheduler: a scheduler; this isn't currently in use
+    :param sampler: None or a string
+        currently our model only uses 'oversampling'
+    :param avgd_acoustic: whether averaged acoustic features are used
+    :param use_speaker: whether speaker embeddings are included
+    :param use_gender: whether speaker gender embeddings are included
+    :param save_encoded_data: whether to save encoded predictions vectors
+    :param loss_fx: a loss function; with default None, the loss
+        function saved within each MultitaskObject from param
+        datasets_list is used rather than this
+    :param use_spec: whether to include spectrograms
+    """
     num_tasks = 3
 
     print(f"Number of tasks: {num_tasks}")
@@ -61,7 +81,6 @@ def train_and_predict_multitask_singledataset(
             avgd_acoustic,
             optimizer,
             mode="training",
-            save_encoded_data=save_encoded_data,
             loss_fx=loss_fx,
             sampler=sampler,
             use_spec=use_spec,
@@ -91,7 +110,6 @@ def train_and_predict_multitask_singledataset(
             avgd_acoustic,
             optimizer,
             mode="eval",
-            save_encoded_data=save_encoded_data,
             loss_fx=loss_fx,
             use_spec=use_spec
         )
@@ -149,14 +167,31 @@ def run_model_multitask_singledataset(
     avgd_acoustic,
     optimizer,
     mode="training",
-    save_encoded_data=False,
     loss_fx=None,
     sampler=None,
     use_spec=False
 ):
     """
     Run the model in either training or testing within a single epoch
-    Returns running_loss, gold labels, and predictions
+    This model is called from within the function
+    train_and_predict_multitask_singledataset
+    :param datasets_list: a list of MultitaskObjects containing our data
+    :param classifier: a pytorch classifier
+    :param batch_size: number of items in each minibatch
+    :param num_tasks: the number of tasks we are getting predictions for
+    :param device: 'cpu' or 'cuda'
+    :param use_speaker: whether to include speaker embeddings
+    :param use_gender: whether to include speaker gender embeddings
+    :param avgd_acoustic: whether acoustic features are averaged
+    :param optimizer: an optimizer
+    :param mode: 'training' or 'evaluation'
+    :param loss_fx: a loss function; with default None, the loss
+        function saved within each MultitaskObject from param
+        datasets_list is used rather than this
+    :param sampler: None or a string
+        currently our model only uses 'oversampling'
+    :param use_spec: whether to include spectrograms
+    :return: running_loss, gold labels, and predictions
     """
     batch_task = None
 
@@ -198,17 +233,13 @@ def run_model_multitask_singledataset(
         # get ys and predictions for the batch
         y_gold, batch_pred = get_asist_predictions(
             batch,
-            batch_index,
             batch_task,
             classifier,
             device,
             use_speaker,
             use_gender,
             avgd_acoustic,
-            tasks,
-            datasets_list,
             use_spec=use_spec,
-            #save_encoded_data=save_encoded_data #todo: add me
         )
 
         # calculate loss
@@ -250,17 +281,13 @@ def run_model_multitask_singledataset(
 
 def get_asist_predictions(
     batch,
-    batch_index,
     batch_task,
     classifier,
     device,
     use_speaker,
     use_gender,
     avgd_acoustic,
-    tasks,
-    datasets_list,
     use_spec=False,
-    save_encoded_data=False
 ):
     """
     Get predictions from asist data ON THREE TASKS
@@ -269,8 +296,6 @@ def get_asist_predictions(
     """
     # get parts of batches
     # get data
-    for item in batch["ys"]:
-        item = item.detach().to(device)
     y_gold = batch["ys"]
 
     batch_acoustic = batch["x_acoustic"].detach().to(device)
@@ -284,8 +309,8 @@ def get_asist_predictions(
         batch_genders = batch["x_gender"].to(device)
     else:
         batch_genders = None
-    batch_lengths = batch["utt_length"] # .to(device)
-    batch_acoustic_lengths = batch["acoustic_length"] # .to(device)
+    batch_lengths = batch["utt_length"]
+    batch_acoustic_lengths = batch["acoustic_length"]
     if use_spec:
         batch_spec = batch["x_spec"].to(device)
     else:
@@ -301,8 +326,7 @@ def get_asist_predictions(
             speaker_input=batch_speakers,
             length_input=batch_lengths,
             gender_input=batch_genders,
-            task_num=tasks[batch_index],
-            save_encoded_data=save_encoded_data
+            task_num=batch_task,
         )
     else:
         y_pred = classifier(
@@ -313,10 +337,11 @@ def get_asist_predictions(
             length_input=batch_lengths,
             acoustic_len_input=batch_acoustic_lengths,
             gender_input=batch_genders,
-            task_num=tasks[batch_index],
-            save_encoded_data=save_encoded_data
+            task_num=batch_task,
         )
 
+    # as of 2023.03.29, there are only 3 tasks of interest
+    # so this takes the first 3 predictions per item
     batch_pred = y_pred[:3]
 
     return y_gold, batch_pred

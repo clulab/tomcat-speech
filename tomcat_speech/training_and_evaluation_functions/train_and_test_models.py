@@ -1,4 +1,8 @@
 # implement training and testing for models
+# this file contains the main training and evaluation functions
+# used by our multimodal multitask networks
+# Cheonkam has started to adapt a version of these functions
+# for use with single-modal networks in train_and_test_single_models.py
 import pickle
 import sys
 from datetime import datetime
@@ -29,6 +33,17 @@ def evaluate(
     """
     Train_ds_list and val_ds_list are lists of MultTaskObject objects!
     Length of the list is the number of datasets used
+    :param classifier: a pytorch model for classification
+    :param train_state: a train state made with function make_train_state
+    :param datasets_list: a list of MultitaskObjects containing our data
+    :param batch_size: the int size of minibatch
+    :param pickle_save_name: the string name and path of a file
+        where predictions may be saved
+    :param device: 'cpu' or 'cuda'
+    :param avgd_acoustic: whether averaged acoustic features are used
+    :param use_speaker: whether speaker embeddings are included
+    :param use_gender: whether speaker gender embeddings are included
+    :param save_encoded_data: whether to save encoded predictions vectors
     """
     num_tasks = len(datasets_list)
     # get a list of the tasks by number
@@ -162,8 +177,26 @@ def train_and_predict(
     use_spec=False
 ):
     """
-    Train_ds_list and val_ds_list are lists of MultTaskObject objects!
-    Length of the list is the number of datasets used
+    Perform training and prediction on train and dev set
+    This function is called from model training scripts
+    :param classifier: A pytorch model
+    :param train_state: a train state created by make_train_state
+    :param datasets_list: a list of MultitaskObjects containing our data
+    :param batch_size: the int size of minibatch
+    :param num_epochs: the max number of epochs for training
+    :param optimizer: an optimizer for training
+    :param device: 'cpu' or 'cuda'
+    :param scheduler: a scheduler; this isn't currently in use
+    :param sampler: None or a string
+        currently our model only uses 'oversampling'
+    :param avgd_acoustic: whether averaged acoustic features are used
+    :param use_speaker: whether speaker embeddings are included
+    :param use_gender: whether speaker gender embeddings are included
+    :param save_encoded_data: whether to save encoded predictions vectors
+    :param loss_fx: a loss function; with default None, the loss
+        function saved within each MultitaskObject from param
+        datasets_list is used rather than this
+    :param use_spec: whether to include spectrograms
     """
     num_tasks = len(datasets_list)
 
@@ -194,7 +227,6 @@ def train_and_predict(
             avgd_acoustic,
             optimizer,
             mode="training",
-            save_encoded_data=save_encoded_data,
             loss_fx=loss_fx,
             sampler=sampler,
             use_spec=use_spec,
@@ -224,7 +256,6 @@ def train_and_predict(
             avgd_acoustic,
             optimizer,
             mode="eval",
-            save_encoded_data=save_encoded_data,
             loss_fx=loss_fx,
             use_spec=use_spec
         )
@@ -266,7 +297,6 @@ def train_and_predict(
 
         # print out how long this epoch took
         last = datetime.now()
-        print(f"Epoch {epoch_index} completed at {last}")
         print(f"This epoch took {last - first}")
         sys.stdout.flush()
 
@@ -282,17 +312,31 @@ def run_model(
     avgd_acoustic,
     optimizer,
     mode="training",
-    save_encoded_data=False,
     loss_fx=None,
     sampler=None,
     use_spec=False
 ):
     """
     Run the model in either training or testing within a single epoch
-    Returns running_loss, gold labels, and predictions
+    This model is called from within function train_and_predict
+    :param datasets_list: a list of MultitaskObjects containing our data
+    :param classifier: a pytorch classifier
+    :param batch_size: number of items in each minibatch
+    :param num_tasks: the number of tasks we are getting predictions for
+    :param device: 'cpu' or 'cuda'
+    :param use_speaker: whether to include speaker embeddings
+    :param use_gender: whether to include speaker gender embeddings
+    :param avgd_acoustic: whether acoustic features are averaged
+    :param optimizer: an optimizer
+    :param mode: 'training' or 'evaluation'
+    :param loss_fx: a loss function; with default None, the loss
+        function saved within each MultitaskObject from param
+        datasets_list is used rather than this
+    :param sampler: None or a string
+        currently our model only uses 'oversampling'
+    :param use_spec: whether to include spectrograms
+    :return: running_loss, gold labels, and predictions
     """
-    first = datetime.now()
-
     # Iterate over training dataset
     running_loss = 0.0
 
@@ -307,9 +351,6 @@ def run_model(
         batches, tasks = get_all_batches(
             datasets_list, batch_size=batch_size, shuffle=True, partition="dev"
         )
-
-    next_time = datetime.now()
-    print(f"Batches organized at {next_time - first}")
 
     # set holders to use for error analysis
     ys_holder = {}
@@ -331,17 +372,13 @@ def run_model(
         # get ys and predictions for the batch
         y_gold, batch_pred = get_predictions(
             batch,
-            batch_index,
             batch_task,
             classifier,
             device,
             use_speaker,
             use_gender,
             avgd_acoustic,
-            tasks,
-            datasets_list,
             use_spec=use_spec,
-            #save_encoded_data=save_encoded_data #todo: add me
         )
 
         # calculate loss
@@ -371,34 +408,34 @@ def run_model(
         if mode.lower() == "training" or mode.lower() == "train":
             optimizer.step()
 
-    then_time = datetime.now()
-    print(f"Train set finished for epoch at {then_time - next_time}")
-
     return running_loss, ys_holder, preds_holder
 
 
 def get_predictions(
     batch,
-    batch_index,
     batch_task,
     classifier,
     device,
     use_speaker,
     use_gender,
     avgd_acoustic,
-    tasks,
-    datasets_list,
     use_spec=False,
-    save_encoded_data=False
 ):
     """
     Get predictions from data
-    This should abstract train and dev into a single function
-    Used with multitask and prototypical networks so far
+    This function is called from within run_model
+    :param batch: a batch of data
+    :param batch_task: the task number for the current batch
+    :param classifier: a classifier for making predictions
+    :param device: 'cpu' or 'cuda'
+    :param use_speaker: whether to include speaker embeddings
+    :param use_gender: whether to include speaker gender embeddings
+    :param avgd_acoustic: whether acoustic features are averaged
+    :param use_spec: whether to include spectrograms
+    :return: gold labels, predictions for the batch
     """
     # get parts of batches
     # get data
-    # todo add flexibilty for other tasks in same dataset
     if batch_task is not None:
         y_gold = batch["ys"][0].detach().to(device)
     else:
@@ -432,8 +469,7 @@ def get_predictions(
             speaker_input=batch_speakers,
             length_input=batch_lengths,
             gender_input=batch_genders,
-            task_num=tasks[batch_index],
-            save_encoded_data=save_encoded_data
+            task_num=batch_task,
         )
     else:
         y_pred = classifier(
@@ -444,16 +480,11 @@ def get_predictions(
             length_input=batch_lengths,
             acoustic_len_input=batch_acoustic_lengths,
             gender_input=batch_genders,
-            task_num=tasks[batch_index],
-            save_encoded_data=save_encoded_data
+            task_num=batch_task,
         )
 
     if batch_task is not None:
         batch_pred = y_pred[batch_task]
-
-        if datasets_list[batch_task].binary:
-            batch_pred = batch_pred.float()
-            y_gold = y_gold.float()
     else:
         batch_pred = y_pred
 
