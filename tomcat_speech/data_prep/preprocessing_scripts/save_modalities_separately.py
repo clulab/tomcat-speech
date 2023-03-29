@@ -53,7 +53,6 @@ def save_data_components(
         False,  # acoustic data must not be averaged
         custom_feats_file,
         selected_ids=selected_ids,
-        num_train_ex=None,
         include_spectrograms=False
     )
     # save class weights

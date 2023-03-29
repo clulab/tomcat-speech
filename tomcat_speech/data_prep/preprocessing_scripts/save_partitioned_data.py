@@ -20,7 +20,6 @@ def save_partitioned_data(
     avg_acoustic_data=False,
     custom_feats_file=None,
     selected_ids=None,
-    num_train_ex=None,
     include_spectrograms=False,
 ):
     """
@@ -56,7 +55,6 @@ def save_partitioned_data(
         avg_acoustic_data,
         custom_feats_file,
         selected_ids=selected_ids,
-        num_train_ex=num_train_ex,
         include_spectrograms=include_spectrograms
     )
 
@@ -163,7 +161,6 @@ if __name__ == "__main__":
                 avg_acoustic_data=avg_feats,
                 custom_feats_file=custom_feats_file,
                 selected_ids=mosi_selected_ids,
-                num_train_ex=num_train,
                 include_spectrograms=with_spec,
             )
         elif dataset == "firstimpr":
@@ -179,7 +176,6 @@ if __name__ == "__main__":
                 data_as_dict=dict_data,
                 avg_acoustic_data=avg_feats,
                 custom_feats_file=custom_feats_file,
-                num_train_ex=num_train,
                 include_spectrograms=with_spec,
             )
         elif dataset == "cdc":
@@ -194,7 +190,6 @@ if __name__ == "__main__":
                 data_as_dict=dict_data,
                 avg_acoustic_data=avg_feats,
                 custom_feats_file=custom_feats_file,
-                num_train_ex=num_train,
                 include_spectrograms=with_spec,
             )
         elif dataset == "meld":
@@ -209,7 +204,6 @@ if __name__ == "__main__":
                 data_as_dict=dict_data,
                 avg_acoustic_data=avg_feats,
                 custom_feats_file=custom_feats_file,
-                num_train_ex=num_train,
                 include_spectrograms=with_spec,
             )
         elif dataset == "mustard":
@@ -224,7 +218,6 @@ if __name__ == "__main__":
                 data_as_dict=dict_data,
                 avg_acoustic_data=avg_feats,
                 custom_feats_file=custom_feats_file,
-                num_train_ex=num_train,
                 include_spectrograms=with_spec,
             )
         elif dataset == "ravdess":
@@ -240,14 +233,13 @@ if __name__ == "__main__":
                 avg_acoustic_data=avg_feats,
                 custom_feats_file=custom_feats_file,
                 selected_ids=selected_ids,
-                num_train_ex=num_train,
                 include_spectrograms=with_spec,
             )
-        elif dataset == "lives":
+        if dataset == "asist":
             save_partitioned_data(
                 dataset,
                 save_path,
-                lives_path,
+                asist_path,
                 feature_set,
                 transcription_type,
                 glove_path,
@@ -255,7 +247,5 @@ if __name__ == "__main__":
                 data_as_dict=dict_data,
                 avg_acoustic_data=avg_feats,
                 custom_feats_file=custom_feats_file,
-                selected_ids=selected_ids,
-                num_train_ex=num_train,
                 include_spectrograms=with_spec,
             )

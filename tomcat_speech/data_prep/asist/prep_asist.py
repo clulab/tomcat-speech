@@ -13,22 +13,18 @@ from tomcat_speech.data_prep.prep_data import SelfSplitPrep
 def prep_asist_data(
     data_path="../../asist_data2/overall_sent-emo.csv",
     feature_set="IS13",
-    transcription_type="gold",
     embedding_type="distilbert",
     glove_filepath="../asist-speech/data/glove.short.300d.punct.txt",
     features_to_use=None,
     as_dict=True,
     avg_acoustic_data=False,
     custom_feats_file=None,
-    num_train_ex=None,
     include_spectrograms=False,
 ):
     """
     Prepare pickle files for ASIST data
     :param data_path: the string path to file containing messages and gold labels
     :param feature_set: the acoustic feature set to use (generally IS13)
-    :param transcription_type: 'gold'; kept only for consistency
-        with other 'prep_<dataset>_data' functions
     :param embedding_type: 'bert', 'roberta', 'distilbert', 'glove'
     :param glove_filepath: the string path to a txt file containing GloVe
     :param features_to_use: None or a list of specific acoustic features
@@ -38,8 +34,6 @@ def prep_asist_data(
     :param avg_acoustic_data: whether to average over acoustic features
     :param custom_feats_file: None or the string name of a file containing
         pre-generated custom acoustic features
-    :param num_train_ex: the number of examples to keep in training partition
-        only kept for consistency with other 'prep_<dataset>_data' functions
     :param include_spectrograms: whether to generate spectrograms as part of the dataset
     """
     # load glove

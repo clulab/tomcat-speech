@@ -8,6 +8,7 @@ from tomcat_speech.data_prep.ravdess.prep_ravdess import *
 
 from torch.utils.data import Dataset
 
+
 def prep_data(
     dataset,
     data_path,
@@ -21,7 +22,6 @@ def prep_data(
     avg_acoustic_data=False,
     custom_feats_file=None,
     selected_ids=None,
-    num_train_ex=None,
     include_spectrograms=False,
 ):
     """
@@ -46,7 +46,6 @@ def prep_data(
             as_dict=data_as_dict,
             avg_acoustic_data=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
-            num_train_ex=num_train_ex,
             include_spectrograms=include_spectrograms,
         )
     elif dataset == "mosi" or dataset == "cmu_mosi" or dataset == "cmu-mosi":
@@ -61,7 +60,6 @@ def prep_data(
             as_dict=data_as_dict,
             avg_acoustic_data=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
-            num_train_ex=num_train_ex,
             include_spectrograms=include_spectrograms
         )
     elif dataset == "firstimpr" or dataset == "chalearn":
@@ -76,7 +74,6 @@ def prep_data(
             as_dict=data_as_dict,
             avg_acoustic_data=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
-            num_train_ex=num_train_ex,
             include_spectrograms=include_spectrograms
         )
     elif dataset == "meld":
@@ -90,7 +87,6 @@ def prep_data(
             as_dict=data_as_dict,
             avg_acoustic_data=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
-            num_train_ex=num_train_ex,
             include_spectrograms=include_spectrograms
         )
     elif dataset == "mustard":
@@ -104,7 +100,6 @@ def prep_data(
             as_dict=data_as_dict,
             avg_acoustic_data=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
-            num_train_ex=num_train_ex,
             include_spectrograms=include_spectrograms
         )
     elif dataset == "ravdess":
@@ -118,21 +113,18 @@ def prep_data(
             avg_acoustic_data=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
             selected_ids=selected_ids,
-            num_train_ex=num_train_ex,
             include_spectrograms=include_spectrograms
         )
     elif dataset == "asist":
         train, dev, test, weights = prep_asist_data(
             data_path,
             feature_set,
-            transcription_type,
             emb_type,
             glove_path,
             feats_to_use,
             as_dict=data_as_dict,
             avg_acoustic_data=avg_acoustic_data,
             custom_feats_file=custom_feats_file,
-            num_train_ex=num_train_ex,
             include_spectrograms=include_spectrograms
         )
 
