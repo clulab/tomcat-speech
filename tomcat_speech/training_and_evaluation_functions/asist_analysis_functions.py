@@ -102,7 +102,7 @@ def get_json_output_of_speech_analysis(
     and a trained model
     and return a new json with metadata and model predictions
     :param list_of_json_objs: a list of json objects
-    :param trained_model: a trained pytorch model
+    :param trained_model_file: a trained pytorch model
     :param glove: an instance of Glove
     :param params: the parameters used with the trained model
     """
@@ -113,7 +113,7 @@ def get_json_output_of_speech_analysis(
     # get set of pretrained embeddings and their shape
     pretrained_embeddings = glove.data
     num_embeddings = pretrained_embeddings.size()[0]
-    print(f"shape of pretrained embeddings is: {data.glove.data.size()}")
+    print(f"shape of pretrained embeddings is: {glove.data.size()}")
 
     # create test model
     classifier = MultitaskModel(

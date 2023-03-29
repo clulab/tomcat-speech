@@ -1,4 +1,7 @@
+#!/usr/bin/env python
+
 from tomcat_speech.training_and_evaluation_functions.asist_analysis_functions import *
+from tomcat_speech.data_prep.utils.data_prep_helpers import make_glove_dict, Glove
 
 if __name__ == "__main__":
     import argparse
