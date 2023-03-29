@@ -46,10 +46,8 @@ class DataFileCombiner:
     """
     def __init__(self, data_location,
                  name1,
-                 name2,
-                 include_text=True,
-                 include_acoustic=True,
-                 include_spec=False):
+                 name2
+                 ):
         self.name1 = name1
         self.name2 = name2
 
@@ -82,11 +80,10 @@ class DataFileCombiner:
                 print(clsswts)
                 with open(self.path / f"{save_name}_clsswts.pickle", 'wb') as pf:
                     pickle.dump(clsswts, pf)
-                exit()
+                break
 
-            #with open(self.path / f"{save_name}_{name_end}", 'wb') as pf:
-            #    pickle.dump(combined, pf)
-
+            with open(self.path / f"{save_name}_{name_end}", 'wb') as pf:
+               pickle.dump(combined, pf)
 
 
 def combine_two_files(pf1, pf2):

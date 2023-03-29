@@ -1,8 +1,7 @@
-# train the models created in models directory with MUStARD data
+# evaluate unlabeled data
 # currently the main entry point into the system
 import shutil
 import sys
-sys.path.append("/")
 import os
 
 import pandas as pd
@@ -15,8 +14,7 @@ from tomcat_speech.training_and_evaluation_functions.train_and_test_without_gold
 from tomcat_speech.models.multimodal_models import MultitaskModel
 
 # import MultitaskObject and Glove from preprocessing code
-sys.path.append("/home/jculnan/github/multimodal_data_preprocessing")
-from utils.data_prep_helpers import (
+from tomcat_speech.data_prep.utils.data_prep_helpers import (
     Glove,
     make_glove_dict,
 )
@@ -92,19 +90,15 @@ if __name__ == "__main__":
             feature_set = config.feature_set
 
             # import data
-            #used_ds = pickle.load(open(f"{load_path}", "rb"))
-            #print("Data loaded")
-
-            # if data is field-separated
             used_ds = load_modality_data(device, config,
                                          use_text=True,
                                          use_acoustic=True)
-            #used_ds = used_ds[0][0].train
+
             all_ds = []
             all_ds.extend(used_ds[0][0].train)
             all_ds.extend(used_ds[0][0].dev)
             all_ds.extend(used_ds[0][0].test)
-            used_ds = all_ds
+            used_ds = used_ds[0][0].test
             print("Data loaded")
 
             # if not using distilbert embeddings

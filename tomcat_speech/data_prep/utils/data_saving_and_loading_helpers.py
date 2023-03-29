@@ -26,8 +26,33 @@ def prep_data(
 ):
     """
     Prepare data for a given dataset
-    :param dataset: string name of dataset
-    :return:
+    :param dataset: the string name of dataset to use
+        'asist', 'cdc', 'mosi', 'firstimpr', 'meld', 'mustard', 'ravdess'
+    :param data_path: string path to the data
+    :param feature_set: acoustic feature set to use; usually 'IS13'
+        'IS09', 'IS10', 'IS11', 'IS12', 'IS13'
+    :param transcription_type: Generally 'gold' unless testing new ASR data
+        'gold', 'google', 'kaldi', 'sphinx' for 2021 paper
+    :param glove_path: string path to glove file
+    :param emb_type: embedding type to use
+        'glove', 'distilbert', 'bert', 'roberta'
+    :param feats_to_use: None or list of acoustic features to use from openSMILE extraction
+        None uses the whole set of extracted acoustic features
+    :param pred_type: type of predictions, for mosi and firstimpr
+        mosi: 'regression', 'classification' (7-class), 'ternary' (3-class classification)
+        firstimpr: 'max_class' (dominant trait), 'binary' (high-low per trait),
+        'ternary' (high-med-low per trait)
+    :param data_as_dict: whether saved data points will be dicts (or lists)
+    :param avg_acoustic_data: whether to average acoustic features
+    :param custom_feats_file: the string path to a file containing custom acoustic features
+        usually NOT used unless you are testing out a new set of acoustic features
+        which you have extracted on your own
+    :param selected_ids: None if generating data randomly or a list of 3 lists
+        One with message IDs for train partition, one for dev, one for test
+        This is needed only for datasets that are not pre-partitioned if you
+        wish to ensure that you have a specific split of the data
+    :param include_spectrograms: whether to include spectrograms
+    :return: train data, dev data, test data, and class weights
     """
     dataset = dataset.lower()
 

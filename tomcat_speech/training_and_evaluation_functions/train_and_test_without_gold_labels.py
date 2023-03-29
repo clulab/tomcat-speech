@@ -1,5 +1,9 @@
-
+# perform multitask prediction on data that does not contain gold labels
+import pickle
 from torch.utils.data import DataLoader
+from sklearn.metrics import confusion_matrix, classification_report, precision_recall_fscore_support
+
+from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import get_all_batches
 
 
 def multitask_predict_without_gold_labels(

@@ -5,12 +5,15 @@ import numpy as np
 import random
 import sys
 
-from tomcat_speech.data_prep.samplers import RandomSampler
 from tomcat_speech.models.multimodal_models import MultitaskModel, MultitaskAcousticShared, \
     MultitaskDuplicateInputModel, MultitaskTextShared
 
 
 def set_cuda_and_seeds(config):
+    """
+    Set cuda and random seeds
+    :param config: a config file containing random seed number
+    """
     # set cuda
     cuda = False
     if torch.cuda.is_available():
@@ -43,6 +46,11 @@ def select_model(model_params, num_embeddings, pretrained_embeddings, multidatas
     """
     Use model parameters to select the appropriate model
     Return this model for training
+    :param model_params: model parameters from a config file
+    :param num_embeddings: the number of embeddings (if necessary)
+    :param pretrained_embeddings: pretrained GloVe embeddings, if using
+    :param multidataset: whether data is coming from multiple datasets
+    :return: a pytorch model
     """
     # set embeddings to None if using bert -- they are calculated
     #   anyway, so if you don't do this, it will ALWAYS use embeddings
@@ -77,7 +85,11 @@ def select_model(model_params, num_embeddings, pretrained_embeddings, multidatas
 
 def get_all_batches(dataset_list, batch_size, shuffle, partition="train", sampler=None):
     """
-    Create all batches and put them together as a single dataset
+    Create all batches and collate them
+    :param dataset_list: a list of MultitaskObjects containing the data
+    :param batch_size: the size of each minibatch
+    :param shuffle: bool for whether to shuffle the order of data points
+    :param sampler: None or a string ('oversampling' currently)
     """
     # set holder for batches
     all_batches = []
@@ -129,7 +141,14 @@ def get_all_batches(dataset_list, batch_size, shuffle, partition="train", sample
 
 
 def make_train_state(learning_rate, model_save_file, early_stopping_criterion):
-    # makes a train state to save information on model during training/testing
+    """
+    Make a train state to save information on model during training/testing
+    :param learning_rate: the learning rate for the model
+    :param model_save_file: the string name of a file to save the model
+        during training
+    :param early_stopping_criterion: the patience of the model
+        used to determine when to stop early
+    """
     return {
         "stop_early": False,
         "early_stopping_step": 0,
@@ -160,19 +179,20 @@ def update_train_state(model, train_state, optimizer=None):
     Components:
      - Early Stopping: Prevent overfitting.
      - Model Checkpoint: Model is saved if the model is better
-    :param args: main arguments
-    :param model: model to train
+    :param model: the model used in training
     :param train_state: a dictionary representing the training state values
+    :param optimizer: the optimizer used in training
+        only passed as a parameter if we want to save the
+        optimizer's state dict alongside the model
     :returns:
-        a new train_state
+        an updated train_state
     """
-
     # Save one model at least
     if train_state["epoch_index"] == 0:
         if optimizer is not None:
             torch.save({'model_state_dict': model.state_dict(),
-                            'optimizer_state_dict': optimizer.state_dict()},
-                            train_state["model_filename"])
+                        'optimizer_state_dict': optimizer.state_dict()},
+                        train_state["model_filename"])
         else:
             torch.save(model.state_dict(), train_state["model_filename"])
         train_state["stop_early"] = False
@@ -258,98 +278,3 @@ def separate_data(batch_of_data, device):
         batch_lengths,
         batch_acoustic_lengths,
     )
-
-
-# unused?
-def get_all_batches_oversampling(dataset_list, batch_size, shuffle, partition="train"):
-    """
-    Create all batches and put them together as a single dataset
-    """
-    # set holder for batches
-    all_batches = []
-    all_loss_funcs = []
-
-    # get number of tasks
-    num_tasks = len(dataset_list)
-
-    max_dset_len = 0
-    if partition == "train":
-        for i in range(num_tasks):
-            if len(dataset_list[i].train) > max_dset_len:
-                max_dset_len = len(dataset_list[i].train)
-
-    print(f"Max dataset length is: {max_dset_len}")
-
-    if partition == "train":
-        # only train set should include this sampler!
-        # cannot use shuffle with random sampler
-        for i in range(num_tasks):
-            data_sampler = RandomSampler(
-                data_source=dataset_list[i].train,
-                replacement=True,
-                num_samples=max_dset_len,
-            )
-
-            data = DataLoader(
-                dataset_list[i].train,
-                batch_size=batch_size,
-                shuffle=False,
-                sampler=data_sampler,
-            )
-            loss_func = dataset_list[i].loss_fx
-
-            # put batches together
-            all_batches.append(data)
-            all_loss_funcs.append(loss_func)
-
-        print(
-            f"The total number of datasets should match this number: {len(all_batches)}"
-        )
-        randomized_batches = []
-        randomized_tasks = []
-
-        # make batched tuples of (task 0, task 1, task 2)
-        # all sets of batches should be same length
-        for batch in all_batches[0]:
-            randomized_batches.append([batch])
-            randomized_tasks.append(0)
-
-        for batches in all_batches[1:]:
-            for i, batch in enumerate(batches):
-                randomized_batches[i].append(batch)
-
-    else:
-        # batch the data for each task
-        for i in range(num_tasks):
-            if partition == "dev" or partition == "val":
-                data = DataLoader(
-                    dataset_list[i].dev, batch_size=batch_size, shuffle=shuffle
-                )
-            elif partition == "test":
-                data = DataLoader(
-                    dataset_list[i].test, batch_size=batch_size, shuffle=shuffle
-                )
-            else:
-                sys.exit(f"Error: data partition {partition} not found")
-            loss_func = dataset_list[i].loss_fx
-            # put batches together
-            all_batches.append(data)
-            all_loss_funcs.append(loss_func)
-
-        randomized_batches = []
-        randomized_tasks = []
-
-        # add all batches to list to be randomized
-        task_num = 0
-        for batches in all_batches:
-            for i, batch in enumerate(batches):
-                randomized_batches.append(batch)
-                randomized_tasks.append(task_num)
-            task_num += 1
-
-    # randomize the batches
-    zipped = list(zip(randomized_batches, randomized_tasks))
-    random.shuffle(zipped)
-    randomized_batches, randomized_tasks = list(zip(*zipped))
-
-    return randomized_batches, randomized_tasks

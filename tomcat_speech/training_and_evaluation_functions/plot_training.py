@@ -77,11 +77,14 @@ def plot_histograms_of_data_classes(
     num_classes = set(data_list)
 
     # add losses/epoch for train and dev set to plot
-    ax.hist(data_list, bins=[i for i in range(len(num_classes) + 1)]) #, bins=[0, .25 * total, .5 * total, .75 * total, 1 * total])
+    ax.hist(data_list, bins=[i for i in range(len(num_classes) + 1)])
 
     # label axes
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
+
+    # add title
+    ax.set_title(title, loc="center", wrap=True)
 
     # save the file
     if save_name is not None:

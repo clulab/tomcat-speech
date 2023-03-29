@@ -1,5 +1,5 @@
-# train the models created in models directory with MUStARD data
-# currently the main entry point into the system
+# fine-tune a model trained on MELD and MOSI with ASIST data
+# currently the main entry point into the system for fine-tuning
 import shutil
 import sys
 import os
@@ -16,15 +16,18 @@ from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import
     select_model,
     make_train_state
 )
-from tomcat_speech.training_scripts.train_multitask import combine_modality_data
-# import MultitaskObject and Glove from preprocessing code
-sys.path.append("/home/jculnan/github/multimodal_data_preprocessing")
+from tomcat_speech.training_and_evaluation_functions.loading_data import combine_modality_data
 from tomcat_speech.data_prep.utils.data_prep_helpers import MultitaskObject, Glove, make_glove_dict
 
 
 def load_modality_data_singledataset_multitask(device, config, use_text=True, use_acoustic=True):
     """
-    Load the modality-separated data
+    Load the modality-separated data for a single dataset
+    that contains multiple tasks of interest
+    :param device: 'cpu' or 'cuda'
+    :param config: the config file used
+    :param use_text: whether to use text modality
+    :param use_acoustic: whether to use acoustic modality
     """
     use_spectrograms = config.model_params.use_spec
     load_path = config.load_path
@@ -181,6 +184,22 @@ def load_modality_data_singledataset_multitask(device, config, use_text=True, us
 
 def finetune_multitask(all_data_list, loss_fx, sampler, device, output_path, config,
                     num_embeddings=None, pretrained_embeddings=None, extra_params=None):
+    """
+    Use a pretrained model to fine-tune on a single dataset
+    Here, we use a model pretrained on MELD and MOSI and
+    fine-tune it on an ASIST dataset.
+    :param all_data_list: a list of MultitaskObjects, containing the datasets
+    :param loss_fx: a loss function
+    :param sampler: a sampler or None
+    :param device: 'cpu' or 'cuda'
+    :param output_path: the string path where output is saved
+    :param config: a config file
+    :param num_embeddings: None or the number of distinct text embeddings
+    :param pretrained_embeddings: None or the pretrained Glove embeddings used
+    :param extra_params: None or an alternative set of parameters
+        to use in the model instead of the model_params from
+        the config file used above
+    """
     if extra_params:
         model_params = extra_params
     else:
@@ -308,7 +327,7 @@ if __name__ == "__main__":
     print(f"OUTPUT PATH:\n{output_path}")
 
     # make sure the full save path exists; if not, create it
-    os.system('if [ ! -d "{0}" ]; then mkdir -p {0}; fi'.format(output_path))
+    os.system(f'if [ ! -d "{output_path}" ]; then mkdir -p {output_path}; fi')
 
     # copy the config file into the experiment directory
     shutil.copyfile(config.CONFIG_FILE, os.path.join(output_path, "config.py"))

@@ -1,9 +1,9 @@
-# train a single-task model for any of the five tasks
+# train a single-task model for any of the tasks
 # combining the training of the separate train_task models into one
+# Cheonkam has started alterations to this file
 
 import shutil
 import sys
-sys.path.append("/home/cheonkamjeong/multimodal_data_preprocessing")
 import os
 
 import torch
@@ -16,7 +16,7 @@ from tomcat_speech.training_and_evaluation_functions.plot_training import *
 from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import (
     set_cuda_and_seeds,
     select_model)
-from tomcat_speech.training_scripts.train_multitask import load_modality_data
+from tomcat_speech.training_and_evaluation_functions.loading_data import load_modality_data
 
 
 def train_single_task(all_data_list, loss_fx, sampler, device, output_path, config,

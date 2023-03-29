@@ -16,14 +16,15 @@ random.seed(345)
 
 class DatumListDataset(Dataset):
     """
-    A dataset to hold a list of datums
+    A dataset to hold a list of data
+    This is generally not in use, with the exception of
+    in the asist_analysis_functions script, which uses
+    older components of the code
     """
 
     def __init__(self, data_list, data_type="meld_emotion", class_weights=None):
         self.data_list = data_list
         self.data_type = data_type
-        # todo: add task number
-
         self.class_weights = class_weights
 
     def __len__(self):
@@ -53,6 +54,7 @@ class DatumListDataset(Dataset):
 class MultitaskObject(object):
     """
     An object to hold the data and meta-information for each of the datasets/tasks
+    This object is used with current multimodal single- and multitask networks
     """
 
     def __init__(

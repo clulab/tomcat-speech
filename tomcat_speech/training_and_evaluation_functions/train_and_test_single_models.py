@@ -1,5 +1,6 @@
 # implement training and testing for models
-import pickle
+# this code is being used with train_single_task and train_single_task_grid_search
+# implementation incomplete as of 2023.03.28
 import sys
 import random
 from datetime import datetime

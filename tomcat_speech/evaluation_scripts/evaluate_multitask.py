@@ -1,5 +1,4 @@
-# train the models created in models directory with MUStARD data
-# currently the main entry point into the system
+# evaluate the multitask model on
 import pickle
 import shutil
 import sys
@@ -15,9 +14,7 @@ from tomcat_speech.training_and_evaluation_functions.train_and_test_models impor
 from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import make_train_state
 from tomcat_speech.models.multimodal_models import MultitaskModel
 
-# import MultitaskObject and Glove from preprocessing code
-sys.path.append("../multimodal_data_preprocessing")
-from utils.data_prep_helpers import (
+from tomcat_speech.data_prep.utils.data_prep_helpers import (
     Glove,
     make_glove_dict,
     MultitaskTestObject,
@@ -147,17 +144,6 @@ if __name__ == "__main__":
                 num_embeddings = pretrained_embeddings.size()[0]
                 print(f"shape of pretrained embeddings is: {glove.data.size()}")
 
-            # 3. CREATE NN
-            # output goes into same location as trained model
-            # item_output_path = os.path.join(
-            #     output_path,
-            #     f"LR{config.model_params.lr}_BATCH{config.model_params.batch_size}_"
-            #     f"NUMLYR{config.model_params.num_gru_layers}_"
-            #     f"SHORTEMB{config.model_params.short_emb_dim}_"
-            #     f"INT-OUTPUT{config.model_params.output_dim}_"
-            #     f"DROPOUT{config.model_params.dropout}",
-            # )
-
             # this uses train-dev-test folds
             # create instance of model
             if config.model_params.use_distilbert:
@@ -228,9 +214,6 @@ if __name__ == "__main__":
 
             print("Trained model loaded, loss function, and optimization prepared")
 
-            # todo: set data sampler?
-            sampler = None
-
             # make the train state to keep track of model training/development
             train_state = make_train_state(
                 config.model_params.lr,
@@ -249,6 +232,5 @@ if __name__ == "__main__":
                 avgd_acoustic=avgd_acoustic_in_network,
                 use_speaker=config.model_params.use_speaker,
                 use_gender=config.model_params.use_gender,
-                # todo: alter this to a config setting after testing
                 save_encoded_data=True,
             )

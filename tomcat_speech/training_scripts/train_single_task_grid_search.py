@@ -6,14 +6,10 @@ import torch
 from datetime import date
 
 import sys
-sys.path.append("/home/cheonkamjeong/multimodal_data_preprocessing")
 from tomcat_speech.training_and_evaluation_functions.train_and_test_single_models import train_and_predict, make_train_state
-from tomcat_speech.train_and_test_models.train_multitask import load_modality_data
-from tomcat_speech.models.plot_training import *
+from tomcat_speech.training_and_evaluation_functions.loading_data import load_modality_data
+from tomcat_speech.training_and_evaluation_functions.plot_training import plot_train_dev_curve
 from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import set_cuda_and_seeds, select_model
-
-# import MultitaskObject and Glove from preprocessing code
-sys.path.append("/home/cheonkamjeong/multimodal_data_preprocessing")
 
 # hyperparameter tuning
 from ray import tune
