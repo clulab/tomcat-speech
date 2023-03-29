@@ -47,7 +47,6 @@ class AcousticPlusPredictionLayer(nn.Module):
     Contains text processing + a prediction layer
     Needs the output of an acoustic only layer
     """
-
     def __init__(self, params, out_dim):
         super(AcousticPlusPredictionLayer, self).__init__()
 

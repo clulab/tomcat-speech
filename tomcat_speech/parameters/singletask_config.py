@@ -1,9 +1,6 @@
 # incorporates elements from https://github.com/marcovzla/discobert/blob/master/config.py
 
 from argparse import Namespace
-import os  # incorporates elements from https://github.com/marcovzla/discobert/blob/master/config.py
-
-from argparse import Namespace
 import os
 
 DEBUG = (

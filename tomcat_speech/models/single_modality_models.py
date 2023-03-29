@@ -18,7 +18,6 @@ class MultitaskAcousticOnly(nn.Module):
         self.multi_dataset = multi_dataset
 
         # # set base of model
-        # comment this out and uncomment the below to try late fusion model
         self.acoustic_base = AcousticOnlyForMultitask(
             params,
             multi_dataset,

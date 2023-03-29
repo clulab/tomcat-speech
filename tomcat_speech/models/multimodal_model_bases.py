@@ -13,7 +13,6 @@ class EarlyFusionMultimodalModel(nn.Module):
     Fuses data prior to entry into the first neural layer;
     Uses averaging of text tensors to do this
     """
-
     def __init__(
         self,
         params,

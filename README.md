@@ -43,6 +43,7 @@ Below is information on how to train and test models within the tomcat_speech re
 
 ### Preparation
 
+<<<<<<< HEAD
 To make use of the data preparation modules or to run models, you will need to start by preprocessing your datasets. 
 Code to preprocess the datasets used here may be found in `tomcat_speech/data_prep`. 
 
@@ -56,6 +57,28 @@ Alter the paths in the relevant parameters file as needed to run the training co
 
 You may either train a model with a single set of parameters (using `train_multitask.py` or `train_single_task.py`) or you may run a grid search by training on multiple parameter values using `grid_search_train.py`.
 
+=======
+To make use of the data preparation modules or to run models, clone the repo `multimodal_data_preprocessing` at https://github.com/jmculnan/multimodal_data_preprocessing and place it in the same parent directory as this repo. 
+
+```
+E.g.: 
+.
+|__ mmml
+|__ multimodal_data_preprocessing
+    |__ datasets_to_use
+
+```
+
+### Running models 
+
+Models are trained using the training scripts in the `tomcat_speech/train_and_test_models` subdirectory. 
+
+The training scripts are associated with parameters files, which may be found in `tomcat_speech/models/parameters`. Alter the paths in the relevant parameters file as needed to run the training code of interest. 
+
+You may either train a model with a single set of parameters (using `train_multitask.py` or `train_single_task.py`) or you may run a grid search by training on multiple parameter values using `grid_search_train.py`.
+
+
+>>>>>>> master
 
 Multimodal Speech Encoder
 -------------------------

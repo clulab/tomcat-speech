@@ -37,9 +37,6 @@ def read_in_aligned_json(input_aligned_json):
     return list_of_json
 
 
-# make new version with Glove Obj
-
-
 def predict_with_model(list_of_json_objs, trained_model, glove, device, params):
     # set random seed
     seed = params.model_params.seed
@@ -54,7 +51,7 @@ def predict_with_model(list_of_json_objs, trained_model, glove, device, params):
 
     # get acoustic dict and utts dict
     acoustic_dict = get_data_from_json(list_of_json_objs, avgd_acoustic)
-    print("Acoustic dict created")
+
     # MAKE DATASET
     data = AsistDataset(
         acoustic_dict,

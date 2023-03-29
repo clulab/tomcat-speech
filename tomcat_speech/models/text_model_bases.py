@@ -409,7 +409,6 @@ class TextOnlyModel(nn.Module):
 
             all_embs = torch.cat((embs, short_embs), dim=2)
         else:
-            # print("We accessed the code correctly.") # added 11/29/22
             all_embs = text_input
 
         # get speaker embeddings, if needed
@@ -417,9 +416,6 @@ class TextOnlyModel(nn.Module):
             speaker_embs = self.speaker_embedding(speaker_input).squeeze(dim=1)
         if gender_input is not None:
             gender_embs = self.gender_embedding(gender_input)
-
-        # added 11/29/22 to check the size
-        # print(all_embs.size())
 
         packed = nn.utils.rnn.pack_padded_sequence(
             all_embs, length_input, batch_first=True, enforce_sorted=False

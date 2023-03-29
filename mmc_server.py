@@ -1,12 +1,23 @@
 import os
+<<<<<<< HEAD
 from typing import Dict, List
+=======
+import sys
+import warnings
+from typing import Optional, Dict, List
+>>>>>>> master
 import torch
 
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 from tomcat_speech.models.multimodal_models import MultitaskModel # fixme
+<<<<<<< HEAD
 from tomcat_speech.data_prep.data_prep_helpers import (
+=======
+sys.path.append("../multimodal_data_preprocessing")
+from utils.data_prep_helpers import (
+>>>>>>> master
     make_glove_dict,
     Glove,
 )
@@ -16,8 +27,8 @@ from tomcat_speech.training_and_evaluation_functions.asist_analysis_functions im
 import tomcat_speech.parameters.testing_parameters.config as params
 
 # Get model and glove paths
-MODEL_PATH = os.path.dirname(__file__) + "/data/MC_GOLD_classwts_nogender_25to75perc_avg_IS13.pth"
-GLOVE_PATH = os.path.dirname(__file__) + "/data/glove.short.300d.punct.txt"
+MODEL_PATH = os.path.dirname(__file__) + "/data/EmoPers_trained_model.pt"
+GLOVE_PATH = os.path.dirname(__file__) + "/data/glove.subset.300d.txt"
 
 # Set device, checking CUDA
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -41,6 +52,12 @@ PREDICTOR = MultitaskModel(
 PREDICTOR.load_state_dict(torch.load(MODEL_PATH))
 PREDICTOR.to(device)
 
+<<<<<<< HEAD
+=======
+# class Emotions(BaseModel):
+
+
+>>>>>>> master
 class DialogAgentMessage(BaseModel):
     """Data model for incoming message from UAZ Dialog Agent"""
 
@@ -60,8 +77,7 @@ class ClassificationMessage(BaseModel):
 
 
 # Create the FastAPI instance
-app = FastAPI(title="UAZ Multimodal Participant State Model", version="0.0.1")
-# todo: are we outputing emotions? or other things?
+app = FastAPI(title="UAZ Multimodal Participant State Model", version="0.0.2")
 
 
 def build_result_message(data):

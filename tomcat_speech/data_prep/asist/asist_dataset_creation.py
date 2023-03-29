@@ -10,12 +10,15 @@ import numpy as np
 import functools
 import operator
 import random
+import sys
 
 from tomcat_speech.data_prep.utils.data_prep_helpers import (
     MinMaxScaleRange,
     clean_up_word,
     get_avg_vec,
     scale_feature,
+    get_acoustic_means,
+    transform_acoustic_item
 )
 
 
@@ -162,7 +165,6 @@ class AsistDataset(Dataset):
         This makes each utterance its own data point; does NOT use conversational structure
         Doing this so that the data may be put into existing networks 8.27
         """
-        print("Data prep and normalization starting")
 
         # set holders for acoustic, words, and speakers
         acoustic_data = []
@@ -256,13 +258,6 @@ class AsistDataset(Dataset):
             acoustic_data = torch.tensor(acoustic_data)
             ordered_words = torch.tensor(ordered_words)
 
-        print("Acoustic data size is: " + str(acoustic_data.shape))
-        print("Ordered words is: " + str(ordered_words.shape))
-        print("Ordered speakers size is: " + str(len(ordered_speakers)))
-        print("Utterance lengths size is: " + str(len(utt_lengths)))
-
-        print("Data prep and normalization complete")
-
         # return acoustic info, words indices, speaker
         return acoustic_data, ordered_words, ordered_speakers, utt_lengths
 
@@ -270,7 +265,6 @@ class AsistDataset(Dataset):
         """
         Prepare the data when it is word-level aligned
         """
-        print("Data prep and normalization starting")
 
         # set holders for acoustic, words, and speakers
         acoustic_data = []
@@ -305,10 +299,8 @@ class AsistDataset(Dataset):
 
         all_speakers = sorted(list(set(speaker_list)))
 
-        print(self.valid_files)
         # iterate through items in the acoustic dict
         for key, item in self.acoustic_dict.items():
-            print(f"key is: {key}")
             # if the item has gold data
             if key in self.valid_files:
                 # set holders
@@ -393,13 +385,6 @@ class AsistDataset(Dataset):
 
             acoustic_data = torch.tensor(acoustic_data)
             ordered_words = torch.tensor(ordered_words)
-
-        print("Acoustic data size is: " + str(acoustic_data.shape))
-        print("Ordered words is: " + str(ordered_words.shape))
-        print("Ordered speakers size is: " + str(len(ordered_speakers)))
-        print("Utterance lengths size is: " + str(len(utt_lengths)))
-
-        print("Data prep and normalization complete")
 
         # return acoustic info, words indices, speaker
         return acoustic_data, ordered_words, ordered_speakers, utt_lengths
@@ -542,7 +527,6 @@ class AsistDataset(Dataset):
         for key in self.acoustic_dict.keys():
             # if the sid has gold data, add it
             if key in self.valid_files:
-                print(key)
                 if key not in self.skipped_files:
                     y = ys[ys.index == key].overall.item()
                     ordered_ys.append(y)
@@ -565,31 +549,31 @@ class AsistDataset(Dataset):
 
         if self.ys_df:
             for i, item in enumerate(self.x_acoustic):
-                # todo: this should be fixed earlier in code
-                acoustic_length = len(item)
+                acoustic_data = transform_acoustic_item(
+                    item, self.x_acoustic_means, self.x_acoustic_stdev
+                )
                 all_data.append(
-                    (
-                        item,
-                        self.x_glove[i],
-                        self.x_speaker[i],
-                        self.speaker_gender_data,
-                        self.y_data[i],
-                        self.x_utt_lengths[i],
-                        acoustic_length,
-                    )
+                    {
+                        "x_acoustic": acoustic_data.clone().detach(),
+                        "x_utt": self.x_glove[i].clone().detach(),
+                        "x_speaker": self.x_speaker[i],
+                        "x_gender": self.speaker_gender_data,
+                        "ys": self.y_data[i],
+                        "utt_length": self.x_utt_lengths[i],
+                        "acoustic_length": len(item),
+                    }
                 )
         else:
             for i, item in enumerate(self.x_acoustic):
-                acoustic_length = len(item)
                 all_data.append(
-                    (
-                        item,
-                        self.x_glove[i],
-                        self.x_speaker[i],
-                        self.speaker_gender_data,
-                        self.x_utt_lengths[i],
-                        acoustic_length,
-                    )
+                    {
+                        "x_acoustic": item.clone().detach(),
+                        "x_utt": self.x_glove[i].clone().detach(),
+                        "x_speaker": self.x_speaker[i],
+                        "x_gender": self.speaker_gender_data,
+                        "utt_length": self.x_utt_lengths[i],
+                        "acoustic_length": len(item),
+                    }
                 )
 
         return all_data

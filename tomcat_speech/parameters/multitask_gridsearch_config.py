@@ -17,9 +17,6 @@ load_dataset = True
 EXPERIMENT_ID = 1
 # during training: enter a brief description that will make the experiment easy to identify
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
-# EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
-# EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
-# EXPERIMENT_DESCRIPTION = "IntermediateFusion_test_paramsfromMMML_ClassWts_"
 EXPERIMENT_DESCRIPTION = "MC_Testing_gridsearch_code_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = True  # 01/10/23
@@ -40,12 +37,11 @@ if USE_SERVER:
 else:
     # path from which to load pickled data files
     # load_path = "../../datasets/pickled_data/IS13_glove_GOLD"
-    None
+    load_path = None
 
 # set dir to save full experiments
 exp_save_path = "output/multitask"
 
-# todo: reincorporate this implementation?
 # set type of predictions to make for chalearn
 chalearn_predtype = "max_class"
 

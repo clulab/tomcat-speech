@@ -12,6 +12,3 @@ curl \
     -d @${ROOT}/data/test_message.json
 
 exit 0
-
-# use the file from John as test.json
-# todo: commit to repo

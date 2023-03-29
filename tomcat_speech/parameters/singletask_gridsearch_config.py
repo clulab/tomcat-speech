@@ -1,9 +1,6 @@
 # incorporates elements from https://github.com/marcovzla/discobert/blob/master/config.py
 
 from argparse import Namespace
-import os  # incorporates elements from https://github.com/marcovzla/discobert/blob/master/config.py
-
-from argparse import Namespace
 import os
 
 DEBUG = (
@@ -22,8 +19,6 @@ task = "firstimpr"
 EXPERIMENT_ID = 1
 # during training: enter a brief description that will make the experiment easy to identify
 # during testing: this is the name of the parent directory for different random seed models saved from an experiment
-# EXPERIMENT_DESCRIPTION = "MMC_25perc-cutoff_15secMax_noClassWeights_IS1010_GaussianNoise_"
-# EXPERIMENT_DESCRIPTION = "CHALEARN_KALDI_TEXTONLY_VALF1CHECKED_25perc-cutoff_15secMax_noClassWeights_IS1076_AcHid50_"
 EXPERIMENT_DESCRIPTION = f"{task}_ReworkedCodeTest_"
 # indicate whether this code is being run locally or on the server
 USE_SERVER = False
