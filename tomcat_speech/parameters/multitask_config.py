@@ -33,7 +33,7 @@ glove_path = "/home/tomcat/multimodal_data/glove.subset.300d.txt"
 
 # where is the preprocessed pickle data saved?
 if USE_SERVER:
-    load_path = "/home/tomcat/multimodal_data/field_separated_data"
+    load_path = "/home/tomcat/multimodal_data/" #field_separated_data detached 10/14/23
 else:
     load_path = "/media/jculnan/backup/jculnan/datasets/pickled_data"
 
@@ -66,7 +66,8 @@ dset2classes = {"meld": 7, "mosi": 3, "ravdess": 2, "firstimpr": 5}
 # whether to fine-tune on a saved model
 # if fine-tuning a saved model, set this to the string path of the model
 # else, set it to None
-saved_model = "output/multitask/1_Testing_gridsearch_2022-08-16/LR0.001_BATCH100_NUMLYR2_SHORTEMB30_INT-OUTPUT100_DROPOUT0.2_FC-FINALDIM20/Testing_gridsearch_code_.pt"
+saved_model = None 
+#"output/multitask/1_Testing_gridsearch_2022-08-16/LR0.001_BATCH100_NUMLYR2_SHORTEMB30_INT-OUTPUT100_DROPOUT0.2_FC-FINALDIM20/Testing_gridsearch_code_.pt" #10/14/23 deleted because we are going to train a new one
 
 # the number of acoustic features to use
 # 130 is the number of features in IS13 set

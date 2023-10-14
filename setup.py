@@ -19,15 +19,15 @@ setup(
     zip_safe=False,
     install_requires=[
         "wheel",
-        "torch==1.9.0",
-        "torchtext==0.10",
+        "torch", #without version specification, it was set to 1.9.0
+        "torchtext", #without version specification, it was set to 0.10
         "torchaudio",
         "nltk",
         "librosa",
         "h5py",
         "pandas",
         "numpy",
-        "sklearn",
+        "scikit-learn", #changed to scikit-learn
         "matplotlib",
         "tqdm",
         "webvtt-py",
