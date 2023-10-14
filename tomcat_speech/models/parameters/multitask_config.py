@@ -20,7 +20,7 @@ EXPERIMENT_ID = 1
 # EXPERIMENT_DESCRIPTION = "IntermediateFusion_test_paramsfromMMML_ClassWts_"
 EXPERIMENT_DESCRIPTION = "Testing_sharedTextModel_reworked_code_"
 # indicate whether this code is being run locally or on the server
-USE_SERVER = False
+USE_SERVER = True
 
 # get this file's path to save a copy
 CONFIG_FILE = os.path.abspath(__file__)
@@ -28,10 +28,11 @@ CONFIG_FILE = os.path.abspath(__file__)
 num_tasks = 5
 
 # set parameters for data prep
-glove_path = "../../datasets/glove/glove.subset.300d.txt"
+glove_path = "/home/tomcat/multimodal_data/glove.subset.300d.txt"
 
 if USE_SERVER:
-    load_path = "/data/nlp/corpora/MM/pickled_data/distilbert_custom_feats"
+    # 10/14/23
+    load_path = "/home/tomcat/multimodal_data/field_separated_data"
 else:
     # path from which to load pickled data files
     load_path = "../../datasets/pickled_data/distilbert_custom_feats"
