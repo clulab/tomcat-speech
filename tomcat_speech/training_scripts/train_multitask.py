@@ -19,6 +19,7 @@ from tomcat_speech.training_and_evaluation_functions.train_and_test_utils import
 )
 from tomcat_speech.training_and_evaluation_functions.loading_data import (
     load_modality_data,
+    load_alter_modality_data
 )
 
 
@@ -157,9 +158,12 @@ if __name__ == "__main__":
             sampler,
             num_embeddings,
             pretrained_embeddings,
-        ) = load_modality_data(device, config, use_text=True, use_acoustic=True)
+        ) = load_alter_modality_data(device, config, use_text=True, use_acoustic=True)
+            #load_modality_data(device, config, use_text=True, use_acoustic=True)
+
     else:
-        data, loss_fx, sampler = load_modality_data(
+        data, loss_fx, sampler = load_alter_modality_data(
+            # load_modality_data(
             device, config, use_text=True, use_acoustic=True
         )
         num_embeddings = None
