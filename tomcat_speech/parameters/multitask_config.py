@@ -16,7 +16,7 @@ EXPERIMENT_ID = 1
 EXPERIMENT_DESCRIPTION = "Test_finetuning_"
 
 # indicate whether this code is being run locally or on the server
-USE_SERVER = False
+USE_SERVER = True
 
 # get this file's path to save a copy
 # this does not need to be changed
@@ -29,11 +29,11 @@ num_tasks = 3
 
 # set parameters for data prep
 # where is your GloVe file located?
-glove_path = "/media/jculnan/backup/jculnan/datasets/glove/glove.subset.300d.txt"
+glove_path = "/home/tomcat/multimodal_data/glove.subset.300d.txt"
 
 # where is the preprocessed pickle data saved?
 if USE_SERVER:
-    load_path = "/data/nlp/corpora/MM/pickled_data/distilbert_custom_feats"
+    load_path = "/home/tomcat/multimodal_data/field_separated_data"
 else:
     load_path = "/media/jculnan/backup/jculnan/datasets/pickled_data"
 
@@ -147,7 +147,7 @@ model_params = Namespace(
     # these flags are used directly by the model (e.g. in multimodal_models.py)
     #   during instantiation
     # if text only, the model should only include text modality
-    text_only=False,
+    text_only=True, #10/14/2
     # if audio only, the model should only include audio modality
     audio_only=False,
     # whether we have an audio spectrogram model only
