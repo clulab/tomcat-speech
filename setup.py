@@ -19,7 +19,7 @@ setup(
     zip_safe=False,
     install_requires=[
         "wheel",
-        "torch==1.9.0",
+        "torch", #it was set to torch==1.9.0
         "torchtext==0.10",
         "torchaudio",
         "nltk",
