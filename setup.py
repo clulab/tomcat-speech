@@ -27,7 +27,7 @@ setup(
         "h5py",
         "pandas",
         "numpy",
-        "sklearn",
+        "sklearn-learn",
         "matplotlib",
         "tqdm",
         "webvtt-py",
